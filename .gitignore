@@ -53,3 +53,11 @@ master-ai-telegram.service
 # Backup copies
 server.py.v4_final
 server.py.pre_*
+analyze_v4.py
+apply_phase1.py
+cleanup_git.py
+memory_patch.py
+server.py.backup_v4
+setup_cron.py
+test_upload.txt
+v5_assembler.py
