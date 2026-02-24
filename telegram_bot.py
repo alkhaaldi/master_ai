@@ -87,7 +87,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/status - \u062D\u0627\u0644\u0629 \u0627\u0644\u0646\u0638\u0627\u0645\n"
         "/tasks - \u0627\u0644\u0645\u0647\u0627\u0645\n"
         "/memory - \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0630\u0627\u0643\u0631\u0629\n"
-        "/lights - \u062D\u0627\u0644\u0629 \u0627\u0644\u0623\u0646\u0648\u0627\u0631\n\n"
+        "/lights - \u062D\u0627\u0644\u0629 \u0627\u0644\u0623\u0646\u0648\u0627\u0631\n"\n        "/events - \u0622\u062E\u0631 \u0627\u0644\u0623\u062D\u062F\u0627\u062B\n"\n        "/approve - \u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0644\u0649 \u062D\u062F\u062B\n"\n        "/autonomy - \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u0642\u0644\u0627\u0644\u064A\u0629\n"\n        "/policy - \u0633\u064A\u0627\u0633\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631\n\n"
         "\u0623\u0648 \u0627\u0631\u0633\u0644 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u0648\u0623\u0646\u0627 \u0623\u0641\u0647\u0645\u0647\u0627 \U0001F9E0"
     )
 
@@ -140,6 +140,89 @@ async def cmd_memory(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"  {cat}: {count}\n"
     
     await update.message.reply_text(text)
+
+
+async def cmd_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update.effective_user.id):
+        return
+    data = await call_master("/events?limit=10")
+    if "error" in data:
+        await update.message.reply_text("\u274c " + data["error"])
+        return
+    events = data.get("events", [])
+    if not events:
+        await update.message.reply_text("\u2705 \u0645\u0627 \u0641\u064a \u0623\u062d\u062f\u0627\u062b")
+        return
+    lines = ["\U0001F4CB \u0622\u062e\u0631 10 \u0623\u062d\u062f\u0627\u062b:\n"]
+    for ev in events:
+        risk_icon = {"high": "\U0001F534", "medium": "\U0001F7E1", "low": "\U0001F7E2"}.get(ev.get("risk",""), "\u26AA")
+        status_icon = {"completed": "\u2705", "waiting_approval": "\u23F3", "pending": "\u23F1", "error": "\u274c"}.get(ev.get("status",""), "\u2753")
+        score = ev.get("risk_score", "?")
+        lines.append(f"{risk_icon}{status_icon} [{ev.get('type','')}] {ev.get('title','')} (score:{score})")
+        lines.append(f"   ID: {ev.get('event_id','')} | {ev.get('created_at','')}")
+    await send_long(update.message, "\n".join(lines))
+
+async def cmd_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update.effective_user.id):
+        return
+    args = context.args
+    if not args:
+        # Show waiting events
+        data = await call_master("/events?limit=20")
+        events = data.get("events", [])
+        waiting = [e for e in events if e.get("status") == "waiting_approval"]
+        if not waiting:
+            await update.message.reply_text("\u2705 \u0645\u0627 \u0641\u064a \u0623\u062d\u062f\u0627\u062b \u062a\u0646\u062a\u0638\u0631 \u0645\u0648\u0627\u0641\u0642\u0629")
+            return
+        lines = ["\u23F3 \u0623\u062d\u062f\u0627\u062b \u062a\u0646\u062a\u0638\u0631 \u0645\u0648\u0627\u0641\u0642\u0629:\n"]
+        for ev in waiting:
+            lines.append(f"\U0001F534 [{ev.get('type','')}] {ev.get('title','')}")
+            lines.append(f"   /approve {ev.get('event_id','')}")
+        await send_long(update.message, "\n".join(lines))
+        return
+    eid = args[0]
+    action = args[1] if len(args) > 1 else "approve"
+    result = await call_master(f"/events/{eid}/approve?action={action}", method="POST")
+    if "error" in result:
+        await update.message.reply_text(f"\u274c {result['error']}")
+    else:
+        await update.message.reply_text(f"\u2705 {result.get('status', 'done')} - {eid}")
+
+async def cmd_autonomy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update.effective_user.id):
+        return
+    args = context.args
+    if not args:
+        cfg = await call_master("/autonomy/config")
+        enabled = "\u2705" if cfg.get("enabled") else "\u274c"
+        await update.message.reply_text(
+            f"\u2699\uFE0F Autonomy Config:\n\n"
+            f"Enabled: {enabled}\n"
+            f"Level: {cfg.get('level', '?')}/5\n"
+            f"Allow Medium: {cfg.get('allow_medium', False)}\n"
+            f"Allow High: {cfg.get('allow_high', False)}\n\n"
+            f"\u062A\u063A\u064A\u064A\u0631: /autonomy <level> (1-5)"
+        )
+        return
+    try:
+        level = int(args[0])
+        result = await call_master("/autonomy/config", method="POST", data={"enabled": True, "level": level, "allow_medium": level >= 4, "allow_high": level >= 5})
+        cfg = result.get("config", result)
+        await update.message.reply_text(f"\u2705 Autonomy level: {cfg.get('level', level)}/5")
+    except ValueError:
+        await update.message.reply_text("\u274c \u0627\u0633\u062A\u062E\u062F\u0645: /autonomy 3")
+
+async def cmd_policy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update.effective_user.id):
+        return
+    policy = await call_master("/policy")
+    t = policy.get("thresholds", {})
+    await update.message.reply_text(
+        f"\U0001F4DC Policy v{policy.get('version', '?')}:\n\n"
+        f"Auto (score 0-{t.get('auto_max', '?')}): \u2705 \u062A\u0646\u0641\u064A\u0630 \u062A\u0644\u0642\u0627\u0626\u064A\n"
+        f"Approval (score {t.get('auto_max',25)+1}-{t.get('approval_max', '?')}): \u23F3 \u064A\u0646\u062A\u0638\u0631 \u0645\u0648\u0627\u0641\u0642\u0629\n"
+        f"Block (score {t.get('block_min', '?')}+): \U0001F6AB \u0645\u0645\u0646\u0648\u0639"
+    )
 
 # --- Main message handler: Send to /agent ---
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -210,6 +293,11 @@ def main():
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("tasks", cmd_tasks))
     app.add_handler(CommandHandler("memory", cmd_memory))
+    app.add_handler(CommandHandler("events", cmd_events))
+    app.add_handler(CommandHandler("approve", cmd_approve))
+    app.add_handler(CommandHandler("autonomy", cmd_autonomy))
+    app.add_handler(CommandHandler("policy", cmd_policy))
+
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Run
