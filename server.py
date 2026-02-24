@@ -5,7 +5,7 @@ Port: 9000
 
 Upgrades from v4:
   1. Task Manager (stateful execution with resume)
-  2. Iterative Planning Loop (plan→execute→verify→replan)
+  2. Iterative Planning Loop (planâexecuteâverifyâreplan)
   3. Strict Action Schemas (Pydantic validation)
   4. Memory Productization (short-term + long-term, graceful fallback)
   5. Observability (structured tracing, latency metrics)
@@ -40,9 +40,9 @@ from openai import AsyncOpenAI, OpenAIError
 from anthropic import AsyncAnthropic
 import httpx
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # CONFIGURATION
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY", "")
@@ -53,7 +53,7 @@ AGENT_SECRET = os.getenv("AGENT_SECRET", "")
 MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
-VERSION = "5.0.0"
+VERSION = "5.1.0"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENTITY_MAP_FILE = os.path.join(BASE_DIR, "entity_map.json")
 AUDIT_DB = os.path.join(BASE_DIR, "data", "audit.db")
@@ -72,9 +72,9 @@ if os.path.exists(ENTITY_MAP_FILE):
     with open(ENTITY_MAP_FILE) as f:
         entity_map = json.load(f)
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # [UPGRADE 3] STRICT ACTION SCHEMAS
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class ActionType(str, Enum):
     HA_GET_STATE = "ha_get_state"
@@ -108,7 +108,7 @@ class HACallServiceAction(BaseModel):
     @classmethod
     def validate_args(cls, v):
         if "domain" not in v or "service" not in v:
-            # Try to fix common format: "light.turn_on" → domain=light, service=turn_on
+            # Try to fix common format: "light.turn_on" â domain=light, service=turn_on
             if "service" in v and "." in str(v["service"]):
                 parts = v["service"].split(".", 1)
                 v["domain"] = parts[0]
@@ -194,6 +194,39 @@ ACTION_SCHEMA_MAP = {
 }
 
 
+
+# ============================================================
+# EVENT ENGINE SCHEMAS (v5.1)
+# ============================================================
+
+class RiskLevel(str, Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+class EventRequest(BaseModel):
+    source: str = "unknown"
+    type: str
+    title: str
+    detail: dict = Field(default_factory=dict)
+    entity_id: str | None = None
+    device_id: str | None = None
+    user: str | None = None
+    ts: str | None = None
+
+class EventResponse(BaseModel):
+    event_id: str
+    risk: RiskLevel
+    autonomy_level: int
+    stored: bool = True
+
+class AutonomyConfig(BaseModel):
+    enabled: bool = True
+    level: int = 2
+    allow_medium: bool = False
+    allow_high: bool = False
+
+
 def validate_action(action: dict) -> tuple[bool, dict, str]:
     """Validate action against schema. Returns (valid, cleaned_action, error_msg)."""
     atype = action.get("type", "")
@@ -207,9 +240,9 @@ def validate_action(action: dict) -> tuple[bool, dict, str]:
         return False, action, str(e)
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # [UPGRADE 4] MEMORY PRODUCTIZATION
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 # Short-term memory buffer (conversation context)
 short_term_memory = deque(maxlen=20)
@@ -221,7 +254,7 @@ try:
     logger.info("memory_db loaded successfully")
 except ImportError:
     MEMORY_AVAILABLE = False
-    logger.warning("memory_db not available — using stub")
+    logger.warning("memory_db not available â using stub")
 
     def build_context(*args, **kwargs):
         return ""
@@ -267,9 +300,9 @@ def memory_retrieve_context(query: str, top_n: int = 5) -> str:
     return "\n---\n".join(parts) if parts else ""
 
 
-# ═══════════════════════════════════════════════════════════════
-# [UPGRADE 5] OBSERVABILITY — Tracing
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# [UPGRADE 5] OBSERVABILITY â Tracing
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class RequestTrace:
     """Tracks timing and metadata for a single request."""
@@ -308,9 +341,9 @@ class RequestTrace:
         }
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # DATABASE INITIALIZATION
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 def init_db():
     """Initialize all SQLite tables (audit + tasks)."""
@@ -378,14 +411,42 @@ def init_db():
         approval_id TEXT
     )""")
 
+
+    # [UPGRADE v5.1] Event Engine tables
+    c.execute("""CREATE TABLE IF NOT EXISTS events (
+        event_id TEXT PRIMARY KEY,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        source TEXT,
+        type TEXT,
+        title TEXT,
+        detail TEXT,
+        entity_id TEXT,
+        device_id TEXT,
+        user TEXT,
+        event_ts TEXT,
+        risk TEXT,
+        autonomy_level INTEGER DEFAULT 0
+    )""")
+
+    c.execute("""CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )""")
+
+    row = c.execute("SELECT value FROM system_settings WHERE key='autonomy_config'").fetchone()
+    if not row:
+        default_cfg = json.dumps({"enabled": True, "level": 2, "allow_medium": False, "allow_high": False})
+        c.execute("INSERT OR REPLACE INTO system_settings (key, value) VALUES ('autonomy_config', ?)", (default_cfg,))
+
     conn.commit()
     conn.close()
-    logger.info("Database initialized (audit + tasks)")
+    logger.info("Database initialized (audit + tasks + events)")
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # AUDIT LOGGING (Extended with request_id/task_id)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async def audit_log(task, actions=None, results=None, status="ok", duration=0.0,
                     request_id=None, task_id=None, step_index=0,
@@ -407,9 +468,9 @@ async def audit_log(task, actions=None, results=None, status="ok", duration=0.0,
         logger.error(f"Audit log error: {e}")
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # LLM CALL (with observability)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048,
                    temperature: float = 0.3, trace: RequestTrace = None) -> str:
@@ -457,9 +518,9 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
     return '{"mode":"single_step","next_step":{"type":"respond_text","args":{"text":"LLM unavailable"}},"task_state":"complete"}'
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # JSON REPAIR UTILITY
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 def repair_json(text: str) -> dict:
     """Attempt to parse and repair malformed JSON from LLM."""
@@ -495,9 +556,9 @@ def repair_json(text: str) -> dict:
     return None
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # SECURITY HELPERS (from v4)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 SSH_BLACKLIST = ["rm -rf /", "mkfs", "dd if=", "> /dev/sd", "shutdown", "reboot",
                  "passwd", "chmod 777", ":(){ :|:& };:"]
@@ -537,9 +598,9 @@ def assess_risk(action_type: str, args: dict) -> str:
     return "low"
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # WINDOWS AGENT JOB QUEUE (from v4)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 connected_agents = {}
 
@@ -580,9 +641,9 @@ def cleanup_expired_approvals():
         pass
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # ACTION EXECUTORS
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async def _exec_ha_get_state(entity_id: str) -> dict:
     async with httpx.AsyncClient() as client:
@@ -683,9 +744,90 @@ async def execute_action(action: dict, trace: RequestTrace = None, step_index: i
     return result
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # [UPGRADE 1] TASK MANAGER
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+
+# ============================================================
+# EVENT ENGINE (v5.1)
+# ============================================================
+
+class EventEngine:
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+
+    def _conn(self):
+        return sqlite3.connect(self.db_path)
+
+    def classify_risk(self, event: EventRequest) -> RiskLevel:
+        t = (event.type or "").lower()
+        title = (event.title or "").lower()
+        if any(k in t for k in ["unlock", "disarm", "delete", "wipe", "format"]) or any(k in title for k in ["unlock", "disarm"]):
+            return RiskLevel.high
+        if any(k in t for k in ["open", "close", "garage", "door", "alarm"]) or any(k in title for k in ["door", "garage", "alarm"]):
+            return RiskLevel.medium
+        return RiskLevel.low
+
+    def get_autonomy_config(self) -> dict:
+        conn = self._conn()
+        cur = conn.cursor()
+        row = cur.execute("SELECT value FROM system_settings WHERE key='autonomy_config'").fetchone()
+        conn.close()
+        if not row:
+            return {"enabled": True, "level": 2, "allow_medium": False, "allow_high": False}
+        try:
+            return json.loads(row[0])
+        except Exception:
+            return {"enabled": True, "level": 2, "allow_medium": False, "allow_high": False}
+
+    def set_autonomy_config(self, cfg: AutonomyConfig) -> dict:
+        payload = cfg.model_dump()
+        conn = self._conn()
+        cur = conn.cursor()
+        cur.execute("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES ('autonomy_config', ?, datetime('now','localtime'))", (json.dumps(payload),))
+        conn.commit()
+        conn.close()
+        return payload
+
+    def create_event(self, req: EventRequest) -> EventResponse:
+        event_id = f"ev_{uuid.uuid4().hex[:10]}"
+        risk = self.classify_risk(req)
+        cfg = self.get_autonomy_config()
+        autonomy_level = int(cfg.get("level", 2))
+        conn = self._conn()
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO events (event_id, source, type, title, detail, entity_id, device_id, user, event_ts, risk, autonomy_level)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (event_id, req.source, req.type, req.title, json.dumps(req.detail or {}),
+             req.entity_id, req.device_id, req.user, req.ts, risk.value, autonomy_level))
+        conn.commit()
+        conn.close()
+        return EventResponse(event_id=event_id, risk=risk, autonomy_level=autonomy_level, stored=True)
+
+    def list_events(self, limit: int = 50) -> list[dict]:
+        conn = self._conn()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM events ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def get_event(self, event_id: str) -> dict | None:
+        conn = self._conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM events WHERE event_id=?", (event_id,)).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def stats(self) -> dict:
+        conn = self._conn()
+        cur = conn.cursor()
+        total = cur.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+        last = cur.execute("SELECT created_at, risk, type FROM events ORDER BY created_at DESC LIMIT 1").fetchone()
+        conn.close()
+        return {"total_events": total, "last_event": {"created_at": last[0], "risk": last[1], "type": last[2]} if last else None}
+
 
 class TaskManager:
     """Manages stateful task execution with persistence."""
@@ -772,22 +914,22 @@ class TaskManager:
         return [dict(r) for r in rows]
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # [UPGRADE 2] ITERATIVE PLANNING LOOP
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 PLANNER_SYSTEM_PROMPT = """You are Master AI v5, a central intelligence system controlling a smart home and PC.
 
 Available action types:
-- ha_get_state: {entity_id} — get HA entity state (use "*" for all)
-- ha_call_service: {domain, service, service_data} — call HA service
-- ssh_run: {cmd} — run shell command on Raspberry Pi
-- respond_text: {text} — respond to user with text
-- win_diagnostics: {checks[]} — run Windows diagnostics
-- win_powershell: {script} — run PowerShell on Windows PC
-- win_winget_install: {package} — install via winget
-- http_request: {url, method, headers, body} — HTTP request
-- memory_store: {category, content, type} — store to long-term memory
+- ha_get_state: {entity_id} â get HA entity state (use "*" for all)
+- ha_call_service: {domain, service, service_data} â call HA service
+- ssh_run: {cmd} â run shell command on Raspberry Pi
+- respond_text: {text} â respond to user with text
+- win_diagnostics: {checks[]} â run Windows diagnostics
+- win_powershell: {script} â run PowerShell on Windows PC
+- win_winget_install: {package} â install via winget
+- http_request: {url, method, headers, body} â HTTP request
+- memory_store: {category, content, type} â store to long-term memory
 
 Entity map (rooms and devices):
 {entity_context}
@@ -803,12 +945,12 @@ You MUST respond ONLY with valid JSON (no markdown, no explanation):
 }}
 
 Rules:
-- For simple questions/greetings → mode: single_step, next_step: respond_text, task_state: complete
-- For device control → mode: single_step or multi_step with ha_call_service actions
-- For complex tasks → mode: multi_step with a plan array
-- If you need more info before continuing → task_state: waiting
+- For simple questions/greetings â mode: single_step, next_step: respond_text, task_state: complete
+- For device control â mode: single_step or multi_step with ha_call_service actions
+- For complex tasks â mode: multi_step with a plan array
+- If you need more info before continuing â task_state: waiting
 - Always include "response" with a user-facing message in Arabic
-- NEVER invent entity IDs — use ONLY from the entity map above
+- NEVER invent entity IDs â use ONLY from the entity map above
 """
 
 
@@ -832,7 +974,7 @@ def build_entity_context() -> str:
 
 async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
                     previous_results: list = None, retry: bool = False) -> dict:
-    """Single planning step — LLM generates next action(s)."""
+    """Single planning step â LLM generates next action(s)."""
     entity_ctx = build_entity_context()
     system = PLANNER_SYSTEM_PROMPT.replace("{entity_context}", entity_ctx)
 
@@ -867,9 +1009,9 @@ async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
         logger.error(f"Failed to parse planner output: {raw[:200]}")
         return {
             "mode": "single_step",
-            "next_step": {"type": "respond_text", "args": {"text": "عذراً، واجهت مشكلة في معالجة الطلب"}},
+            "next_step": {"type": "respond_text", "args": {"text": "Ø¹Ø°Ø±Ø§ÙØ ÙØ§Ø¬ÙØª ÙØ´ÙÙØ© ÙÙ ÙØ¹Ø§ÙØ¬Ø© Ø§ÙØ·ÙØ¨"}},
             "task_state": "complete",
-            "response": "عذراً، واجهت مشكلة في معالجة الطلب",
+            "response": "Ø¹Ø°Ø±Ø§ÙØ ÙØ§Ø¬ÙØª ÙØ´ÙÙØ© ÙÙ ÙØ¹Ø§ÙØ¬Ø© Ø§ÙØ·ÙØ¨",
             "_parse_error": True
         }
 
@@ -879,7 +1021,7 @@ async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
 async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace = None,
                            task_id: str = None, max_iterations: int = 8) -> dict:
     """
-    [UPGRADE 2] Iterative planning loop: plan → execute → verify → replan
+    [UPGRADE 2] Iterative planning loop: plan â execute â verify â replan
     Returns final result with all step outputs.
     """
     all_results = []
@@ -908,7 +1050,7 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
         elif "next_step" in plan:
             actions = [plan["next_step"]]
         else:
-            actions = [{"type": "respond_text", "args": {"text": final_response or "تم"}}]
+            actions = [{"type": "respond_text", "args": {"text": final_response or "ØªÙ"}}]
 
         # 3. VALIDATE & EXECUTE each action
         for i, action in enumerate(actions):
@@ -949,7 +1091,7 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
             if task_id:
                 TaskManager.update_task(task_id, state="waiting")
             break
-        # else: "running" → loop continues with results fed back to planner
+        # else: "running" â loop continues with results fed back to planner
 
     # Finalize task
     if task_id:
@@ -967,9 +1109,9 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
     }
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # SUMMARY GENERATOR
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async def generate_summary(task: str, actions: list, results: list, trace: RequestTrace = None) -> str:
     if not results:
@@ -982,9 +1124,9 @@ async def generate_summary(task: str, actions: list, results: list, trace: Reque
         return ""
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # FASTAPI APP
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @asynccontextmanager
 async def lifespan(app):
@@ -997,10 +1139,13 @@ async def lifespan(app):
 app = FastAPI(title="Master AI", version=VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+# Event Engine (v5.1)
+event_engine = EventEngine(AUDIT_DB)
 
-# ═══════════════════════════════════════════════════════════════
+
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # API KEY MIDDLEWARE
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -1018,9 +1163,9 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 app.add_middleware(APIKeyMiddleware)
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # EXCEPTION HANDLER
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -1028,9 +1173,9 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse({"error": str(exc)}, status_code=500)
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # CORE ENDPOINTS
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.get("/health")
 async def health():
@@ -1040,6 +1185,8 @@ async def health():
         "agents": list(connected_agents.keys()),
         "queued_jobs": _count_queued_jobs(),
         "memory_available": MEMORY_AVAILABLE,
+        "event_engine": event_engine.stats(),
+        "autonomy": event_engine.get_autonomy_config(),
     }
 
 
@@ -1053,7 +1200,7 @@ def _count_queued_jobs():
         return 0
 
 
-# ── /ask — Main chat endpoint ─────────────────────────────────
+# ââ /ask â Main chat endpoint âââââââââââââââââââââââââââââââââ
 
 class AskRequest(BaseModel):
     message: str
@@ -1084,7 +1231,7 @@ async def ask(body: AskRequest):
     else:
         # Check for "continue task" pattern
         msg_lower = body.message.lower()
-        if "continue task" in msg_lower or "كمل المهمة" in msg_lower:
+        if "continue task" in msg_lower or "ÙÙÙ Ø§ÙÙÙÙØ©" in msg_lower:
             match = re.search(r"t_[a-f0-9]+", body.message)
             if match:
                 task_id = match.group()
@@ -1109,7 +1256,7 @@ async def ask(body: AskRequest):
     except Exception as e:
         logger.error(f"Engine error: {e}", exc_info=True)
         TaskManager.fail_task(task_id, str(e))
-        result = {"response": f"خطأ: {e}", "actions": [], "results": [], "task_state": "failed", "iterations": 0}
+        result = {"response": f"Ø®Ø·Ø£: {e}", "actions": [], "results": [], "task_state": "failed", "iterations": 0}
 
     duration = time.time() - t0
 
@@ -1133,7 +1280,7 @@ async def ask(body: AskRequest):
     )
 
 
-# ── /agent — Telegram/external agent endpoint ────────────────
+# ââ /agent â Telegram/external agent endpoint ââââââââââââââââ
 
 class AgentRequest(BaseModel):
     message: str
@@ -1144,7 +1291,7 @@ class AgentRequest(BaseModel):
 
 @app.post("/agent")
 async def agent_endpoint(body: AgentRequest):
-    """Agent endpoint — same iterative engine, different interface."""
+    """Agent endpoint â same iterative engine, different interface."""
     trace = RequestTrace()
     task_id = TaskManager.create_task(body.message, trace.request_id)
     trace.task_id = task_id
@@ -1159,7 +1306,7 @@ async def agent_endpoint(body: AgentRequest):
     except Exception as e:
         logger.error(f"Agent error: {e}", exc_info=True)
         TaskManager.fail_task(task_id, str(e))
-        return {"response": f"خطأ: {e}", "task_id": task_id}
+        return {"response": f"Ø®Ø·Ø£: {e}", "task_id": task_id}
 
     duration = time.time() - t0
     memory_add_short_term("assistant", result["response"])
@@ -1178,9 +1325,9 @@ async def agent_endpoint(body: AgentRequest):
     }
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # HOME ASSISTANT ENDPOINTS
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class HAServiceRequest(BaseModel):
     domain: str
@@ -1208,9 +1355,9 @@ async def ha_get_state(entity_id: str):
     return await _exec_ha_get_state(entity_id)
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # SSH ENDPOINT
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class SSHRunRequest(BaseModel):
     cmd: str
@@ -1221,9 +1368,9 @@ async def ssh_run(body: SSHRunRequest):
     return await _exec_ssh_run(body.cmd)
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # APPROVAL SYSTEM
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.post("/approve/{approval_id}")
 async def approve_action(approval_id: str, action: str = "approve"):
@@ -1244,9 +1391,9 @@ async def approve_action(approval_id: str, action: str = "approve"):
     return {"status": action + "d", "approval_id": approval_id}
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # WINDOWS AGENT ENDPOINTS
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class WinRegisterRequest(BaseModel):
     agent_id: str
@@ -1307,9 +1454,9 @@ async def win_jobs(status: str = Query(default=None), limit: int = Query(default
     return {"jobs": [dict(r) for r in rows]}
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # STATS & SHIFT
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.get("/stats/daily")
 async def stats_daily(date: str = Query(default=None)):
@@ -1330,7 +1477,7 @@ async def stats_capture():
 
 
 SHIFT_PATTERN = ["A", "A", "D", "D", "B", "B", "C", "C"]
-SHIFT_NAMES = {"A": "Morning ☀️", "B": "Evening 🌅", "C": "Night 🌙", "D": "Off 🏠"}
+SHIFT_NAMES = {"A": "Morning âï¸", "B": "Evening ð", "C": "Night ð", "D": "Off ð "}
 SHIFT_EPOCH = datetime(2024, 1, 1)
 
 
@@ -1357,9 +1504,9 @@ async def shift_info(date: str = Query(default=None)):
     }
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # CLAUDE CONTEXT ENDPOINT (for claude.ai integration)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.get("/claude")
 async def claude_context():
@@ -1401,7 +1548,7 @@ async def claude_context():
             "health": "GET /health",
         },
         "capabilities": [
-            "Iterative planning (plan→execute→verify→replan)",
+            "Iterative planning (planâexecuteâverifyâreplan)",
             "Task management with resume",
             "Action schema validation",
             "Short-term + long-term memory",
@@ -1412,9 +1559,9 @@ async def claude_context():
     return context
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # SESSIONS (from v4)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class SessionCreate(BaseModel):
     source: str = "api"
@@ -1453,9 +1600,9 @@ async def latest_session():
     return dict(row) if row else {"error": "No sessions"}
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # KNOWLEDGE BASE (from v4)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class KnowledgeCreate(BaseModel):
     category: str
@@ -1522,9 +1669,9 @@ async def delete_knowledge(kid: int):
     return {"status": "deleted"}
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # TASK ENDPOINTS (Enhanced from v4 with Task Manager)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.get("/tasks")
 async def list_tasks_ep(state: str = Query(default=None), limit: int = Query(default=20)):
@@ -1539,9 +1686,9 @@ async def get_task_ep(task_id: str):
     return task
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # STOCKS (from v4)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.get("/stocks/portfolio")
 async def stock_portfolio():
@@ -1561,9 +1708,9 @@ async def stock_alerts_history(limit: int = 20):
         return {"error": "stock_alerts module not available"}
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # DEPLOY ENDPOINT (kept for backward compatibility)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class DeployRequest(BaseModel):
     file_path: str
@@ -1573,7 +1720,7 @@ class DeployRequest(BaseModel):
 
 @app.post("/deploy")
 async def deploy_file(body: DeployRequest):
-    """Deploy a file to the server (backward compat — prefer Git workflow)."""
+    """Deploy a file to the server (backward compat â prefer Git workflow)."""
     target = os.path.join(BASE_DIR, body.file_path)
     if ".." in body.file_path:
         return JSONResponse({"error": "Invalid path"}, status_code=400)
@@ -1599,9 +1746,9 @@ async def deploy_file(body: DeployRequest):
     return result
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # MEMORY ENDPOINTS (from v4, productized)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class MemoryCreate(BaseModel):
     category: str = "general"
@@ -1645,9 +1792,9 @@ async def mem_stats():
     return {"total": 0, "note": "memory_db not available", "short_term": len(short_term_memory)}
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # MESSAGE SAVE / USERS (from v4)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class MsgSave(BaseModel):
     role: str
@@ -1695,9 +1842,9 @@ async def list_users():
     return {"users": [dict(r) for r in rows]}
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # AUDIT ENDPOINT
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.get("/audit")
 async def get_audit(limit: int = Query(default=50), request_id: str = Query(default=None),
@@ -1714,15 +1861,44 @@ async def get_audit(limit: int = Query(default=50), request_id: str = Query(defa
     return {"audit": [dict(r) for r in rows]}
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # WEB PANEL (minimal)
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+
+# ============================================================
+# EVENT ENGINE ENDPOINTS (v5.1)
+# ============================================================
+
+@app.post("/event", response_model=EventResponse, tags=["events"])
+async def ingest_event(req: EventRequest):
+    return event_engine.create_event(req)
+
+@app.get("/events", tags=["events"])
+async def list_events_ep(limit: int = Query(default=50, ge=1, le=500)):
+    return {"events": event_engine.list_events(limit)}
+
+@app.get("/events/{event_id}", tags=["events"])
+async def get_event_ep(event_id: str = Path(...)):
+    ev = event_engine.get_event(event_id)
+    if not ev:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return ev
+
+@app.get("/autonomy/config", tags=["events"])
+async def get_autonomy():
+    return event_engine.get_autonomy_config()
+
+@app.post("/autonomy/config", tags=["events"])
+async def set_autonomy(cfg: AutonomyConfig):
+    return {"status": "ok", "config": event_engine.set_autonomy_config(cfg)}
+
 
 @app.get("/panel", response_class=HTMLResponse)
 async def web_panel():
     return """<html><head><title>Master AI v5</title></head>
     <body style="font-family:monospace;background:#1a1a2e;color:#eee;padding:20px">
-    <h1>🤖 Master AI v5.0</h1>
+    <h1>ð¤ Master AI v5.0</h1>
     <p>Endpoints: /health, /ask, /agent, /tasks, /ha/states, /ssh/run, /claude</p>
     <p><a href="/health" style="color:#0ff">/health</a> |
        <a href="/claude" style="color:#0ff">/claude</a> |
@@ -1730,13 +1906,13 @@ async def web_panel():
     </body></html>"""
 
 
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # DEPLOYMENT NOTES
-# ═══════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # How to deploy:
 #   1. On dev machine: git add server.py && git commit -m "v5.0" && git push
 #   2. On Raspberry Pi: cd ~/master_ai && ./update.sh
-#   3. update.sh will: pull → syntax check → restart → health check → rollback if failed
+#   3. update.sh will: pull â syntax check â restart â health check â rollback if failed
 #
 # Requirements (should already be installed):
 #   pip install fastapi uvicorn python-dotenv httpx openai anthropic pydantic
