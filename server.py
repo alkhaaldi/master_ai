@@ -851,10 +851,10 @@ class EventEngine:
         cur = conn.cursor()
         total = cur.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         last = cur.execute("SELECT created_at, risk, type FROM events ORDER BY created_at DESC LIMIT 1").fetchone()
-        conn.close()
         by_status = {}
         for row in cur.execute("SELECT status, COUNT(*) FROM events GROUP BY status").fetchall():
             by_status[row[0] or "pending"] = row[1]
+        conn.close()
         return {"total_events": total, "by_status": by_status, "last_event": {"created_at": last[0], "risk": last[1], "type": last[2]} if last else None}
 
 
