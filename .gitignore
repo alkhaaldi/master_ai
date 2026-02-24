@@ -1,15 +1,55 @@
+# Environment & secrets
 .env
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Runtime data
 data/
 audit/
-*.bak*
 *.log
 *.db
-v5c_*
-*.tmp
-# temp deployment artifacts
-v5_chunk_*
+
+# Backups
+*.bak*
 *.pre_*
 *.save
+*.tmp
+
+# Old patches & fixes (cleanup)
+fix_*.py
+patch_*.py
+safe_*_patch.py
+apply_patch.py
+
+# Old install scripts
+install_*.py
+install_*.sh
+
+# Test files
+rtest*.py
+
+# Migration scripts
+migrate_*.py
+add_stats_*.py
+add_entities.py
+
+# Build/scan helpers
+build_map.py
+build_rooms.py
+scan_entities.py
+
+# Old deployment artifacts
+v5c_*
+v5_chunk_*
+recv_file.py
+upload_server.py
 *.deb
+
+# Old service files (managed by systemd directly)
+master-ai-telegram.service
+
+# Backup copies
+server.py.v4_final
+server.py.pre_*
