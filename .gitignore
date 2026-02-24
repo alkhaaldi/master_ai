@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+data/
+audit/
+*.bak*
+*.log
+*.db
+v5c_*
+*.tmp
+# temp deployment artifacts
+v5_chunk_*
+*.pre_*
+*.save
+*.deb

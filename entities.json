@@ -1,0 +1,2012 @@
+{
+  "light": [
+    {
+      "id": "light.1g_wifi_switch_wifi_ble_9_switch_1",
+      "name": "مرايا الديوانية"
+    },
+    {
+      "id": "light.my_bathroom_switch_2",
+      "name": "My bathroom mirror light"
+    },
+    {
+      "id": "light.ldywny_spot_1",
+      "name": "الديوانية spot 1"
+    },
+    {
+      "id": "light.ldywny_s_switch_1_2",
+      "name": "الديوانية spot 3"
+    },
+    {
+      "id": "light.ldywny_s_switch_1",
+      "name": "الديوانية spot 2"
+    },
+    {
+      "id": "light.kitchen_light_switch_1",
+      "name": "Kitchen Chandler"
+    },
+    {
+      "id": "light.kitchen_light_switch_2",
+      "name": "Kitchen spot 1"
+    },
+    {
+      "id": "light.kitchen_switch_1",
+      "name": "Kitchen spot 2"
+    },
+    {
+      "id": "light.kitchen_storage_switch_2",
+      "name": "Kitchen storage spot"
+    },
+    {
+      "id": "light.kitchen_switch_2",
+      "name": "Kitchen strip"
+    },
+    {
+      "id": "light.kitchen_switch_3",
+      "name": "Kitchen wordrob strip"
+    },
+    {
+      "id": "light.men_room_switch_3",
+      "name": "ثرية الديوانية"
+    },
+    {
+      "id": "light.men_room_switch_2",
+      "name": "سبوت ممر الديوانية"
+    },
+    {
+      "id": "light.ldywny_s_switch_3",
+      "name": "مغسلة الديوانية spot"
+    },
+    {
+      "id": "light.ldywny_s_switch_2",
+      "name": "الديوانية strip"
+    },
+    {
+      "id": "light.men_room_switch_1",
+      "name": "Strip ممر الديوانية"
+    },
+    {
+      "id": "light.hmm_ldywny_s_switch_3",
+      "name": "حمام الديوانية strip"
+    },
+    {
+      "id": "light.ldywny_s_switch_2_2",
+      "name": "مغسلة الديوانية strip"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_1",
+      "name": "صالة الاستقبال Chandler"
+    },
+    {
+      "id": "light.hmm_ldywny_s_switch_3_2",
+      "name": "حمام الديوانية strip"
+    },
+    {
+      "id": "light.men_room_switch_2_2",
+      "name": "سبوت ممر الديوانية"
+    },
+    {
+      "id": "light.ldywny_s_switch_2_3",
+      "name": "مغسلة الديوانية strip"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_1_2",
+      "name": "صالة الاستقبال Chandler"
+    },
+    {
+      "id": "light.ground_floor_section_2_switch_2",
+      "name": "Ground floor  section 1 strip"
+    },
+    {
+      "id": "light.ground_floors_section_2_switch_3",
+      "name": "Ground floor section 1 spot"
+    },
+    {
+      "id": "light.ground_floors_section_2_switch_2",
+      "name": "Ground floor section 1 strip"
+    },
+    {
+      "id": "light.ground_floor_section_2_switch_1",
+      "name": "Ground floor section 2 spot"
+    },
+    {
+      "id": "light.guest_bathroom_switch_2",
+      "name": "Guest bathroom strip"
+    },
+    {
+      "id": "light.guest_hand_wash_light_switch_2",
+      "name": "Guest hand wash spot"
+    },
+    {
+      "id": "light.guest_hand_wash_light_switch_1",
+      "name": "Guest hand wash strip"
+    },
+    {
+      "id": "light.ground_floors_section_2_switch_1",
+      "name": "In the ground light"
+    },
+    {
+      "id": "light.guest_bathroom_light_switch_1",
+      "name": "Mama bathroom room mirror"
+    },
+    {
+      "id": "light.guest_bathroom_light_switch_2",
+      "name": "Mama bathroom strip"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_1_3",
+      "name": "صالة الاستقبال small light"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_2",
+      "name": "صالة الاستقبال sport 2"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_1_4",
+      "name": "صالة الاستقبال spot 1"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_2_2",
+      "name": "صالة الاستقبال strip"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_1_5",
+      "name": "ثرية مدخل صالة الاستقبال"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_1_6",
+      "name": "صالة الاستقبال مدخل spot 1"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_2_3",
+      "name": "مدخل صالة الاستقبال  strip"
+    },
+    {
+      "id": "light.sl_lstqbl_switch_2_4",
+      "name": "مدخل صالة الاستقبال spot 2"
+    },
+    {
+      "id": "light.laundry_room_switch_2",
+      "name": "Laundry room spot"
+    },
+    {
+      "id": "light.laundry_room_switch_1",
+      "name": "Laundry room vent"
+    },
+    {
+      "id": "light.living_room_switch_1",
+      "name": "Living room chandler"
+    },
+    {
+      "id": "light.living_room_switch_2",
+      "name": "Living room spot"
+    },
+    {
+      "id": "light.living_room_switch_1_2",
+      "name": "Living room strip"
+    },
+    {
+      "id": "light.living_room_tv_strip_light_switch_1",
+      "name": "Living room tv strip light Switch 1"
+    },
+    {
+      "id": "light.abajora_socket_1",
+      "name": "Abajora Socket 1"
+    },
+    {
+      "id": "light.aisha_dressing_room_switch_1",
+      "name": "Aisha dresser room strip"
+    },
+    {
+      "id": "light.aisha_dressing_room_switch_2",
+      "name": "Aisha dresses room spot"
+    },
+    {
+      "id": "light.aisha_light_socket_1",
+      "name": "Aisha Light"
+    },
+    {
+      "id": "light.aisha_bathroom_switch_1",
+      "name": "Ausha bathroom room strip"
+    },
+    {
+      "id": "light.aisha_bathroom_switch_1_2",
+      "name": "Ausha bathroom room strip"
+    },
+    {
+      "id": "light.aisha_bathroom_switch_2",
+      "name": "Ausha bathroom small light"
+    },
+    {
+      "id": "light.aisha_dressing_room_switch_3",
+      "name": "Ausha bathroom spot"
+    },
+    {
+      "id": "light.aisha_dressing_room_switch_3_2",
+      "name": "Ausha bathroom spot"
+    },
+    {
+      "id": "light.my_room_lights_switch_3",
+      "name": "My room spot 1"
+    },
+    {
+      "id": "light.balcony_light_switch_1",
+      "name": "balcony light  Switch 1"
+    },
+    {
+      "id": "light.balcony_light_switch_1_2",
+      "name": "balcony light  Switch 1"
+    },
+    {
+      "id": "light.my_room_lights_switch_2",
+      "name": "My room spot 2"
+    },
+    {
+      "id": "light.my_room_lights_switch_1",
+      "name": "My room strip 1"
+    },
+    {
+      "id": "light.my_room_lights_switch_1_2",
+      "name": "My room strip 1"
+    },
+    {
+      "id": "light.maid_bathroom_room_switch_1",
+      "name": "Maid bathroom room Switch 1"
+    },
+    {
+      "id": "light.maid_bathroom_switch_1",
+      "name": "Maid bathroom Switch 1"
+    },
+    {
+      "id": "light.maid_room_switch_2",
+      "name": "Maid room Switch 2"
+    },
+    {
+      "id": "light.maid_bathroom_switch_2",
+      "name": "Maid bathroom Switch 2"
+    },
+    {
+      "id": "light.maid_bathroom_switch_1_2",
+      "name": "Maid bathroom Switch 1"
+    },
+    {
+      "id": "light.my_bathroom_switch_3",
+      "name": "My bathroom spot"
+    },
+    {
+      "id": "light.my_bathroom_switch_3_2",
+      "name": "My bathroom spot"
+    },
+    {
+      "id": "light.my_dressing_room_switch_1",
+      "name": "My bathroom strip"
+    },
+    {
+      "id": "light.my_dressing_room_switch_3",
+      "name": "My dresser spot"
+    },
+    {
+      "id": "light.my_dressing_room_switch_2",
+      "name": "My dresser strip"
+    },
+    {
+      "id": "light.maid_room_switch_1",
+      "name": "Maid room Switch 1"
+    },
+    {
+      "id": "light.room_2_bathroom_vent_switch_1",
+      "name": "Room 2 bathroom room miror"
+    },
+    {
+      "id": "light.room_2_bathroom_switch_2",
+      "name": "Room 2 bathroom spot"
+    },
+    {
+      "id": "light.room_2_bathroom_switch_1",
+      "name": "Room 2 bathroom strip"
+    },
+    {
+      "id": "light.room_2_bathroom_vent_switch_2",
+      "name": "Room 2 bathroom vent Switch 2"
+    },
+    {
+      "id": "light.room_2_spot_switch_1",
+      "name": "Room 2 spot Switch 1"
+    },
+    {
+      "id": "light.room_2_spot_switch_2",
+      "name": "Room 2 spot Switch 2"
+    },
+    {
+      "id": "light.room_2_strip_switch_1",
+      "name": "Room 2 strip Switch 1"
+    },
+    {
+      "id": "light.room_2_strip_switch_2",
+      "name": "Room 2 strip Switch 2"
+    },
+    {
+      "id": "light.room_3_spot_switch_1",
+      "name": "Room 3 spot 1"
+    },
+    {
+      "id": "light.room_3_spot_switch_2",
+      "name": "Room 3 spot 2"
+    },
+    {
+      "id": "light.room_3_strip_switch_2",
+      "name": "Room 3 Strip"
+    },
+    {
+      "id": "light.room_2_dressing_room_switch_2",
+      "name": "Room 2 dresser spot"
+    },
+    {
+      "id": "light.room_2_dressing_room_switch_1",
+      "name": "Room 2 dresser strip"
+    },
+    {
+      "id": "light.bathroom_3_vent_switch_1",
+      "name": "Room 3 bathroom room miror"
+    },
+    {
+      "id": "light.bathroom_3_light_switch_2",
+      "name": "Room 3 bathroom room spot light"
+    },
+    {
+      "id": "light.bathroom_3_light_switch_1",
+      "name": "Room 3 bathroom room strip"
+    },
+    {
+      "id": "light.room_3_dressing_switch_2",
+      "name": "Room 3 dresser spot"
+    },
+    {
+      "id": "light.room_4_strip_switch_1",
+      "name": "Room 4 empty"
+    },
+    {
+      "id": "light.room_4_spot_switch_2",
+      "name": "Room 4 spot 1"
+    },
+    {
+      "id": "light.room_4_spot_switch_1",
+      "name": "Room 4 spot 2"
+    },
+    {
+      "id": "light.room_4_strip_switch_2",
+      "name": "Room 4 strip"
+    },
+    {
+      "id": "light.bathroom_4_vent_switch_1",
+      "name": "Bathroom 4 vent Switch 1"
+    },
+    {
+      "id": "light.bathroom_4_vent_switch_2",
+      "name": "Bathroom 4 vent Switch 2"
+    },
+    {
+      "id": "light.room_4_vent_switch_2",
+      "name": "Room 4 bathroom room miror"
+    },
+    {
+      "id": "light.room_4_vent_switch_2_2",
+      "name": "Room 4 bathroom room miror"
+    },
+    {
+      "id": "light.bathroom_4_light_switch_2",
+      "name": "Room 4 bathroom spot"
+    },
+    {
+      "id": "light.bathroom_4_light_switch_1",
+      "name": "Room 4 bathroom strip"
+    },
+    {
+      "id": "light.room_4_dressing_room_switch_1",
+      "name": "Room 4 dresser spot"
+    },
+    {
+      "id": "light.room_4_dressing_room_switch_2",
+      "name": "Room 4 dressing room Switch 2"
+    },
+    {
+      "id": "light.room_5_spot_switch_1",
+      "name": "Room 5 spot 1"
+    },
+    {
+      "id": "light.room_5_spot_switch_2",
+      "name": "Room 5 spot 2"
+    },
+    {
+      "id": "light.room_5_strip_switch_1",
+      "name": "Room 5 strip"
+    },
+    {
+      "id": "light.bathroom_5_light_switch_2",
+      "name": "Bathroom 5 spot"
+    },
+    {
+      "id": "light.room_5_bathroom_switch_1",
+      "name": "room 5 bathroom  Switch 1"
+    },
+    {
+      "id": "light.room_5_bathroom_switch_2",
+      "name": "room 5 bathroom  Switch 2"
+    },
+    {
+      "id": "light.bathroom_5_light_switch_1",
+      "name": "Room 5 bathroom strip"
+    },
+    {
+      "id": "light.dining_room_switch_1_2",
+      "name": "Dining room Switch 1"
+    },
+    {
+      "id": "light.dining_room_switch_2_2",
+      "name": "Dining room Switch 2"
+    },
+    {
+      "id": "light.salon_light_switch_2",
+      "name": "My sweet Chandler"
+    },
+    {
+      "id": "light.my_tv_strip_switch_1",
+      "name": "My tv Strip  Switch 1"
+    },
+    {
+      "id": "light.salon_light_switch_1",
+      "name": "My sweet spot"
+    },
+    {
+      "id": "light.salon_light_switch_3",
+      "name": "My sweet strip"
+    },
+    {
+      "id": "light.salon_light_switch_3_2",
+      "name": "My sweet strip"
+    },
+    {
+      "id": "light.outdoor_lights_switch_1_2",
+      "name": "Outdoor lights  Switch 1"
+    },
+    {
+      "id": "light.drj_lmwjryn_ldwr_lthny_switch_1",
+      "name": "إضاءة مدخل المؤجرين"
+    },
+    {
+      "id": "light.drj_lmwjryn_mm_lsnsyr_switch_1",
+      "name": "درج المؤجرين امام الاصانصير Switch 1"
+    },
+    {
+      "id": "light.room_3_dressing_switch_1",
+      "name": "Room 3 dresser strip light"
+    },
+    {
+      "id": "light.room_3_dressing_switch_1_2",
+      "name": "Room 3 dresser strip light"
+    },
+    {
+      "id": "light.outdoor_lights_switch_2",
+      "name": "إضاءة مدخل المؤجرين"
+    },
+    {
+      "id": "light.outdoor_lights_switch_2_2",
+      "name": "اضاءة مدخل المؤجرين"
+    },
+    {
+      "id": "light.dressing_room_5_light_switch_1",
+      "name": "Room 5 dresser spot"
+    },
+    {
+      "id": "light.dressing_room_5_light_switch_2",
+      "name": "Room 5 dresser strip"
+    },
+    {
+      "id": "light.d_drj_ldwr_lwl_switch_1",
+      "name": "اضاءة ادرج الدور الاول Switch 1"
+    },
+    {
+      "id": "light.parking_light_switch_1",
+      "name": "Parking light"
+    },
+    {
+      "id": "light.parking_light_switch_1_2",
+      "name": "Parking light"
+    },
+    {
+      "id": "light.1st_floor_hall_switch_1",
+      "name": "1st floor hall  Switch 1"
+    },
+    {
+      "id": "light.office_strip_switch_2",
+      "name": "office strip"
+    },
+    {
+      "id": "light.office_strip_switch_2_2",
+      "name": "office strip"
+    },
+    {
+      "id": "light.office_strip_switch_2_3",
+      "name": "office strip"
+    },
+    {
+      "id": "light.my_dressing_room_backlight",
+      "name": "My dressing room Backlight"
+    },
+    {
+      "id": "light.aisha_bathroom_backlight",
+      "name": "Aisha bathroom Backlight"
+    },
+    {
+      "id": "light.aisha_dressing_room_backlight",
+      "name": "Aisha dressing room Backlight"
+    },
+    {
+      "id": "light.ldywny_s_backlight",
+      "name": "الديوانية s Backlight"
+    },
+    {
+      "id": "light.ldywny_s_backlight_2",
+      "name": "الديوانية s Backlight"
+    },
+    {
+      "id": "light.hmm_ldywny_s_backlight",
+      "name": "حمام الديوانية s Backlight"
+    },
+    {
+      "id": "light.my_bathroom_backlight",
+      "name": "My Bathroom Backlight"
+    },
+    {
+      "id": "light.guest_bathroom_backlight",
+      "name": "GUEST BATHROOM Backlight"
+    },
+    {
+      "id": "light.guest_mirror_light_backlight",
+      "name": "Guest Mirror Light Backlight"
+    },
+    {
+      "id": "light.guest_hand_wash_light_backlight",
+      "name": "Guest hand wash light Backlight"
+    },
+    {
+      "id": "light.kitchen_backlight",
+      "name": "Kitchen Backlight"
+    },
+    {
+      "id": "light.sl_lstqbl_backlight",
+      "name": "صالة الاستقبال Backlight"
+    },
+    {
+      "id": "light.sl_lstqbl_backlight_2",
+      "name": "صالة الاستقبال Backlight"
+    },
+    {
+      "id": "light.sl_lstqbl_backlight_4",
+      "name": "صالة الاستقبال Backlight"
+    },
+    {
+      "id": "light.sl_lstqbl_backlight_5",
+      "name": "صالة الاستقبال Backlight"
+    },
+    {
+      "id": "light.sl_lstqbl_backlight_6",
+      "name": "صالة الاستقبال Backlight"
+    },
+    {
+      "id": "light.parking_light_backlight",
+      "name": "Parking Light Backlight"
+    },
+    {
+      "id": "light.outdoor_lights_backlight",
+      "name": "Outdoor lights  Backlight"
+    },
+    {
+      "id": "light.ground_floor_section_2_backlight",
+      "name": "Ground floor section 2 Backlight"
+    },
+    {
+      "id": "light.my_room_lights_backlight",
+      "name": "My room lights Backlight"
+    },
+    {
+      "id": "light.dining_room_backlight_2",
+      "name": "Dining room Backlight"
+    },
+    {
+      "id": "light.living_room_backlight",
+      "name": "Living room Backlight"
+    },
+    {
+      "id": "light.living_room_backlight_2",
+      "name": "Living room Backlight"
+    },
+    {
+      "id": "light.living_room_right_shutter_backlight",
+      "name": "Living room right shutter Backlight"
+    },
+    {
+      "id": "light.empty_switch_backlight",
+      "name": "Empty switch Backlight"
+    },
+    {
+      "id": "light.men_door_shutter_backlight",
+      "name": "Men door shutter Backlight"
+    },
+    {
+      "id": "light.guest_room_backlight",
+      "name": "mama room spot Backlight"
+    },
+    {
+      "id": "light.guest_room_shutter_backlight",
+      "name": "Guest room shutter Backlight"
+    },
+    {
+      "id": "light.guest_dressing_room_backlight",
+      "name": "GUEST Dressing room Backlight"
+    },
+    {
+      "id": "light.guest_bathroom_light_backlight",
+      "name": "Guest bathroom Light Backlight"
+    },
+    {
+      "id": "light.guest_bathroom_room_vent_backlight",
+      "name": "Guest bathroom room vent Backlight"
+    },
+    {
+      "id": "light.my_tv_strip_backlight",
+      "name": "My tv Strip  Backlight"
+    },
+    {
+      "id": "light.kitchen_light_backlight",
+      "name": "Kitchen light Backlight"
+    },
+    {
+      "id": "light.kitchen_backlight_2",
+      "name": "Kitchen Backlight"
+    },
+    {
+      "id": "light.kitchen_storage_backlight",
+      "name": "Kitchen storage Backlight"
+    },
+    {
+      "id": "light.maid_room_backlight",
+      "name": "Maid room Backlight"
+    },
+    {
+      "id": "light.maid_bathroom_backlight",
+      "name": "Maid bathroom Backlight"
+    },
+    {
+      "id": "light.maid_bathroom_room_backlight",
+      "name": "Maid bathroom room Backlight"
+    },
+    {
+      "id": "light.men_room_backlight",
+      "name": "men room Backlight"
+    },
+    {
+      "id": "light.ground_floors_section_2_backlight",
+      "name": "ground floors section 2 Backlight"
+    },
+    {
+      "id": "light.living_room_tv_strip_light_backlight",
+      "name": "Living room tv strip light Backlight"
+    },
+    {
+      "id": "light.room_2_spot_backlight",
+      "name": "Room 2 spot Backlight"
+    },
+    {
+      "id": "light.room_2_strip_backlight",
+      "name": "Room 2 strip Backlight"
+    },
+    {
+      "id": "light.room_2_shutter_backlight",
+      "name": "Room 2 Shutter Backlight"
+    },
+    {
+      "id": "light.room_2_dressing_room_backlight",
+      "name": "Room 2 dressing room Backlight"
+    },
+    {
+      "id": "light.room_2_bathroom_backlight",
+      "name": "Room 2 bathroom Backlight"
+    },
+    {
+      "id": "light.room_2_bathroom_vent_backlight",
+      "name": "Room 2 bathroom vent Backlight"
+    },
+    {
+      "id": "light.room_3_strip_backlight",
+      "name": "Room 3 strip Backlight"
+    },
+    {
+      "id": "light.room_3_spot_backlight",
+      "name": "Room 3 spot Backlight"
+    },
+    {
+      "id": "light.room_3_dressing_backlight",
+      "name": "ROOM 3 Dressing  Backlight"
+    },
+    {
+      "id": "light.bathroom_3_light_backlight",
+      "name": "Bathroom 3 light Backlight"
+    },
+    {
+      "id": "light.bathroom_3_vent_backlight",
+      "name": "bathroom 3 vent Backlight"
+    },
+    {
+      "id": "light.room_3_shutter_backlight",
+      "name": "Room 3 Shutter Backlight"
+    },
+    {
+      "id": "light.room_4_spot_backlight",
+      "name": "Room 4 spot Backlight"
+    },
+    {
+      "id": "light.room_4_strip_backlight",
+      "name": "Room 4 strip Backlight"
+    },
+    {
+      "id": "light.room_4_shutter_backlight",
+      "name": "Room 4 shutter Backlight"
+    },
+    {
+      "id": "light.room_4_dressing_room_backlight",
+      "name": "Room 4 dressing room Backlight"
+    },
+    {
+      "id": "light.bathroom_4_light_backlight",
+      "name": "Bathroom 4 light Backlight"
+    },
+    {
+      "id": "light.bathroom_4_vent_backlight",
+      "name": "Bathroom 4 vent Backlight"
+    },
+    {
+      "id": "light.room_5_spot_backlight",
+      "name": "Room 5 spot Backlight"
+    },
+    {
+      "id": "light.room_5_strip_backlight",
+      "name": "Room 5 strip Backlight"
+    },
+    {
+      "id": "light.bathroom_5_light_backlight",
+      "name": "Bathroom 5 light Backlight"
+    },
+    {
+      "id": "light.dressing_room_5_light_backlight",
+      "name": "Dressing room 5 light Backlight"
+    },
+    {
+      "id": "light.room_5_bathroom_backlight",
+      "name": "room 5 bathroom  Backlight"
+    },
+    {
+      "id": "light.living_room_left_shutter_backlight",
+      "name": "living room left shutter Backlight"
+    },
+    {
+      "id": "light.balcony_light_backlight",
+      "name": "balcony light  Backlight"
+    },
+    {
+      "id": "light.1g_wifi_switch_wifi_ble_9_backlight",
+      "name": "1G Wifi Switch(WIFI+BLE) 9 Backlight"
+    },
+    {
+      "id": "light.salon_light_backlight",
+      "name": "Salon Light Backlight"
+    },
+    {
+      "id": "light.men_window_shutter_backlight",
+      "name": "men window shutter Backlight"
+    },
+    {
+      "id": "light.drj_lmwjryn_mm_lsnsyr_backlight",
+      "name": "درج المؤجرين امام الاصانصير Backlight"
+    },
+    {
+      "id": "light.drj_lmwjryn_ldwr_lthny_backlight",
+      "name": "درج المؤجرين الدور الثاني Backlight"
+    },
+    {
+      "id": "light.d_drj_ldwr_lwl_backlight",
+      "name": "اضاءة ادرج الدور الاول Backlight"
+    },
+    {
+      "id": "light.room_4_vent_backlight",
+      "name": "room 4 vent Backlight"
+    },
+    {
+      "id": "light.ldywny_s_backlight_3",
+      "name": "الديوانية s Backlight"
+    },
+    {
+      "id": "light.laundry_room_backlight",
+      "name": "Laundry room Backlight"
+    },
+    {
+      "id": "light.curtain_switch_wifi_ble_8_backlight",
+      "name": "Room 5 Shutter. Backlight"
+    },
+    {
+      "id": "light.1st_floor_hall_backlight_2",
+      "name": "1st floor hall  Backlight"
+    },
+    {
+      "id": "light.office_strip_backlight",
+      "name": "Office strip Backlight"
+    },
+    {
+      "id": "light.grf_mlbs_1_backlight",
+      "name": "غرفة ملابس 1 Backlight"
+    },
+    {
+      "id": "light.grf_mlbs_1_backlight_2",
+      "name": "Office dress room Backlight"
+    },
+    {
+      "id": "light.1st_floor_hall_light_backlight",
+      "name": "1st floor hall light Backlight"
+    },
+    {
+      "id": "light.office_spot_backlight",
+      "name": "office spot Backlight"
+    },
+    {
+      "id": "light.first_floor_chandelier_1_backlight",
+      "name": "First Floor chandelier 1 Backlight"
+    },
+    {
+      "id": "light.room_1_shower_backlight",
+      "name": "room 1 shower Backlight"
+    },
+    {
+      "id": "light.1st_floor_hall_backlight",
+      "name": "1st floor Hall Backlight"
+    },
+    {
+      "id": "light.dining_room_backlight",
+      "name": "Dining room Backlight"
+    },
+    {
+      "id": "light.dining_room_spot_light_backlight",
+      "name": "Dining room spot light  Backlight"
+    },
+    {
+      "id": "light.guest_room_strip_backlight",
+      "name": "strip mama Backlight"
+    },
+    {
+      "id": "light.my_room_backlight",
+      "name": "My room Backlight"
+    },
+    {
+      "id": "light.my_room_left_shutter_backlight",
+      "name": "My room left shutter Backlight"
+    },
+    {
+      "id": "light.my_room_right_shutter_backlight",
+      "name": "My room right shutter Backlight"
+    },
+    {
+      "id": "light.my_sweet_left_shutter_backlight",
+      "name": "My sweet left shutter Backlight"
+    },
+    {
+      "id": "light.my_sweet_right_shutter_backlight",
+      "name": "My sweet right shutter Backlight"
+    },
+    {
+      "id": "light.curtain_switch_wifi_ble_9_backlight",
+      "name": "Office Shutter Backlight"
+    }
+  ],
+  "fan": [
+    {
+      "id": "fan.kitchen_switch_1",
+      "name": "Kitchen vent"
+    },
+    {
+      "id": "fan.hmm_ldywny_s_switch_2",
+      "name": "حمام الديوانية vent"
+    },
+    {
+      "id": "fan.guest_bathroom_switch_1",
+      "name": "Guest bathroom room vent"
+    },
+    {
+      "id": "fan.guest_bathroom_room_vent_switch_1",
+      "name": "Mama bathroom room vent"
+    },
+    {
+      "id": "fan.laundry_room_switch_1",
+      "name": "Laundry room vent"
+    },
+    {
+      "id": "fan.aisha_bathroom_switch_3",
+      "name": "Ausha bathroom vent"
+    },
+    {
+      "id": "fan.aisha_bathroom_switch_3_2",
+      "name": "Ausha bathroom vent"
+    },
+    {
+      "id": "fan.my_bathroom_switch_1",
+      "name": "My bathroom vent"
+    },
+    {
+      "id": "fan.bathroom_3_vent_switch_2",
+      "name": "bathroom 3 vent Switch 2"
+    },
+    {
+      "id": "fan.room_4_vent_switch_1",
+      "name": "Room 4 bathroom room vent"
+    },
+    {
+      "id": "fan.living_room_air_freshener",
+      "name": "Living room Air freshener"
+    },
+    {
+      "id": "fan.air_purifier_men_room",
+      "name": "Air Purifier men room "
+    },
+    {
+      "id": "fan.living_room_middle_side",
+      "name": "Living Room middle side"
+    },
+    {
+      "id": "fan.my_room_air_purifier",
+      "name": "My room Air Purifier"
+    },
+    {
+      "id": "fan.man_room_entrence_air_purifier",
+      "name": "Man Room entrence Air Purifier"
+    }
+  ],
+  "scene": [
+    {
+      "id": "scene.tfwy_kl_shy",
+      "name": "طفّي كل شي"
+    },
+    {
+      "id": "scene.wd_lnwm",
+      "name": "وضع النوم 🌙"
+    },
+    {
+      "id": "scene.sbh_lkhyr",
+      "name": "صباح الخير ☀️"
+    },
+    {
+      "id": "scene.mgdr_lbyt",
+      "name": "مغادرة البيت 🚪"
+    },
+    {
+      "id": "scene.wd_ldywf",
+      "name": "وضع الضيوف 🎉"
+    },
+    {
+      "id": "scene.wd_ldywny",
+      "name": "وضع الديوانية ☕"
+    },
+    {
+      "id": "scene.wd_lsynm",
+      "name": "وضع السينما 🎬"
+    },
+    {
+      "id": "scene.tf_kl_lhmmt",
+      "name": "إطفاء كل الحمامات 🚿"
+    },
+    {
+      "id": "scene.glq_kl_lshftt",
+      "name": "إغلاق كل الشفاطات 🌀"
+    },
+    {
+      "id": "scene.tf_kl_grf_lmlbs",
+      "name": "إطفاء كل غرف الملابس 👗"
+    },
+    {
+      "id": "scene.sbwt_fqt",
+      "name": "سبوت فقط 💡"
+    },
+    {
+      "id": "scene.stryb_fqt",
+      "name": "ستريب فقط 🌙"
+    },
+    {
+      "id": "scene.tnqy_hw_shml",
+      "name": "تنقية هواء شاملة 🌬️"
+    },
+    {
+      "id": "scene.tf_grf_lwl",
+      "name": "إطفاء غرف الأول 🛏️"
+    },
+    {
+      "id": "scene.tf_lrdy",
+      "name": "إطفاء الأرضي 🏠"
+    },
+    {
+      "id": "scene.skwr_kl_lstyr",
+      "name": "سكّر كل الستائر 🪟"
+    },
+    {
+      "id": "scene.fth_kl_lstyr",
+      "name": "افتح كل الستائر ☀️"
+    },
+    {
+      "id": "scene.stryb_slt_lrdy",
+      "name": "ستريب صالات الأرضي 🌙"
+    },
+    {
+      "id": "scene.sbwt_slt_lrdy",
+      "name": "سبوت صالات الأرضي 💡"
+    },
+    {
+      "id": "scene.one_click_purify",
+      "name": "One-click purify"
+    },
+    {
+      "id": "scene.turn_off_all_switches",
+      "name": "Turn off all switches"
+    },
+    {
+      "id": "scene.turn_on_all_switches",
+      "name": "Turn on all switches"
+    },
+    {
+      "id": "scene.force_to_close",
+      "name": "force to close"
+    },
+    {
+      "id": "scene.shutters",
+      "name": "shutters"
+    }
+  ],
+  "cover": [
+    {
+      "id": "cover.living_room_left_shutter_inverted",
+      "name": "صالة يسار"
+    },
+    {
+      "id": "cover.living_room_right_shutter_inverted",
+      "name": "صالة يمين"
+    },
+    {
+      "id": "cover.my_room_left_shutter_inverted",
+      "name": "غرفتي يسار"
+    },
+    {
+      "id": "cover.my_room_right_shutter_inverted",
+      "name": "غرفتي يمين"
+    },
+    {
+      "id": "cover.my_sweet_left_shutter_inverted",
+      "name": "صالتي يسار"
+    },
+    {
+      "id": "cover.my_sweet_right_shutter_inverted",
+      "name": "صالتي يمين"
+    },
+    {
+      "id": "cover.room_1_shutter_inverted",
+      "name": "المكتب"
+    },
+    {
+      "id": "cover.room_2_shutter_inverted",
+      "name": "غرفة 2"
+    },
+    {
+      "id": "cover.room_3_shutter_inverted",
+      "name": "غرفة 3"
+    },
+    {
+      "id": "cover.room_4_shutter_inverted",
+      "name": "غرفة 4"
+    },
+    {
+      "id": "cover.room_5_shutter_inverted",
+      "name": "غرفة 5"
+    },
+    {
+      "id": "cover.guest_room_shutter_inverted",
+      "name": "غرفة أمي"
+    },
+    {
+      "id": "cover.men_door_shutter_inverted",
+      "name": "باب الديوانية"
+    },
+    {
+      "id": "cover.men_window_shutter_inverted",
+      "name": "شباك الديوانية"
+    },
+    {
+      "id": "cover.living_room_right_shutter_curtain",
+      "name": "Living room right shutter Curtain"
+    },
+    {
+      "id": "cover.men_door_shutter_curtain",
+      "name": "Men door shutter Curtain"
+    },
+    {
+      "id": "cover.guest_room_shutter_curtain",
+      "name": "Guest room shutter Curtain"
+    },
+    {
+      "id": "cover.room_2_shutter_curtain",
+      "name": "Room 2 Shutter Curtain"
+    },
+    {
+      "id": "cover.room_3_shutter_curtain",
+      "name": "Room 3 Shutter Curtain"
+    },
+    {
+      "id": "cover.room_4_shutter_curtain",
+      "name": "Room 4 shutter Curtain"
+    },
+    {
+      "id": "cover.living_room_left_shutter_curtain",
+      "name": "living room left shutter Curtain"
+    },
+    {
+      "id": "cover.men_window_shutter_curtain",
+      "name": "men window shutter Curtain"
+    },
+    {
+      "id": "cover.curtain_switch_wifi_ble_8_curtain",
+      "name": "Room 5 Shutter. Curtain"
+    },
+    {
+      "id": "cover.my_room_left_shutter_curtain",
+      "name": "My room left shutter Curtain"
+    },
+    {
+      "id": "cover.my_room_right_shutter_curtain",
+      "name": "My room right shutter Curtain"
+    },
+    {
+      "id": "cover.my_sweet_left_shutter_curtain",
+      "name": "My sweet left shutter Curtain"
+    },
+    {
+      "id": "cover.my_sweet_right_shutter_curtain",
+      "name": "My sweet right shutter Curtain"
+    },
+    {
+      "id": "cover.curtain_switch_wifi_ble_9_curtain",
+      "name": "Office Shutter Curtain"
+    }
+  ],
+  "media_player": [
+    {
+      "id": "media_player.samsung_bu8000_85_tv_ua85bu8000uxzn",
+      "name": "Samsung BU8000 85 TV (UA85BU8000UXZN)"
+    },
+    {
+      "id": "media_player.bravia_kd_85x85j",
+      "name": "Living room TV"
+    },
+    {
+      "id": "media_player.my_room_alexa",
+      "name": "My Room Alexa"
+    },
+    {
+      "id": "media_player.living_room_alexa",
+      "name": "Living Room Alexa"
+    },
+    {
+      "id": "media_player.everywhere",
+      "name": "Everywhere"
+    },
+    {
+      "id": "media_player.this_device",
+      "name": "This Device"
+    },
+    {
+      "id": "media_player.bravia_4k_vh2",
+      "name": ""
+    },
+    {
+      "id": "media_player.office_1_2",
+      "name": "Office 1"
+    },
+    {
+      "id": "media_player.office_2_2",
+      "name": "Office 2"
+    },
+    {
+      "id": "media_player.room_3_2",
+      "name": "Room 3"
+    },
+    {
+      "id": "media_player.ground_floor",
+      "name": "Ground"
+    }
+  ],
+  "climate": [
+    {
+      "id": "climate.mkyf_sl_ldwr_lwl",
+      "name": "مكيف صالة الدور الأول"
+    },
+    {
+      "id": "climate.mkyf_ldwr_lwl_grf_5",
+      "name": "مكيف غرفة 5"
+    },
+    {
+      "id": "climate.mkyf_ldwr_lwl_grf_3",
+      "name": "مكيف غرفة 3"
+    },
+    {
+      "id": "climate.mkyf_ldywny",
+      "name": "مكيف الديوانية"
+    },
+    {
+      "id": "climate.my_room_ac",
+      "name": "My room AC"
+    },
+    {
+      "id": "climate.living_room_ac",
+      "name": "مكيف صالة المعيشة"
+    },
+    {
+      "id": "climate.mama_room_ac",
+      "name": "mama room AC"
+    },
+    {
+      "id": "climate.mkyf_lmtbkh",
+      "name": "Kitchen AC"
+    }
+  ],
+  "switch": [
+    {
+      "id": "switch.aisha_light_child_lock",
+      "name": "Aisha Light Child lock"
+    },
+    {
+      "id": "switch.aisha_light_socket_1",
+      "name": "Aisha Light Socket 1"
+    },
+    {
+      "id": "switch.living_room_air_freshener_ionizer",
+      "name": "Living room Air freshener Ionizer"
+    },
+    {
+      "id": "switch.living_room_air_freshener_filter_cartridge_reset",
+      "name": "Living room Air freshener Filter cartridge reset"
+    },
+    {
+      "id": "switch.living_room_air_freshener_power",
+      "name": "Living room Air freshener Power"
+    },
+    {
+      "id": "switch.living_room_air_freshener_uv_sterilization",
+      "name": "Living room Air freshener UV sterilization"
+    },
+    {
+      "id": "switch.air_purifier_men_room_ionizer",
+      "name": "Air Purifier men room  Ionizer"
+    },
+    {
+      "id": "switch.air_purifier_men_room_filter_cartridge_reset",
+      "name": "Air Purifier men room  Filter cartridge reset"
+    },
+    {
+      "id": "switch.air_purifier_men_room_power",
+      "name": "Air Purifier men room  Power"
+    },
+    {
+      "id": "switch.air_purifier_men_room_uv_sterilization",
+      "name": "Air Purifier men room  UV sterilization"
+    },
+    {
+      "id": "switch.living_room_middle_side_ionizer",
+      "name": "Living Room middle side Ionizer"
+    },
+    {
+      "id": "switch.living_room_middle_side_filter_cartridge_reset",
+      "name": "Living Room middle side Filter cartridge reset"
+    },
+    {
+      "id": "switch.living_room_middle_side_power",
+      "name": "Living Room middle side Power"
+    },
+    {
+      "id": "switch.living_room_middle_side_uv_sterilization",
+      "name": "Living Room middle side UV sterilization"
+    },
+    {
+      "id": "switch.my_room_air_purifier_ionizer",
+      "name": "My room Air Purifier Ionizer"
+    },
+    {
+      "id": "switch.my_room_air_purifier_filter_cartridge_reset",
+      "name": "My room Air Purifier Filter cartridge reset"
+    },
+    {
+      "id": "switch.my_room_air_purifier_power",
+      "name": "My room Air Purifier Power"
+    },
+    {
+      "id": "switch.my_room_air_purifier_uv_sterilization",
+      "name": "My room Air Purifier UV sterilization"
+    },
+    {
+      "id": "switch.man_room_entrence_air_purifier_ionizer",
+      "name": "Man Room entrence Air Purifier Ionizer"
+    },
+    {
+      "id": "switch.man_room_entrence_air_purifier_filter_cartridge_reset",
+      "name": "Man Room entrence Air Purifier Filter cartridge reset"
+    },
+    {
+      "id": "switch.man_room_entrence_air_purifier_power",
+      "name": "Man Room entrence Air Purifier Power"
+    },
+    {
+      "id": "switch.man_room_entrence_air_purifier_uv_sterilization",
+      "name": "Man Room entrence Air Purifier UV sterilization"
+    },
+    {
+      "id": "switch.my_dressing_room_switch_1",
+      "name": "My bathroom strip"
+    },
+    {
+      "id": "switch.my_dressing_room_switch_2",
+      "name": "My dresser strip"
+    },
+    {
+      "id": "switch.my_dressing_room_switch_3",
+      "name": "My dresser spot"
+    },
+    {
+      "id": "switch.aisha_bathroom_switch_1",
+      "name": "Ausha bathroom room strip"
+    },
+    {
+      "id": "switch.aisha_bathroom_switch_2",
+      "name": "Ausha bathroom small light"
+    },
+    {
+      "id": "switch.aisha_bathroom_switch_3",
+      "name": "Ausha bathroom vent"
+    },
+    {
+      "id": "switch.aisha_dressing_room_switch_1",
+      "name": "Aisha dresser room strip"
+    },
+    {
+      "id": "switch.aisha_dressing_room_switch_2",
+      "name": "Aisha dresses room spot"
+    },
+    {
+      "id": "switch.aisha_dressing_room_switch_3",
+      "name": "Ausha bathroom spot"
+    },
+    {
+      "id": "switch.ldywny_s_switch_2",
+      "name": "مغسلة الديوانية strip"
+    },
+    {
+      "id": "switch.ldywny_s_switch_3",
+      "name": "مغسلة الديوانية spot"
+    },
+    {
+      "id": "switch.ldywny_s_switch_1_2",
+      "name": "الديوانية spot 3"
+    },
+    {
+      "id": "switch.ldywny_s_switch_2_2",
+      "name": "الديوانية strip"
+    },
+    {
+      "id": "switch.hmm_ldywny_s_switch_2",
+      "name": "حمام الديوانية vent"
+    },
+    {
+      "id": "switch.hmm_ldywny_s_switch_3",
+      "name": "حمام الديوانية strip"
+    },
+    {
+      "id": "switch.my_bathroom_switch_1",
+      "name": "My bathroom vent"
+    },
+    {
+      "id": "switch.my_bathroom_switch_2",
+      "name": "My bathroom mirror light"
+    },
+    {
+      "id": "switch.my_bathroom_switch_3",
+      "name": "My bathroom spot"
+    },
+    {
+      "id": "switch.guest_bathroom_switch_1",
+      "name": "Guest bathroom room vent"
+    },
+    {
+      "id": "switch.guest_bathroom_switch_2",
+      "name": "Guest bathroom strip"
+    },
+    {
+      "id": "switch.guest_mirror_light_switch_1",
+      "name": "Guest hand wash empty"
+    },
+    {
+      "id": "switch.guest_mirror_light_switch_2",
+      "name": "Guest hand wash mirror"
+    },
+    {
+      "id": "switch.guest_hand_wash_light_switch_1",
+      "name": "Guest hand wash strip"
+    },
+    {
+      "id": "switch.guest_hand_wash_light_switch_2",
+      "name": "Guest hand wash spot"
+    },
+    {
+      "id": "switch.kitchen_switch_1",
+      "name": "Kitchen vent"
+    },
+    {
+      "id": "switch.kitchen_switch_3",
+      "name": "Kitchen wordrob strip"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_1",
+      "name": "صالة الاستقبال spot 1"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_2",
+      "name": "صالة الاستقبال strip"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_1_2",
+      "name": "صالة الاستقبال Chandler"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_2_2",
+      "name": "صالة الاستقبال sport 2"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_1_4",
+      "name": "صالة الاستقبال مدخل spot 1"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_2_4",
+      "name": "مدخل صالة الاستقبال  strip"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_1_5",
+      "name": "صالة الاستقبال small light"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_1_6",
+      "name": "ثرية مدخل صالة الاستقبال"
+    },
+    {
+      "id": "switch.sl_lstqbl_switch_2_6",
+      "name": "مدخل صالة الاستقبال spot 2"
+    },
+    {
+      "id": "switch.parking_light_switch_1",
+      "name": "Parking light"
+    },
+    {
+      "id": "switch.outdoor_lights_switch_1",
+      "name": "Outdoor lights  Switch 1"
+    },
+    {
+      "id": "switch.outdoor_lights_switch_2",
+      "name": "إضاءة مدخل المؤجرين"
+    },
+    {
+      "id": "switch.ground_floor_section_2_switch_1",
+      "name": "Ground floor section 2 spot"
+    },
+    {
+      "id": "switch.ground_floor_section_2_switch_2",
+      "name": "Ground floor  section 1 strip"
+    },
+    {
+      "id": "switch.my_room_lights_switch_1",
+      "name": "My room strip 1"
+    },
+    {
+      "id": "switch.my_room_lights_switch_2",
+      "name": "My room spot 2"
+    },
+    {
+      "id": "switch.my_room_lights_switch_3",
+      "name": "My room spot 1"
+    },
+    {
+      "id": "switch.dining_room_switch_1_2",
+      "name": "Dining room Switch 1"
+    },
+    {
+      "id": "switch.dining_room_switch_2_2",
+      "name": "Dining room Switch 2"
+    },
+    {
+      "id": "switch.living_room_switch_1",
+      "name": "Living room strip"
+    },
+    {
+      "id": "switch.living_room_switch_2",
+      "name": "Living room spot"
+    },
+    {
+      "id": "switch.living_room_switch_1_2",
+      "name": "Living room chandler"
+    },
+    {
+      "id": "switch.guest_room_switch_1",
+      "name": "Mama room spot 1"
+    },
+    {
+      "id": "switch.guest_room_switch_2",
+      "name": "Mama room spot 2"
+    },
+    {
+      "id": "switch.guest_dressing_room_switch_1",
+      "name": "Mama dresser room spot"
+    },
+    {
+      "id": "switch.guest_dressing_room_switch_2",
+      "name": "Mama dresser room strip"
+    },
+    {
+      "id": "switch.guest_bathroom_light_switch_1",
+      "name": "Mama bathroom room mirror"
+    },
+    {
+      "id": "switch.guest_bathroom_light_switch_2",
+      "name": "Mama bathroom strip"
+    },
+    {
+      "id": "switch.guest_bathroom_room_vent_switch_1",
+      "name": "Mama bathroom room vent"
+    },
+    {
+      "id": "switch.my_tv_strip_switch_1",
+      "name": "My tv Strip  Switch 1"
+    },
+    {
+      "id": "switch.kitchen_light_switch_1",
+      "name": "Kitchen Chandler"
+    },
+    {
+      "id": "switch.kitchen_light_switch_2",
+      "name": "Kitchen spot 1"
+    },
+    {
+      "id": "switch.kitchen_switch_1_2",
+      "name": "Kitchen spot 2"
+    },
+    {
+      "id": "switch.kitchen_switch_2_2",
+      "name": "Kitchen strip"
+    },
+    {
+      "id": "switch.kitchen_storage_switch_2",
+      "name": "Kitchen storage spot"
+    },
+    {
+      "id": "switch.maid_room_switch_1",
+      "name": "Maid room Switch 1"
+    },
+    {
+      "id": "switch.maid_room_switch_2",
+      "name": "Maid room Switch 2"
+    },
+    {
+      "id": "switch.maid_bathroom_switch_1",
+      "name": "Maid bathroom Switch 1"
+    },
+    {
+      "id": "switch.maid_bathroom_switch_2",
+      "name": "Maid bathroom Switch 2"
+    },
+    {
+      "id": "switch.maid_bathroom_room_switch_1",
+      "name": "Maid bathroom room Switch 1"
+    },
+    {
+      "id": "switch.men_room_switch_1",
+      "name": "Strip ممر الديوانية"
+    },
+    {
+      "id": "switch.men_room_switch_2",
+      "name": "سبوت ممر الديوانية"
+    },
+    {
+      "id": "switch.men_room_switch_3",
+      "name": "ثرية الديوانية"
+    },
+    {
+      "id": "switch.ground_floors_section_2_switch_1",
+      "name": "In the ground light"
+    },
+    {
+      "id": "switch.ground_floors_section_2_switch_2",
+      "name": "Ground floor section 1 strip"
+    },
+    {
+      "id": "switch.ground_floors_section_2_switch_3",
+      "name": "Ground floor section 1 spot"
+    },
+    {
+      "id": "switch.living_room_tv_strip_light_switch_1",
+      "name": "Living room tv strip light Switch 1"
+    },
+    {
+      "id": "switch.room_2_spot_switch_1",
+      "name": "Room 2 spot Switch 1"
+    },
+    {
+      "id": "switch.room_2_spot_switch_2",
+      "name": "Room 2 spot Switch 2"
+    },
+    {
+      "id": "switch.room_2_strip_switch_1",
+      "name": "Room 2 strip Switch 1"
+    },
+    {
+      "id": "switch.room_2_strip_switch_2",
+      "name": "Room 2 strip Switch 2"
+    },
+    {
+      "id": "switch.room_2_dressing_room_switch_1",
+      "name": "Room 2 dresser strip"
+    },
+    {
+      "id": "switch.room_2_dressing_room_switch_2",
+      "name": "Room 2 dresser spot"
+    },
+    {
+      "id": "switch.room_2_bathroom_switch_1",
+      "name": "Room 2 bathroom strip"
+    },
+    {
+      "id": "switch.room_2_bathroom_switch_2",
+      "name": "Room 2 bathroom spot"
+    },
+    {
+      "id": "switch.room_2_bathroom_vent_switch_1",
+      "name": "Room 2 bathroom room miror"
+    },
+    {
+      "id": "switch.room_2_bathroom_vent_switch_2",
+      "name": "Room 2 bathroom vent Switch 2"
+    },
+    {
+      "id": "switch.room_3_strip_switch_2",
+      "name": "Room 3 Strip"
+    },
+    {
+      "id": "switch.room_3_spot_switch_1",
+      "name": "Room 3 spot 1"
+    },
+    {
+      "id": "switch.room_3_spot_switch_2",
+      "name": "Room 3 spot 2"
+    },
+    {
+      "id": "switch.room_3_dressing_switch_1",
+      "name": "Room 3 dresser strip light"
+    },
+    {
+      "id": "switch.room_3_dressing_switch_2",
+      "name": "Room 3 dresser spot"
+    },
+    {
+      "id": "switch.bathroom_3_light_switch_1",
+      "name": "Room 3 bathroom room strip"
+    },
+    {
+      "id": "switch.bathroom_3_light_switch_2",
+      "name": "Room 3 bathroom room spot light"
+    },
+    {
+      "id": "switch.bathroom_3_vent_switch_1",
+      "name": "Room 3 bathroom room miror"
+    },
+    {
+      "id": "switch.bathroom_3_vent_switch_2",
+      "name": "bathroom 3 vent Switch 2"
+    },
+    {
+      "id": "switch.room_4_spot_switch_1",
+      "name": "Room 4 spot 2"
+    },
+    {
+      "id": "switch.room_4_spot_switch_2",
+      "name": "Room 4 spot 1"
+    },
+    {
+      "id": "switch.room_4_strip_switch_1",
+      "name": "Room 4 empty"
+    },
+    {
+      "id": "switch.room_4_strip_switch_2",
+      "name": "Room 4 strip"
+    },
+    {
+      "id": "switch.room_4_dressing_room_switch_1",
+      "name": "Room 4 dresser spot"
+    },
+    {
+      "id": "switch.room_4_dressing_room_switch_2",
+      "name": "Room 4 dressing room Switch 2"
+    },
+    {
+      "id": "switch.bathroom_4_light_switch_1",
+      "name": "Room 4 bathroom strip"
+    },
+    {
+      "id": "switch.bathroom_4_light_switch_2",
+      "name": "Room 4 bathroom spot"
+    },
+    {
+      "id": "switch.bathroom_4_vent_switch_1",
+      "name": "Bathroom 4 vent Switch 1"
+    },
+    {
+      "id": "switch.bathroom_4_vent_switch_2",
+      "name": "Bathroom 4 vent Switch 2"
+    },
+    {
+      "id": "switch.room_5_spot_switch_1",
+      "name": "Room 5 spot 1"
+    },
+    {
+      "id": "switch.room_5_spot_switch_2",
+      "name": "Room 5 spot 2"
+    },
+    {
+      "id": "switch.room_5_strip_switch_1",
+      "name": "Room 5 strip"
+    },
+    {
+      "id": "switch.bathroom_5_light_switch_1",
+      "name": "Room 5 bathroom strip"
+    },
+    {
+      "id": "switch.bathroom_5_light_switch_2",
+      "name": "Bathroom 5 spot"
+    },
+    {
+      "id": "switch.dressing_room_5_light_switch_1",
+      "name": "Room 5 dresser spot"
+    },
+    {
+      "id": "switch.dressing_room_5_light_switch_2",
+      "name": "Room 5 dresser strip"
+    },
+    {
+      "id": "switch.room_5_bathroom_switch_1",
+      "name": "room 5 bathroom  Switch 1"
+    },
+    {
+      "id": "switch.room_5_bathroom_switch_2",
+      "name": "room 5 bathroom  Switch 2"
+    },
+    {
+      "id": "switch.abajora_child_lock",
+      "name": "Abajora Child lock"
+    },
+    {
+      "id": "switch.abajora_socket_1",
+      "name": "Abajora Socket 1"
+    },
+    {
+      "id": "switch.balcony_light_switch_1",
+      "name": "balcony light  Switch 1"
+    },
+    {
+      "id": "switch.1g_wifi_switch_wifi_ble_9_switch_1",
+      "name": "مرايا الديوانية"
+    },
+    {
+      "id": "switch.lms_ltbdyl_1_tryq_switch_1",
+      "name": "لمس التبديل 1 طريقة Switch 1"
+    },
+    {
+      "id": "switch.salon_light_switch_1",
+      "name": "My sweet spot"
+    },
+    {
+      "id": "switch.salon_light_switch_2",
+      "name": "My sweet Chandler"
+    },
+    {
+      "id": "switch.salon_light_switch_3",
+      "name": "My sweet strip"
+    },
+    {
+      "id": "switch.drj_lmwjryn_mm_lsnsyr_switch_1",
+      "name": "درج المؤجرين امام الاصانصير Switch 1"
+    },
+    {
+      "id": "switch.drj_lmwjryn_ldwr_lthny_switch_1",
+      "name": "درج المؤجرين الدور الثاني Switch 1"
+    },
+    {
+      "id": "switch.d_drj_ldwr_lwl_switch_1",
+      "name": "اضاءة ادرج الدور الاول Switch 1"
+    },
+    {
+      "id": "switch.room_4_vent_switch_1",
+      "name": "Room 4 bathroom room vent"
+    },
+    {
+      "id": "switch.room_4_vent_switch_2",
+      "name": "Room 4 bathroom room miror"
+    },
+    {
+      "id": "switch.laundry_room_switch_1",
+      "name": "Laundry room vent"
+    },
+    {
+      "id": "switch.laundry_room_switch_2",
+      "name": "Laundry room spot"
+    },
+    {
+      "id": "switch.ldywny_spot_1",
+      "name": "الديوانية spot 1"
+    },
+    {
+      "id": "switch.my_room_alexa_do_not_disturb_switch",
+      "name": "Do not disturb"
+    },
+    {
+      "id": "switch.my_room_alexa_shuffle_switch",
+      "name": "Shuffle"
+    },
+    {
+      "id": "switch.my_room_alexa_repeat_switch",
+      "name": "Repeat"
+    },
+    {
+      "id": "switch.living_room_alexa_do_not_disturb_switch",
+      "name": "Do not disturb"
+    },
+    {
+      "id": "switch.living_room_alexa_shuffle_switch",
+      "name": "Shuffle"
+    },
+    {
+      "id": "switch.living_room_alexa_repeat_switch",
+      "name": "Repeat"
+    },
+    {
+      "id": "switch.everywhere_do_not_disturb_switch",
+      "name": "Do not disturb"
+    },
+    {
+      "id": "switch.everywhere_shuffle_switch",
+      "name": "Shuffle"
+    },
+    {
+      "id": "switch.everywhere_repeat_switch",
+      "name": "Repeat"
+    },
+    {
+      "id": "switch.this_device_do_not_disturb_switch",
+      "name": "Do not disturb"
+    },
+    {
+      "id": "switch.smart_plug_child_lock",
+      "name": "Raspberry Power Plug Child lock"
+    },
+    {
+      "id": "switch.smart_plug_socket_1",
+      "name": "Raspberry Power Plug Socket 1"
+    },
+    {
+      "id": "switch.1st_floor_hall_switch_1_2",
+      "name": "1st floor hall  Switch 1"
+    },
+    {
+      "id": "switch.1st_floor_hall_switch_2_2",
+      "name": "1st floor hall  Switch 2"
+    },
+    {
+      "id": "switch.1st_floor_hall_switch_3_2",
+      "name": "1st floor hall  Switch 3"
+    },
+    {
+      "id": "switch.office_strip_switch_2",
+      "name": "office strip"
+    },
+    {
+      "id": "switch.grf_mlbs_1_switch_1",
+      "name": "office dressing room strip"
+    },
+    {
+      "id": "switch.grf_mlbs_1_switch_2",
+      "name": "office bathroom strip"
+    },
+    {
+      "id": "switch.grf_mlbs_1_switch_1_2",
+      "name": "Office dresser strip"
+    },
+    {
+      "id": "switch.grf_mlbs_1_switch_2_2",
+      "name": "Office bathroom spot"
+    },
+    {
+      "id": "switch.1st_floor_hall_light_switch_1",
+      "name": "1st floor hall light Switch 1"
+    },
+    {
+      "id": "switch.1st_floor_hall_light_switch_2",
+      "name": "1st floor hall light Switch 2"
+    },
+    {
+      "id": "switch.1st_floor_hall_light_switch_3",
+      "name": "1st floor hall light Switch 3"
+    },
+    {
+      "id": "switch.office_spot_switch_1",
+      "name": "office spot 1"
+    },
+    {
+      "id": "switch.office_spot_switch_2",
+      "name": "office spot 2"
+    },
+    {
+      "id": "switch.first_floor_chandelier_1_switch_1",
+      "name": "First floor Chandler 1"
+    },
+    {
+      "id": "switch.room_1_shower_switch_1",
+      "name": "room 1 shower Switch 1"
+    },
+    {
+      "id": "switch.room_1_shower_switch_2",
+      "name": "room 1 shower Switch 2"
+    },
+    {
+      "id": "switch.1st_floor_hall_switch_1",
+      "name": "1st floor Hall Switch 1"
+    },
+    {
+      "id": "switch.1st_floor_hall_switch_2",
+      "name": "1st floor Hall Switch 2"
+    },
+    {
+      "id": "switch.1st_floor_hall_switch_3",
+      "name": "1st floor Hall Switch 3"
+    },
+    {
+      "id": "switch.dining_room_switch_1",
+      "name": "Dining room strip"
+    },
+    {
+      "id": "switch.dining_room_switch_2",
+      "name": "Dining room Chandler"
+    },
+    {
+      "id": "switch.dining_room_spot_light_switch_2",
+      "name": "Dining room spot"
+    },
+    {
+      "id": "switch.guest_room_strip_switch_1",
+      "name": "Mama room strip 1"
+    },
+    {
+      "id": "switch.guest_room_strip_switch_2",
+      "name": "Mama room strip 2"
+    },
+    {
+      "id": "switch.my_room_switch_1",
+      "name": "My room spot 3"
+    },
+    {
+      "id": "switch.my_room_switch_2",
+      "name": "My room strip 2"
+    }
+  ]
+}
