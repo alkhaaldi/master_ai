@@ -276,6 +276,13 @@ class AutonomyConfig(BaseModel):
     allow_high: bool = False
 
 
+class ActionExecuteRequest(BaseModel):
+    """Request body for POST /action/execute."""
+    action_type: str
+    args: dict = {}
+
+
+
 def validate_action(action: dict) -> tuple[bool, dict, str]:
     """Validate action against schema. Returns (valid, cleaned_action, error_msg)."""
     atype = action.get("type", "")
@@ -1261,6 +1268,106 @@ def register_plugins():
     logger.info(f"Registered {len(PLUGIN_REGISTRY._plugins)} plugins")
 
 
+async def execute_action_gateway(action_type: str, args: dict, trace=None, step_index: int = 0, bypass_approval: bool = False) -> dict:
+    """Central execution gateway: risk + policy + autonomy + plugin dispatch."""
+    register_plugins()
+
+    # 1. Resolve plugin
+    plugin = PLUGIN_REGISTRY.get(action_type)
+    if plugin is None:
+        return {"success": False, "error": f"Unknown action type: {action_type}", "action_type": action_type}
+    if hasattr(plugin, "enabled") and not plugin.enabled:
+        return {"success": False, "error": f"Plugin disabled: {plugin.name}", "action_type": action_type}
+
+    # 2. Assess risk (fail-safe: default high)
+    try:
+        risk_raw = assess_risk(action_type, args)
+    except Exception:
+        risk_raw = "high"
+    # Normalize
+    if isinstance(risk_raw, dict):
+        risk_level = str(risk_raw.get("level", risk_raw.get("risk", "high"))).lower()
+    elif isinstance(risk_raw, str):
+        risk_level = risk_raw.lower()
+    else:
+        risk_level = "high"
+    if risk_level not in ("low", "medium", "high"):
+        risk_level = "high"
+
+    # 3. Load policy (permissive fallback)
+    try:
+        policy = load_policy()
+        thresholds = policy.get("thresholds", {})
+    except Exception:
+        thresholds = {"auto_max": 100, "approval_max": 100, "block_min": 101}
+
+    # 4. Autonomy config (permissive fallback)
+    try:
+        autonomy = event_engine.get_autonomy_config()
+    except Exception:
+        autonomy = {"enabled": False, "level": 0, "allow_medium": True, "allow_high": True}
+
+    # 5. Policy / autonomy gate
+    _blocked = False
+    _reason = ""
+    if autonomy.get("enabled", False) and not bypass_approval:
+        if risk_level == "high" and not autonomy.get("allow_high", False):
+            _blocked = True
+            _reason = "High-risk action blocked by autonomy config"
+        elif risk_level == "medium" and not autonomy.get("allow_medium", False):
+            _blocked = True
+            _reason = "Medium-risk action blocked by autonomy config"
+        else:
+            block_min = thresholds.get("block_min", 61)
+            score_map = {"low": 10, "medium": 40, "high": 80}
+            if score_map.get(risk_level, 80) >= block_min:
+                _blocked = True
+                _reason = f"Blocked by policy (score >= {block_min})"
+
+    if _blocked:
+        _needs_approval = risk_level in ("medium", "high")
+        if _needs_approval:
+            _aid = str(uuid.uuid4())[:8]
+            _now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            _exp = (datetime.now() + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+            _payload = json.dumps({
+                "kind": "gateway_action",
+                "action_type": action_type,
+                "args": args or {},
+                "risk_level": risk_level,
+                "reason": _reason,
+            }, ensure_ascii=False)
+            _conn = sqlite3.connect(AUDIT_DB)
+            _conn.execute(
+                "INSERT INTO approval_queue (approval_id, job_id, agent_id, action, risk, status, expires_at) VALUES (?,NULL,NULL,?,?,'pending',?)",
+                (_aid, _payload, risk_level, _exp))
+            _conn.commit()
+            _conn.close()
+            return {
+                "success": False, "denied": True, "needs_approval": True,
+                "approval_id": _aid, "action_type": action_type,
+                "risk_level": risk_level, "reason": _reason,
+            }
+        return {
+            "success": False, "denied": True, "needs_approval": False,
+            "action_type": action_type, "risk_level": risk_level, "reason": _reason,
+        }
+
+    # 6. Execute plugin
+    try:
+        out = await plugin.execute(args, trace, step_index)
+    except Exception as e:
+        return {"success": False, "error": str(e), "action_type": action_type, "risk_level": risk_level}
+
+    # 7. Unified response
+    if isinstance(out, dict) and "success" in out:
+        out["action_type"] = action_type
+        out["risk_level"] = risk_level
+        return out
+    return {"success": True, "result": out, "action_type": action_type, "risk_level": risk_level}
+
+
+
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # [UPGRADE 1] TASK MANAGER
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
@@ -2135,23 +2242,82 @@ async def ssh_run(body: SSHRunRequest):
 # APPROVAL SYSTEM
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
-@app.post("/approve/{approval_id}")
+@app.post("/approve/{approval_id}", tags=["approvals"])
 async def approve_action(approval_id: str, action: str = "approve"):
+    """Approve or reject a pending action. Handles both win_jobs and gateway actions."""
     conn = sqlite3.connect(AUDIT_DB)
+    conn.row_factory = sqlite3.Row
     row = conn.execute("SELECT * FROM approval_queue WHERE approval_id = ?", (approval_id,)).fetchone()
     if not row:
         conn.close()
         return JSONResponse({"error": "Not found"}, status_code=404)
+    if row["status"] != "pending":
+        conn.close()
+        return {"status": row["status"], "approval_id": approval_id, "note": "Already processed"}
+
     if action == "approve":
         conn.execute("UPDATE approval_queue SET status='approved', approved_at=datetime('now','localtime') WHERE approval_id=?",
                      (approval_id,))
-        conn.execute("UPDATE win_jobs SET status='queued' WHERE approval_id=?", (approval_id,))
+        conn.commit()
+
+        job_id = row["job_id"]
+        if job_id:
+            # Legacy win_jobs path (unchanged)
+            conn.execute("UPDATE win_jobs SET status='queued' WHERE approval_id=?", (approval_id,))
+            conn.commit()
+            conn.close()
+            return {"status": "approved", "approval_id": approval_id, "path": "win_jobs"}
+        else:
+            # Gateway action path - execute with bypass
+            conn.close()
+            try:
+                payload = json.loads(row["action"] or "{}")
+                if payload.get("kind") != "gateway_action":
+                    return {"status": "approved", "approval_id": approval_id, "executed": False, "error": "Unknown approval kind"}
+                result = await execute_action_gateway(
+                    payload["action_type"], payload.get("args") or {}, bypass_approval=True)
+                return {"status": "approved", "approval_id": approval_id, "executed": True, "result": result}
+            except Exception as e:
+                return JSONResponse(
+                    {"status": "approved", "approval_id": approval_id, "executed": False, "error": str(e)},
+                    status_code=500)
     else:
         conn.execute("UPDATE approval_queue SET status='rejected' WHERE approval_id=?", (approval_id,))
         conn.execute("UPDATE win_jobs SET status='rejected' WHERE approval_id=?", (approval_id,))
-    conn.commit()
+        conn.commit()
+        conn.close()
+        return {"status": "rejected", "approval_id": approval_id}
+
+
+@app.get("/approvals/pending", tags=["approvals"])
+async def list_pending_approvals():
+    """List all pending approval requests (gateway + win_jobs)."""
+    conn = sqlite3.connect(AUDIT_DB)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT approval_id, job_id, agent_id, action, risk, created_at, expires_at, status
+        FROM approval_queue WHERE status='pending'
+        ORDER BY created_at DESC LIMIT 50
+    """).fetchall()
     conn.close()
-    return {"status": action + "d", "approval_id": approval_id}
+    items = []
+    for r in rows:
+        item = {
+            "approval_id": r["approval_id"],
+            "risk": r["risk"],
+            "created_at": r["created_at"],
+            "expires_at": r["expires_at"],
+        }
+        try:
+            payload = json.loads(r["action"] or "{}")
+            item["kind"] = payload.get("kind", "win_job" if r["job_id"] else "unknown")
+            item["action_type"] = payload.get("action_type", payload.get("type", ""))
+            item["reason"] = payload.get("reason", "")
+        except Exception:
+            item["kind"] = "win_job" if r["job_id"] else "unknown"
+            item["action_type"] = ""
+        items.append(item)
+    return {"pending": items, "count": len(items)}
 
 
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
@@ -2675,6 +2841,13 @@ async def list_plugins():
     return {"plugins": PLUGIN_REGISTRY.list()}
 
 
+@app.post("/action/execute", tags=["actions"])
+async def action_execute_endpoint(req: ActionExecuteRequest):
+    """Central action execution gateway with risk/policy/autonomy checks."""
+    return await execute_action_gateway(req.action_type, req.args)
+
+
+
 @app.post("/plugins/{name}/enable", tags=["plugins"])
 async def enable_plugin(name: str):
     if PLUGIN_REGISTRY.enable(name):
@@ -2753,7 +2926,7 @@ async def system_context():
     try:
         result["plugins"] = {
             "count": len(PLUGIN_REGISTRY._plugins),
-            "list": PLUGIN_REGISTRY.list_plugins(),
+            "list": PLUGIN_REGISTRY.list(),
         }
     except Exception as e:
         result["plugins"] = None
@@ -2790,11 +2963,53 @@ async def system_context():
 
 @app.post("/event", tags=["events"])
 async def ingest_event(req: EventRequest):
-    return event_engine.create_event(req)
+    result = event_engine.create_event(req)
+    # Event rules automation: check policy for matching rules
+    try:
+        policy = load_policy()
+        rules = policy.get("event_rules", {})
+        actions = rules.get(req.type, [])
+        if actions:
+            _MAX_AUTO = 10
+            if len(actions) > _MAX_AUTO:
+                actions = actions[:_MAX_AUTO]
+                result["auto_actions_warning"] = f"Truncated to {_MAX_AUTO} actions"
+            auto_results = []
+            for act in actions:
+                act_type = act.get("action_type", "")
+                act_args = act.get("args", {})
+                if not act_type:
+                    continue
+                # Merge event data into args if template vars present
+                merged = {}
+                for k, v in act_args.items():
+                    if isinstance(v, str) and "{event." in v:
+                        v = v.replace("{event.type}", req.type or "")
+                        v = v.replace("{event.source}", req.source or "")
+                        v = v.replace("{event.user}", req.user or "")
+                        v = v.replace("{event.entity_id}", req.entity_id or "")
+                        v = v.replace("{event.event_id}", result.get("event_id", ""))
+                    merged[k] = v
+                try:
+                    r = await execute_action_gateway(act_type, merged)
+                    auto_results.append({"action_type": act_type, "result": r})
+                except Exception as e:
+                    auto_results.append({"action_type": act_type, "error": str(e)})
+            result["auto_actions"] = auto_results
+    except Exception as e:
+        logger.error(f"Event rules automation error: {e}")
+    return result
 
 @app.get("/events", tags=["events"])
 async def list_events_ep(limit: int = Query(default=50, ge=1, le=500)):
     return {"events": event_engine.list_events(limit)}
+
+@app.get("/event_rules", tags=["events"])
+async def get_event_rules():
+    """Return currently loaded event_rules from policy."""
+    policy = load_policy()
+    rules = policy.get("event_rules", {})
+    return {"event_rules": rules, "count": sum(len(v) for v in rules.values())}
 
 @app.get("/events/{event_id}", tags=["events"])
 async def get_event_ep(event_id: str = Path(...)):
