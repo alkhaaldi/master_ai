@@ -61,3 +61,13 @@ server.py.backup_v4
 setup_cron.py
 test_upload.txt
 v5_assembler.py
+
+# Deployment scripts (local ops only)
+update.sh
+deploy_tag.sh
+entities.json
+phase4_split.py
+server_v531_backup.py
+tunnel_url.txt
+daily_stats.py
+ruijie_integration.py
