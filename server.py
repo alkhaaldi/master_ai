@@ -2690,6 +2690,95 @@ async def disable_plugin(name: str):
 
 
 
+# ============================================================================
+#  SYSTEM CONTEXT  (GET /system/context)
+# ============================================================================
+
+@app.get("/system/context", tags=["system"])
+async def system_context():
+    """Full system context for new AI conversations. API-key protected."""
+    warnings = []
+    result = {"service": "master_ai", "version": VERSION}
+
+    # --- schema ---
+    try:
+        result["schema"] = _get_schema_status()
+    except Exception as e:
+        result["schema"] = None
+        warnings.append(f"schema: {e}")
+
+    # --- policy ---
+    try:
+        pol = load_policy()
+        result["policy"] = {
+            "policy_version": pol.get("version"),
+            "thresholds": pol.get("thresholds"),
+        } if pol else None
+    except Exception as e:
+        result["policy"] = None
+        warnings.append(f"policy: {e}")
+
+    # --- autonomy ---
+    try:
+        result["autonomy"] = event_engine.get_autonomy_config()
+    except Exception as e:
+        result["autonomy"] = {"enabled": None, "level": None, "allow_medium": None, "allow_high": None}
+        warnings.append(f"autonomy: {e}")
+
+    # --- db ---
+    try:
+        conn = sqlite3.connect(AUDIT_DB)
+        jm = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        tc = conn.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone()[0]
+        conn.close()
+        result["db"] = {"path": AUDIT_DB, "wal_mode": jm, "tables_count": tc}
+    except Exception as e:
+        result["db"] = None
+        warnings.append(f"db: {e}")
+
+    # --- runtime ---
+    try:
+        uptime = round(time.time() - START_TIME)
+        st_iso = datetime.fromtimestamp(START_TIME).isoformat()
+        result["runtime"] = {
+            "uptime_seconds": uptime,
+            "start_time_iso": st_iso,
+            "connected_agents_count": len(connected_agents),
+        }
+    except Exception as e:
+        result["runtime"] = None
+        warnings.append(f"runtime: {e}")
+
+    # --- plugins ---
+    try:
+        result["plugins"] = {
+            "count": len(PLUGIN_REGISTRY._plugins),
+            "list": PLUGIN_REGISTRY.list_plugins(),
+        }
+    except Exception as e:
+        result["plugins"] = None
+        warnings.append(f"plugins: {e}")
+
+    # --- git ---
+    try:
+        import subprocess as _sp
+        def _git(cmd):
+            r = _sp.run(cmd, capture_output=True, text=True, timeout=5, cwd=BASE_DIR)
+            return r.stdout.strip() if r.returncode == 0 else None
+        result["git"] = {
+            "branch": _git(["git", "rev-parse", "--abbrev-ref", "HEAD"]),
+            "commit": _git(["git", "rev-parse", "--short", "HEAD"]),
+            "tags": (_git(["git", "tag", "--sort=-creatordate"]) or "").split("\n")[:10],
+        }
+    except Exception as e:
+        result["git"] = {"branch": None, "commit": None, "tags": []}
+        warnings.append(f"git: {e}")
+
+    if warnings:
+        result["warnings"] = warnings
+    return result
+
+
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # WEB PANEL (minimal)
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ

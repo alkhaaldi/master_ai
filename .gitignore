@@ -71,3 +71,5 @@ server_v531_backup.py
 tunnel_url.txt
 daily_stats.py
 ruijie_integration.py
+PROJECT_STATE.md
+*.md.tmp
