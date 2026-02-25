@@ -2015,7 +2015,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/health", "/win/poll", "/win/report", "/win/register"}
+    OPEN_PATHS = {"/health", "/win/poll", "/win/report", "/win/register", "/panel"}
 
     async def dispatch(self, request: Request, call_next):
         if request.url.path in self.OPEN_PATHS or not MASTER_API_KEY:
@@ -2960,142 +2960,104 @@ async def system_context():
 
 
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
-# WEB PANEL (minimal)
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# WEB PANEL v2 - approvals, memory, events
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_PANEL_HTML = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Master AI Panel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',monospace;font-size:14px;padding:16px}
+h1{color:#58a6ff;font-size:20px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+h1 .dot{width:8px;height:8px;border-radius:50%;background:#3fb950;display:inline-block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;max-height:440px;overflow-y:auto}
+.card h2{color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;position:sticky;top:0;background:#161b22;padding-bottom:4px}
+.card.full{grid-column:1/-1}
+.it{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:13px}
+.it .m{color:#8b949e;font-size:11px;margin-top:3px}
+.b{display:inline-block;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:600}
+.b.low{background:#238636;color:#fff}.b.medium{background:#d29922;color:#000}.b.high{background:#da3633;color:#fff}
+.b.fact{background:#1f6feb;color:#fff}.b.context{background:#8957e5;color:#fff}.b.pattern{background:#d29922;color:#000}
+.b.operational_policy{background:#da3633;color:#fff}.b.preference{background:#238636;color:#fff}
+.bt{border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;margin-right:4px;margin-top:6px}
+.bt.ap{background:#238636;color:#fff}.bt.ap:hover{background:#2ea043}
+.bt.dn{background:#da3633;color:#fff}.bt.dn:hover{background:#f85149}
+.bt:disabled{opacity:.4;cursor:not-allowed}
+.em{color:#484f58;font-style:italic;padding:16px;text-align:center}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+#st{color:#484f58;font-size:11px}
+</style></head><body>
+<div class="bar"><h1><span class="dot"></span>Master AI Panel</h1><span id="st">loading...</span></div>
+<div class="grid">
+<div class="card full"><h2 id="ah">Pending Approvals</h2><div id="ap">loading...</div></div>
+<div class="card"><h2>Recent Memory</h2><div id="me">loading...</div></div>
+<div class="card"><h2>Recent Events</h2><div id="ev">loading...</div></div>
+</div>
+<script>
+const K=new URLSearchParams(location.search).get('key')||'';
+const H={'X-API-Key':K};
+const $=id=>document.getElementById(id);
+function x(s){if(!s)return'';const d=document.createElement('div');d.textContent=String(s);return d.innerHTML}
+function ago(t){if(!t)return'';const d=Date.now()-new Date(t).getTime();if(d<0)return'future';if(d<60e3)return(d/1e3|0)+'s';if(d<36e5)return(d/6e4|0)+'m';if(d<864e5)return(d/36e5|0)+'h';return(d/864e5|0)+'d'}
+function b(c){return'<span class="b '+x(c)+'">'+x(c)+'</span>'}
+
+async function F(p,o){try{const r=await fetch(p,Object.assign({headers:H},o||{}));return r.ok?r.json():null}catch(e){return null}}
+
+async function doA(id,yes){
+  document.querySelectorAll('button[data-i="'+id+'"]').forEach(z=>z.disabled=true);
+  await F('/approve/'+id+'?action='+(yes?'approve':'deny'),{method:'POST'});
+  R();
+}
+
+async function R(){
+  const t=Date.now();
+  // Approvals
+  const a=await F('/approvals/pending');
+  if(a){
+    $('ah').textContent='Pending Approvals ('+a.count+')';
+    if(!a.count)$('ap').innerHTML='<div class="em">No pending approvals</div>';
+    else $('ap').innerHTML=a.pending.map(i=>{
+      const id=x(i.id||i.approval_id||'?');
+      const tp=i.action_type||i.type||'?';
+      const rk=i.risk_level||i.risk||'low';
+      const dt=typeof i.description==='string'?i.description:(typeof i.args==='object'?JSON.stringify(i.args):'');
+      return'<div class="it"><div>'+b(rk)+' <b>'+x(tp)+'</b> '+x(dt).substring(0,120)+'</div>'+
+        '<div class="m">'+id+' &middot; '+ago(i.created_at)+'</div>'+
+        '<button class="bt ap" data-i="'+id+'" onclick="doA(\''+id+'\',true)">Approve</button>'+
+        '<button class="bt dn" data-i="'+id+'" onclick="doA(\''+id+'\',false)">Deny</button></div>'
+    }).join('');
+  }
+  // Memory
+  const m=await F('/memory/recent?limit=10');
+  if(m&&m.memories){
+    if(!m.count)$('me').innerHTML='<div class="em">No memories</div>';
+    else $('me').innerHTML=m.memories.map(i=>
+      '<div class="it"><div>'+x((i.content||'').substring(0,140))+'</div>'+
+      '<div class="m">'+b(i.type||'fact')+' '+x(i.category||'')+' &middot; '+ago(i.created_at)+'</div></div>'
+    ).join('');
+  }
+  // Events
+  const e=await F('/events?limit=10');
+  if(e&&e.events){
+    if(!e.events.length)$('ev').innerHTML='<div class="em">No events</div>';
+    else $('ev').innerHTML=e.events.map(i=>
+      '<div class="it"><div>'+b(i.risk||'low')+' <b>'+x(i.type||'?')+'</b> '+x(i.title||'')+'</div>'+
+      '<div class="m">'+x(i.source||'')+' &middot; '+x(i.user||'')+' &middot; '+x(i.status||'')+' &middot; '+ago(i.created_at)+'</div></div>'
+    ).join('');
+  }else{$('ev').innerHTML='<div class="em">Events unavailable</div>'}
+  $('st').textContent=new Date().toLocaleTimeString()+' ('+(Date.now()-t)+'ms)';
+}
+if(!K){document.body.innerHTML='<h1 style="color:#da3633">Missing key</h1><p style="color:#8b949e;margin-top:8px">Use /panel?key=YOUR_API_KEY</p>'}
+else{R();setInterval(R,10000)}
+</script></body></html>"""
 
 
-# ============================================================
-# EVENT ENGINE ENDPOINTS (v5.1)
-# ============================================================
+@app.get("/panel", response_class=HTMLResponse, tags=["panel"])
+async def web_panel(key: str = Query(default="")):
+    """Minimal dark-theme ops panel: approvals + memory + events."""
+    if key != MASTER_API_KEY:
+        return HTMLResponse("<h1 style='color:#da3633;font-family:monospace;padding:40px'>401 Unauthorized</h1>", status_code=401)
+    return HTMLResponse(_PANEL_HTML)
 
-@app.post("/event", tags=["events"])
-async def ingest_event(req: EventRequest):
-    result = event_engine.create_event(req)
-    # Event rules automation: check policy for matching rules
-    try:
-        policy = load_policy()
-        rules = policy.get("event_rules", {})
-        actions = rules.get(req.type, [])
-        if actions:
-            _MAX_AUTO = 10
-            if len(actions) > _MAX_AUTO:
-                actions = actions[:_MAX_AUTO]
-                result["auto_actions_warning"] = f"Truncated to {_MAX_AUTO} actions"
-            auto_results = []
-            for act in actions:
-                act_type = act.get("action_type", "")
-                act_args = act.get("args", {})
-                if not act_type:
-                    continue
-                # Merge event data into args if template vars present
-                merged = {}
-                for k, v in act_args.items():
-                    if isinstance(v, str) and "{event." in v:
-                        v = v.replace("{event.type}", req.type or "")
-                        v = v.replace("{event.source}", req.source or "")
-                        v = v.replace("{event.user}", req.user or "")
-                        v = v.replace("{event.entity_id}", req.entity_id or "")
-                        v = v.replace("{event.event_id}", result.get("event_id", ""))
-                    merged[k] = v
-                try:
-                    r = await execute_action_gateway(act_type, merged)
-                    auto_results.append({"action_type": act_type, "result": r})
-                except Exception as e:
-                    auto_results.append({"action_type": act_type, "error": str(e)})
-            result["auto_actions"] = auto_results
-    except Exception as e:
-        logger.error(f"Event rules automation error: {e}")
-    return result
-
-@app.get("/events", tags=["events"])
-async def list_events_ep(limit: int = Query(default=50, ge=1, le=500)):
-    return {"events": event_engine.list_events(limit)}
-
-@app.get("/event_rules", tags=["events"])
-async def get_event_rules():
-    """Return currently loaded event_rules from policy."""
-    policy = load_policy()
-    rules = policy.get("event_rules", {})
-    return {"event_rules": rules, "count": sum(len(v) for v in rules.values())}
-
-@app.get("/events/{event_id}", tags=["events"])
-async def get_event_ep(event_id: str = Path(...)):
-    ev = event_engine.get_event(event_id)
-    if not ev:
-        return JSONResponse({"error": "Not found"}, status_code=404)
-    return ev
-
-
-@app.post("/events/{event_id}/approve", tags=["events"])
-async def approve_event(event_id: str = Path(...), action: str = "approve"):
-    ev = event_engine.get_event(event_id)
-    if not ev:
-        return JSONResponse({"error": "Not found"}, status_code=404)
-    if ev.get("status") != "waiting_approval":
-        return {"error": "Event not waiting approval", "current_status": ev.get("status")}
-    if action == "approve":
-        event_engine.update_event(event_id, status="pending")
-        # Force immediate processing
-        updated = event_engine.get_event(event_id)
-        await process_event(updated)
-        return {"status": "approved_and_processed", "event_id": event_id}
-    else:
-        event_engine.update_event(event_id, status="rejected", result="Manually rejected")
-        return {"status": "rejected", "event_id": event_id}
-
-
-# ═══════════════════════════════════════════════════════════════
-# POLICY + RISK SCORE ENDPOINTS (v5.3)
-# ═══════════════════════════════════════════════════════════════
-
-@app.get("/policy", tags=["policy"])
-async def get_policy():
-    return load_policy()
-
-@app.post("/policy", tags=["policy"])
-async def update_policy(request: Request):
-    body = await request.json()
-    current = load_policy()
-    current.update(body)
-    save_policy(current)
-    return {"status": "ok", "policy": current}
-
-@app.post("/score", tags=["policy"])
-async def score_event(req: EventRequest):
-    """Score an event without storing it. Useful for testing policy."""
-    result = event_engine.score_risk(req)
-    cfg = event_engine.get_autonomy_config()
-    decision = decide({"risk_score": result["risk_score"], "risk": result["risk_level"]}, cfg)
-    return {**result, "decision": decision}
-
-@app.get("/autonomy/config", tags=["events"])
-async def get_autonomy():
-    return event_engine.get_autonomy_config()
-
-@app.post("/autonomy/config", tags=["events"])
-async def set_autonomy(cfg: AutonomyConfig):
-    return {"status": "ok", "config": event_engine.set_autonomy_config(cfg)}
-
-
-@app.get("/panel", response_class=HTMLResponse)
-async def web_panel():
-    return """<html><head><title>Master AI v5</title></head>
-    <body style="font-family:monospace;background:#1a1a2e;color:#eee;padding:20px">
-    <h1>ÃÂ°ÃÂÃÂ¤ÃÂ Master AI v5.0</h1>
-    <p>Endpoints: /health, /ask, /agent, /tasks, /ha/states, /ssh/run, /claude</p>
-    <p><a href="/health" style="color:#0ff">/health</a> |
-       <a href="/claude" style="color:#0ff">/claude</a> |
-       <a href="/tasks" style="color:#0ff">/tasks</a></p>
-    </body></html>"""
-
-
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
-# DEPLOYMENT NOTES
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
-# How to deploy:
-#   1. On dev machine: git add server.py && git commit -m "v5.0" && git push
-#   2. On Raspberry Pi: cd ~/master_ai && ./update.sh
-#   3. update.sh will: pull ÃÂ¢ÃÂÃÂ syntax check ÃÂ¢ÃÂÃÂ restart ÃÂ¢ÃÂÃÂ health check ÃÂ¢ÃÂÃÂ rollback if failed
-#
-# Requirements (should already be installed):
-#   pip install fastapi uvicorn python-dotenv httpx openai anthropic pydantic
