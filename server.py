@@ -53,7 +53,7 @@ AGENT_SECRET = os.getenv("AGENT_SECRET", "")
 MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
-VERSION = "5.3.0"
+VERSION = "5.4.0"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENTITY_MAP_FILE = os.path.join(BASE_DIR, "entity_map.json")
 AUDIT_DB = os.path.join(BASE_DIR, "data", "audit.db")
@@ -697,6 +697,364 @@ def cleanup_expired_approvals():
         pass
 
 
+
+# ═══════════════════════════════════════════════════════════════
+# PHASE 3.3 — ADVANCED SCHEMA MIGRATIONS
+# ═══════════════════════════════════════════════════════════════
+
+SCHEMA_VERSION = "3.3.0"
+
+SCHEMA_CONTRACT = {
+    "audit_log": {
+        "columns": {
+            "id": {"type": "INTEGER", "pk": True},
+            "timestamp": {"type": "TEXT"}, "request_id": {"type": "TEXT"},
+            "task_id": {"type": "TEXT"}, "step_index": {"type": "INTEGER"},
+            "task": {"type": "TEXT"}, "actions": {"type": "TEXT"},
+            "results": {"type": "TEXT"}, "status": {"type": "TEXT"},
+            "duration_ms": {"type": "REAL"}, "approval_id": {"type": "TEXT"},
+            "approved_at": {"type": "TEXT"},
+            "source": {"type": "TEXT", "default": "'api'"},
+            "ip_address": {"type": "TEXT"},
+        },
+        "indexes": {
+            "idx_audit_timestamp": ["timestamp"], "idx_audit_request_id": ["request_id"],
+            "idx_audit_task_id": ["task_id"], "idx_audit_status": ["status"],
+        },
+    },
+    "tasks": {
+        "columns": {
+            "task_id": {"type": "TEXT", "pk": True}, "request_id": {"type": "TEXT"},
+            "goal": {"type": "TEXT"}, "steps": {"type": "TEXT"},
+            "current_step": {"type": "INTEGER"}, "state": {"type": "TEXT"},
+            "artifacts": {"type": "TEXT"}, "created_at": {"type": "TEXT"},
+            "updated_at": {"type": "TEXT"}, "completed_at": {"type": "TEXT"},
+            "error": {"type": "TEXT"}, "risk_score": {"type": "INTEGER"},
+            "risk_reasons": {"type": "TEXT"},
+        },
+        "indexes": {"idx_tasks_state": ["state"], "idx_tasks_created": ["created_at"]},
+    },
+    "approval_queue": {
+        "columns": {
+            "approval_id": {"type": "TEXT", "pk": True}, "job_id": {"type": "TEXT"},
+            "agent_id": {"type": "TEXT"}, "action": {"type": "TEXT"},
+            "risk": {"type": "TEXT"}, "created_at": {"type": "TEXT"},
+            "status": {"type": "TEXT"}, "approved_at": {"type": "TEXT"},
+            "expires_at": {"type": "TEXT"},
+        },
+        "indexes": {"idx_approval_status": ["status"], "idx_approval_expires": ["expires_at"]},
+    },
+    "win_jobs": {
+        "columns": {
+            "job_id": {"type": "TEXT", "pk": True}, "job_type": {"type": "TEXT"},
+            "args": {"type": "TEXT"}, "risk": {"type": "TEXT"},
+            "task_ref": {"type": "TEXT"}, "status": {"type": "TEXT"},
+            "result": {"type": "TEXT"}, "agent_id": {"type": "TEXT"},
+            "created_at": {"type": "TEXT"}, "completed_at": {"type": "TEXT"},
+            "needs_approval": {"type": "INTEGER"}, "approval_id": {"type": "TEXT"},
+        },
+        "indexes": {"idx_winjobs_status": ["status"], "idx_winjobs_created": ["created_at"]},
+    },
+    "sessions": {
+        "columns": {
+            "session_id": {"type": "TEXT", "pk": True}, "source": {"type": "TEXT"},
+            "metadata": {"type": "TEXT"}, "created_at": {"type": "TEXT"},
+        },
+        "indexes": {"idx_sessions_created": ["created_at"]},
+    },
+    "knowledge": {
+        "columns": {
+            "id": {"type": "INTEGER", "pk": True}, "category": {"type": "TEXT"},
+            "key": {"type": "TEXT"}, "value": {"type": "TEXT"},
+            "source": {"type": "TEXT"}, "created_at": {"type": "TEXT"},
+        },
+        "indexes": {"idx_knowledge_category": ["category"], "idx_knowledge_key": ["key"]},
+    },
+    "users": {
+        "columns": {
+            "id": {"type": "INTEGER", "pk": True}, "username": {"type": "TEXT"},
+            "display_name": {"type": "TEXT"}, "role": {"type": "TEXT"},
+            "created_at": {"type": "TEXT"},
+        },
+        "indexes": {"idx_users_username": ["username"]},
+    },
+    "events": {
+        "columns": {
+            "event_id": {"type": "TEXT", "pk": True},
+            "created_at": {"type": "TEXT"}, "source": {"type": "TEXT"},
+            "type": {"type": "TEXT"}, "title": {"type": "TEXT"},
+            "detail": {"type": "TEXT"}, "entity_id": {"type": "TEXT"},
+            "device_id": {"type": "TEXT"}, "user": {"type": "TEXT"},
+            "event_ts": {"type": "TEXT"}, "risk": {"type": "TEXT"},
+            "autonomy_level": {"type": "INTEGER"},
+            "status": {"type": "TEXT", "default": "'pending'"},
+            "task_id": {"type": "TEXT"}, "result": {"type": "TEXT"},
+            "processed_at": {"type": "TEXT"}, "error": {"type": "TEXT"},
+            "risk_score": {"type": "INTEGER", "default": "0"},
+            "risk_reasons": {"type": "TEXT"},
+            "policy_version": {"type": "TEXT"},
+        },
+        "indexes": {
+            "idx_events_type": ["type"], "idx_events_status": ["status"],
+            "idx_events_task": ["task_id"], "idx_events_created": ["created_at"],
+        },
+    },
+    "system_settings": {
+        "columns": {
+            "key": {"type": "TEXT", "pk": True}, "value": {"type": "TEXT"},
+            "updated_at": {"type": "TEXT"},
+        },
+        "indexes": {},
+    },
+    "schema_migrations": {
+        "columns": {
+            "id": {"type": "INTEGER", "pk": True}, "version": {"type": "TEXT"},
+            "applied_at": {"type": "TEXT"}, "plan_json": {"type": "TEXT"},
+            "ok": {"type": "INTEGER"}, "error": {"type": "TEXT"},
+            "duration_ms": {"type": "REAL"},
+        },
+        "indexes": {"idx_migrations_version": ["version"]},
+    },
+}
+
+
+def _db_introspect(conn: sqlite3.Connection) -> dict:
+    """Introspect current database schema via PRAGMA."""
+    result = {}
+    tables = [r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+    ).fetchall()]
+    for table in tables:
+        cols = {}
+        for row in conn.execute(f"PRAGMA table_info('{table}')").fetchall():
+            cols[row[1]] = {"type": (row[2] or "TEXT").upper(), "notnull": bool(row[3]),
+                            "default": row[4], "pk": bool(row[5])}
+        indexes = {}
+        for idx_row in conn.execute(f"PRAGMA index_list('{table}')").fetchall():
+            idx_name = idx_row[1]
+            idx_cols = [r[2] for r in conn.execute(f"PRAGMA index_info('{idx_name}')").fetchall()]
+            indexes[idx_name] = idx_cols
+        result[table] = {"columns": cols, "indexes": indexes}
+    return result
+
+
+def _build_migration_plan(current: dict, contract: dict) -> dict:
+    """Compare current schema vs contract."""
+    plan = {"missing_tables": [], "missing_columns": [], "missing_indexes": [],
+            "drift_warnings": [], "backfill_needed": []}
+    for table_name, table_spec in contract.items():
+        if table_name not in current:
+            plan["missing_tables"].append({"table": table_name, "columns": table_spec["columns"],
+                                           "indexes": table_spec.get("indexes", {})})
+            continue
+        cur_table = current[table_name]
+        for col_name, col_spec in table_spec["columns"].items():
+            if col_name not in cur_table["columns"]:
+                plan["missing_columns"].append({"table": table_name, "column": col_name,
+                                                "type": col_spec["type"], "default": col_spec.get("default")})
+            else:
+                cur_type = cur_table["columns"][col_name].get("type", "TEXT").upper()
+                exp_type = col_spec["type"].upper()
+                if cur_type != exp_type and cur_type not in ("", "NUMERIC"):
+                    plan["drift_warnings"].append({"table": table_name, "column": col_name,
+                                                   "expected_type": exp_type, "actual_type": cur_type,
+                                                   "action": "none (manual fix required)"})
+        cur_indexes = cur_table.get("indexes", {})
+        for idx_name, idx_cols in table_spec.get("indexes", {}).items():
+            found = idx_name in cur_indexes
+            if not found:
+                for existing_cols in cur_indexes.values():
+                    if existing_cols == idx_cols:
+                        found = True
+                        break
+            if not found:
+                plan["missing_indexes"].append({"table": table_name, "index": idx_name, "columns": idx_cols})
+    if "events" in current:
+        for col in ["status", "risk_score", "policy_version"]:
+            if col in current["events"]["columns"]:
+                plan["backfill_needed"].append({"table": "events", "column": col})
+    return plan
+
+
+def _gen_create_table_sql(table_name: str, columns: dict) -> str:
+    col_defs = []
+    for col_name, col_spec in columns.items():
+        parts = [col_name, col_spec["type"]]
+        if col_spec.get("pk"):
+            parts.append("PRIMARY KEY")
+            if col_spec["type"] == "INTEGER":
+                parts.append("AUTOINCREMENT")
+        if col_spec.get("default"):
+            parts.append(f"DEFAULT {col_spec['default']}")
+        col_defs.append(" ".join(parts))
+    return f"CREATE TABLE IF NOT EXISTS {table_name} (\n  " + ",\n  ".join(col_defs) + "\n)"
+
+
+def _gen_add_column_sql(table, column, col_type, default=None):
+    stmt = f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
+    if default is not None:
+        stmt += f" DEFAULT {default}"
+    return stmt
+
+
+def _gen_create_index_sql(table, index_name, columns):
+    return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table} ({', '.join(columns)})"
+
+
+def _run_backfills(conn, plan):
+    results = []
+    backfills = [
+        ("events", "status", "UPDATE events SET status='unknown' WHERE status IS NULL"),
+        ("events", "risk_score", "UPDATE events SET risk_score=0 WHERE risk_score IS NULL"),
+        ("events", "policy_version", "UPDATE events SET policy_version='pre-3.3' WHERE policy_version IS NULL"),
+        ("audit_log", "source", "UPDATE audit_log SET source='api' WHERE source IS NULL"),
+    ]
+    for table, col, sql in backfills:
+        try:
+            count = conn.execute(sql).rowcount
+            if count > 0:
+                results.append(f"{table}.{col}: backfilled {count} rows")
+        except sqlite3.OperationalError:
+            pass
+    return results
+
+
+def _update_schema_version(conn, version):
+    now = datetime.now().isoformat()
+    conn.execute(
+        "INSERT INTO system_settings (key, value, updated_at) VALUES ('schema_version', ?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+        (version, now))
+
+
+def _record_migration(conn, version, report, ok, error=None):
+    conn.execute(
+        "INSERT INTO schema_migrations (version, applied_at, plan_json, ok, error, duration_ms) VALUES (?,?,?,?,?,?)",
+        (version, datetime.now().isoformat(), json.dumps(report.get("plan", {}), default=str),
+         1 if ok else 0, error, report.get("duration_ms", 0)))
+
+
+def ensure_schema(dry_run=True, apply=False):
+    """Advanced schema migration: introspect, plan, apply in transaction."""
+    start_ts = time.time()
+    report = {"schema_version": SCHEMA_VERSION, "current_version": None,
+              "dry_run": dry_run, "applied": False,
+              "plan": {}, "executed": [], "backfills": [], "errors": [], "duration_ms": 0}
+    conn = None
+    try:
+        conn = sqlite3.connect(AUDIT_DB, timeout=10)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+        try:
+            row = conn.execute("SELECT value FROM system_settings WHERE key='schema_version'").fetchone()
+            report["current_version"] = row[0] if row else None
+        except sqlite3.OperationalError:
+            report["current_version"] = None
+        current = _db_introspect(conn)
+        plan = _build_migration_plan(current, SCHEMA_CONTRACT)
+        report["plan"] = plan
+        total = len(plan["missing_tables"]) + len(plan["missing_columns"]) + len(plan["missing_indexes"])
+        if dry_run or not apply:
+            report["summary"] = {"missing_tables": len(plan["missing_tables"]),
+                                 "missing_columns": len(plan["missing_columns"]),
+                                 "missing_indexes": len(plan["missing_indexes"]),
+                                 "drift_warnings": len(plan["drift_warnings"]),
+                                 "total_actions": total,
+                                 "status": "dry_run" if dry_run else "plan_only"}
+            report["duration_ms"] = round((time.time() - start_ts) * 1000, 2)
+            return report
+        if total == 0 and not plan["backfill_needed"]:
+            report["applied"] = True
+            report["summary"] = {"status": "already_up_to_date", "total_actions": 0}
+            _update_schema_version(conn, SCHEMA_VERSION)
+            conn.commit()
+            report["duration_ms"] = round((time.time() - start_ts) * 1000, 2)
+            return report
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            for tbl in plan["missing_tables"]:
+                conn.execute(_gen_create_table_sql(tbl["table"], tbl["columns"]))
+                report["executed"].append(f"CREATE TABLE {tbl['table']}")
+                logger.info(f"[Schema] Created table: {tbl['table']}")
+                for idx_name, idx_cols in tbl.get("indexes", {}).items():
+                    conn.execute(_gen_create_index_sql(tbl["table"], idx_name, idx_cols))
+                    report["executed"].append(f"CREATE INDEX {idx_name}")
+            for col in plan["missing_columns"]:
+                conn.execute(_gen_add_column_sql(col["table"], col["column"], col["type"], col.get("default")))
+                report["executed"].append(f"ADD COLUMN {col['table']}.{col['column']}")
+                logger.info(f"[Schema] Added column: {col['table']}.{col['column']}")
+            for idx in plan["missing_indexes"]:
+                conn.execute(_gen_create_index_sql(idx["table"], idx["index"], idx["columns"]))
+                report["executed"].append(f"CREATE INDEX {idx['index']}")
+                logger.info(f"[Schema] Created index: {idx['index']}")
+            report["backfills"] = _run_backfills(conn, plan)
+            _update_schema_version(conn, SCHEMA_VERSION)
+            _record_migration(conn, SCHEMA_VERSION, report, ok=True)
+            conn.execute("COMMIT")
+            report["applied"] = True
+            report["summary"] = {"status": "applied", "total_actions": len(report["executed"]),
+                                 "backfills": len(report["backfills"])}
+            logger.info(f"[Schema] Migration v{SCHEMA_VERSION}: {len(report['executed'])} actions")
+        except Exception as e:
+            conn.execute("ROLLBACK")
+            error_msg = f"Rolled back: {e}"
+            report["errors"].append(error_msg)
+            report["summary"] = {"status": "rollback", "error": error_msg}
+            logger.error(f"[Schema] {error_msg}")
+            try:
+                c2 = sqlite3.connect(AUDIT_DB, timeout=5)
+                c2.execute(_gen_create_table_sql("schema_migrations", SCHEMA_CONTRACT["schema_migrations"]["columns"]))
+                _record_migration(c2, SCHEMA_VERSION, report, ok=False, error=str(e))
+                c2.commit()
+                c2.close()
+            except Exception:
+                pass
+    except sqlite3.OperationalError as e:
+        report["errors"].append(f"DB error: {e}")
+        report["summary"] = {"status": "error", "error": str(e)}
+        logger.error(f"[Schema] DB error: {e}")
+    finally:
+        if conn:
+            conn.close()
+        report["duration_ms"] = round((time.time() - start_ts) * 1000, 2)
+    return report
+
+
+def _get_schema_status():
+    """Get current schema status for /health and /schema."""
+    try:
+        conn = sqlite3.connect(AUDIT_DB, timeout=5)
+        conn.row_factory = sqlite3.Row
+        current_version = None
+        try:
+            row = conn.execute("SELECT value FROM system_settings WHERE key='schema_version'").fetchone()
+            current_version = row["value"] if row else None
+        except sqlite3.OperationalError:
+            pass
+        drift_count = 0
+        try:
+            current = _db_introspect(conn)
+            plan = _build_migration_plan(current, SCHEMA_CONTRACT)
+            drift_count = (len(plan["missing_tables"]) + len(plan["missing_columns"])
+                           + len(plan["missing_indexes"]) + len(plan["drift_warnings"]))
+        except Exception:
+            drift_count = -1
+        last_migration = None
+        try:
+            row = conn.execute("SELECT version, applied_at, ok, error FROM schema_migrations ORDER BY id DESC LIMIT 1").fetchone()
+            if row:
+                last_migration = {"version": row["version"], "applied_at": row["applied_at"],
+                                  "ok": bool(row["ok"]), "error": row["error"]}
+        except sqlite3.OperationalError:
+            pass
+        conn.close()
+        return {"schema_version": current_version, "expected_version": SCHEMA_VERSION,
+                "drift_count": drift_count, "last_migration": last_migration}
+    except Exception as e:
+        return {"schema_version": None, "expected_version": SCHEMA_VERSION,
+                "drift_count": -1, "last_migration": None, "error": str(e)}
+
+
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # ACTION EXECUTORS
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
@@ -756,39 +1114,22 @@ async def _exec_http_request(args: dict) -> dict:
 
 
 async def execute_action(action: dict, trace: RequestTrace = None, step_index: int = 0) -> dict:
-    """Execute a single validated action with timing."""
+    """Execute a single validated action via Plugin Layer with timing."""
     t0 = time.time()
     atype = action.get("type", "")
-    args = action.get("args", {})
+    args = dict(action.get("args", {}))
     result = {}
 
     try:
-        if atype == "ha_get_state":
-            result = await _exec_ha_get_state(args.get("entity_id", "*"))
-        elif atype == "ha_call_service":
-            result = await _exec_ha_call_service(args["domain"], args["service"], args.get("service_data"))
-        elif atype == "ssh_run":
-            result = await _exec_ssh_run(args["cmd"])
-        elif atype == "respond_text":
-            result = {"success": True, "text": args.get("text", "")}
-        elif atype in ("win_diagnostics", "win_powershell", "win_winget_install"):
-            win_type = atype.replace("win_", "")
-            risk = assess_risk(atype, args)
-            job = enqueue_win_job(win_type, args, risk, task_ref=action.get("why", ""))
-            result = {"success": True, "queued": True, "job_id": job["job_id"],
-                      "needs_approval": job["needs_approval"], "approval_id": job.get("approval_id")}
-        elif atype == "http_request":
-            result = await _exec_http_request(args)
-        elif atype == "memory_store":
-            if MEMORY_AVAILABLE:
-                add_memory(category=args.get("category", "general"),
-                           content=args.get("content", ""),
-                           memory_type=args.get("type", "fact"))
-                result = {"success": True, "stored": True}
-            else:
-                result = {"success": False, "error": "memory_db not available"}
-        else:
+        plugin = PLUGIN_REGISTRY.get(atype)
+        if plugin is None:
             result = {"success": False, "error": f"Unknown action type: {atype}"}
+        elif not plugin.enabled:
+            result = {"success": False, "error": f"Plugin disabled: {plugin.name}"}
+        else:
+            # Pass full action for plugins that need extra fields (e.g. "why")
+            args["_action"] = action
+            result = await plugin.execute(args, trace, step_index)
     except Exception as e:
         result = {"success": False, "error": str(e)}
 
@@ -798,6 +1139,126 @@ async def execute_action(action: dict, trace: RequestTrace = None, step_index: i
                    duration, json.dumps(result)[:200])
 
     return result
+
+
+# ============================================================
+# PHASE 4 — PLUGIN LAYER
+# ============================================================
+
+class BasePlugin:
+    """Base class for all action plugins."""
+    name: str = "base"
+    enabled: bool = True
+
+    def __init__(self, name: str, enabled: bool = True):
+        self.name = name
+        self.enabled = enabled
+
+    async def execute(self, args: dict, trace: RequestTrace = None, step_index: int = 0) -> dict:
+        return {"success": False, "error": "Not implemented"}
+
+    def metadata(self) -> dict:
+        return {"name": self.name, "enabled": self.enabled}
+
+
+class PluginRegistry:
+    """Registry for action plugins. Maps action_type -> BasePlugin."""
+
+    def __init__(self):
+        self._plugins: dict[str, BasePlugin] = {}
+
+    def register(self, action_type: str, plugin: BasePlugin):
+        self._plugins[action_type] = plugin
+
+    def get(self, action_type: str) -> BasePlugin | None:
+        return self._plugins.get(action_type)
+
+    def list(self) -> dict:
+        return {atype: p.metadata() for atype, p in self._plugins.items()}
+
+    def enable(self, name: str) -> bool:
+        for p in self._plugins.values():
+            if p.name == name:
+                p.enabled = True
+                return True
+        return False
+
+    def disable(self, name: str) -> bool:
+        for p in self._plugins.values():
+            if p.name == name:
+                p.enabled = False
+                return True
+        return False
+
+
+PLUGIN_REGISTRY = PluginRegistry()
+
+
+# --- Concrete Plugins (thin wrappers around existing executors) ---
+
+class HAGetStatePlugin(BasePlugin):
+    def __init__(self): super().__init__("ha_get_state")
+    async def execute(self, args, trace=None, step_index=0):
+        return await _exec_ha_get_state(args.get("entity_id", "*"))
+
+class HACallServicePlugin(BasePlugin):
+    def __init__(self): super().__init__("ha_call_service")
+    async def execute(self, args, trace=None, step_index=0):
+        return await _exec_ha_call_service(args["domain"], args["service"], args.get("service_data"))
+
+class SSHRunPlugin(BasePlugin):
+    def __init__(self): super().__init__("ssh_run")
+    async def execute(self, args, trace=None, step_index=0):
+        return await _exec_ssh_run(args["cmd"])
+
+class RespondTextPlugin(BasePlugin):
+    def __init__(self): super().__init__("respond_text")
+    async def execute(self, args, trace=None, step_index=0):
+        return {"success": True, "text": args.get("text", "")}
+
+class HTTPPlugin(BasePlugin):
+    def __init__(self): super().__init__("http_request")
+    async def execute(self, args, trace=None, step_index=0):
+        return await _exec_http_request(args)
+
+class MemoryPlugin(BasePlugin):
+    def __init__(self): super().__init__("memory_store")
+    async def execute(self, args, trace=None, step_index=0):
+        if MEMORY_AVAILABLE:
+            add_memory(category=args.get("category", "general"),
+                       content=args.get("content", ""),
+                       memory_type=args.get("type", "fact"))
+            return {"success": True, "stored": True}
+        return {"success": False, "error": "memory_db not available"}
+
+class WindowsPlugin(BasePlugin):
+    """Handles win_diagnostics, win_powershell, win_winget_install."""
+    def __init__(self, win_action_type: str):
+        super().__init__(win_action_type)
+        self._atype = win_action_type
+    async def execute(self, args, trace=None, step_index=0):
+        action = args.pop("_action", {})
+        win_type = self._atype.replace("win_", "")
+        risk = assess_risk(self._atype, args)
+        job = enqueue_win_job(win_type, args, risk, task_ref=action.get("why", ""))
+        return {"success": True, "queued": True, "job_id": job["job_id"],
+                "needs_approval": job["needs_approval"], "approval_id": job.get("approval_id")}
+
+
+def register_plugins():
+    """Register all built-in plugins. Safe to call multiple times (idempotent)."""
+    if PLUGIN_REGISTRY._plugins:
+        return  # Already registered
+    PLUGIN_REGISTRY.register("ha_get_state", HAGetStatePlugin())
+    PLUGIN_REGISTRY.register("ha_call_service", HACallServicePlugin())
+    PLUGIN_REGISTRY.register("ssh_run", SSHRunPlugin())
+    PLUGIN_REGISTRY.register("respond_text", RespondTextPlugin())
+    PLUGIN_REGISTRY.register("http_request", HTTPPlugin())
+    PLUGIN_REGISTRY.register("memory_store", MemoryPlugin())
+    PLUGIN_REGISTRY.register("win_diagnostics", WindowsPlugin("win_diagnostics"))
+    PLUGIN_REGISTRY.register("win_powershell", WindowsPlugin("win_powershell"))
+    PLUGIN_REGISTRY.register("win_winget_install", WindowsPlugin("win_winget_install"))
+    logger.info(f"Registered {len(PLUGIN_REGISTRY._plugins)} plugins")
 
 
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
@@ -1412,6 +1873,19 @@ async def generate_summary(task: str, actions: list, results: list, trace: Reque
 @asynccontextmanager
 async def lifespan(app):
     init_db()
+    # Phase 4: Register plugins
+    register_plugins()
+    # Phase 3.3: Advanced schema migration on startup
+    try:
+        migration = ensure_schema(dry_run=False, apply=True)
+        if migration.get("applied"):
+            logger.info(f"Schema migration applied: {migration.get('summary', {})}")
+        elif migration.get("errors"):
+            logger.warning(f"Schema migration issues: {migration['errors']}")
+        else:
+            logger.info(f"Schema up to date (v{SCHEMA_VERSION})")
+    except Exception as e:
+        logger.error(f"Schema migration error (non-fatal): {e}")
     cleanup_expired_approvals()
     logger.info(f"Master AI v{VERSION} started")
     asyncio.create_task(event_processor_loop())
@@ -1462,6 +1936,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.get("/health")
 async def health():
+    schema = _get_schema_status()
     return {
         "status": "ok", "service": "master_ai", "version": VERSION,
         "uptime_seconds": round(time.time() - START_TIME),
@@ -1471,6 +1946,10 @@ async def health():
         "event_engine": event_engine.stats(),
         "autonomy": event_engine.get_autonomy_config(),
         "policy_version": load_policy().get("version", 0),
+        "schema_version": schema.get("schema_version"),
+        "schema_drift_count": schema.get("drift_count", -1),
+        "last_migration_ok": (schema.get("last_migration") or {}).get("ok"),
+        "plugins": len(PLUGIN_REGISTRY._plugins),
     }
 
 
@@ -2143,6 +2622,72 @@ async def get_audit(limit: int = Query(default=50), request_id: str = Query(defa
         rows = conn.execute("SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     conn.close()
     return {"audit": [dict(r) for r in rows]}
+
+
+
+# ═══════════════════════════════════════════════════════════════
+# PHASE 3.3 — SCHEMA ENDPOINTS
+# ═══════════════════════════════════════════════════════════════
+
+class SchemaEnsureRequest(BaseModel):
+    dry_run: bool = True
+    apply: bool = False
+
+
+@app.get("/schema")
+async def schema_status():
+    """Returns expected version, current version, drift summary, last migration."""
+    status = _get_schema_status()
+    try:
+        conn = sqlite3.connect(AUDIT_DB, timeout=5)
+        current = _db_introspect(conn)
+        plan = _build_migration_plan(current, SCHEMA_CONTRACT)
+        conn.close()
+        status["drift_detail"] = {
+            "missing_tables": [t["table"] for t in plan["missing_tables"]],
+            "missing_columns": [f"{c['table']}.{c['column']}" for c in plan["missing_columns"]],
+            "missing_indexes": [i["index"] for i in plan["missing_indexes"]],
+            "type_warnings": plan["drift_warnings"],
+        }
+    except Exception as e:
+        status["drift_detail"] = {"error": str(e)}
+    return status
+
+
+@app.post("/schema/ensure")
+async def schema_ensure(body: SchemaEnsureRequest):
+    """Run schema migration. Protected by API key (not in OPEN_PATHS)."""
+    try:
+        report = ensure_schema(dry_run=body.dry_run, apply=body.apply)
+        return report
+    except Exception as e:
+        logger.error(f"[Schema] ensure error: {e}", exc_info=True)
+        return JSONResponse({"error": str(e), "schema_version": SCHEMA_VERSION}, status_code=500)
+
+
+# ═══════════════════════════════════════════════════════════════
+# PHASE 4 — PLUGIN ENDPOINTS
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/plugins", tags=["plugins"])
+async def list_plugins():
+    """List all registered plugins and their status."""
+    return {"plugins": PLUGIN_REGISTRY.list()}
+
+
+@app.post("/plugins/{name}/enable", tags=["plugins"])
+async def enable_plugin(name: str):
+    if PLUGIN_REGISTRY.enable(name):
+        return {"status": "enabled", "plugin": name}
+    return JSONResponse({"error": f"Plugin not found: {name}"}, status_code=404)
+
+
+@app.post("/plugins/{name}/disable", tags=["plugins"])
+async def disable_plugin(name: str):
+    if PLUGIN_REGISTRY.disable(name):
+        return {"status": "disabled", "plugin": name}
+    return JSONResponse({"error": f"Plugin not found: {name}"}, status_code=404)
+
 
 
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
