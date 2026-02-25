@@ -3005,49 +3005,49 @@ function b(c){return'<span class="b '+x(c)+'">'+x(c)+'</span>'}
 
 async function F(p,o){try{const r=await fetch(p,Object.assign({headers:H},o||{}));return r.ok?r.json():null}catch(e){return null}}
 
-async function doA(id,yes){
-  document.querySelectorAll('button[data-i="'+id+'"]').forEach(z=>z.disabled=true);
-  await F('/approve/'+id+'?action='+(yes?'approve':'deny'),{method:'POST'});
-  R();
-}
+document.addEventListener('click',async function(e){
+ var t=e.target;if(!t.classList.contains('bt'))return;
+ var id=t.getAttribute('data-i'),yes=t.getAttribute('data-a')==='1';
+ if(!id)return;
+ document.querySelectorAll('button[data-i="'+id+'"]').forEach(function(z){z.disabled=true});
+ await F('/approve/'+id+'?action='+(yes?'approve':'deny'),{method:'POST'});
+ R();
+});
 
 async function R(){
-  const t=Date.now();
-  // Approvals
-  const a=await F('/approvals/pending');
-  if(a){
-    $('ah').textContent='Pending Approvals ('+a.count+')';
-    if(!a.count)$('ap').innerHTML='<div class="em">No pending approvals</div>';
-    else $('ap').innerHTML=a.pending.map(i=>{
-      const id=x(i.id||i.approval_id||'?');
-      const tp=i.action_type||i.type||'?';
-      const rk=i.risk_level||i.risk||'low';
-      const dt=typeof i.description==='string'?i.description:(typeof i.args==='object'?JSON.stringify(i.args):'');
-      return'<div class="it"><div>'+b(rk)+' <b>'+x(tp)+'</b> '+x(dt).substring(0,120)+'</div>'+
-        '<div class="m">'+id+' &middot; '+ago(i.created_at)+'</div>'+
-        '<button class="bt ap" data-i="'+id+'" onclick="doA(\''+id+'\',true)">Approve</button>'+
-        '<button class="bt dn" data-i="'+id+'" onclick="doA(\''+id+'\',false)">Deny</button></div>'
-    }).join('');
-  }
-  // Memory
-  const m=await F('/memory/recent?limit=10');
-  if(m&&m.memories){
-    if(!m.count)$('me').innerHTML='<div class="em">No memories</div>';
-    else $('me').innerHTML=m.memories.map(i=>
-      '<div class="it"><div>'+x((i.content||'').substring(0,140))+'</div>'+
-      '<div class="m">'+b(i.type||'fact')+' '+x(i.category||'')+' &middot; '+ago(i.created_at)+'</div></div>'
-    ).join('');
-  }
-  // Events
-  const e=await F('/events?limit=10');
-  if(e&&e.events){
-    if(!e.events.length)$('ev').innerHTML='<div class="em">No events</div>';
-    else $('ev').innerHTML=e.events.map(i=>
-      '<div class="it"><div>'+b(i.risk||'low')+' <b>'+x(i.type||'?')+'</b> '+x(i.title||'')+'</div>'+
-      '<div class="m">'+x(i.source||'')+' &middot; '+x(i.user||'')+' &middot; '+x(i.status||'')+' &middot; '+ago(i.created_at)+'</div></div>'
-    ).join('');
-  }else{$('ev').innerHTML='<div class="em">Events unavailable</div>'}
-  $('st').textContent=new Date().toLocaleTimeString()+' ('+(Date.now()-t)+'ms)';
+ var t=Date.now();
+ var a=await F('/approvals/pending');
+ if(a){
+ $('ah').textContent='Pending Approvals ('+a.count+')';
+ if(!a.count)$('ap').innerHTML='<div class="em">No pending approvals</div>';
+ else $('ap').innerHTML=a.pending.map(function(i){
+  var id=x(i.id||i.approval_id||'?');
+  var tp=i.action_type||i.type||'?';
+  var rk=i.risk_level||i.risk||'low';
+  var dt=typeof i.description==='string'?i.description:(typeof i.args==='object'?JSON.stringify(i.args):'');
+  return'<div class="it"><div>'+b(rk)+' <b>'+x(tp)+'</b> '+x(dt).substring(0,120)+'</div>'+
+  '<div class="m">'+id+' · '+ago(i.created_at)+'</div>'+
+  '<button class="bt ap" data-i="'+id+'" data-a="1">Approve</button>'+
+  '<button class="bt dn" data-i="'+id+'" data-a="0">Deny</button></div>'
+ }).join('');
+ }
+ var m=await F('/memory/recent?limit=10');
+ if(m&&m.memories){
+ if(!m.count)$('me').innerHTML='<div class="em">No memories</div>';
+ else $('me').innerHTML=m.memories.map(function(i){
+  return'<div class="it"><div>'+x((i.content||'').substring(0,140))+'</div>'+
+  '<div class="m">'+b(i.type||'fact')+' '+x(i.category||'')+' · '+ago(i.created_at)+'</div></div>'
+ }).join('');
+ }
+ var e=await F('/events?limit=10');
+ if(e&&e.events){
+ if(!e.events.length)$('ev').innerHTML='<div class="em">No events</div>';
+ else $('ev').innerHTML=e.events.map(function(i){
+  return'<div class="it"><div>'+b(i.risk||'low')+' <b>'+x(i.type||'?')+'</b> '+x(i.title||'')+'</div>'+
+  '<div class="m">'+x(i.source||'')+' · '+x(i.user||'')+' · '+x(i.status||'')+' · '+ago(i.created_at)+'</div></div>'
+ }).join('');
+ }else{$('ev').innerHTML='<div class="em">Events endpoint unavailable</div>'}
+ $('st').textContent=new Date().toLocaleTimeString()+' ('+(Date.now()-t)+'ms)';
 }
 if(!K){document.body.innerHTML='<h1 style="color:#da3633">Missing key</h1><p style="color:#8b949e;margin-top:8px">Use /panel?key=YOUR_API_KEY</p>'}
 else{R();setInterval(R,10000)}
