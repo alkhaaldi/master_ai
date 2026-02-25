@@ -305,9 +305,10 @@ short_term_memory = deque(maxlen=20)
 
 # Try to import memory_db, graceful fallback
 try:
-    from memory_db import build_context, save_message, add_memory, get_memories
+    from memory_db import build_context, save_message, add_memory, get_memories, init_memory_db, get_memory_stats as _get_memory_stats
+    init_memory_db()
     MEMORY_AVAILABLE = True
-    logger.info("memory_db loaded successfully")
+    logger.info("memory_db loaded + initialized successfully")
 except ImportError:
     MEMORY_AVAILABLE = False
     logger.warning("memory_db not available ÃÂ¢ÃÂÃÂ using stub")
@@ -2690,9 +2691,9 @@ class MemoryCreate(BaseModel):
 @app.post("/memory")
 async def create_memory_ep(data: MemoryCreate):
     if MEMORY_AVAILABLE:
-        add_memory(category=data.category, content=data.content,
-                   memory_type=data.memory_type)
-        return {"status": "stored"}
+        await add_memory(category=data.category, content=data.content,
+                         type_=data.memory_type)
+        return {"status": "stored", "category": data.category, "type": data.memory_type}
     return {"error": "memory_db not available"}
 
 
@@ -2700,7 +2701,7 @@ async def create_memory_ep(data: MemoryCreate):
 async def list_memories_ep(category: str = Query(default=None), search: str = Query(default=None),
                            limit: int = Query(default=20)):
     if MEMORY_AVAILABLE:
-        memories = get_memories()
+        memories = await get_memories()
         if category:
             memories = [m for m in memories if m.get("category") == category]
         if search:
@@ -2712,12 +2713,9 @@ async def list_memories_ep(category: str = Query(default=None), search: str = Qu
 @app.get("/memory/stats")
 async def mem_stats():
     if MEMORY_AVAILABLE:
-        memories = get_memories()
-        categories = {}
-        for m in memories:
-            cat = m.get("category", "unknown")
-            categories[cat] = categories.get(cat, 0) + 1
-        return {"total": len(memories), "categories": categories, "short_term": len(short_term_memory)}
+        stats = await _get_memory_stats()
+        stats["short_term"] = len(short_term_memory)
+        return stats
     return {"total": 0, "note": "memory_db not available", "short_term": len(short_term_memory)}
 
 
@@ -2732,6 +2730,15 @@ class MsgSave(BaseModel):
     source: str = "api"
 
 
+
+
+@app.get("/memory/recent")
+async def memory_recent(limit: int = Query(default=20, ge=1, le=100)):
+    """Return most recent memories."""
+    if MEMORY_AVAILABLE:
+        memories = await get_memories(limit=limit)
+        return {"memories": memories, "count": len(memories)}
+    return {"memories": [], "count": 0, "note": "memory_db not available"}
 @app.post("/memory/message")
 async def save_msg(data: MsgSave):
     if MEMORY_AVAILABLE:
