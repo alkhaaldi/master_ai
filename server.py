@@ -2018,7 +2018,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
     OPEN_PATHS = {"/health", "/win/poll", "/win/report", "/win/register", "/panel"}
 
     async def dispatch(self, request: Request, call_next):
-        if request.url.path in self.OPEN_PATHS or not MASTER_API_KEY:
+        path = request.url.path
+        if path in self.OPEN_PATHS or path.startswith("/webhook/") or not MASTER_API_KEY:
             return await call_next(request)
         key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
         if key != MASTER_API_KEY:
@@ -2880,6 +2881,77 @@ async def disable_plugin(name: str):
 
 # ============================================================================
 #  SYSTEM CONTEXT  (GET /system/context)
+
+# ============================================================
+# EVENT ENGINE ENDPOINTS (v5.1) + WEBHOOK (v5.4.5)
+# ============================================================
+
+@app.post("/event", tags=["events"])
+async def ingest_event(req: EventRequest):
+    result = event_engine.create_event(req)
+    try:
+        policy = load_policy()
+        rules = policy.get("event_rules", {})
+        actions = rules.get(req.type, [])
+        if actions:
+            _MAX_AUTO = 10
+            if len(actions) > _MAX_AUTO:
+                actions = actions[:_MAX_AUTO]
+                result["auto_actions_warning"] = f"Truncated to {_MAX_AUTO} actions"
+            auto_results = []
+            for act in actions:
+                act_type = act.get("action_type", "")
+                act_args = act.get("args", {})
+                if not act_type:
+                    continue
+                merged = {}
+                for k, v in act_args.items():
+                    if isinstance(v, str) and "{event." in v:
+                        v = v.replace("{event.type}", req.type or "")
+                        v = v.replace("{event.source}", req.source or "")
+                        v = v.replace("{event.user}", req.user or "")
+                        v = v.replace("{event.entity_id}", req.entity_id or "")
+                        v = v.replace("{event.event_id}", result.get("event_id", ""))
+                    merged[k] = v
+                try:
+                    r = await execute_action_gateway(act_type, merged)
+                    auto_results.append({"action_type": act_type, "result": r})
+                except Exception as e:
+                    auto_results.append({"action_type": act_type, "error": str(e)})
+            result["auto_actions"] = auto_results
+    except Exception as e:
+        logger.error(f"Event rules automation error: {e}")
+    return result
+
+@app.get("/events", tags=["events"])
+async def list_events_ep(limit: int = Query(default=50, ge=1, le=500)):
+    return {"events": event_engine.list_events(limit)}
+
+@app.get("/events/{event_id}", tags=["events"])
+async def get_event_ep(event_id: str = Path(...)):
+    ev = event_engine.get_event(event_id)
+    if not ev:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return ev
+
+@app.get("/event_rules", tags=["events"])
+async def get_event_rules():
+    policy = load_policy()
+    rules = policy.get("event_rules", {})
+    return {"event_rules": rules, "count": sum(len(v) for v in rules.values())}
+
+
+@app.post("/webhook/event/{token}", tags=["webhook"])
+async def webhook_event(token: str, req: EventRequest):
+    policy = load_policy()
+    expected = policy.get("webhook_token")
+    if not expected:
+        return JSONResponse({"error": "webhook not configured"}, status_code=503)
+    if token != expected:
+        return JSONResponse({"error": "invalid token"}, status_code=403)
+    return await ingest_event(req)
+
+
 # ============================================================================
 
 @app.get("/system/context", tags=["system"])

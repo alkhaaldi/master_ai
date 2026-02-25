@@ -1,4 +1,4 @@
-"""Master AI - Web Panel Module. Extracted for modularity."""
+"""Master AI - Web Panel Module."""
 import os
 from fastapi import Query
 from fastapi.responses import HTMLResponse
@@ -98,11 +98,8 @@ else{R();setInterval(R,10000)}
 
 
 def register_panel_routes(app):
-    """Register /panel route on the FastAPI app."""
-
     @app.get("/panel", response_class=HTMLResponse, tags=["panel"])
     async def web_panel(key: str = Query(default="")):
-        """Minimal dark-theme ops panel: approvals + memory + events."""
         if key != MASTER_API_KEY:
-            return HTMLResponse("<h1 style='color:#da3633;font-family:monospace;padding:40px'>401 Unauthorized</h1>", status_code=401)
+            return HTMLResponse("<h1 style=\'color:#da3633;font-family:monospace;padding:40px\'>401 Unauthorized</h1>", status_code=401)
         return HTMLResponse(_PANEL_HTML)
