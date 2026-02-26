@@ -42,7 +42,7 @@ import httpx
 
 # Brain Module (intelligence layer)
 try:
-    from brain import build_system_prompt, build_user_message, learn_from_result, reload as brain_reload, get_brain_stats
+    from brain import build_system_prompt, build_user_message, learn_from_result, reload as brain_reload, get_brain_stats, get_quick_response, build_response_prompt
     BRAIN_AVAILABLE = True
 except Exception as e:
     BRAIN_AVAILABLE = False
@@ -1985,6 +1985,15 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
     else:
         pass
 
+    # Quick response template (skip LLM if simple action)
+    if BRAIN_AVAILABLE and all_actions and not final_response:
+        try:
+            quick = get_quick_response(all_actions, all_results)
+            if quick:
+                final_response = quick
+                logger.info(f"QUICK_RESPONSE: {quick[:50]}")
+        except Exception as e:
+            logger.error(f"Quick response error: {e}")
     return {
         "response": final_response,
         "actions": all_actions,
@@ -2001,7 +2010,13 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
 async def generate_summary(task: str, actions: list, results: list, trace: RequestTrace = None) -> str:
     if not results:
         return ""
-    summary_prompt = "Summarize the results of this task in Arabic. Be concise."
+    if BRAIN_AVAILABLE:
+        try:
+            summary_prompt = build_response_prompt()
+        except Exception:
+            summary_prompt = "Summarize the results of this task in Arabic. Be concise."
+    else:
+        summary_prompt = "Summarize the results of this task in Arabic. Be concise."
     detail = f"Task: {task}\nResults: {json.dumps(results)[:2000]}"
     try:
         return await llm_call(summary_prompt, detail, max_tokens=500, trace=trace)
@@ -2101,6 +2116,15 @@ async def brain_stats_endpoint():
 @app.get("/health")
 async def health():
     schema = _get_schema_status()
+    # Quick response template (skip LLM if simple action)
+    if BRAIN_AVAILABLE and all_actions and not final_response:
+        try:
+            quick = get_quick_response(all_actions, all_results)
+            if quick:
+                final_response = quick
+                logger.info(f"QUICK_RESPONSE: {quick[:50]}")
+        except Exception as e:
+            logger.error(f"Quick response error: {e}")
     return {
         "status": "ok", "service": "master_ai", "version": VERSION,
         "uptime_seconds": round(time.time() - START_TIME),
@@ -2244,6 +2268,15 @@ async def agent_endpoint(body: AgentRequest):
         status="ok", duration=duration, request_id=trace.request_id, task_id=task_id
     )
 
+    # Quick response template (skip LLM if simple action)
+    if BRAIN_AVAILABLE and all_actions and not final_response:
+        try:
+            quick = get_quick_response(all_actions, all_results)
+            if quick:
+                final_response = quick
+                logger.info(f"QUICK_RESPONSE: {quick[:50]}")
+        except Exception as e:
+            logger.error(f"Quick response error: {e}")
     return {
         "response": result["response"],
         "task_id": task_id,
@@ -2486,6 +2519,15 @@ async def shift_info(date: str = Query(default=None)):
         week.append({"date": d.strftime("%Y-%m-%d"), "shift": s, "name": SHIFT_NAMES[s],
                       "is_today": i == 0})
 
+    # Quick response template (skip LLM if simple action)
+    if BRAIN_AVAILABLE and all_actions and not final_response:
+        try:
+            quick = get_quick_response(all_actions, all_results)
+            if quick:
+                final_response = quick
+                logger.info(f"QUICK_RESPONSE: {quick[:50]}")
+        except Exception as e:
+            logger.error(f"Quick response error: {e}")
     return {
         "date": target.strftime("%Y-%m-%d"),
         "shift": shift, "name": SHIFT_NAMES[shift],

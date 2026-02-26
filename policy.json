@@ -1,0 +1,23 @@
+{
+  "quick_response": {
+    "enabled": true,
+    "max_actions_for_template": 2
+  },
+  "personality": {
+    "dialect": "kuwaiti",
+    "verbosity": "minimal",
+    "emoji": true
+  },
+  "proactive": {
+    "enabled": false,
+    "rate_limit_per_hour": 4,
+    "rate_limit_per_day": 15,
+    "dedup_window_hours": 6,
+    "quiet_hours_start": "00:00",
+    "quiet_hours_end": "07:00"
+  },
+  "learning": {
+    "auto_optimize_prompts": false,
+    "min_interactions_for_optimize": 200
+  }
+}
