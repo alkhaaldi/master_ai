@@ -3,6 +3,7 @@ Master AI Brain Learning v1.1
 Pattern learning, memory, confidence decay, user corrections
 """
 import asyncio
+import re
 import json
 import logging
 import sqlite3
@@ -38,6 +39,15 @@ def _get_relevant_patterns(goal):
                                    "confidence": conf, "hits": hits})
             except: pass
         results.sort(key=lambda x: x.get("hits", 0), reverse=True)
+        if results:
+            try:
+                _c2 = sqlite3.connect(str(AUDIT_DB))
+                for _rr in results[:3]:
+                    _c2.execute("UPDATE memory SET hit_count=hit_count+1, last_used=datetime('now') WHERE content=? AND category='pattern' AND active=1", (_rr["goal"],))
+                _c2.commit()
+                _c2.close()
+            except Exception:
+                pass
         return results[:3]
     except: return []
 
