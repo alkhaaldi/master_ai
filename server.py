@@ -3565,9 +3565,6 @@ async def tg_handle_message(chat_id, text: str, user: dict):
             trace=trace,
             task_id=task_id,
         ), timeout=120)
-            trace=trace,
-            task_id=task_id,
-        )
         response = result.get("response", "\u2705 Done")
     except asyncio.TimeoutError:
         logger.warning(f"TG engine timeout: {text[:50]}")
