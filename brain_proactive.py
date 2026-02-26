@@ -422,12 +422,10 @@ async def proactive_loop():
             for a in filtered:
                 by_type.setdefault(a["type"], []).append(a)
 
-            parts = []
-            parts.append("🚨 *Smart Home Alerts*")
+            parts = ["🚨 *Smart Home Alerts*"]
 
             high_alerts = [a for a in filtered if a["severity"] == "high"]
             if high_alerts:
-                parts.append("")
                 parts.append("🔴 *Urgent:*")
                 for a in high_alerts[:5]:
                     parts.append("  " + a["message"])
@@ -437,25 +435,18 @@ async def proactive_loop():
                 if not non_high:
                     continue
                 if atype == "light_on_long":
-                    parts.append("")
-                    parts.append(f"💡 {len(non_high)} lights on > 8 hours")
+                    parts.append(f"💡 {len(non_high)} lights on > 8h")
                 elif atype == "device_unavailable":
-                    parts.append("")
-                    parts.append(f"⚠️ {len(non_high)} devices offline")
-                    for a in non_high[:3]:
-                        name = a["entity_id"].split(".", 1)[1] if "." in a["entity_id"] else a["entity_id"]
-                        parts.append(f"  - {name}")
-                    if len(non_high) > 3:
-                        parts.append(f"  ...and {len(non_high) - 3} more")
+                    names = [a["entity_id"].split(".")[1] for a in non_high[:3]]
+                    extra = f" +{len(non_high)-3}" if len(non_high) > 3 else ""
+                    parts.append(f"⚠️ {len(non_high)} offline: " + ", ".join(names) + extra)
                 elif atype == "ac_long_run":
-                    parts.append("")
                     parts.append(f"❄️ {len(non_high)} ACs running long")
                 elif atype == "door_open_long":
                     for a in non_high:
-                        parts.append("")
-                        parts.append(f"🚪 {a['message']}")
+                        parts.append(a["message"])
 
-            summary = "\n".join(parts)
+            summary = chr(10).join(parts)
             sent = await _send_telegram(summary)
             if sent:
                 for a in filtered:
