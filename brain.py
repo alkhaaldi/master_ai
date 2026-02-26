@@ -217,7 +217,7 @@ def _apply_confidence_decay():
     except: pass
 
 def get_brain_stats():
-    stats = {"brain_version": "1.1", "knowledge_loaded": bool(_knowledge_cache),
+    stats = {"brain_version": "1.1", "knowledge_loaded": bool(_knowledge),
              "aliases_compiled": len(_alias_cache), "entity_index_size": len(_entity_index)}
     try:
         conn = sqlite3.connect(str(AUDIT_DB))
