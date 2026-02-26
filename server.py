@@ -53,6 +53,12 @@ try:
 except Exception:
     TG_OPS_OK = False
 
+try:
+    from tg_home import cmd_rooms, cmd_devices, cmd_find, find_buttons, cmd_scenes_dynamic, handle_devctl
+    TG_HOME_OK = True
+except Exception:
+    TG_HOME_OK = False
+
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # CONFIGURATION
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
@@ -704,6 +710,15 @@ def enqueue_win_job(job_type: str, args: dict, risk: str = "low", task_ref: str 
     )
     conn.commit()
     conn.close()
+
+    if needs_approval and approval_id:
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.ensure_future(_notify_approval(approval_id, f"WinAgent: {job_type}", risk))
+        except Exception:
+            pass
 
     return {"job_id": job_id, "status": status, "needs_approval": needs_approval, "approval_id": approval_id}
 
@@ -1373,6 +1388,11 @@ async def execute_action_gateway(action_type: str, args: dict, trace=None, step_
                 (_aid, _payload, risk_level, _exp))
             _conn.commit()
             _conn.close()
+            try:
+                import asyncio
+                asyncio.ensure_future(_notify_approval(_aid, f"Gateway: {action_type}", risk_level))
+            except Exception:
+                pass
             return {
                 "success": False, "denied": True, "needs_approval": True,
                 "approval_id": _aid, "action_type": action_type,
@@ -2208,6 +2228,20 @@ async def brain_diag_endpoint():
         result["brain_module"] = "not loaded"
     return result
 
+
+@app.post("/debug/test_approval", tags=["debug"])
+async def debug_test_approval(request: Request):
+    """Create a dummy approval for testing TG notification."""
+    pass  # auth via middleware
+    import uuid as _uuid
+    _aid = str(_uuid.uuid4())[:8]
+    _exp = (datetime.now() + timedelta(minutes=5)).isoformat()
+    conn = sqlite3.connect(AUDIT_DB)
+    conn.execute("INSERT INTO approval_queue (approval_id, job_id, agent_id, action, risk, status, expires_at) VALUES (?,NULL,NULL,?,?,'pending',?)", (_aid, '{"kind":"test","action_type":"debug_test"}', "low", _exp))
+    conn.commit()
+    conn.close()
+    await _notify_approval(_aid, "Debug test approval", "low")
+    return {"approval_id": _aid, "status": "created", "notification": "sent"}
 
 @app.get("/health")
 async def health():
@@ -3271,6 +3305,25 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
     return True
 
 
+
+async def _notify_approval(approval_id, action_desc, risk):
+    """Send Telegram notification to admin when approval is created."""
+    try:
+        admin_id = None
+        if TG_OPS_OK:
+            admin_id = get_admin_chat_id()
+        if not admin_id:
+            aid_path = os.path.join(os.path.dirname(__file__) or ".", "admin_chat_id.txt")
+            if os.path.exists(aid_path):
+                admin_id = open(aid_path).read().strip()
+        if not admin_id:
+            return
+        msg = f"\u26a0 Approval needed\nID: {approval_id}\nRisk: {risk}\n{action_desc[:100]}"
+        btn = [{"text": "📋 Open approvals", "callback_data": "cmd:approvals"}]
+        await tg_send_inline(int(admin_id), msg, btn, columns=1)
+    except Exception as e:
+        logger.error(f"Approval notify error: {e}")
+
 async def tg_handle_command(chat_id, text: str) -> str | None:
     """Handle quick commands. Returns response or None to pass to engine."""
     cmd = text.strip().lower()
@@ -3369,6 +3422,52 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         ]
         await tg_send_inline(chat_id, "🏠 *القائمة الرئيسية*", buttons, columns=2)
         return "__inline_sent__"
+
+    # --- Level 2: Home commands ---
+    if cmd == "/rooms":
+        if not TG_HOME_OK:
+            return "tg_home module not loaded"
+        return await cmd_rooms()
+
+    if cmd.startswith("/devices"):
+        if not TG_HOME_OK:
+            return "tg_home module not loaded"
+        room_q = text[len("/devices"):].strip()
+        if not room_q:
+            return "Usage: /devices <room name>"
+        return await cmd_devices(room_q)
+
+    if cmd.startswith("/find"):
+        if not TG_HOME_OK:
+            return "tg_home module not loaded"
+        try:
+            kw = text[len("/find"):].strip()
+            result = await cmd_find(kw)
+            if isinstance(result, tuple):
+                msg, results = result
+                btns = find_buttons(results)
+                if btns:
+                    flat = [b for row in btns for b in row]
+                    await tg_send_inline(chat_id, msg, flat, columns=2)
+                    return "__inline_sent__"
+                return msg
+            return result
+        except Exception as e:
+            logger.error(f"find error: {e}")
+            return f"Error: {e}" 
+
+    if cmd == "/scenes_dynamic" or cmd == "/scenes_all":
+        if not TG_HOME_OK:
+            return "tg_home module not loaded"
+        try:
+            msg, buttons = await cmd_scenes_dynamic()
+            if buttons:
+                await tg_send_inline(chat_id, msg, buttons, columns=2)
+                return "__inline_sent__"
+            return msg
+        except Exception as e:
+            logger.error(f"scenes_dynamic error: {e}")
+            return f"Error: {e}" 
 
     if cmd == "/scenes" or cmd == "/scenes1":
         sc = [
@@ -3605,6 +3704,18 @@ async def tg_handle_callback(callback_query: dict):
         except Exception as e:
             logger.error(f"Cam error: {e}")
             answer = "❌"
+
+    elif data.startswith("devctl:"):
+        parts_d = data.split(":")
+        if len(parts_d) == 3 and TG_HOME_OK:
+            action_d, eid_d = parts_d[1], parts_d[2]
+            result_d = await handle_devctl(action_d, eid_d)
+            try:
+                await _tg_client.post(f"https://api.telegram.org/bot{TG_TOKEN}/answerCallbackQuery",
+                    json={"callback_query_id": cq_id, "text": result_d[:200]})
+            except Exception:
+                pass
+            await tg_send(chat_id, result_d)
 
     elif data.startswith("appr:"):
         parts_a = data.split(":")
