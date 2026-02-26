@@ -61,10 +61,11 @@ def _ensure_alerts_table():
 
 def _save_alert(alert_type, entity_id, message, severity="low"):
     try:
+        msg = message.encode("utf-8", errors="replace").decode("utf-8")
         conn = sqlite3.connect(str(DB_PATH))
         conn.execute(
             "INSERT INTO proactive_alerts (alert_type, entity_id, message, severity, sent) VALUES (?,?,?,?,1)",
-            (alert_type, entity_id, message, severity)
+            (alert_type, entity_id, msg, severity)
         )
         conn.commit()
         conn.close()
