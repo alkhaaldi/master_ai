@@ -1986,7 +1986,7 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
         pass
 
     # Quick response template (skip LLM if simple action)
-    if BRAIN_AVAILABLE and all_actions and not final_response:
+    if BRAIN_AVAILABLE and all_actions:
         try:
             quick = get_quick_response(all_actions, all_results)
             if quick:
@@ -2117,7 +2117,7 @@ async def brain_stats_endpoint():
 async def health():
     schema = _get_schema_status()
     # Quick response template (skip LLM if simple action)
-    if BRAIN_AVAILABLE and all_actions and not final_response:
+    if BRAIN_AVAILABLE and all_actions:
         try:
             quick = get_quick_response(all_actions, all_results)
             if quick:
@@ -2269,7 +2269,7 @@ async def agent_endpoint(body: AgentRequest):
     )
 
     # Quick response template (skip LLM if simple action)
-    if BRAIN_AVAILABLE and all_actions and not final_response:
+    if BRAIN_AVAILABLE and all_actions:
         try:
             quick = get_quick_response(all_actions, all_results)
             if quick:
@@ -2520,7 +2520,7 @@ async def shift_info(date: str = Query(default=None)):
                       "is_today": i == 0})
 
     # Quick response template (skip LLM if simple action)
-    if BRAIN_AVAILABLE and all_actions and not final_response:
+    if BRAIN_AVAILABLE and all_actions:
         try:
             quick = get_quick_response(all_actions, all_results)
             if quick:
