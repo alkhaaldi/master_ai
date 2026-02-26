@@ -143,9 +143,11 @@ async def _send_telegram(text):
     import httpx
     try:
         async with httpx.AsyncClient(timeout=10) as client:
+            # Sanitize surrogates
+            clean = text.encode("utf-8", errors="replace").decode("utf-8")
             resp = await client.post(
                 f"https://api.telegram.org/bot{tg_token}/sendMessage",
-                json={"chat_id": chat_id, "text": text}
+                json={"chat_id": chat_id, "text": clean}
             )
             return resp.status_code == 200
     except Exception as e:
