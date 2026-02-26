@@ -1082,7 +1082,21 @@ async def _exec_ha_get_state(entity_id: str) -> dict:
             r = await client.get(f"{HA_URL}/api/states", headers=headers, timeout=10)
             states = r.json()
             return {"success": True, "count": len(states), "states": states[:50]}
-        r = await client.get(f"{HA_URL}/api/states/{entity_id}", headers=headers, timeout=10)
+        # Support comma-separated entity IDs
+        ids = [e.strip() for e in entity_id.split(",") if e.strip()]
+        if len(ids) > 1:
+            results = []
+            for eid in ids:
+                try:
+                    r = await client.get(f"{HA_URL}/api/states/{eid}", headers=headers, timeout=10)
+                    if r.status_code == 200:
+                        results.append(r.json())
+                    else:
+                        results.append({"entity_id": eid, "state": f"error_{r.status_code}"})
+                except Exception as e:
+                    results.append({"entity_id": eid, "state": f"error: {e}"})
+            return {"success": True, "count": len(results), "states": results}
+        r = await client.get(f"{HA_URL}/api/states/{ids[0]}", headers=headers, timeout=10)
         if r.status_code == 200:
             return {"success": True, "state": r.json()}
         return {"success": False, "error": f"HTTP {r.status_code}"}
