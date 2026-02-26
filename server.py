@@ -3308,6 +3308,58 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"\u26a0\ufe0f diag: {e}"
 
+    if cmd == "/home":
+        buttons = [
+            {"text": "💡 الأضواء", "callback_data": "cmd:lights"},
+            {"text": "❄️ المكيفات", "callback_data": "cmd:temp"},
+            {"text": "🎬 المشاهد", "callback_data": "cmd:scenes"},
+            {"text": "📷 الكاميرات", "callback_data": "cmd:cam"},
+            {"text": "🧠 العقل", "callback_data": "cmd:brain"},
+            {"text": "📊 النظام", "callback_data": "cmd:diag"},
+        ]
+        await tg_send_inline(chat_id, "🏠 *القائمة الرئيسية*", buttons, columns=2)
+        return "__inline_sent__"
+
+    if cmd == "/scenes" or cmd == "/scenes1":
+        sc = [
+            {"text": "🌙 نوم", "callback_data": "sc:scene.wd_lnwm"},
+            {"text": "☀️ صباح", "callback_data": "sc:scene.sbh_lkhyr"},
+            {"text": "🚪 مغادرة", "callback_data": "sc:scene.mgdr_lbyt"},
+            {"text": "🎉 ضيوف", "callback_data": "sc:scene.wd_ldywf"},
+            {"text": "☕ ديوانية", "callback_data": "sc:scene.wd_ldywny"},
+            {"text": "🎬 سينما", "callback_data": "sc:scene.wd_lsynm"},
+            {"text": "🛑 طفّي كل شي", "callback_data": "sc:scene.tfwy_kl_shy"},
+            {"text": "➡️ المزيد", "callback_data": "cmd:scenes2"},
+        ]
+        await tg_send_inline(chat_id, "🎬 *المشاهد* (1/2)", sc, columns=2)
+        return "__inline_sent__"
+
+    if cmd == "/scenes2":
+        sc2 = [
+            {"text": "💡 سبوت فقط", "callback_data": "sc:scene.sbwt_fqt"},
+            {"text": "🌙 ستريب فقط", "callback_data": "sc:scene.stryb_fqt"},
+            {"text": "🌬️ تنقية", "callback_data": "sc:scene.tnqy_hw_shml"},
+            {"text": "🚿 حمامات", "callback_data": "sc:scene.tf_kl_lhmmt"},
+            {"text": "🌀 شفاطات", "callback_data": "sc:scene.glq_kl_lshftt"},
+            {"text": "🪧 سكّر ستاير", "callback_data": "sc:scene.skwr_kl_lstyr"},
+            {"text": "☀️ افتح ستاير", "callback_data": "sc:scene.fth_kl_lstyr"},
+            {"text": "⬅️ رجوع", "callback_data": "cmd:scenes"},
+        ]
+        await tg_send_inline(chat_id, "🎬 *المشاهد* (2/2)", sc2, columns=2)
+        return "__inline_sent__"
+
+    if cmd == "/cam":
+        cb = [
+            {"text": "📷 كام 1", "callback_data": "cam:1"},
+            {"text": "📷 كام 2", "callback_data": "cam:2"},
+            {"text": "📷 كام 3", "callback_data": "cam:3"},
+            {"text": "📷 كام 4", "callback_data": "cam:4"},
+            {"text": "📷 كام 5", "callback_data": "cam:5"},
+            {"text": "📷 كام 6", "callback_data": "cam:6"},
+        ]
+        await tg_send_inline(chat_id, "📷 *اختر كاميرا*", cb, columns=3)
+        return "__inline_sent__"
+
     if cmd == "/help":
         return "\U0001f3e0 Master AI\n\n/status - \u0627\u0644\u0646\u0638\u0627\u0645\n/lights - \u0627\u0644\u0623\u0636\u0648\u0627\u0621\n/temp - \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a\n/brain - \u0627\u0644\u0639\u0642\u0644\n/diag - \u062a\u0634\u062e\u064a\u0635\n\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \U0001f44d"
 
@@ -3342,12 +3394,36 @@ async def tg_send_with_feedback(chat_id, text: str, request_id: str = None) -> b
     return True
 
 
+
+async def tg_send_inline(chat_id, text: str, buttons: list, columns: int = 2) -> bool:
+    """Send message with custom inline keyboard."""
+    global _tg_client
+    if not _tg_client:
+        _tg_client = httpx.AsyncClient(timeout=30)
+    rows = []
+    for i in range(0, len(buttons), columns):
+        rows.append(buttons[i:i+columns])
+    payload = {
+        "chat_id": chat_id,
+        "text": text.encode("utf-8", errors="replace").decode("utf-8"),
+        "reply_markup": json.dumps({"inline_keyboard": rows}),
+    }
+    try:
+        resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json=payload)
+        return resp.status_code == 200
+    except Exception as e:
+        logger.error(f"tg_send_inline error: {e}")
+        return False
+
+
 async def tg_handle_callback(callback_query: dict):
     """Handle inline button presses (feedback)."""
     global _tg_client
     if not _tg_client:
         _tg_client = httpx.AsyncClient(timeout=30)
     data = callback_query.get("data", "")
+    qid = callback_query.get("id", "")
+    chat_id = callback_query.get("message", {}).get("chat", {}).get("id", "")
     cq_id = callback_query.get("id")
     tg_user_id = callback_query.get("from", {}).get("id")
 
@@ -3363,6 +3439,48 @@ async def tg_handle_callback(callback_query: dict):
             except Exception as e:
                 logger.error(f"Feedback error: {e}")
                 answer = "OK"
+    elif data.startswith("sc:"):
+        scene_id = data[3:]
+        try:
+            async with httpx.AsyncClient(timeout=10) as hc:
+                resp = await hc.post(f"{HA_URL}/api/services/scene/turn_on",
+                    headers={"Authorization": f"Bearer {HA_TOKEN}"},
+                    json={"entity_id": scene_id})
+            answer = "✅ تم!" if resp.status_code == 200 else "❌ فشل"
+        except Exception as e:
+            logger.error(f"Scene error: {e}")
+            answer = "❌"
+
+    elif data.startswith("cmd:"):
+        sub = "/" + data[4:]
+        r = await tg_handle_command(chat_id, sub)
+        if r and r != "__inline_sent__":
+            await tg_send(chat_id, r)
+        answer = ""
+
+    elif data.startswith("cam:"):
+        cam_num = data[4:]
+        cam_eid = "camera.192_168_111_90" + ("_" + cam_num if cam_num != "1" else "")
+        try:
+            snap_url = f"{HA_URL}/api/camera_proxy/{cam_eid}"
+            async with httpx.AsyncClient(timeout=15) as hc:
+                resp = await hc.get(snap_url, headers={"Authorization": f"Bearer {HA_TOKEN}"})
+                if resp.status_code == 200:
+                    import tempfile, os as _os
+                    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+                        tmp.write(resp.content)
+                        tmp_path = tmp.name
+                    with open(tmp_path, "rb") as photo:
+                        files = {"photo": ("snapshot.jpg", photo, "image/jpeg")}
+                        await _tg_client.post(f"{TG_BASE}/sendPhoto", files=files, data={"chat_id": str(chat_id), "caption": f"Cam {cam_num}"})
+                    _os.unlink(tmp_path)
+                    answer = "📷"
+                else:
+                    answer = "❌"
+        except Exception as e:
+            logger.error(f"Cam error: {e}")
+            answer = "❌"
+
     else:
         answer = ""
 
@@ -3388,6 +3506,8 @@ async def tg_handle_message(chat_id, text: str, user: dict):
         logger.info(f"Saved admin chat_id: {chat_id}")
 
     quick = await tg_handle_command(chat_id, text)
+    if quick == "__inline_sent__":
+        return
     if quick:
         await tg_send(chat_id, quick)
         return
