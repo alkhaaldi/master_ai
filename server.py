@@ -3545,6 +3545,12 @@ async def tg_handle_message(chat_id, text: str, user: dict):
         await tg_send(chat_id, quick)
         return
 
+    # Send typing indicator
+    try:
+        await _tg_client.post(f"{TG_BASE}/sendChatAction", json={"chat_id": chat_id, "action": "typing"})
+    except Exception:
+        pass
+
     trace = RequestTrace()
     task_id = TaskManager.create_task(text, trace.request_id)
     trace.task_id = task_id
@@ -3553,13 +3559,20 @@ async def tg_handle_message(chat_id, text: str, user: dict):
     t0 = time.time()
     result = {}
     try:
-        result = await iterative_engine(
+        result = await asyncio.wait_for(iterative_engine(
             goal=text,
             context={"source": "telegram", "chat_id": str(chat_id), "user_name": user_name, "user_profile": user_profile},
             trace=trace,
             task_id=task_id,
+        ), timeout=120)
+            trace=trace,
+            task_id=task_id,
         )
         response = result.get("response", "\u2705 Done")
+    except asyncio.TimeoutError:
+        logger.warning(f"TG engine timeout: {text[:50]}")
+        TaskManager.fail_task(task_id, "timeout")
+        response = "⏰ العملية أخذت وقت طويل. جرب طلب أبسط."
     except Exception as e:
         logger.error(f"TG engine error: {e}", exc_info=True)
         TaskManager.fail_task(task_id, str(e))

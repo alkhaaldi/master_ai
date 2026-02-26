@@ -85,7 +85,10 @@
         "climate.mkyf_lmtbkh",
         "climate.living_room_ac",
         "climate.my_room_ac",
-        "climate.mama_room_ac"
+        "climate.mama_room_ac",
+        "climate.mkyf_sl_ldwr_lwl",
+        "climate.mkyf_ldwr_lwl_grf_5",
+        "climate.mkyf_ldwr_lwl_grf_3"
       ],
       "note": "حارس حرارة: حد أقصى 23°، 5 دقائق delay"
     },
@@ -258,6 +261,37 @@
         "scene.wd_ltnqy"
       ],
       "note": "scene تنقية الهواء"
+    },
+    {
+      "patterns": [
+        "مكيف صالة الدور الأول",
+        "مكيف صالة الأول",
+        "AC صالة الأول"
+      ],
+      "entities": [
+        "climate.mkyf_sl_ldwr_lwl"
+      ],
+      "note": ""
+    },
+    {
+      "patterns": [
+        "مكيف غرفة 5",
+        "مكيف الغرفة الخامسة"
+      ],
+      "entities": [
+        "climate.mkyf_ldwr_lwl_grf_5"
+      ],
+      "note": ""
+    },
+    {
+      "patterns": [
+        "مكيف غرفة 3",
+        "مكيف الغرفة الثالثة"
+      ],
+      "entities": [
+        "climate.mkyf_ldwr_lwl_grf_3"
+      ],
+      "note": ""
     }
   ],
   "device_notes": {
