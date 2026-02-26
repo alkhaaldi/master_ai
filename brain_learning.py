@@ -219,3 +219,21 @@ async def learn_from_result(goal, actions, results, response):
         logger.warning("Learn queue full, dropping item")
     except Exception as e:
         logger.warning(f"learn_from_result error: {e}")
+
+
+def _learning_stats():
+    """Return learning module statistics."""
+    import sqlite3
+    from pathlib import Path
+    DB = Path(__file__).parent / 'data' / 'audit.db'
+    stats = {'queue_size': 0}
+    try:
+        conn = sqlite3.connect(str(DB))
+        rows = conn.execute('SELECT category, COUNT(*), AVG(confidence), SUM(hit_count) FROM memory WHERE active=1 GROUP BY category').fetchall()
+        conn.close()
+        for r in rows:
+            stats[r[0]] = {'count': r[1], 'avg_conf': round(r[2], 2), 'hits': r[3] or 0}
+        stats['total_memories'] = sum(r[1] for r in rows)
+    except Exception as e:
+        stats['error'] = str(e)
+    return stats
