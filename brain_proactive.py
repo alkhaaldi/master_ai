@@ -198,9 +198,11 @@ async def _run_checks(states):
         fname = s.get("attributes", {}).get("friendly_name", eid)
         duration_min = _parse_duration_minutes(s)
 
-        # Device unavailable > 30 min
-        if state == "unavailable" and duration_min > 30:
-            if not any(skip in eid for skip in ["update.", "button.", "number.", "select."]):
+        # Device unavailable > 60 min (important devices only)
+        if state == "unavailable" and duration_min > 60:
+            skip_prefixes = ["update.", "button.", "number.", "select.", "sensor.", "binary_sensor.", "switch."]
+            skip_keywords = ["alexa", "iphone", "geocoded", "shuffle", "repeat", "next_track", "media_player"]
+            if not any(eid.startswith(p) for p in skip_prefixes) and not any(kw in eid.lower() for kw in skip_keywords):
                 alerts.append({
                     "type": "device_unavailable",
                     "entity_id": eid,
@@ -370,8 +372,13 @@ async def proactive_loop():
             if not policy.get("enabled", False):
                 await asyncio.sleep(60)
                 continue
-            if not ADMIN_CHAT_ID:
-                logger.warning("ADMIN_CHAT_ID not set")
+            admin_id = ADMIN_CHAT_ID
+            if not admin_id:
+                admin_file = BASE_DIR / "data" / "admin_chat_id.txt"
+                if admin_file.exists():
+                    admin_id = admin_file.read_text().strip()
+            if not admin_id:
+                logger.warning("ADMIN_CHAT_ID not set (env or file)")
                 await asyncio.sleep(300)
                 continue
 
@@ -392,19 +399,70 @@ async def proactive_loop():
             alerts = await _run_checks(states)
             dedup_hours = policy.get("dedup_window_hours", 6)
 
+            # Filter alerts (dedup + quiet hours)
+            filtered = []
             for alert in alerts:
                 if _get_recent_alerts(alert["type"], alert["entity_id"], dedup_hours) > 0:
                     continue
                 if _in_quiet_hours(policy) and alert["severity"] != "high":
                     continue
-                if not _rate_limit_ok(policy):
-                    logger.warning("Rate limit hit")
-                    break
+                filtered.append(alert)
 
-                sent = await _send_telegram(alert["message"])
-                if sent:
-                    _save_alert(alert["type"], alert["entity_id"], alert["message"], alert["severity"])
-                    logger.info(f"Alert sent: {alert['type']} - {alert['entity_id']}")
+            if not filtered:
+                await asyncio.sleep(CHECK_INTERVAL)
+                continue
+
+            if not _rate_limit_ok(policy):
+                logger.warning("Rate limit hit, skipping alerts")
+                await asyncio.sleep(CHECK_INTERVAL)
+                continue
+
+            # Build batched summary message
+            from collections import Counter
+            by_type = {}
+            for a in filtered:
+                by_type.setdefault(a["type"], []).append(a)
+
+            parts = ["🚨 *تنبيهات المنزل الذكي*
+"]
+
+            # High severity first (individual)
+            high_alerts = [a for a in filtered if a["severity"] == "high"]
+            if high_alerts:
+                parts.append("🔴 *عاجل:*")
+                for a in high_alerts[:5]:
+                    parts.append(f"  {a['message']}")
+
+            # Summary for others
+            for atype, items in by_type.items():
+                non_high = [a for a in items if a["severity"] != "high"]
+                if not non_high:
+                    continue
+                if atype == "light_on_long":
+                    parts.append(f"
+💡 {len(non_high)} ضوء شغال أكثر من 8 ساعات")
+                elif atype == "device_unavailable":
+                    parts.append(f"
+⚠️ {len(non_high)} جهاز مو متصل")
+                    for a in non_high[:3]:
+                        parts.append(f"  - {a['entity_id'].split('.')[1]}")
+                    if len(non_high) > 3:
+                        parts.append(f"  ...و {len(non_high)-3} ثاني")
+                elif atype == "ac_long_run":
+                    parts.append(f"
+❄️ {len(non_high)} مكيف شغال من فترة")
+                elif atype == "door_open_long":
+                    for a in non_high:
+                        parts.append(f"
+🚪 {a['message']}")
+
+            summary = "
+".join(parts)
+            sent = await _send_telegram(summary)
+            if sent:
+                for a in filtered:
+                    _save_alert(a["type"], a["entity_id"], a["message"], a["severity"])
+                logger.info(f"Batch alert sent: {len(filtered)} alerts")
 
             await asyncio.sleep(CHECK_INTERVAL)
 
