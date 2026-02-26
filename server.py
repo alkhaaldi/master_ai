@@ -1974,9 +1974,11 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
     # Brain learning (async, non-blocking)
     if BRAIN_AVAILABLE and all_actions:
         try:
+            logger.info(f"BRAIN_LEARN_HOOK: goal={goal[:40]}, actions={len(all_actions)}, results={len(all_results)}")
             asyncio.create_task(learn_from_result(goal, all_actions, all_results, final_response))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"BRAIN_LEARN_HOOK error: {e}")
+    else:
 
     return {
         "response": final_response,

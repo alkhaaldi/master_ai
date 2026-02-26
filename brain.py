@@ -480,13 +480,6 @@ async def _process_learn_item(item):
     actions = item.get("actions", [])
     results = item.get("results", [])
 
-    # Debug logging
-    logger.info(f"LEARN: goal={goal[:50]}, actions={len(actions)}, results={len(results)}")
-    logger.info(f"LEARN: action_types={[type(a).__name__ for a in actions[:3]]}")
-    logger.info(f"LEARN: result_types={[type(r).__name__ for r in results[:3]]}")
-    if results:
-        logger.info(f"LEARN: result[0]={str(results[0])[:200]}")
-
     # Skip trivial interactions
     if not actions or all(a.get("type") == "respond_text" for a in actions if isinstance(a, dict)):
         return
