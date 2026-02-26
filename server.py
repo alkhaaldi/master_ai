@@ -2162,15 +2162,6 @@ async def feedback_endpoint(data: dict):
 @app.get("/health")
 async def health():
     schema = _get_schema_status()
-    # Quick response template (skip LLM if simple action)
-    if BRAIN_AVAILABLE and all_actions:
-        try:
-            quick = get_quick_response(all_actions, all_results)
-            if quick:
-                final_response = quick
-                logger.info(f"QUICK_RESPONSE: {quick[:50]}")
-        except Exception as e:
-            logger.error(f"Quick response error: {e}")
     return {
         "status": "ok", "service": "master_ai", "version": VERSION,
         "uptime_seconds": round(time.time() - START_TIME),
