@@ -417,47 +417,45 @@ async def proactive_loop():
                 await asyncio.sleep(CHECK_INTERVAL)
                 continue
 
-            # Build batched summary message
-            from collections import Counter
+            # Build batched summary
             by_type = {}
             for a in filtered:
                 by_type.setdefault(a["type"], []).append(a)
 
-            parts = ["🚨 *تنبيهات المنزل الذكي*
-"]
+            parts = []
+            parts.append("🚨 *Smart Home Alerts*")
 
-            # High severity first (individual)
             high_alerts = [a for a in filtered if a["severity"] == "high"]
             if high_alerts:
-                parts.append("🔴 *عاجل:*")
+                parts.append("")
+                parts.append("🔴 *Urgent:*")
                 for a in high_alerts[:5]:
-                    parts.append(f"  {a['message']}")
+                    parts.append("  " + a["message"])
 
-            # Summary for others
             for atype, items in by_type.items():
                 non_high = [a for a in items if a["severity"] != "high"]
                 if not non_high:
                     continue
                 if atype == "light_on_long":
-                    parts.append(f"
-💡 {len(non_high)} ضوء شغال أكثر من 8 ساعات")
+                    parts.append("")
+                    parts.append(f"💡 {len(non_high)} lights on > 8 hours")
                 elif atype == "device_unavailable":
-                    parts.append(f"
-⚠️ {len(non_high)} جهاز مو متصل")
+                    parts.append("")
+                    parts.append(f"⚠️ {len(non_high)} devices offline")
                     for a in non_high[:3]:
-                        parts.append(f"  - {a['entity_id'].split('.')[1]}")
+                        name = a["entity_id"].split(".", 1)[1] if "." in a["entity_id"] else a["entity_id"]
+                        parts.append(f"  - {name}")
                     if len(non_high) > 3:
-                        parts.append(f"  ...و {len(non_high)-3} ثاني")
+                        parts.append(f"  ...and {len(non_high) - 3} more")
                 elif atype == "ac_long_run":
-                    parts.append(f"
-❄️ {len(non_high)} مكيف شغال من فترة")
+                    parts.append("")
+                    parts.append(f"❄️ {len(non_high)} ACs running long")
                 elif atype == "door_open_long":
                     for a in non_high:
-                        parts.append(f"
-🚪 {a['message']}")
+                        parts.append("")
+                        parts.append(f"🚪 {a['message']}")
 
-            summary = "
-".join(parts)
+            summary = "\n".join(parts)
             sent = await _send_telegram(summary)
             if sent:
                 for a in filtered:
