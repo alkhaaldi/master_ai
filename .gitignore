@@ -75,3 +75,6 @@ PROJECT_STATE.md
 *.md.tmp
 server.py.step*
 server.py.bak*
+
+# Backup data (on-device only)
+backups/

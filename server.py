@@ -2096,7 +2096,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/health", "/win/poll", "/win/report", "/win/register", "/panel"}
+    OPEN_PATHS = {"/health", "/panel"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -2171,6 +2171,36 @@ async def feedback_endpoint(data: dict):
         return {"error": "brain module not loaded"}
     ok = record_feedback(session_id=data.get("session_id",""), rating=data.get("rating",3), comment=data.get("comment",""), user_id=data.get("user_id","bu_khalifa"), goal=data.get("goal",""))
     return {"success": ok}
+
+
+@app.get("/brain/diag")
+async def brain_diag_endpoint():
+    """Brain diagnostics: DB state, learning stats, errors."""
+    import sqlite3 as _sq, os as _os
+    db_path = _os.path.join(BASE_DIR, "data", "audit.db")
+    brain_db = _os.path.join(BASE_DIR, "data", "brain.db")
+    result = {
+        "brain_db_exists": _os.path.exists(brain_db),
+        "brain_db_size": _os.path.getsize(brain_db) if _os.path.exists(brain_db) else 0,
+        "brain_db_note": "orphan file - learning uses audit.db",
+    }
+    try:
+        conn = _sq.connect(db_path)
+        result["memory_count"] = conn.execute("SELECT COUNT(*) FROM memory").fetchone()[0]
+        result["audit_db_ok"] = True
+        conn.close()
+    except Exception as e:
+        result["audit_db_ok"] = False
+        result["error"] = str(e)
+    if BRAIN_AVAILABLE:
+        result["brain_module"] = "loaded"
+        try:
+            result["brain_stats"] = get_brain_stats()
+        except Exception as e:
+            result["brain_stats_error"] = str(e)
+    else:
+        result["brain_module"] = "not loaded"
+    return result
 
 
 @app.get("/health")
