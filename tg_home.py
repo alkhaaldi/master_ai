@@ -62,7 +62,7 @@ def _category(eid):
     if eid.startswith("media_player."): return "media"
     if eid.startswith("sensor."): return "sensors"
     if eid.startswith("switch."): return "switches"
-    if eid.startswith("scene.") or "backlight" in eid.lower() or "Backlight" in name: return "scenes"
+    if eid.startswith("scene.") or "backlight" in eid.lower(): return "scenes"
     if eid.startswith("air_quality.") or eid.startswith("humidifier."): return "air"
     return "other"
 
@@ -210,6 +210,8 @@ async def cmd_find(keyword):
         if eid in seen:
             continue
         fname = s.get("attributes", {}).get("friendly_name", "")
+        if _should_skip(eid, fname, all_map_eids):
+            continue
         if q in eid.lower() or q in fname.lower():
             seen.add(eid)
             st = _short_state(eid, smap)
