@@ -3446,7 +3446,15 @@ async def tg_handle_callback(callback_query: dict):
                 resp = await hc.post(f"{HA_URL}/api/services/scene/turn_on",
                     headers={"Authorization": f"Bearer {HA_TOKEN}"},
                     json={"entity_id": scene_id})
-            answer = "✅ تم!" if resp.status_code == 200 else "❌ فشل"
+            if resp.status_code == 200:
+                answer = "✅ تم!"
+                back_btns = [
+                    {"text": "🎬 المشاهد", "callback_data": "cmd:scenes"},
+                    {"text": "🏠 القائمة", "callback_data": "cmd:home"},
+                ]
+                await tg_send_inline(chat_id, "✅ تم تفعيل المشهد", back_btns, columns=2)
+            else:
+                answer = "❌ فشل"
         except Exception as e:
             logger.error(f"Scene error: {e}")
             answer = "❌"
@@ -3475,6 +3483,17 @@ async def tg_handle_callback(callback_query: dict):
                         await _tg_client.post(f"{TG_BASE}/sendPhoto", files=files, data={"chat_id": str(chat_id), "caption": f"Cam {cam_num}"})
                     _os.unlink(tmp_path)
                     answer = "📷"
+                    # Re-send cam buttons after photo
+                    cam_btns = [
+                        {"text": "📷 كام 1", "callback_data": "cam:1"},
+                        {"text": "📷 كام 2", "callback_data": "cam:2"},
+                        {"text": "📷 كام 3", "callback_data": "cam:3"},
+                        {"text": "📷 كام 4", "callback_data": "cam:4"},
+                        {"text": "📷 كام 5", "callback_data": "cam:5"},
+                        {"text": "📷 كام 6", "callback_data": "cam:6"},
+                        {"text": "🏠 القائمة", "callback_data": "cmd:home"},
+                    ]
+                    await tg_send_inline(chat_id, "📷 كاميرا ثانية؟", cam_btns, columns=3)
                 else:
                     answer = "❌"
         except Exception as e:
