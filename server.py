@@ -40,6 +40,14 @@ from openai import AsyncOpenAI, OpenAIError
 from anthropic import AsyncAnthropic
 import httpx
 
+# Brain Module (intelligence layer)
+try:
+    from brain import build_system_prompt, build_user_message, learn_from_result, reload as brain_reload
+    BRAIN_AVAILABLE = True
+except Exception as e:
+    BRAIN_AVAILABLE = False
+    logging.getLogger("master_ai").warning("Brain module not available, using built-in planner: %s", e)
+
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # CONFIGURATION
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
@@ -1825,31 +1833,44 @@ def build_entity_context() -> str:
 async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
                     previous_results: list = None, retry: bool = False) -> dict:
     """Single planning step ÃÂ¢ÃÂÃÂ LLM generates next action(s)."""
-    entity_ctx = build_entity_context()
-    system = PLANNER_SYSTEM_PROMPT.replace("{entity_context}", entity_ctx)
+    if BRAIN_AVAILABLE:
+        system = build_system_prompt()
+    else:
+        entity_ctx = build_entity_context()
+        system = PLANNER_SYSTEM_PROMPT.replace("{entity_context}", entity_ctx)
 
-    user_msg = f"User request: {goal}"
+    if BRAIN_AVAILABLE:
+        user_msg = build_user_message(goal, context, previous_results)
+    else:
+        user_msg = f"User request: {goal}"
 
-    # Add memory context
-    mem_ctx = memory_retrieve_context(goal)
-    if mem_ctx:
-        user_msg += f"\n\nContext from memory:\n{mem_ctx}"
+    if not BRAIN_AVAILABLE:
+        # Fallback: add memory and context manually
+        # Add memory context
+        mem_ctx = memory_retrieve_context(goal)
+        if mem_ctx:
+            user_msg += f"\n\nContext from memory:\n{mem_ctx}"
 
-    # Add previous step results for iterative planning
-    if previous_results:
-        user_msg += "\n\nPrevious step results:\n"
-        for i, pr in enumerate(previous_results[-5:]):
-            user_msg += f"Step {i}: {json.dumps(pr)[:300]}\n"
+        # Add previous step results for iterative planning
+        if previous_results:
+            user_msg += "\n\nPrevious step results:\n"
+            for i, pr in enumerate(previous_results[-5:]):
+                user_msg += f"Step {i}: {json.dumps(pr)[:300]}\n"
 
-    # Add retry correction
-    if retry and context and context.get("validation_error"):
-        user_msg += f"\n\nYour previous response had a validation error: {context['validation_error']}\nPlease fix and respond with valid JSON."
+        # Add retry correction
+        if retry and context and context.get("validation_error"):
+            user_msg += f"\n\nYour previous response had a validation error: {context['validation_error']}\nPlease fix and respond with valid JSON."
 
-    # Add extra context
-    if context:
-        for k in ("extra", "task_context"):
-            if k in context:
-                user_msg += f"\n\n{k}: {context[k]}"
+        # Add extra context
+        if context:
+            for k in ("extra", "task_context"):
+                if k in context:
+                    user_msg += f"\n\n{k}: {context[k]}"
+
+    else:
+        # Brain already handles memory, previous_results, and context
+        if retry and context and context.get("validation_error"):
+            user_msg += f"\n\nRetry correction: {context['validation_error']}"
 
     raw = await llm_call(system, user_msg, max_tokens=2048, trace=trace)
 
@@ -1949,6 +1970,13 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
             TaskManager.complete_task(task_id, {"response": final_response})
         elif task_state != "waiting":
             TaskManager.complete_task(task_id)
+
+    # Brain learning (async, non-blocking)
+    if BRAIN_AVAILABLE and all_actions:
+        try:
+            asyncio.create_task(learn_from_result(goal, all_actions, all_results, final_response))
+        except Exception:
+            pass
 
     return {
         "response": final_response,

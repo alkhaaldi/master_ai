@@ -116,7 +116,7 @@
     "switch.ground_floors_section_2_switch_1=In the ground light",
     "switch.ground_floors_section_2_switch_2=Ground floor section 1 strip",
     "switch.ground_floors_section_2_switch_3=Ground floor section 1 spot",
-    "media_player.ground_floor=Ground"
+    "media_player.ground_floor=سماعة الأرضي Bluesound Ground"
   ],
   "غرفة الضيوف/Guest": [
     "light.guest_bathroom_switch_2=Guest bathroom strip",
@@ -334,7 +334,7 @@
     "switch.bathroom_3_light_switch_2=Room 3 bathroom room spot light",
     "switch.bathroom_3_vent_switch_1=Room 3 bathroom room miror",
     "switch.bathroom_3_vent_switch_2=bathroom 3 vent Switch 2",
-    "media_player.room_3_2=Room 3"
+    "media_player.room_3_2=سماعة غرفة 3 Bluesound Room3"
   ],
   "غرفة 4": [
     "light.room_4_strip_switch_1=Room 4 empty",
@@ -467,8 +467,8 @@
     "light.office_strip_switch_2_2=office strip",
     "light.office_strip_switch_2_3=office strip",
     "cover.room_1_shutter_inverted=المكتب",
-    "media_player.office_1_2=Office 1",
-    "media_player.office_2_2=Office 2",
+    "media_player.office_1_2=سماعة المكتب 1 Bluesound Office1",
+    "media_player.office_2_2=سماعة المكتب 2 Bluesound Office2",
     "light.office_strip_backlight=Office strip Backlight",
     "switch.office_strip_switch_2=office strip",
     "switch.grf_mlbs_1_switch_1=office dressing room strip",

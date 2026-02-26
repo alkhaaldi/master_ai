@@ -1,0 +1,65 @@
+{
+  "home": {
+    "owner": "بو خليفة (سالم)",
+    "family": ["Oana (زوجة)", "عبود (ابن - قادم)", "ناهد/أم سالم (أمي)"],
+    "floors": 4,
+    "description": "بيت 4 أدوار بالكويت، 250+ جهاز ذكي Tuya، RPi5 يدير Home Assistant"
+  },
+  "device_aliases": [
+    {"patterns": ["بلو ساوند","بلوساوند","bluesound","السماعات","speakers","سماعات"], "entities": ["media_player.office_1_2","media_player.office_2_2","media_player.room_3_2","media_player.ground_floor"], "note": "4 سماعات Bluesound تشتغل عبر Music Assistant فقط — native entities معطلة"},
+    {"patterns": ["تلفزيون المعيشة","تلفزيون الصالة","living tv","سوني المعيشة","سوني","bravia"], "entities": ["media_player.bravia_kd_85x85j"], "note": "Sony BRAVIA 85 بوصة"},
+    {"patterns": ["تلفزيون سامسونج","samsung tv","سامسونج"], "entities": ["media_player.samsung_bu8000_85_tv_ua85bu8000uxzn"], "note": "Samsung BU8000 — يحتاج WoL"},
+    {"patterns": ["اليكسا غرفتي","اليكسا الماستر"], "entities": ["media_player.my_room_alexa"], "note": ""},
+    {"patterns": ["اليكسا المعيشة","اليكسا الصالة"], "entities": ["media_player.living_room_alexa"], "note": ""},
+    {"patterns": ["المكيفات","مكيفات","AC","all AC","كل المكيفات"], "entities": ["climate.mkyf_ldywny","climate.mkyf_lmtbkh","climate.living_room_ac","climate.my_room_ac","climate.mama_room_ac"], "note": "حارس حرارة: حد أقصى 23°، 5 دقائق delay"},
+    {"patterns": ["مكيف الديوانية","AC ديوانية"], "entities": ["climate.mkyf_ldywny"], "note": ""},
+    {"patterns": ["مكيف غرفتي","مكيف الماستر","مكيف النوم"], "entities": ["climate.my_room_ac"], "note": "عنيد — يرجع 21° بالليل 10PM-6AM"},
+    {"patterns": ["مكيف المعيشة","مكيف الصالة"], "entities": ["climate.living_room_ac"], "note": ""},
+    {"patterns": ["مكيف المطبخ","kitchen AC"], "entities": ["climate.mkyf_lmtbkh"], "note": ""},
+    {"patterns": ["مكيف أمي","مكيف ماما"], "entities": ["climate.mama_room_ac"], "note": ""},
+    {"patterns": ["ستائر المعيشة","شتر الصالة"], "entities": ["cover.living_room_left_shutter_inverted","cover.living_room_right_shutter_inverted"], "note": "_inverted — open=close"},
+    {"patterns": ["ستائر غرفتي","شتر الماستر"], "entities": ["cover.my_room_left_shutter_inverted","cover.my_room_right_shutter_inverted"], "note": "_inverted"},
+    {"patterns": ["كل الستائر","all shutters","جميع الستائر"], "entities": ["scene.skwr_kl_lstyr","scene.fth_kl_lstyr"], "note": "scene للسكر/الفتح"},
+    {"patterns": ["طفي كل شي","طفي البيت","turn off all","أطفي"], "entities": ["scene.tfwy_kl_shy"], "note": ""},
+    {"patterns": ["وضع النوم","نوم","sleep mode"], "entities": ["scene.wd_lnwm"], "note": ""},
+    {"patterns": ["صباح الخير","وضع الصباح"], "entities": ["scene.sbh_lkhyr"], "note": ""},
+    {"patterns": ["وضع الضيوف","ضيوف"], "entities": ["scene.wd_ldywf"], "note": ""},
+    {"patterns": ["وضع السينما","سينما"], "entities": ["scene.wd_lsynm"], "note": ""},
+    {"patterns": ["وضع الديوانية","ديوانية جاهزة"], "entities": ["scene.wd_ldywny"], "note": ""},
+    {"patterns": ["الطابعة","printer","canon"], "entities": ["button.shhy_ltb_h"], "note": "Canon MF657Cdw — WoL entity صحّي الطابعة"},
+    {"patterns": ["منقي الهواء","air purifier","تنقية"], "entities": ["scene.wd_ltnqy"], "note": "scene تنقية الهواء"}
+  ],
+  "device_notes": {
+    "media_player": "السماعات Bluesound عبر Music Assistant فقط (native disabled لمنع echo). Sony BRAVIA + Samsung BU8000 (WoL)",
+    "cover": "كل الستائر _inverted — open_cover يسكّر والعكس. استخدم الأسماء بالعربي",
+    "climate": "حارس حرارة: حد أقصى 23°، 5min delay، input_boolean للتفعيل. مكيف الماستر عنيد يرجع 21° بالليل",
+    "scene": "17 مشهد — طفي كل شي، نوم، صباح، مغادرة، ضيوف، ديوانية، سينما، حمامات off، شفاطات off، ملابس off، سبوت فقط، ستريب فقط، تنقية، أول off، أرضي off، سكر/فتح ستائر",
+    "fan": "الشفاطات بالحمامات. منقيات الهواء (air purifier) بالديوانية والمعيشة",
+    "light": "أنواع: spot, strip, chandelier, mirror, backlight. كل غرفة نوم فيها ملابس(spot+strip)+حمام(spot+strip+mirror+vent)"
+  },
+  "room_descriptions": {
+    "الديوانية": "استقبال رجال. ثريا+مرايا+3سبوت+ستريب. ممر+مغسلة+حمام. مكيف+2منقي. شتر باب+نافذة. بدون درج!",
+    "صالة المعيشة": "صالة العائلة. Sony BRAVIA 85 بوصة+Alexa. مكيف. 4 ستائر. 2 منقي هواء",
+    "غرفة الماستر": "غرفة نوم بو خليفة. 4 ستائر. مكيف عنيد(21° بالليل). Alexa. ملابس+حمام ماستر",
+    "المكتب": "مكتب الدور الأول. 2 سماعة Bluesound (Office1+Office2)",
+    "غرفة 3": "نوم الدور الأول. سماعة Bluesound Room3",
+    "الأرضي": "سماعة Bluesound Ground. مدخل البيت",
+    "المهبخ": "ثريا+2سبوت+ستريب+ستوريج. مكيف. شفاط",
+    "صالة الاستقبال": "استقبال رسمي. ثريا+مرايا+سبوت+ستريب",
+    "غرفة ماما": "غرفة أم سالم (ناهد). مكيف. داشبورد خاص (خط كبير zoom 1.4)"
+  },
+  "rules": [
+    "docker kill homeassistant قبل تعديل ملفات lovelace — docker stop يكتب فوق التعديلات",
+    "Bluesound عبر Music Assistant فقط — native entities معطلة لمنع echo",
+    "الستائر _inverted — open_cover يسكّر والعكس",
+    "لا تخترع entity IDs — استخدم فقط من entity_map",
+    "ردود المستخدم بالعربي الكويتي",
+    "Git deploy فقط — ممنوع copy/paste",
+    "حد المكيفات 23° — حارس حرارة automation"
+  ],
+  "user_preferences": {
+    "language": "كويتي عربي",
+    "tone": "casual, direct, no formalities",
+    "name": "بو خليفة"
+  }
+}
