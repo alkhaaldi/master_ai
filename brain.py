@@ -97,6 +97,11 @@ def reload():
     _entity_index = _build_entity_index(_entity_map)
     _alias_cache = _compile_aliases(_knowledge)
     total_entities = sum(len(v) for v in _entity_index.values())
+    try:
+        _ensure_memory_table()
+        _apply_confidence_decay()
+    except Exception:
+        pass
     logger.info(
         f"Brain loaded: {len(_entity_map)} rooms, "
         f"{total_entities} entities, {len(_alias_cache)} alias groups"
@@ -164,6 +169,66 @@ def _get_learned_aliases(text):
         return results
     except Exception:
         return []
+
+
+
+def _get_relevant_patterns(goal):
+    try:
+        if not AUDIT_DB.exists(): return []
+        keywords = _extract_keywords(goal)
+        if not keywords: return []
+        conn = sqlite3.connect(str(AUDIT_DB))
+        rows = conn.execute(
+            "SELECT content, context, confidence, hit_count FROM memory "
+            "WHERE category='pattern' AND active=1 ORDER BY hit_count DESC LIMIT 20"
+        ).fetchall()
+        conn.close()
+        results = []
+        for content, ctx_str, conf, hits in rows:
+            try:
+                ctx = json.loads(ctx_str) if ctx_str else {}
+                past_kw = ctx.get("goal_keywords", [])
+                if len(set(keywords) & set(past_kw)) >= 1:
+                    results.append({"goal": content, "actions": ctx.get("action_types", []),
+                                   "confidence": conf, "hits": hits})
+            except: pass
+        results.sort(key=lambda x: x.get("hits", 0), reverse=True)
+        return results[:3]
+    except: return []
+
+def _detect_user_correction(goal, previous_results):
+    markers = ["مو هذا", "لا مو", "غلط", "أقصد", "ما أبي",
+               "not this", "wrong", "I meant"]
+    for m in markers:
+        if m in goal.lower(): return True
+    if previous_results:
+        last = previous_results[-1] if previous_results else {}
+        if isinstance(last, dict) and not last.get("success", True): return True
+    return False
+
+def _apply_confidence_decay():
+    try:
+        conn = sqlite3.connect(str(AUDIT_DB))
+        conn.execute("UPDATE memory SET confidence=MAX(confidence-0.05,0.1) "
+                     "WHERE category='pattern' AND active=1 AND "
+                     "(last_used IS NULL OR last_used < datetime('now','-7 days'))")
+        conn.execute("UPDATE memory SET active=0 WHERE confidence<0.15 AND category!='alias'")
+        conn.commit(); conn.close()
+    except: pass
+
+def get_brain_stats():
+    stats = {"brain_version": "1.1", "knowledge_loaded": bool(_knowledge_cache),
+             "aliases_compiled": len(_alias_cache), "entity_index_size": len(_entity_index)}
+    try:
+        conn = sqlite3.connect(str(AUDIT_DB))
+        rows = conn.execute("SELECT category, COUNT(*), AVG(confidence), SUM(hit_count) "
+                           "FROM memory WHERE active=1 GROUP BY category").fetchall()
+        conn.close()
+        stats["memory"] = {r[0]: {"count": r[1], "avg_conf": round(r[2],2), "hits": r[3] or 0} for r in rows}
+        stats["total_memories"] = sum(r[1] for r in rows)
+    except:
+        stats["memory"] = {}; stats["total_memories"] = 0
+    return stats
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -366,6 +431,17 @@ def build_user_message(goal, context=None, previous_results=None):
             parts.append(f"\nvalidation_error: {context['validation_error']}")
             parts.append("Your previous response had a validation error. Fix and respond with valid JSON.")
 
+    # Add relevant past patterns
+    patterns = _get_relevant_patterns(goal)
+    if patterns:
+        parts.append("═══ Past patterns ═══")
+        for p in patterns:
+            acts = ", ".join(p.get("actions", []))
+            g = p.get("goal", "?")
+            h = p.get("hits", 0)
+            parts.append("  [%s] -> %s (x%d)" % (g, acts, h))
+
+
     return "\n\n".join(parts)
 
 
@@ -435,7 +511,23 @@ async def _process_learn_item(item):
                     _store_learning("error_pattern", goal[:100],
                                   json.dumps({"error": error_msg[:200]},
                                             ensure_ascii=False),
-                                  source="error_log")
+                                  source="error_log", confidence=0.5)
+    
+    # Learn alias from successful correction
+    if has_successes and LEARN_RULES.get("save_alias", True):
+        if _detect_user_correction(goal, []):
+            successful_entities = []
+            for a in actions:
+                eid = a.get("args", {}).get("entity_id", "")
+                if eid and eid != "*":
+                    successful_entities.extend(eid.split(","))
+            if successful_entities:
+                for kw in _extract_keywords(goal)[:3]:
+                    if len(kw) > 2:
+                        _store_learning("alias", kw,
+                            json.dumps({"entities": successful_entities[:5]}, ensure_ascii=False),
+                            source="user_correction")
+                        logger.info(f"Learned alias: {kw} -> {successful_entities[:3]}")
 
 
 def _extract_keywords(text):
@@ -448,20 +540,40 @@ def _extract_keywords(text):
     return [w for w in words if w not in stops and len(w) > 1][:10]
 
 
-def _store_learning(category, content, context_json, source="unknown"):
-    """Store learning item in audit.db memory table."""
+def _ensure_memory_table():
+    """Auto-create memory table if missing."""
     try:
         conn = sqlite3.connect(str(AUDIT_DB))
+        conn.execute("""CREATE TABLE IF NOT EXISTS memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL,
+            content TEXT NOT NULL, context TEXT DEFAULT '{}',
+            source TEXT DEFAULT 'unknown', confidence REAL DEFAULT 1.0,
+            hit_count INTEGER DEFAULT 0, last_used TEXT,
+            active INTEGER DEFAULT 1, created_at TEXT NOT NULL,
+            UNIQUE(category, content))""")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_mem_cat ON memory(category, active)")
+        conn.commit(); conn.close()
+    except Exception: pass
+
+_ensure_memory_table()
+
+
+def _store_learning(category, content, context_json, source="unknown", confidence=1.0):
+    """Store learning item with ON CONFLICT upsert."""
+    try:
+        conn = sqlite3.connect(str(AUDIT_DB))
+        now = datetime.now().isoformat()
         conn.execute(
-            "INSERT OR IGNORE INTO memory (category, content, context, source, active, created_at) "
-            "VALUES (?, ?, ?, ?, 1, ?)",
-            (category, content, context_json, source, datetime.now().isoformat())
-        )
-        conn.commit()
-        conn.close()
-        logger.info(f"Learned [{category}]: {content[:60]}")
+            "INSERT INTO memory (category,content,context,source,confidence,active,created_at) "
+            "VALUES (?,?,?,?,?,1,?) ON CONFLICT(category,content) DO UPDATE SET "
+            "hit_count=hit_count+1, confidence=MIN(confidence+0.1,1.0), last_used=?, context=?",
+            (category, content, context_json, source, confidence, now, now, context_json))
+        conn.commit(); conn.close()
     except Exception as e:
-        logger.warning(f"Failed to store learning: {e}")
+        logger.warning(f"_store_learning error: {e}")
+
+
+
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
