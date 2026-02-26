@@ -3199,10 +3199,10 @@ def tg_split_message(text: str) -> list[str]:
         parts.append(text[:split_at])
         text = text[split_at:].lstrip("\n")
     return parts
-
-
 async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
     """Send message to Telegram, auto-split if >4096 chars."""
+
+
     global _tg_client
     if not _tg_client:
         _tg_client = httpx.AsyncClient(timeout=30)
@@ -3315,7 +3315,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
 
 
 
-
 async def tg_send_with_feedback(chat_id, text: str, request_id: str = None) -> bool:
     """Send message with inline feedback buttons."""
     global _tg_client
@@ -3377,12 +3376,13 @@ async def tg_handle_callback(callback_query: dict):
 
 async def tg_handle_message(chat_id, text: str, user: dict):
     """Process a Telegram message through the iterative engine."""
+    # DEBUG: log to file
     user_name = user.get("first_name", "User")
     tg_user_id = user.get("id")
     user_profile = detect_user(source="telegram", telegram_user_id=tg_user_id)
     logger.info(f"TG user: {user_profile.get('user_id', '?')} ({user_name})")
     # Auto-save admin chat_id for proactive alerts
-    _admin_path = Path("data/admin_chat_id.txt")
+    _admin_path = __import__("pathlib").Path("data/admin_chat_id.txt")
     if not _admin_path.exists():
         _admin_path.write_text(str(chat_id))
         logger.info(f"Saved admin chat_id: {chat_id}")
@@ -3440,7 +3440,7 @@ async def telegram_polling_loop():
         try:
             resp = await _tg_client.get(
                 f"{TG_BASE}/getUpdates",
-                params={"offset": _tg_offset, "timeout": 30, "allowed_updates": '["message"]'},
+                params={"offset": _tg_offset, "timeout": 30, "allowed_updates": '["message","callback_query"]'},
             )
             if resp.status_code == 200:
                 data = resp.json()
