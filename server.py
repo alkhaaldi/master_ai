@@ -1998,6 +1998,10 @@ async def lifespan(app):
     logger.info(f"Master AI v{VERSION} started")
     asyncio.create_task(event_processor_loop())
     logger.info("Event processor loop scheduled")
+    # Telegram bot polling
+    if TELEGRAM_TOKEN:
+        asyncio.create_task(telegram_polling_loop())
+        logger.info("Telegram bot polling scheduled")
     yield
     logger.info("Master AI shutting down")
 
@@ -3041,5 +3045,200 @@ async def system_context():
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # WEB PANEL - moved to modules/panel.py
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TELEGRAM BOT (v5.4.6)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TG_BASE = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+TG_MAX_MSG = 4096
+_tg_client: httpx.AsyncClient = None
+_tg_offset = 0
+_tg_running = False
+
+
+def tg_split_message(text: str) -> list[str]:
+    """Split long messages at newline boundaries."""
+    if len(text) <= TG_MAX_MSG:
+        return [text]
+    parts = []
+    while text:
+        if len(text) <= TG_MAX_MSG:
+            parts.append(text)
+            break
+        split_at = text.rfind("\n", 0, TG_MAX_MSG)
+        if split_at <= 0:
+            split_at = TG_MAX_MSG
+        parts.append(text[:split_at])
+        text = text[split_at:].lstrip("\n")
+    return parts
+
+
+async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
+    """Send message to Telegram, auto-split if >4096 chars."""
+    global _tg_client
+    if not _tg_client:
+        _tg_client = httpx.AsyncClient(timeout=30)
+    for part in tg_split_message(text):
+        try:
+            payload = {"chat_id": chat_id, "text": part}
+            if parse_mode:
+                payload["parse_mode"] = parse_mode
+            resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json=payload)
+            if resp.status_code != 200:
+                logger.error(f"TG send fail: {resp.text[:200]}")
+                return False
+        except Exception as e:
+            logger.error(f"TG send error: {e}")
+            return False
+    return True
+
+
+async def tg_handle_command(chat_id, text: str) -> str | None:
+    """Handle quick commands. Returns response or None to pass to engine."""
+    cmd = text.strip().lower()
+
+    if cmd == "/start":
+        return "\U0001f3e0 Master AI Bot\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \u0623\u0648 \u0623\u0645\u0631.\n\n/status \u2014 \u062d\u0627\u0644\u0629 \u0627\u0644\u0646\u0638\u0627\u0645\n/lights \u2014 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0627\u0644\u0645\u0634\u063a\u0644\u0629\n/temp \u2014 \u062d\u0631\u0627\u0631\u0629 \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a"
+
+    if cmd == "/status":
+        uptime = int(time.time() - START_TIME)
+        h, m = divmod(uptime // 60, 60)
+        return f"\u2705 Master AI v{VERSION}\n\u23f1 Uptime: {h}h {m}m\n\U0001f50c Plugins: {len(PLUGIN_REGISTRY._plugins)}"
+
+    if cmd == "/lights":
+        try:
+            async with httpx.AsyncClient(timeout=10) as c:
+                resp = await c.get(
+                    f"{HA_URL}/api/states",
+                    headers={"Authorization": f"Bearer {HA_TOKEN}"}
+                )
+                states = resp.json()
+                on_lights = [
+                    s["attributes"].get("friendly_name", s["entity_id"])
+                    for s in states
+                    if s["entity_id"].startswith("light.") and s["state"] == "on"
+                ]
+            if on_lights:
+                return f"\U0001f4a1 ({len(on_lights)}):\n" + "\n".join(f"\u2022 {n}" for n in on_lights)
+            return "\U0001f4a1 \u0643\u0644 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0645\u0637\u0641\u064a\u0629"
+        except Exception as e:
+            return f"\u26a0\ufe0f {e}"
+
+    if cmd == "/temp":
+        try:
+            async with httpx.AsyncClient(timeout=10) as c:
+                resp = await c.get(
+                    f"{HA_URL}/api/states",
+                    headers={"Authorization": f"Bearer {HA_TOKEN}"}
+                )
+                states = resp.json()
+                climates = [
+                    s for s in states
+                    if s["entity_id"].startswith("climate.") and s["state"] != "unavailable"
+                ]
+            if climates:
+                lines = []
+                for cl in climates:
+                    name = cl["attributes"].get("friendly_name", cl["entity_id"])
+                    current = cl["attributes"].get("current_temperature", "?")
+                    target = cl["attributes"].get("temperature", "?")
+                    state = cl["state"]
+                    emoji = "\u2744\ufe0f" if state == "cool" else "\U0001f525" if state == "heat" else "\u23f8" if state == "off" else "\U0001f300"
+                    lines.append(f"{emoji} {name}: {current}\u00b0 \u2192 {target}\u00b0")
+                return "\U0001f321 :\n" + "\n".join(lines)
+            return "\U0001f321 \u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0643\u064a\u0641\u0627\u062a"
+        except Exception as e:
+            return f"\u26a0\ufe0f {e}"
+
+    return None
+
+
+async def tg_handle_message(chat_id, text: str, user: dict):
+    """Process a Telegram message through the iterative engine."""
+    user_name = user.get("first_name", "User")
+
+    quick = await tg_handle_command(chat_id, text)
+    if quick:
+        await tg_send(chat_id, quick)
+        return
+
+    trace = RequestTrace()
+    task_id = TaskManager.create_task(text, trace.request_id)
+    trace.task_id = task_id
+    memory_add_short_term("user", f"[Telegram/{user_name}] {text}")
+
+    t0 = time.time()
+    result = {}
+    try:
+        result = await iterative_engine(
+            goal=text,
+            context={"source": "telegram", "chat_id": str(chat_id), "user_name": user_name},
+            trace=trace,
+            task_id=task_id,
+        )
+        response = result.get("response", "\u2705 Done")
+    except Exception as e:
+        logger.error(f"TG engine error: {e}", exc_info=True)
+        TaskManager.fail_task(task_id, str(e))
+        response = f"\u26a0\ufe0f Error: {str(e)[:500]}"
+
+    duration = time.time() - t0
+    memory_add_short_term("assistant", response)
+    await audit_log(
+        task=text, actions=result.get("actions"),
+        results=result.get("results"),
+        status="ok", duration=duration,
+        request_id=trace.request_id, task_id=task_id,
+    )
+    await tg_send(chat_id, response)
+
+
+async def telegram_polling_loop():
+    """Long-polling loop for Telegram updates."""
+    global _tg_client, _tg_offset, _tg_running
+
+    if not TELEGRAM_TOKEN:
+        logger.warning("TELEGRAM_BOT_TOKEN not set - bot disabled")
+        return
+
+    _tg_client = httpx.AsyncClient(timeout=httpx.Timeout(40, connect=10))
+    _tg_running = True
+    logger.info("Telegram polling started")
+
+    consecutive_errors = 0
+    while _tg_running:
+        try:
+            resp = await _tg_client.get(
+                f"{TG_BASE}/getUpdates",
+                params={"offset": _tg_offset, "timeout": 30, "allowed_updates": '["message"]'},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                consecutive_errors = 0
+                for update in data.get("result", []):
+                    _tg_offset = update["update_id"] + 1
+                    msg = update.get("message", {})
+                    txt = msg.get("text", "")
+                    cid = msg.get("chat", {}).get("id")
+                    usr = msg.get("from", {})
+                    if txt and cid:
+                        asyncio.create_task(tg_handle_message(cid, txt, usr))
+            elif resp.status_code == 409:
+                logger.warning("TG 409 conflict - retrying in 10s")
+                await asyncio.sleep(10)
+            else:
+                logger.error(f"TG poll HTTP {resp.status_code}: {resp.text[:200]}")
+                await asyncio.sleep(5)
+        except httpx.ReadTimeout:
+            continue
+        except Exception as e:
+            consecutive_errors += 1
+            wait = min(consecutive_errors * 5, 60)
+            logger.error(f"TG poll error ({consecutive_errors}): {e}")
+            await asyncio.sleep(wait)
+
+    logger.info("Telegram polling stopped")
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
