@@ -1,5 +1,5 @@
 """
-Master AI Brain v3.0 — Facade
+Master AI Brain v4.0 — Facade
 Re-exports all brain functions from sub-modules.
 server.py imports from here — no changes needed.
 """
@@ -35,33 +35,34 @@ try:
         _detect_user_correction,
         _apply_confidence_decay,
         _ensure_memory_table,
-        _learn_worker,
+        _learning_stats,
     )
     LEARNING_OK = True
     logger.info("brain_learning loaded")
 except Exception as e:
     LEARNING_OK = False
     logger.error(f"brain_learning FAILED: {e}")
+    async def learn_from_result(*a, **kw): pass
+    def _learning_stats(): return {}
 
 # ═══════════════════════════════════════
-# Personality: templates, response prompt
+# Personality: quick responses, response prompts
 # ═══════════════════════════════════════
 try:
     from brain_personality import (
         get_quick_response,
         build_response_prompt,
-        reload_policy,
-        get_policy,
     )
     PERSONALITY_OK = True
     logger.info("brain_personality loaded")
 except Exception as e:
     PERSONALITY_OK = False
     logger.error(f"brain_personality FAILED: {e}")
-
+    def get_quick_response(*a, **kw): return None
+    def build_response_prompt(): return "Summarize the results for the user."
 
 # ═══════════════════════════════════════
-# Proactive: monitoring, alerts, briefing
+# Proactive: alerts, daily briefing
 # ═══════════════════════════════════════
 try:
     from brain_proactive import (
@@ -74,12 +75,70 @@ try:
 except Exception as e:
     PROACTIVE_OK = False
     logger.error(f"brain_proactive FAILED: {e}")
-    async def proactive_loop():
-        pass
-    def get_proactive_stats():
-        return {"enabled": False, "error": "module not loaded"}
+    async def proactive_loop(): pass
+    def get_proactive_stats(): return {"enabled": False, "error": "module not loaded"}
+
+# ═══════════════════════════════════════
+# Observability: diagnostics, backups (Phase 4.5)
+# ═══════════════════════════════════════
+try:
+    from brain_observability import (
+        get_system_diag,
+        run_backup,
+        backup_loop,
+        record_error,
+        errors_last_hour,
+    )
+    OBSERVABILITY_OK = True
+    logger.info("brain_observability loaded")
+except Exception as e:
+    OBSERVABILITY_OK = False
+    logger.error(f"brain_observability FAILED: {e}")
+    def get_system_diag(**kw): return {"error": "module not loaded"}
+    def run_backup(): return {"error": "module not loaded"}
+    async def backup_loop(): pass
+    def record_error(*a): pass
+
+# ═══════════════════════════════════════
+# Multi-User: profiles, source detection (Phase 5)
+# ═══════════════════════════════════════
+try:
+    from brain_multiuser import (
+        detect_user,
+        get_user_response_style,
+        get_user_patterns,
+        get_multiuser_stats,
+    )
+    MULTIUSER_OK = True
+    logger.info("brain_multiuser loaded")
+except Exception as e:
+    MULTIUSER_OK = False
+    logger.error(f"brain_multiuser FAILED: {e}")
+    def detect_user(**kw): return {"user_id": "bu_khalifa", "name": "بو خليفة", "language": "ar_kw"}
+    def get_multiuser_stats(): return {"error": "module not loaded"}
+
+# ═══════════════════════════════════════
+# Analytics: feedback, request logging (Phase 6)
+# ═══════════════════════════════════════
+try:
+    from brain_analytics import (
+        record_feedback,
+        log_request,
+        get_analytics,
+    )
+    ANALYTICS_OK = True
+    logger.info("brain_analytics loaded")
+except Exception as e:
+    ANALYTICS_OK = False
+    logger.error(f"brain_analytics FAILED: {e}")
+    def record_feedback(*a, **kw): return False
+    def log_request(*a, **kw): pass
+    def get_analytics(**kw): return {"error": "module not loaded"}
 
 
+# ═══════════════════════════════════════
+# Combined stats (called by server.py)
+# ═══════════════════════════════════════
 def get_brain_stats():
     """Combined stats from all modules."""
     stats = {}
@@ -90,7 +149,12 @@ def get_brain_stats():
         "learning": "ok" if LEARNING_OK else "failed",
         "personality": "ok" if PERSONALITY_OK else "failed",
         "proactive": "ok" if PROACTIVE_OK else "failed",
+        "observability": "ok" if OBSERVABILITY_OK else "failed",
+        "multiuser": "ok" if MULTIUSER_OK else "failed",
+        "analytics": "ok" if ANALYTICS_OK else "failed",
     }
     if PROACTIVE_OK:
         stats["proactive"] = get_proactive_stats()
+    if MULTIUSER_OK:
+        stats["multiuser"] = get_multiuser_stats()
     return stats

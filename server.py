@@ -42,7 +42,7 @@ import httpx
 
 # Brain Module (intelligence layer)
 try:
-    from brain import build_system_prompt, build_user_message, learn_from_result, reload as brain_reload, get_brain_stats, get_quick_response, build_response_prompt, proactive_loop
+    from brain import build_system_prompt, build_user_message, learn_from_result, reload as brain_reload, get_brain_stats, get_quick_response, build_response_prompt, proactive_loop, get_system_diag, run_backup, backup_loop, record_error, detect_user, get_multiuser_stats, record_feedback, log_request, get_analytics
     BRAIN_AVAILABLE = True
 except Exception as e:
     BRAIN_AVAILABLE = False
@@ -2059,6 +2059,12 @@ async def lifespan(app):
             logger.info("Proactive engine scheduled")
         except Exception as e:
             logger.error(f"Proactive engine failed to start (non-fatal): {e}")
+        # Phase 4.5: Observability backup engine
+        try:
+            asyncio.create_task(backup_loop())
+            logger.info("Backup engine scheduled")
+        except Exception as e:
+            logger.error(f"Backup engine failed to start (non-fatal): {e}")
     yield
     logger.info("Master AI shutting down")
 
@@ -2119,6 +2125,39 @@ async def brain_stats_endpoint():
     if not BRAIN_AVAILABLE:
         return {"error": "brain module not loaded"}
     return get_brain_stats()
+
+@app.get('/system/diag')
+async def system_diag_endpoint():
+    if not BRAIN_AVAILABLE:
+        return {"error": "brain module not loaded"}
+    stats = get_brain_stats()
+    return get_system_diag(brain_stats=stats)
+
+@app.post('/system/backup')
+async def backup_endpoint():
+    if not BRAIN_AVAILABLE:
+        return {"error": "brain module not loaded"}
+    return run_backup()
+
+@app.get('/brain/analytics')
+async def analytics_endpoint(days: int = 7):
+    if not BRAIN_AVAILABLE:
+        return {"error": "brain module not loaded"}
+    return get_analytics(days=days)
+
+@app.get('/brain/users')
+async def users_endpoint():
+    if not BRAIN_AVAILABLE:
+        return {"error": "brain module not loaded"}
+    return get_multiuser_stats()
+
+@app.post('/brain/feedback')
+async def feedback_endpoint(data: dict):
+    if not BRAIN_AVAILABLE:
+        return {"error": "brain module not loaded"}
+    ok = record_feedback(session_id=data.get("session_id",""), rating=data.get("rating",3), comment=data.get("comment",""), user_id=data.get("user_id","bu_khalifa"), goal=data.get("goal",""))
+    return {"success": ok}
+
 
 @app.get("/health")
 async def health():

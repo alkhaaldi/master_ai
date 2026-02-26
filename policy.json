@@ -9,15 +9,26 @@
     "emoji": true
   },
   "proactive": {
-    "enabled": false,
+    "enabled": true,
     "rate_limit_per_hour": 4,
     "rate_limit_per_day": 15,
     "dedup_window_hours": 6,
     "quiet_hours_start": "00:00",
-    "quiet_hours_end": "07:00"
+    "quiet_hours_end": "07:00",
+    "check_interval_seconds": 300,
+    "daily_briefing_time": "07:30",
+    "daily_briefing_enabled": true
   },
   "learning": {
     "auto_optimize_prompts": false,
-    "min_interactions_for_optimize": 200
+    "min_interactions_for_optimize": 200,
+    "feedback_enabled": true
+  },
+  "observability": {
+    "backup_enabled": true,
+    "backup_time": "03:00",
+    "backup_keep_days": 7,
+    "knowledge_sync_enabled": false,
+    "knowledge_sync_interval_hours": 6
   }
 }
