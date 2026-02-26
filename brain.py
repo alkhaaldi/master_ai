@@ -1,5 +1,5 @@
 """
-Master AI Brain v2.0 — Facade
+Master AI Brain v3.0 — Facade
 Re-exports all brain functions from sub-modules.
 server.py imports from here — no changes needed.
 """
@@ -60,6 +60,26 @@ except Exception as e:
     logger.error(f"brain_personality FAILED: {e}")
 
 
+# ═══════════════════════════════════════
+# Proactive: monitoring, alerts, briefing
+# ═══════════════════════════════════════
+try:
+    from brain_proactive import (
+        proactive_loop,
+        get_proactive_stats,
+        _ensure_alerts_table,
+    )
+    PROACTIVE_OK = True
+    logger.info("brain_proactive loaded")
+except Exception as e:
+    PROACTIVE_OK = False
+    logger.error(f"brain_proactive FAILED: {e}")
+    async def proactive_loop():
+        pass
+    def get_proactive_stats():
+        return {"enabled": False, "error": "module not loaded"}
+
+
 def get_brain_stats():
     """Combined stats from all modules."""
     stats = {}
@@ -69,5 +89,8 @@ def get_brain_stats():
         "core": "ok" if CORE_OK else "failed",
         "learning": "ok" if LEARNING_OK else "failed",
         "personality": "ok" if PERSONALITY_OK else "failed",
+        "proactive": "ok" if PROACTIVE_OK else "failed",
     }
+    if PROACTIVE_OK:
+        stats["proactive"] = get_proactive_stats()
     return stats

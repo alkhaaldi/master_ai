@@ -42,7 +42,7 @@ import httpx
 
 # Brain Module (intelligence layer)
 try:
-    from brain import build_system_prompt, build_user_message, learn_from_result, reload as brain_reload, get_brain_stats, get_quick_response, build_response_prompt
+    from brain import build_system_prompt, build_user_message, learn_from_result, reload as brain_reload, get_brain_stats, get_quick_response, build_response_prompt, proactive_loop
     BRAIN_AVAILABLE = True
 except Exception as e:
     BRAIN_AVAILABLE = False
@@ -2052,6 +2052,13 @@ async def lifespan(app):
     if TELEGRAM_TOKEN:
         asyncio.create_task(telegram_polling_loop())
         logger.info("Telegram bot polling scheduled")
+    # Phase 4: Proactive monitoring engine
+    if BRAIN_AVAILABLE:
+        try:
+            asyncio.create_task(proactive_loop())
+            logger.info("Proactive engine scheduled")
+        except Exception as e:
+            logger.error(f"Proactive engine failed to start (non-fatal): {e}")
     yield
     logger.info("Master AI shutting down")
 
@@ -3247,6 +3254,11 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
 async def tg_handle_message(chat_id, text: str, user: dict):
     """Process a Telegram message through the iterative engine."""
     user_name = user.get("first_name", "User")
+    # Auto-save admin chat_id for proactive alerts
+    _admin_path = Path("data/admin_chat_id.txt")
+    if not _admin_path.exists():
+        _admin_path.write_text(str(chat_id))
+        logger.info(f"Saved admin chat_id: {chat_id}")
 
     quick = await tg_handle_command(chat_id, text)
     if quick:
