@@ -47,6 +47,11 @@ try:
 except Exception as e:
     BRAIN_AVAILABLE = False
     logging.getLogger("master_ai").warning("Brain module not available, using built-in planner: %s", e)
+try:
+    from tg_ops import is_tg_admin, get_pending_approvals, process_approval, format_approval_buttons, run_backup as tg_run_backup, get_admin_chat_id
+    TG_OPS_OK = True
+except Exception:
+    TG_OPS_OK = False
 
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # CONFIGURATION
@@ -60,6 +65,7 @@ HA_TOKEN = os.getenv("HA_TOKEN", "")
 AGENT_SECRET = os.getenv("AGENT_SECRET", "")
 MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+ADMIN_TELEGRAM_ID = os.getenv("ADMIN_TELEGRAM_ID", "")
 
 VERSION = "5.4.0"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -3404,6 +3410,62 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         await tg_send_inline(chat_id, "📷 *اختر كاميرا*", cb, columns=3)
         return "__inline_sent__"
 
+    # Level 1 admin-only operational commands
+    if cmd == "/approvals":
+        if not TG_OPS_OK:
+            return "tg_ops module not loaded"
+        if not is_tg_admin(chat_id):
+            return "Admin only"
+        pending = get_pending_approvals(10)
+        if not pending:
+            return "No pending approvals"
+        buttons = format_approval_buttons(pending)
+        header = f"Pending approvals: {len(pending)}"
+        await tg_send_inline(chat_id, header, buttons, columns=2)
+        return "__inline_sent__"
+
+    if cmd == "/backup":
+        if not TG_OPS_OK:
+            return "tg_ops module not loaded"
+        if not is_tg_admin(chat_id):
+            return "Admin only"
+        ok, msg = tg_run_backup()
+        if ok:
+            return f"Backup done\n{msg}"
+        return f"Backup failed: {msg}"
+
+    if cmd == "/restart":
+        if not is_tg_admin(chat_id) if TG_OPS_OK else True:
+            return "Admin only"
+        try:
+            async with httpx.AsyncClient(timeout=10) as rc:
+                hdrs = {}
+                if MASTER_API_KEY:
+                    hdrs["X-API-Key"] = MASTER_API_KEY
+                resp = await rc.post("http://127.0.0.1:9001/restart", headers=hdrs)
+                if resp.status_code == 200:
+                    return "Restart initiated via recovery"
+                return f"Recovery responded: {resp.status_code}"
+        except Exception as e:
+            return f"Recovery unreachable: {e}"
+
+    if cmd == "/errors":
+        if not is_tg_admin(chat_id) if TG_OPS_OK else True:
+            return "Admin only"
+        try:
+            diag = get_system_diag()
+            errs = diag.get("recent_errors", [])
+            cnt = diag.get("errors_last_hour", 0)
+            if not errs and cnt == 0:
+                return "No recent errors"
+            parts = [f"Errors last hour: {cnt}"]
+            for er in errs[:5]:
+                parts.append(f"  - {str(er)[:100]}")
+            return "\n".join(parts)
+        except Exception as e:
+            return f"Error: {e}"
+
+
     if cmd == "/help":
         return "\U0001f3e0 Master AI\n\n/status - \u0627\u0644\u0646\u0638\u0627\u0645\n/lights - \u0627\u0644\u0623\u0636\u0648\u0627\u0621\n/temp - \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a\n/brain - \u0627\u0644\u0639\u0642\u0644\n/diag - \u062a\u0634\u062e\u064a\u0635\n\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \U0001f44d"
 
@@ -3544,6 +3606,19 @@ async def tg_handle_callback(callback_query: dict):
             logger.error(f"Cam error: {e}")
             answer = "❌"
 
+    elif data.startswith("appr:"):
+        parts_a = data.split(":")
+        if len(parts_a) == 3 and TG_OPS_OK:
+            aid_cb = parts_a[1]
+            dec_cb = "approve" if parts_a[2] == "1" else "deny"
+            if not is_tg_admin(tg_user_id):
+                answer = "Admin only"
+            else:
+                answer = process_approval(aid_cb, dec_cb)
+        else:
+            answer = "Invalid"
+
+
     else:
         answer = ""
 
@@ -3562,11 +3637,12 @@ async def tg_handle_message(chat_id, text: str, user: dict):
     tg_user_id = user.get("id")
     user_profile = detect_user(source="telegram", telegram_user_id=tg_user_id)
     logger.info(f"TG user: {user_profile.get('user_id', '?')} ({user_name})")
-    # Auto-save admin chat_id for proactive alerts
-    _admin_path = __import__("pathlib").Path("data/admin_chat_id.txt")
-    if not _admin_path.exists():
-        _admin_path.write_text(str(chat_id))
-        logger.info(f"Saved admin chat_id: {chat_id}")
+    # Auto-save admin chat_id (skip if ADMIN_TELEGRAM_ID is set)
+    if not ADMIN_TELEGRAM_ID:
+        _admin_path = __import__("pathlib").Path("data/admin_chat_id.txt")
+        if not _admin_path.exists():
+            _admin_path.write_text(str(chat_id))
+            logger.info(f"Saved admin chat_id: {chat_id}")
 
     quick = await tg_handle_command(chat_id, text)
     if quick == "__inline_sent__":
