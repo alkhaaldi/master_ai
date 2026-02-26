@@ -480,8 +480,15 @@ async def _process_learn_item(item):
     actions = item.get("actions", [])
     results = item.get("results", [])
 
+    # Debug logging
+    logger.info(f"LEARN: goal={goal[:50]}, actions={len(actions)}, results={len(results)}")
+    logger.info(f"LEARN: action_types={[type(a).__name__ for a in actions[:3]]}")
+    logger.info(f"LEARN: result_types={[type(r).__name__ for r in results[:3]]}")
+    if results:
+        logger.info(f"LEARN: result[0]={str(results[0])[:200]}")
+
     # Skip trivial interactions
-    if not actions or all(a.get("type") == "respond_text" for a in actions):
+    if not actions or all(a.get("type") == "respond_text" for a in actions if isinstance(a, dict)):
         return
 
     has_errors = any(
@@ -492,7 +499,7 @@ async def _process_learn_item(item):
     )
 
     # Learn successful multi-step patterns
-    if has_successes and len(actions) > 1 and LEARN_RULES["save_pattern"]:
+    if len(actions) > 1 and LEARN_RULES["save_pattern"]:
         pattern = {
             "goal_keywords": _extract_keywords(goal),
             "action_types": [a.get("type") for a in actions],
@@ -507,7 +514,7 @@ async def _process_learn_item(item):
         for i, r in enumerate(results):
             if isinstance(r, dict) and not r.get("success", True):
                 error_msg = r.get("error", "")
-                if "not found" in error_msg.lower() or "entity" in error_msg.lower():
+                if error_msg:  # Save all errors as lessons
                     _store_learning("error_pattern", goal[:100],
                                   json.dumps({"error": error_msg[:200]},
                                             ensure_ascii=False),
