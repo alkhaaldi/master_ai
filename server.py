@@ -3278,12 +3278,109 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"\u26a0\ufe0f {e}"
 
+    if cmd == "/brain":
+        try:
+            stats = get_brain_stats()
+            mods = stats.get("modules", {})
+            parts = []
+            for k, v in mods.items():
+                e = "\u2705" if v == "ok" else "\u274c"
+                parts.append(f"  {e} {k}")
+            mod_text = "\n".join(parts)
+            total = stats.get("total_memories", 0)
+            aliases = stats.get("aliases_compiled", 0)
+            bv = stats.get("brain_version", "?")
+            return f"\U0001f9e0 Brain v{bv}\n\nModules:\n{mod_text}\n\nMemories: {total}\nAliases: {aliases}"
+        except Exception as e:
+            return f"\u26a0\ufe0f brain: {e}"
+
+    if cmd == "/diag":
+        try:
+            diag = get_system_diag()
+            si = diag.get("system", {})
+            cpu = si.get("cpu_percent", 0)
+            ram = si.get("memory_percent", 0)
+            temp = si.get("temperature", 0)
+            disk = si.get("disk_percent", 0)
+            db = diag.get("db_size_mb", 0)
+            errs = diag.get("errors_last_hour", 0)
+            return f"\U0001f4ca Diagnostics\n\nCPU: {cpu}%\nRAM: {ram}%\nTemp: {temp}\u00b0C\nDisk: {disk}%\nDB: {db}MB\nErrors/h: {errs}"
+        except Exception as e:
+            return f"\u26a0\ufe0f diag: {e}"
+
+    if cmd == "/help":
+        return "\U0001f3e0 Master AI\n\n/status - \u0627\u0644\u0646\u0638\u0627\u0645\n/lights - \u0627\u0644\u0623\u0636\u0648\u0627\u0621\n/temp - \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a\n/brain - \u0627\u0644\u0639\u0642\u0644\n/diag - \u062a\u0634\u062e\u064a\u0635\n\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \U0001f44d"
+
     return None
+
+
+
+
+async def tg_send_with_feedback(chat_id, text: str, request_id: str = None) -> bool:
+    """Send message with inline feedback buttons."""
+    global _tg_client
+    if not _tg_client:
+        _tg_client = httpx.AsyncClient(timeout=30)
+    parts = tg_split_message(text)
+    for i, part in enumerate(parts):
+        payload = {"chat_id": chat_id, "text": part}
+        # Add feedback buttons only to last part
+        if i == len(parts) - 1 and request_id:
+            payload["reply_markup"] = json.dumps({
+                "inline_keyboard": [[
+                    {"text": "👍", "callback_data": f"fb:good:{request_id[:32]}"},
+                    {"text": "👎", "callback_data": f"fb:bad:{request_id[:32]}"},
+                ]]
+            })
+        try:
+            resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json=payload)
+            if resp.status_code != 200:
+                logger.error(f"TG send fail: {resp.text[:200]}")
+                return False
+        except Exception as e:
+            logger.error(f"TG send error: {e}")
+            return False
+    return True
+
+
+async def tg_handle_callback(callback_query: dict):
+    """Handle inline button presses (feedback)."""
+    global _tg_client
+    if not _tg_client:
+        _tg_client = httpx.AsyncClient(timeout=30)
+    data = callback_query.get("data", "")
+    cq_id = callback_query.get("id")
+    tg_user_id = callback_query.get("from", {}).get("id")
+
+    if data.startswith("fb:"):
+        parts = data.split(":")
+        if len(parts) == 3:
+            rating = 1.0 if parts[1] == "good" else 0.0
+            req_id = parts[2]
+            try:
+                user_profile = detect_user(source="telegram", telegram_user_id=tg_user_id)
+                record_feedback(req_id, rating, user_id=user_profile.get("user_id", "unknown"))
+                answer = "شكراً!" if rating > 0 else "أتحسن المرة الجاية"
+            except Exception as e:
+                logger.error(f"Feedback error: {e}")
+                answer = "OK"
+    else:
+        answer = ""
+
+    try:
+        await _tg_client.post(f"{TG_BASE}/answerCallbackQuery", json={
+            "callback_query_id": cq_id, "text": answer
+        })
+    except Exception:
+        pass
 
 
 async def tg_handle_message(chat_id, text: str, user: dict):
     """Process a Telegram message through the iterative engine."""
     user_name = user.get("first_name", "User")
+    tg_user_id = user.get("id")
+    user_profile = detect_user(source="telegram", telegram_user_id=tg_user_id)
+    logger.info(f"TG user: {user_profile.get('user_id', '?')} ({user_name})")
     # Auto-save admin chat_id for proactive alerts
     _admin_path = Path("data/admin_chat_id.txt")
     if not _admin_path.exists():
@@ -3305,7 +3402,7 @@ async def tg_handle_message(chat_id, text: str, user: dict):
     try:
         result = await iterative_engine(
             goal=text,
-            context={"source": "telegram", "chat_id": str(chat_id), "user_name": user_name},
+            context={"source": "telegram", "chat_id": str(chat_id), "user_name": user_name, "user_profile": user_profile},
             trace=trace,
             task_id=task_id,
         )
@@ -3323,7 +3420,7 @@ async def tg_handle_message(chat_id, text: str, user: dict):
         status="ok", duration=duration,
         request_id=trace.request_id, task_id=task_id,
     )
-    await tg_send(chat_id, response)
+    await tg_send_with_feedback(chat_id, response, request_id=trace.request_id)
 
 
 async def telegram_polling_loop():
@@ -3350,6 +3447,11 @@ async def telegram_polling_loop():
                 consecutive_errors = 0
                 for update in data.get("result", []):
                     _tg_offset = update["update_id"] + 1
+                    # Handle callback queries (inline buttons)
+                    cb = update.get("callback_query")
+                    if cb:
+                        asyncio.create_task(tg_handle_callback(cb))
+                        continue
                     msg = update.get("message", {})
                     txt = msg.get("text", "")
                     cid = msg.get("chat", {}).get("id")
