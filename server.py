@@ -1299,6 +1299,7 @@ async def execute_action_gateway(action_type: str, args: dict, trace=None, step_
     elif isinstance(risk_raw, str):
         risk_level = risk_raw.lower()
     else:
+        pass
         risk_level = "high"
     if risk_level not in ("low", "medium", "high"):
         risk_level = "high"
@@ -1836,12 +1837,14 @@ async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
     if BRAIN_AVAILABLE:
         system = build_system_prompt()
     else:
+        pass
         entity_ctx = build_entity_context()
         system = PLANNER_SYSTEM_PROMPT.replace("{entity_context}", entity_ctx)
 
     if BRAIN_AVAILABLE:
         user_msg = build_user_message(goal, context, previous_results)
     else:
+        pass
         user_msg = f"User request: {goal}"
 
     if not BRAIN_AVAILABLE:
@@ -1868,6 +1871,7 @@ async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
                     user_msg += f"\n\n{k}: {context[k]}"
 
     else:
+        pass
         # Brain already handles memory, previous_results, and context
         if retry and context and context.get("validation_error"):
             user_msg += f"\n\nRetry correction: {context['validation_error']}"
@@ -1979,6 +1983,7 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
         except Exception as e:
             logger.error(f"BRAIN_LEARN_HOOK error: {e}")
     else:
+        pass
 
     return {
         "response": final_response,
@@ -2151,6 +2156,7 @@ async def ask(body: AskRequest):
             TaskManager.update_task(task_id, state="running")
             trace.task_id = task_id
     else:
+        pass
         # Check for "continue task" pattern
         msg_lower = body.message.lower()
         if "continue task" in msg_lower or "ÃÂÃÂÃÂÃÂÃÂÃÂ ÃÂÃÂ§ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©" in msg_lower:
@@ -2334,6 +2340,7 @@ async def approve_action(approval_id: str, action: str = "approve"):
                     {"status": "approved", "approval_id": approval_id, "executed": False, "error": str(e)},
                     status_code=500)
     else:
+        pass
         conn.execute("UPDATE approval_queue SET status='rejected' WHERE approval_id=?", (approval_id,))
         conn.execute("UPDATE win_jobs SET status='rejected' WHERE approval_id=?", (approval_id,))
         conn.commit()
@@ -2430,6 +2437,7 @@ async def win_jobs(status: str = Query(default=None), limit: int = Query(default
         rows = conn.execute("SELECT * FROM win_jobs WHERE status=? ORDER BY created_at DESC LIMIT ?",
                             (status, limit)).fetchall()
     else:
+        pass
         rows = conn.execute("SELECT * FROM win_jobs ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
     conn.close()
     return {"jobs": [dict(r) for r in rows]}
@@ -2604,6 +2612,7 @@ async def list_knowledge(category: str = Query(default=None)):
     if category:
         rows = conn.execute("SELECT * FROM knowledge WHERE category=?", (category,)).fetchall()
     else:
+        pass
         rows = conn.execute("SELECT * FROM knowledge ORDER BY created_at DESC LIMIT 50").fetchall()
     conn.close()
     return {"knowledge": [dict(r) for r in rows]}
@@ -2843,6 +2852,7 @@ async def get_audit(limit: int = Query(default=50), request_id: str = Query(defa
     elif task_id:
         rows = conn.execute("SELECT * FROM audit_log WHERE task_id=? ORDER BY id DESC", (task_id,)).fetchall()
     else:
+        pass
         rows = conn.execute("SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     conn.close()
     return {"audit": [dict(r) for r in rows]}
