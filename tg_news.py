@@ -12,9 +12,9 @@ logger = logging.getLogger("tg_news")
 
 # RSS Feeds
 FEEDS = [
-    {"name": "\u0627\u0644\u0642\u0628\u0633", "url": "https://alqabas.com/rss", "icon": "\ud83c\uddf0\ud83c\uddfc", "max": 3},
-    {"name": "\u0627\u0644\u0631\u0627\u0626\u064a", "url": "https://www.alraimedia.com/rss", "icon": "\ud83d\udcf0", "max": 3},
-    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "icon": "\ud83d\udcbb", "max": 3},
+    {"name": "\u0627\u0644\u0642\u0628\u0633", "url": "https://alqabas.com/rss", "icon": "KW", "max": 3},
+    {"name": "\u0627\u0644\u0631\u0627\u0626\u064a", "url": "https://www.alraimedia.com/rss", "icon": "📰", "max": 3},
+    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "icon": "💻", "max": 3},
     {"name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index", "icon": "\u2699\ufe0f", "max": 2},
 ]
 
@@ -83,10 +83,10 @@ async def get_news_digest() -> str:
                 sections.append("\n".join(lines))
 
     if not sections:
-        return "\u26a0\ufe0f \u0645\u0627 \u0642\u062f\u0631\u062a \u0623\u062c\u064a\u0628 \u0623\u062e\u0628\u0627\u0631 \u0627\u0644\u062d\u064a\u0646"
+        return "⚠ \u0645\u0627 \u0642\u062f\u0631\u062a \u0623\u062c\u064a\u0628 \u0623\u062e\u0628\u0627\u0631 \u0627\u0644\u062d\u064a\u0646"
 
     now = datetime.now()
-    header = f"\ud83d\udcf0 \u0623\u062e\u0628\u0627\u0631 \u0627\u0644\u064a\u0648\u0645 \u2014 {now.strftime('%d/%m/%Y')}"
+    header = f"📰 \u0623\u062e\u0628\u0627\u0631 \u0627\u0644\u064a\u0648\u0645 \u2014 {now.strftime('%d/%m/%Y')}"
     return header + "\n\n" + "\n\n".join(sections)
 
 
@@ -94,7 +94,7 @@ async def news_scheduler(sender_fn):
     """Background scheduler - sends news at 7:00 AM daily."""
     global _sender_fn
     _sender_fn = sender_fn
-    logger.info("\ud83d\udcf0 News scheduler started")
+    logger.info("📰 News scheduler started")
     while True:
         try:
             now = datetime.now()
