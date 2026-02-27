@@ -3822,6 +3822,19 @@ async def tg_handle_callback(callback_query: dict):
         pass
 
 
+def _correction_name(eid):
+    """Get friendly name from entity_map."""
+    try:
+        import json as _json
+        emap = _json.load(open("/home/pi/master_ai/entity_map.json"))
+        for room, entries in emap.items():
+            for entry in entries:
+                if "=" in entry and entry.startswith(eid + "="):
+                    return entry.split("=", 1)[1]
+    except Exception:
+        pass
+    return eid.split(".")[-1].replace("_", " ")
+
 async def tg_handle_message(chat_id, text: str, user: dict):
     """Process a Telegram message through the iterative engine."""
     try:
@@ -3898,13 +3911,16 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 return
 
             elif ftype == "correction":
-                # Show disambiguation with last entities as buttons
+                # Show disambiguation with last entities as buttons (friendly names from entity_map)
                 last_ents = followup.get("last_entities", [])
                 if last_ents:
                     btns = []
                     for eid in last_ents[:6]:
-                        name = eid.split(".")[-1].replace("_", " ").title()
-                        btns.append([{"text": name, "callback_data": f"devctl:toggle:{eid}"}])
+                        name = _correction_name(eid)
+                        btns.append([
+                            {"text": f"🟢 {name}", "callback_data": f"devctl:on:{eid}"},
+                            {"text": f"⚫ {name}", "callback_data": f"devctl:off:{eid}"}
+                        ])
                     kb = json.dumps({"inline_keyboard": btns})
                     await _tg_client.post(f"{TG_BASE}/sendMessage", json={
                         "chat_id": chat_id,

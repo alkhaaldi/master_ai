@@ -39,7 +39,14 @@ async def _call_ha(ha_url, ha_token, eid, action, temp=None):
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             await client.post(f"{ha_url}/api/services/{domain}/{svc}", headers=headers, json=data)
+        # Try HA API for friendly_name, fallback to entity_id parsing
         fname = eid.split(".")[-1].replace("_", " ").title()
+        try:
+            sr = await client.get(f"{ha_url}/api/states/{eid}", headers={"Authorization": f"Bearer {ha_token}"})
+            if sr.status_code == 200:
+                fname = sr.json().get("attributes", {}).get("friendly_name", fname)
+        except Exception:
+            pass
         detail = f"{data.get('temperature', '')}\u00b0" if "temperature" in data else ""
         return True, fname, detail
     except Exception as e:
