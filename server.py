@@ -3776,6 +3776,16 @@ async def tg_handle_callback(callback_query: dict):
 
 async def tg_handle_message(chat_id, text: str, user: dict):
     """Process a Telegram message through the iterative engine."""
+    try:
+        return await _tg_handle_message_inner(chat_id, text, user)
+    except Exception as e:
+        logger.error(f"TG HANDLE CRASH: {e}", exc_info=True)
+        try:
+            await tg_send(chat_id, f"❌ Error: {str(e)[:100]}")
+        except Exception:
+            pass
+
+async def _tg_handle_message_inner(chat_id, text: str, user: dict):
     # DEBUG: log to file
     user_name = user.get("first_name", "User")
     tg_user_id = user.get("id")
@@ -3807,7 +3817,14 @@ async def tg_handle_message(chat_id, text: str, user: dict):
                     _sact = "on" if "شغّلت" in intent_result else "off" if "طفّيت" in intent_result else "set_temp" if "ضبطت" in intent_result else "scene" if "مشهد" in intent_result else "query" if "الحالة" in intent_result else None
                     _sbtns = get_suggestions(_sact) if _sact else []
                     if _sbtns:
-                        await tg_send_inline(chat_id, intent_result, _sbtns, columns=len(_sbtns[0]) if _sbtns else 2)
+                        # _sbtns is already rows format [[btn1,btn2],[btn3]]
+                        _kb = json.dumps({"inline_keyboard": _sbtns})
+                        _payload = {"chat_id": chat_id, "text": intent_result, "reply_markup": _kb, "parse_mode": "Markdown"}
+                        try:
+                            await _tg_client.post(f"{TG_BASE}/sendMessage", json=_payload)
+                        except Exception as _e:
+                            logger.error(f"suggest send error: {_e}")
+                            await tg_send(chat_id, intent_result, parse_mode="Markdown")
                     else:
                         await tg_send(chat_id, intent_result, parse_mode="Markdown")
                 else:
