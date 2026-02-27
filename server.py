@@ -2154,7 +2154,7 @@ async def lifespan(app):
     # Phase 4: Proactive monitoring engine
     if BRAIN_AVAILABLE:
         try:
-            asyncio.create_task(proactive_loop())
+            # asyncio.create_task(proactive_loop())  # DISABLED: replaced by tg_alerts.py (B3)
             logger.info("Proactive engine scheduled")
         except Exception as e:
             logger.error(f"Proactive engine failed to start (non-fatal): {e}")

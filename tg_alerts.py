@@ -14,6 +14,7 @@ HA_URL = os.environ.get("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.environ.get("HA_TOKEN", "")
 
 # Track state to avoid duplicate alerts
+_warmup_done = False  # First check populates baseline
 _prev_offline = set()
 _prev_open_covers = set()
 _prev_hot_acs = set()
@@ -24,7 +25,7 @@ AC_TEMP_LIMIT = 24.0  # Alert if current temp > this
 NIGHT_START = 23  # 11 PM
 NIGHT_END = 6     # 6 AM
 CHECK_INTERVAL = 300  # 5 minutes
-COOLDOWN_MINUTES = 30  # Don't re-alert same entity within 30 min
+COOLDOWN_MINUTES = 120  # Don't re-alert same entity within 30 min
 
 
 def _in_cooldown(entity_id: str) -> bool:
@@ -70,6 +71,20 @@ async def check_alerts(send_fn) -> list[str]:
     now = datetime.now()
     is_night = now.hour >= NIGHT_START or now.hour < NIGHT_END
     
+    # --- Warmup: first run captures baseline ---
+    global _warmup_done
+    if not _warmup_done:
+        _warmup_done = True
+        for s in states:
+            eid = s.get("entity_id", "")
+            st = s.get("state", "")
+            if st == "unavailable" and any(eid.startswith(d) for d in OFFLINE_DOMAINS):
+                _prev_offline.add(eid)
+            if eid.startswith("cover.") and st == "open":
+                _prev_open_covers.add(eid)
+        logger.info(f"Warmup: {len(_prev_offline)} offline, {len(_prev_open_covers)} open covers baselined")
+        return []
+
     # --- 1. New offline devices ---
     current_offline = set()
     for s in states:
