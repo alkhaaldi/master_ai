@@ -3662,17 +3662,19 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return f"Error: {e}"
 
 
-    if cmd == "/news":
+    if cmd.startswith("/news"):
         if not TG_NEWS_OK:
             return "News module not loaded"
         digest = await get_news_digest()
         return digest
 
-    if cmd == "/remind" or cmd == "/reminder":
+    if cmd.startswith("/remind") and not cmd.startswith("/reminders"):
         if not TG_REMIND_OK:
             return "Reminder module not loaded"
         parts = text.split(None, 2)  # /remind 5m message
-        if len(parts) < 3:
+        if len(parts) == 2:
+            return add_reminder(chat_id, parts[1], "⏰")
+        if len(parts) < 2:
             return "u23f0 /remind <u0648u0642u062a> <u0631u0633u0627u0644u0629>\nu0645u062bu0627u0644: /remind 5m u0634u064au0643 u0627u0644u0641u0631u0646 | /remind 14:30 u0627u062au0635u0644 | /remind 2h u0627u062cu062au0645u0627u0639"
         return add_reminder(chat_id, parts[1], parts[2])
 
