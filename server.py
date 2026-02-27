@@ -3795,7 +3795,28 @@ async def tg_handle_message(chat_id, text: str, user: dict):
         await tg_send(chat_id, quick)
         return
 
-    # --- Follow-up Resolution (Phase A2) ---
+    # --- Intent Router (Phase A3) — check FIRST for explicit device+room commands ---
+    if TG_INTENT_OK:
+        try:
+            intent_result = await route_intent(text)
+            if intent_result:
+                logger.info(f"TG intent routed: {text[:50]}")
+                if TG_SESSION_OK:
+                    tg_session_upsert(str(chat_id), last_intent="action")
+                if TG_SUGGEST_OK:
+                    _sact = "on" if "شغّلت" in intent_result else "off" if "طفّيت" in intent_result else "set_temp" if "ضبطت" in intent_result else "scene" if "مشهد" in intent_result else "query" if "الحالة" in intent_result else None
+                    _sbtns = get_suggestions(_sact) if _sact else []
+                    if _sbtns:
+                        await tg_send_inline(chat_id, intent_result, _sbtns, columns=len(_sbtns[0]) if _sbtns else 2)
+                    else:
+                        await tg_send(chat_id, intent_result, parse_mode="Markdown")
+                else:
+                    await tg_send(chat_id, intent_result, parse_mode="Markdown")
+                return
+        except Exception as e:
+            logger.error(f"Intent router error: {e}")
+
+    # --- Follow-up Resolution (Phase A2) — only if intent router didn't match ---
     if TG_SESSION_OK:
         session = tg_session_get(str(chat_id))
         if session:
@@ -3806,7 +3827,9 @@ async def tg_handle_message(chat_id, text: str, user: dict):
                 await tg_send(chat_id, result, parse_mode="Markdown")
                 return
 
-    # --- Intent Router (Phase A3) ---
+    # --- Remaining: AI Agent ---
+    # (intent router block was here, now moved above)
+    # 
     if TG_INTENT_OK:
         try:
             intent_result = await route_intent(text)
