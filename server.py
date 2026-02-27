@@ -2147,6 +2147,13 @@ async def lifespan(app):
         logger.error(f"Schema migration error (non-fatal): {e}")
     cleanup_expired_approvals()
     logger.info(f"Master AI v{VERSION} started")
+    # Canary mode: skip all background tasks (for safe deploy testing)
+    _canary = os.environ.get("CANARY_MODE", "").lower() in ("1", "true", "yes")
+    if _canary:
+        logger.info("CANARY MODE: background tasks skipped")
+        yield
+        logger.info("Canary shutting down")
+        return
     asyncio.create_task(event_processor_loop())
     logger.info("Event processor loop scheduled")
     # Telegram bot polling
