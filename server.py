@@ -2642,7 +2642,7 @@ async def stats_capture():
 
 SHIFT_PATTERN = ["A", "A", "D", "D", "B", "B", "C", "C"]
 SHIFT_NAMES = {"A": "Morning ÃÂ¢ÃÂÃÂÃÂ¯ÃÂ¸ÃÂ", "B": "Evening ÃÂ°ÃÂÃÂÃÂ", "C": "Night ÃÂ°ÃÂÃÂÃÂ", "D": "Off ÃÂ°ÃÂÃÂÃÂ "}
-SHIFT_EPOCH = datetime(2024, 1, 1)
+SHIFT_EPOCH = datetime(2024, 1, 4)
 
 
 @app.get("/shift")
