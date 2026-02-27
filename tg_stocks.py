@@ -1,146 +1,139 @@
-"""Phase C1: Stock Monitoring for Telegram.
+"""Phase C1: Stock Portfolio Tracker for Telegram.
 
-Features:
-- /stocks - Show portfolio status
-- /price <ticker> - Check a specific stock price
-- Background: check prices every 30 min during market hours (Sun-Thu 9:00-13:10 KW time)
-- Alert on significant moves (>3% daily change)
-
-Uses boursakuwait.com.kw for price data (no API key needed).
+Commands:
+- /stocks — Show portfolio summary
+- /price TICKER — Get current price for a ticker
 """
-import httpx, logging, asyncio, re
+import httpx, logging, re
 from datetime import datetime
 
 logger = logging.getLogger("tg_stocks")
 
+# Portfolio — update manually or via command
 PORTFOLIO = {
-    "CLEANING": {"buy": 153, "target": 200, "stop": 95, "name": "\u0634\u0631\u0643\u0629 \u0627\u0644\u062a\u0646\u0638\u064a\u0641\u0627\u062a"},
-    "SENERGY": {"buy": 111, "target": 180, "stop": 95, "name": "\u0633\u064a\u0646\u0631\u062c\u064a"},
+    "CLEANING": {"buy_price": 153, "shares": 0, "note": "\u062a\u062c\u0645\u064a\u0639 \u0645\u0624\u0633\u0633\u064a"},
+    "SENERGY": {"buy_price": 111, "shares": 0, "note": "\u0647\u062f\u0641 140-180"},
 }
 
-CHECK_INTERVAL = 1800  # 30 min
-ALERT_THRESHOLD = 3.0  # % daily move to alert
-_last_prices = {}  # ticker -> last known price
+# Boursa Kuwait scraper (public page, no API key needed)
+BOURSA_URL = "https://www.boursakuwait.com.kw/api/v2/instruments/search?q={ticker}&lang=en"
 
 
-async def _fetch_price(ticker: str) -> dict | None:
-    """Fetch stock price from boursakuwait.com.kw search API."""
+async def _fetch_price(ticker: str) -> dict:
+    """Fetch price from Boursa Kuwait API."""
+    ticker = ticker.upper().strip()
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as c:
-            # Try the search endpoint
-            r = await c.get(f"https://www.boursakuwait.com.kw/api/search?q={ticker}")
-            if r.status_code == 200:
-                data = r.json()
-                if data and isinstance(data, list):
-                    for item in data:
-                        if item.get("symbol", "").upper() == ticker.upper():
-                            return {
-                                "symbol": ticker.upper(),
-                                "price": float(item.get("last_price", 0)),
-                                "change": float(item.get("change_pct", 0)),
-                                "volume": int(item.get("volume", 0)),
-                                "name": item.get("name_ar", ticker),
-                            }
-    except Exception as e:
-        logger.warning(f"Price fetch error for {ticker}: {e}")
-    
-    # Fallback: try scraping
-    try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as c:
-            r = await c.get(f"https://www.boursakuwait.com.kw/en/company/{ticker}/overview")
-            if r.status_code == 200:
-                # Extract price from HTML
-                match = re.search(r'data-last-price="([\d.]+)"', r.text)
-                change = re.search(r'data-change-pct="([\-\d.]+)"', r.text)
-                if match:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+            # Try Boursa Kuwait search API
+            resp = await client.get(
+                f"https://www.boursakuwait.com.kw/api/v2/instruments/search",
+                params={"q": ticker, "lang": "en"},
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data and isinstance(data, list) and len(data) > 0:
+                    item = data[0]
                     return {
-                        "symbol": ticker.upper(),
-                        "price": float(match.group(1)),
-                        "change": float(change.group(1)) if change else 0,
-                        "volume": 0,
-                        "name": ticker,
+                        "ticker": item.get("symbol", ticker),
+                        "name_ar": item.get("name_ar", ""),
+                        "name_en": item.get("name_en", ""),
+                        "last": item.get("last", 0),
+                        "change": item.get("change", 0),
+                        "change_pct": item.get("change_pct", 0),
+                        "volume": item.get("volume", 0),
+                        "high": item.get("high", 0),
+                        "low": item.get("low", 0),
+                        "open": item.get("open", 0),
                     }
+            
+            # Fallback: try direct symbol lookup
+            resp2 = await client.get(
+                f"https://www.boursakuwait.com.kw/api/v2/instruments/{ticker}/overview",
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            if resp2.status_code == 200:
+                item = resp2.json()
+                return {
+                    "ticker": ticker,
+                    "name_ar": item.get("name_ar", ""),
+                    "name_en": item.get("name_en", ""),
+                    "last": item.get("last_price", item.get("last", 0)),
+                    "change": item.get("change", 0),
+                    "change_pct": item.get("change_percent", 0),
+                    "volume": item.get("volume", 0),
+                    "high": item.get("high", 0),
+                    "low": item.get("low", 0),
+                    "open": item.get("open", 0),
+                }
     except Exception as e:
-        logger.warning(f"Scrape error for {ticker}: {e}")
-    
+        logger.error(f"Price fetch error for {ticker}: {e}")
     return None
 
 
-async def get_portfolio_status() -> str:
-    """Get full portfolio status."""
-    lines = ["\U0001f4ca \u0645\u062d\u0641\u0638\u0629 \u0628\u0648 \u062e\u0644\u064a\u0641\u0629:\n"]
+def _format_number(n) -> str:
+    """Format number with commas."""
+    try:
+        if isinstance(n, float):
+            return f"{n:,.3f}"
+        return f"{int(n):,}"
+    except:
+        return str(n)
+
+
+def _pnl_emoji(pct: float) -> str:
+    if pct > 5: return "\U0001f680"
+    if pct > 0: return "\u2705"
+    if pct > -5: return "\u26a0\ufe0f"
+    return "\U0001f534"
+
+
+async def get_portfolio() -> str:
+    """Get portfolio summary with live prices."""
+    lines = ["\U0001f4c8 \u0627\u0644\u0645\u062d\u0641\u0638\u0629:\n"]
     
     for ticker, info in PORTFOLIO.items():
         data = await _fetch_price(ticker)
-        if data:
-            price = data["price"]
-            pnl = ((price - info["buy"]) / info["buy"]) * 100 if info["buy"] > 0 else 0
-            icon = "\U0001f7e2" if pnl >= 0 else "\U0001f534"
+        if data and data["last"]:
+            price = float(data["last"])
+            buy = info["buy_price"]
+            pnl_pct = ((price - buy) / buy * 100) if buy > 0 else 0
+            emoji = _pnl_emoji(pnl_pct)
+            change_str = f"+{data['change_pct']}" if float(data.get('change_pct', 0)) >= 0 else str(data['change_pct'])
             
-            line = f"{icon} {ticker} ({info['name']})\n"
-            line += f"   \u0627\u0644\u0633\u0639\u0631: {price} | \u0627\u0644\u062a\u063a\u064a\u0631: {data['change']:+.1f}%\n"
-            line += f"   \u0627\u0644\u0634\u0631\u0627\u0621: {info['buy']} | \u0627\u0644\u0631\u0628\u062d: {pnl:+.1f}%\n"
-            line += f"   \u0627\u0644\u0647\u062f\u0641: {info['target']} | \u0627\u0644\u0648\u0642\u0641: {info['stop']}"
-            lines.append(line)
-            _last_prices[ticker] = price
+            lines.append(f"{emoji} {ticker}")
+            name = data.get('name_ar') or data.get('name_en', '')
+            if name:
+                lines.append(f"   {name}")
+            lines.append(f"   \u0627\u0644\u0633\u0639\u0631: {_format_number(price)} | \u0627\u0644\u062a\u063a\u064a\u064a\u0631: {change_str}%")
+            if buy > 0:
+                lines.append(f"   \u0627\u0644\u0634\u0631\u0627\u0621: {buy} | \u0627\u0644\u0631\u0628\u062d: {pnl_pct:+.1f}%")
+            if info.get("note"):
+                lines.append(f"   \U0001f4dd {info['note']}")
+            lines.append("")
         else:
-            lines.append(f"\u26a0 {ticker}: \u0645\u0627 \u0642\u062f\u0631\u062a \u0623\u062c\u064a\u0628 \u0627\u0644\u0633\u0639\u0631")
-    
-    now = datetime.now()
-    is_market = now.weekday() < 4 and 9 <= now.hour < 14  # Sun-Thu approx
-    status = "\U0001f7e2 \u0627\u0644\u0633\u0648\u0642 \u0645\u0641\u062a\u0648\u062d" if is_market else "\U0001f534 \u0627\u0644\u0633\u0648\u0642 \u0645\u0642\u0641\u0644"
-    lines.append(f"\n{status}")
+            lines.append(f"\u26a0\ufe0f {ticker}: \u0645\u0627 \u0642\u062f\u0631\u062a \u0623\u062c\u064a\u0628 \u0627\u0644\u0633\u0639\u0631\n")
     
     return "\n".join(lines)
 
 
 async def get_price(ticker: str) -> str:
-    """Get single stock price."""
+    """Get price for a specific ticker."""
     data = await _fetch_price(ticker)
-    if not data:
-        return f"\u26a0 \u0645\u0627 \u0644\u0642\u064a\u062a {ticker}"
+    if not data or not data.get("last"):
+        return f"\u26a0\ufe0f \u0645\u0627 \u0644\u0642\u064a\u062a {ticker.upper()} \u0628\u0628\u0648\u0631\u0635\u0629 \u0627\u0644\u0643\u0648\u064a\u062a"
     
-    price = data["price"]
-    return f"\U0001f4c8 {ticker}: {price} ({data['change']:+.1f}%) | Vol: {data['volume']:,}"
-
-
-async def stock_monitor_loop(send_fn):
-    """Background loop: check prices during market hours, alert on big moves."""
-    logger.info("\U0001f4c8 Stock monitor started")
+    price = float(data["last"])
+    change_pct = data.get("change_pct", 0)
+    change_str = f"+{change_pct}" if float(change_pct) >= 0 else str(change_pct)
+    name = data.get("name_ar") or data.get("name_en", ticker.upper())
+    vol = _format_number(data.get("volume", 0))
     
-    while True:
-        now = datetime.now()
-        # Kuwait market: Sun-Thu 9:00-13:10
-        is_market_day = now.weekday() in [6, 0, 1, 2, 3]  # Sun=6, Mon-Thu=0-3
-        is_market_hour = 9 <= now.hour < 14
-        
-        if is_market_day and is_market_hour:
-            for ticker, info in PORTFOLIO.items():
-                data = await _fetch_price(ticker)
-                if not data:
-                    continue
-                
-                price = data["price"]
-                change = abs(data["change"])
-                prev = _last_prices.get(ticker)
-                _last_prices[ticker] = price
-                
-                # Alert conditions
-                alerts = []
-                if change >= ALERT_THRESHOLD:
-                    direction = "\U0001f4c8 \u0627\u0631\u062a\u0641\u0627\u0639" if data["change"] > 0 else "\U0001f4c9 \u0627\u0646\u062e\u0641\u0627\u0636"
-                    alerts.append(f"{direction} {ticker} {data['change']:+.1f}% (\u0627\u0644\u0633\u0639\u0631: {price})")
-                
-                if price >= info["target"] and info["target"] > 0:
-                    alerts.append(f"\U0001f3af {ticker} \u0648\u0635\u0644 \u0627\u0644\u0647\u062f\u0641! {price} >= {info['target']}")
-                
-                if price <= info["stop"] and info["stop"] > 0:
-                    alerts.append(f"\U0001f6a8 {ticker} \u0643\u0633\u0631 \u0627\u0644\u0648\u0642\u0641! {price} <= {info['stop']}")
-                
-                for msg in alerts:
-                    try:
-                        await send_fn(msg)
-                    except Exception as e:
-                        logger.error(f"Stock alert send error: {e}")
-        
-        await asyncio.sleep(CHECK_INTERVAL)
+    return (
+        f"\U0001f4ca {data['ticker']} — {name}\n\n"
+        f"\u0627\u0644\u0633\u0639\u0631: {_format_number(price)}\n"
+        f"\u0627\u0644\u062a\u063a\u064a\u064a\u0631: {change_str}%\n"
+        f"\u0627\u0644\u0623\u0639\u0644\u0649: {_format_number(data.get('high', 0))} | \u0627\u0644\u0623\u062f\u0646\u0649: {_format_number(data.get('low', 0))}\n"
+        f"\u0627\u0644\u0627\u0641\u062a\u062a\u0627\u062d: {_format_number(data.get('open', 0))}\n"
+        f"\u0627\u0644\u0643\u0645\u064a\u0629: {vol}"
+    )

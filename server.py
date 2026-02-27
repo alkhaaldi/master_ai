@@ -98,7 +98,7 @@ except Exception:
     TG_NEWS_OK = False
 
 try:
-    from tg_stocks import get_portfolio_status, get_price, stock_monitor_loop
+    from tg_stocks import get_portfolio, get_price
     TG_STOCKS_OK = True
 except Exception:
     TG_STOCKS_OK = False
@@ -2161,7 +2161,7 @@ async def lifespan(app):
     if BRAIN_AVAILABLE:
         try:
             # asyncio.create_task(proactive_loop())  # DISABLED: replaced by tg_alerts.py (B3)
-            logger.info("Proactive engine scheduled")
+            logger.info("Proactive engine disabled (replaced by tg_alerts.py)")
         except Exception as e:
             logger.error(f"Proactive engine failed to start (non-fatal): {e}")
         # Phase 4.5: Observability backup engine
@@ -3668,6 +3668,18 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return f"Error: {e}"
 
 
+    if cmd == "/stocks":
+        if not TG_STOCKS_OK:
+            return "Stock module not loaded"
+        return await get_portfolio()
+    if cmd.startswith("/price"):
+        if not TG_STOCKS_OK:
+            return "Stock module not loaded"
+        parts = text.strip().split(None, 1)
+        if len(parts) >= 2:
+            return await get_price(parts[1])
+        return "الاستخدام: /price TICKER"
+
     if cmd.startswith("/news"):
         if not TG_NEWS_OK:
             return "News module not loaded"
@@ -3698,9 +3710,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         return "الاستخدام: /cancel <رقم>"
 
     if cmd == "/help":
-        return "🏠 Master AI\n\n/status - النظام\n/lights - الأضواء\n/temp - المكيفات\n/rooms - الغرف\n/scenes - المشاهد\n/report - تقرير\n/remind - تذكير\n/news - أخبار
-/stocks - المحفظة
-/price X - سعر سهم\n/brain - العقل\n/diag - تشخيص\n\nأرسل أي رسالة 👍"
+        return "U0001f3e0 Master AI\n\n/status - u0627u0644u0646u0638u0627u0645\n/lights - u0627u0644u0623u0636u0648u0627u0621\n/temp - u0627u0644u0645u0643u064au0641u0627u062a\n/rooms - u0627u0644u063au0631u0641\n/scenes - u0627u0644u0645u0634u0627u0647u062f\n/report - u062au0642u0631u064au0631\n/remind - u062au0630u0643u064au0631\n/news - u0623u062eu0628u0627u0631\n/stocks - u0627u0644u0645u062du0641u0638u0629\n/price X - u0633u0639u0631 u0633u0647u0645\n/brain - u0627u0644u0639u0642u0644\n/diag - u062au0634u062eu064au0635\n\nu0623u0631u0633u0644 u0623u064a u0631u0633u0627u0644u0629 U0001f44d"
 
     return None
 
