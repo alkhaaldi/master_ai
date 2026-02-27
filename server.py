@@ -4091,6 +4091,20 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
 
             if ftype == "followup":
                 logger.info(f"TG followup: {followup}")
+                # Disambiguation: action but no specific target + multiple entities
+                f_action = followup.get("action")
+                f_target = followup.get("target_entity")
+                f_ents = followup.get("last_entities") or []
+                if f_action and not f_target and len(f_ents) > 1:
+                    action_text = {"on": "شغّل", "off": "طفّي", "increase": "ارفع", "decrease": "وطّي"}.get(f_action, f_action)
+                    btns = []
+                    for eid in f_ents[:6]:
+                        name = _correction_name(eid)
+                        btns.append([{"text": name, "callback_data": f"devctl:{f_action}:{eid}"}])
+                    btns.append([{"text": "✅ الكل", "callback_data": f"suggest:followup:{f_action}"}])
+                    kb = json.dumps({"inline_keyboard": btns})
+                    await _tg_client.post(f"{TG_BASE}/sendMessage", json={"chat_id": chat_id, "text": f"❓ {action_text} أي واحد؟", "reply_markup": kb})
+                    return
                 result = await resolve_followup_action(followup, HA_URL, HA_TOKEN)
                 await tg_send(chat_id, result, parse_mode="Markdown")
                 return
