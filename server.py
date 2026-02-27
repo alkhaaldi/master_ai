@@ -83,6 +83,30 @@ except Exception:
 _suggest_cooldown = {}
 _SUGGEST_COOLDOWN_SEC = 30
 
+# Router analytics (in-memory, resets on restart)
+_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat()}
+
+
+def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "") -> str:
+    """Build enhanced system prompt for chat-routed messages."""
+    parts = [
+        "\u0623\u0646\u062a Master AI \u2014 \u0645\u0633\u0627\u0639\u062f \u0628\u064a\u062a \u0630\u0643\u064a \u0644\u0628\u0648 \u062e\u0644\u064a\u0641\u0629.",
+        "\u0647\u0630\u064a \u0645\u062d\u0627\u062f\u062b\u0629 \u0639\u0627\u062f\u064a\u0629 (\u0645\u0648 \u0623\u0645\u0631 \u062a\u0646\u0641\u064a\u0630). \u0631\u062f \u0628\u0639\u0631\u0628\u064a \u0643\u0648\u064a\u062a\u064a \u0645\u062e\u062a\u0635\u0631 \u0648\u0648\u062f\u0648\u062f.",
+        "\u0644\u0648 \u0633\u0623\u0644\u0643 \u0639\u0646 \u062c\u0647\u0627\u0632 \u0623\u0648 \u063a\u0631\u0641\u0629\u060c \u0639\u0637\u064a\u0647 \u0645\u0639\u0644\u0648\u0645\u0627\u062a \u0645\u0641\u064a\u062f\u0629 \u0645\u0646 \u0645\u0639\u0631\u0641\u062a\u0643 \u0628\u0627\u0644\u0628\u064a\u062a.",
+        "\u0644\u0648 \u0645\u0627 \u062a\u0639\u0631\u0641 \u0627\u0644\u062c\u0648\u0627\u0628 \u0642\u0648\u0644 \u0645\u0627 \u0623\u0639\u0631\u0641. \u0644\u0627 \u062a\u0631\u062f \u0628\u0640 JSON.",
+    ]
+    base = "\n".join(parts) + "\n\n"
+    if brain_prompt:
+        # Extract useful sections from brain prompt (skip JSON format instructions)
+        for section in brain_prompt.split("\u2550\u2550\u2550"):
+            sec_lower = section.strip().lower()
+            if any(k in sec_lower for k in ["\u0628\u064a\u062a \u0628\u0648 \u062e\u0644\u064a\u0641\u0629", "\u0648\u0635\u0641 \u0627\u0644\u063a\u0631\u0641", "\u0645\u0644\u0627\u062d\u0638\u0627\u062a \u0627\u0644\u0623\u062c\u0647\u0632\u0629", "\u0642\u0648\u0627\u0639\u062f \u0635\u0627\u0631\u0645\u0629"]):
+                base += "\u2550" * 30 + "\n" + section.strip() + "\n"
+    if home_ctx:
+        base += "\n\u2550\u2550\u2550 \u0645\u0644\u062e\u0635 \u0627\u0644\u0623\u062c\u0647\u0632\u0629 \u0627\u0644\u0645\u0643\u062a\u0634\u0641\u0629 \u2550\u2550\u2550\n" + home_ctx + "\n"
+    return base
+
+
 def _should_send_suggestions(user_id, intent_type=None):
     """Check if suggestions should be sent (30s cooldown, except correction/disambiguation)."""
     if intent_type in ("correction", "disambiguation", "ambiguity"):
@@ -4231,6 +4255,32 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
             pass
     memory_add_short_term("user", f"[Telegram/{user_name}] {text}")
 
+    # ── SmartRouter: fast chat path for questions/greetings ──
+    if SMART_ROUTER_OK:
+        _msg_class = classify_message(text)
+        logger.info(f"SmartRouter: '{text[:40]}' -> {_msg_class}")
+        _router_stats[_msg_class] = _router_stats.get(_msg_class, 0) + 1
+        _router_stats["total"] += 1
+        if _msg_class == "chat" and BRAIN_AVAILABLE:
+            try:
+                _home_ctx = get_home_summary() if DISCOVERY_OK else ""
+                # Use brain's rich prompt for chat (knowledge + rooms + rules)
+                try:
+                    _brain_prompt = build_system_prompt()
+                except Exception:
+                    _brain_prompt = ""
+                _chat_sys = build_chat_system_prompt(_brain_prompt, _home_ctx)
+                _chat_resp = await llm_call(_chat_sys, text, max_tokens=1500)
+                memory_add_short_term("assistant", _chat_resp)
+                await audit_log(task=text, actions=None, results=None, status="chat_routed", duration=0, request_id=trace.request_id, task_id=task_id)
+                await tg_send_with_feedback(chat_id, _chat_resp, request_id=trace.request_id)
+                if TG_SESSION_OK:
+                    tg_session_append_context(str(chat_id), "assistant", _chat_resp[:200])
+                return
+            except Exception as _ce:
+                logger.warning(f"SmartRouter chat fallback: {_ce}")
+
+    _router_stats["iterative"] = _router_stats.get("iterative", 0) + 1
     t0 = time.time()
     result = {}
     try:
@@ -4267,6 +4317,19 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         except Exception:
             pass
 
+
+
+@app.get("/router/stats")
+async def router_stats_endpoint():
+    total = _router_stats.get("total", 0) or 1
+    return {
+        **_router_stats,
+        "percentages": {
+            k: round(v / total * 100, 1)
+            for k, v in _router_stats.items()
+            if k != "total" and k != "started_at" and isinstance(v, (int, float))
+        },
+    }
 
 async def morning_report_scheduler():
     # Send morning report daily at 5:30 AM Kuwait time
