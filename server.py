@@ -3677,6 +3677,54 @@ async def tg_handle_callback(callback_query: dict):
             except Exception as e:
                 logger.error(f"Feedback error: {e}")
                 answer = "OK"
+    elif data.startswith("suggest:"):
+            parts = data.split(":", 2)
+            stype = parts[1] if len(parts) > 1 else ""
+            sval = parts[2] if len(parts) > 2 else ""
+            logger.info(f"TG suggest callback: {stype}:{sval}")
+
+            if stype == "followup":
+                # Use session entities for follow-up
+                if TG_SESSION_OK:
+                    session = tg_session_get(str(chat_id))
+                    if session and session.get("last_entities"):
+                        from tg_session import detect_followup
+                        fake = {"on": "شغله", "off": "طفيه"}.get(sval, sval)
+                        followup = detect_followup(fake, session)
+                        if followup.get("type") == "followup":
+                            result = await resolve_followup_action(followup, HA_URL, HA_TOKEN)
+                            await tg_send(chat_id, result, parse_mode="Markdown")
+                        else:
+                            await tg_send(chat_id, "❓ ما فيه سياق")
+                    else:
+                        await tg_send(chat_id, "❓ ما فيه سياق — جرب /find")
+            elif stype == "temp":
+                if TG_SESSION_OK:
+                    session = tg_session_get(str(chat_id))
+                    if session and session.get("last_entities"):
+                        from tg_session import detect_followup
+                        followup = detect_followup(f"اضبطهم على {sval}", session)
+                        if followup.get("type") == "followup":
+                            result = await resolve_followup_action(followup, HA_URL, HA_TOKEN)
+                            await tg_send(chat_id, result, parse_mode="Markdown")
+            elif stype == "devices" and TG_HOME_OK:
+                result = await cmd_devices(sval)
+                if TG_SESSION_OK:
+                    tg_session_upsert(str(chat_id), last_intent="devices", last_room=sval)
+                await tg_send(chat_id, result, parse_mode="Markdown")
+            elif stype == "scenes" and TG_HOME_OK:
+                msg, btns = await cmd_scenes_dynamic()
+                if btns:
+                    rows = [[b] for b in btns[:12]]
+                    await tg_send_inline(chat_id, msg, rows, columns=2)
+            elif stype == "scene":
+                if TG_INTENT_OK:
+                    r = await route_intent(f"فعل مشهد {sval}")
+                    if r:
+                        t = r["text"] if isinstance(r, dict) else r
+                        await tg_send(chat_id, t, parse_mode="Markdown")
+            answer_text = "✅"
+
     elif data.startswith("sc:"):
         scene_id = data[3:]
         try:
