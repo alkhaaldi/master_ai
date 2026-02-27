@@ -98,7 +98,7 @@ except Exception:
     TG_NEWS_OK = False
 
 try:
-    from tg_stocks import get_portfolio, get_price
+    from tg_stocks import get_portfolio, get_price, update_stock
     TG_STOCKS_OK = True
 except Exception:
     TG_STOCKS_OK = False
@@ -3667,6 +3667,17 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"Error: {e}"
 
+
+    if cmd.startswith("/update_stock"):
+        if not TG_STOCKS_OK:
+            return "Stock module not loaded"
+        parts = text.strip().split()
+        if len(parts) >= 3:
+            try:
+                return update_stock(parts[1], float(parts[2]), " ".join(parts[3:]) if len(parts) > 3 else None)
+            except ValueError:
+                return "الاستخدام: /update_stock TICKER PRICE [note]"
+        return "الاستخدام: /update_stock TICKER PRICE [note]"
 
     if cmd == "/stocks":
         if not TG_STOCKS_OK:
