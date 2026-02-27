@@ -74,6 +74,7 @@ except Exception:
 
 try:
     from tg_suggestions import get_suggestions
+    from tg_morning_report import build_morning_report, send_morning_report
     TG_SUGGEST_OK = True
 except Exception:
     TG_SUGGEST_OK = False
@@ -2110,6 +2111,7 @@ async def lifespan(app):
     # Telegram bot polling
     if TELEGRAM_TOKEN:
         asyncio.create_task(telegram_polling_loop())
+        asyncio.create_task(morning_report_scheduler())
         logger.info("Telegram bot polling scheduled")
     # Phase 4: Proactive monitoring engine
     if BRAIN_AVAILABLE:
@@ -3350,6 +3352,14 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/start":
         return "\U0001f3e0 Master AI Bot\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \u0623\u0648 \u0623\u0645\u0631.\n\n/status \u2014 \u062d\u0627\u0644\u0629 \u0627\u0644\u0646\u0638\u0627\u0645\n/lights \u2014 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0627\u0644\u0645\u0634\u063a\u0644\u0629\n/temp \u2014 \u062d\u0631\u0627\u0631\u0629 \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a"
 
+    if cmd == "/report":
+        try:
+            report = await build_morning_report()
+            await tg_send(chat_id, report, parse_mode="Markdown")
+        except Exception as e:
+            await tg_send(chat_id, f"Report error: {str(e)[:100]}")
+        return "__inline_sent__"
+
     if cmd == "/reset":
         if TG_SESSION_OK:
             tg_session_reset(str(chat_id))
@@ -4005,6 +4015,23 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
             tg_session_append_context(str(chat_id), "assistant", response[:200])
         except Exception:
             pass
+
+
+async def morning_report_scheduler():
+    # Send morning report daily at 5:30 AM Kuwait time
+    logger.info("Morning report scheduler started")
+    while True:
+        now = datetime.now()
+        target = now.replace(hour=5, minute=30, second=0, microsecond=0)
+        if now >= target:
+            target += timedelta(days=1)
+        wait_secs = (target - now).total_seconds()
+        logger.info(f"Next morning report in {wait_secs/3600:.1f} hours")
+        await asyncio.sleep(wait_secs)
+        try:
+            await send_morning_report(TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_ID or "669769765")
+        except Exception as e:
+            logger.error(f"Morning report error: {e}")
 
 
 async def telegram_polling_loop():
