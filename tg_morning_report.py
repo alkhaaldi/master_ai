@@ -7,8 +7,8 @@ logger = logging.getLogger("tg_morning")
 HA_URL = os.environ.get("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.environ.get("HA_TOKEN", "")
 
-SHIFT_PATTERN = ["A", "A", "D", "D", "B", "B", "C", "C"]
-SHIFT_NAMES = {"A": "صباحي ☀️", "B": "مسائي 🌅", "C": "ليلي 🌙", "D": "إجازة 😎"}
+SHIFT_PATTERN = ["A", "A", "B", "B", "C", "C", "D", "D"]
+SHIFT_NAMES = {"A": "صباحي ☀️", "B": "عصري 🌅", "C": "ليلي 🌙", "D": "إجازة 😎"}
 SHIFT_EPOCH = datetime(2024, 1, 4)
 
 
