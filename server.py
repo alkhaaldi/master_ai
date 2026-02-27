@@ -3810,25 +3810,28 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         try:
             intent_result = await route_intent(text)
             if intent_result:
-                logger.info(f"TG intent routed: {text[:50]}")
+                _ir_text = intent_result["text"] if isinstance(intent_result, dict) else intent_result
+                _ir_entities = intent_result.get("entities", []) if isinstance(intent_result, dict) else []
+                _ir_action = intent_result.get("action", "") if isinstance(intent_result, dict) else ""
+                logger.info(f"TG intent routed: {text[:50]} -> {_ir_action} ({len(_ir_entities)} entities)")
                 if TG_SESSION_OK:
-                    tg_session_upsert(str(chat_id), last_intent="action")
+                    tg_session_upsert(str(chat_id), last_intent="action", last_entities=_ir_entities)
                 if TG_SUGGEST_OK:
-                    _sact = "on" if "شغّلت" in intent_result else "off" if "طفّيت" in intent_result else "set_temp" if "ضبطت" in intent_result else "scene" if "مشهد" in intent_result else "query" if "الحالة" in intent_result else None
+                    _sact = "on" if "شغّلت" in _ir_text else "off" if "طفّيت" in _ir_text else "set_temp" if "ضبطت" in _ir_text else "scene" if "مشهد" in _ir_text else "query" if "الحالة" in _ir_text else None
                     _sbtns = get_suggestions(_sact) if _sact else []
                     if _sbtns:
                         # _sbtns is already rows format [[btn1,btn2],[btn3]]
                         _kb = json.dumps({"inline_keyboard": _sbtns})
-                        _payload = {"chat_id": chat_id, "text": intent_result, "reply_markup": _kb, "parse_mode": "Markdown"}
+                        _payload = {"chat_id": chat_id, "text": _ir_text, "reply_markup": _kb, "parse_mode": "Markdown"}
                         try:
                             await _tg_client.post(f"{TG_BASE}/sendMessage", json=_payload)
                         except Exception as _e:
                             logger.error(f"suggest send error: {_e}")
-                            await tg_send(chat_id, intent_result, parse_mode="Markdown")
+                            await tg_send(chat_id, _ir_text, parse_mode="Markdown")
                     else:
-                        await tg_send(chat_id, intent_result, parse_mode="Markdown")
+                        await tg_send(chat_id, _ir_text, parse_mode="Markdown")
                 else:
-                    await tg_send(chat_id, intent_result, parse_mode="Markdown")
+                    await tg_send(chat_id, _ir_text, parse_mode="Markdown")
                 return
         except Exception as e:
             logger.error(f"Intent router error: {e}")

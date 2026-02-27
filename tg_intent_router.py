@@ -172,8 +172,9 @@ async def _ha_get_state(entity_id):
         return None
 
 
-async def route_intent(text: str) -> str | None:
-    """Try to route text to a fast-path handler. Returns response or None."""
+async def route_intent(text: str) -> dict | None:
+    """Try to route text to a fast-path handler.
+    Returns dict {text, entities, action} or None."""
     text = text.strip()
     words = text.split()
     if not words:
@@ -232,7 +233,7 @@ async def _handle_scene(text, emap):
         async with httpx.AsyncClient(timeout=10) as c:
             await c.post(f"{HA_URL}/api/services/scene/turn_on", headers=headers, json={"entity_id": best["entity_id"]})
         fname = best.get("attributes", {}).get("friendly_name", best["entity_id"])
-        return f"🎬 فعّلت مشهد *{fname}*"
+        return {"text": f"🎬 فعّلت مشهد *{fname}*", "entities": [], "action": "scene"}
     except Exception:
         return None
 
@@ -317,7 +318,7 @@ async def _handle_action(text, words, emap):
 
     # For set_temp without number
     if action == "set_temp" and temp is None:
-        return "🌡️ كم تبي الحرارة؟"
+        return {"text": "🌡️ كم تبي الحرارة؟", "entities": [], "action": "set_temp"}
 
     # Execute on all matching entities
     results = []
