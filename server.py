@@ -79,6 +79,22 @@ try:
 except Exception:
     TG_SUGGEST_OK = False
 
+# Suggestion rate limit: {user_id: last_suggest_timestamp}
+_suggest_cooldown = {}
+_SUGGEST_COOLDOWN_SEC = 30
+
+def _should_send_suggestions(user_id, intent_type=None):
+    """Check if suggestions should be sent (30s cooldown, except correction/disambiguation)."""
+    if intent_type in ("correction", "disambiguation", "ambiguity"):
+        return True
+    import time as _t
+    now = _t.time()
+    last = _suggest_cooldown.get(str(user_id), 0)
+    if now - last < _SUGGEST_COOLDOWN_SEC:
+        return False
+    _suggest_cooldown[str(user_id)] = now
+    return True
+
 try:
     from tg_alerts import alert_loop as tg_alert_loop
     TG_ALERTS_OK = True
@@ -3685,8 +3701,8 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         return "الاستخدام: /update_stock TICKER PRICE [note]"
 
     if cmd == "/log":
-        import subprocess
-        result = subprocess.run(["tail", "-15", "/home/pi/master_ai/server.log"], capture_output=True, text=True)
+        import subprocess, asyncio
+        result = await asyncio.to_thread(subprocess.run, ["tail", "-15", "/home/pi/master_ai/server.log"], capture_output=True, text=True)
         log_text = result.stdout[-2000:] if result.stdout else "empty"
         return "📜 Log:\n" + log_text
     if cmd == "/tasks" or cmd.startswith("/tasks "):
@@ -4062,7 +4078,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 logger.info(f"TG intent routed: {text[:50]} -> {_ir_action} ({len(_ir_entities)} entities)")
                 if TG_SESSION_OK:
                     tg_session_upsert(str(chat_id), last_intent="action", last_entities=_ir_entities)
-                if TG_SUGGEST_OK:
+                if TG_SUGGEST_OK and _should_send_suggestions(str(chat_id)):
                     _sact = "on" if "شغّلت" in _ir_text else "off" if "طفّيت" in _ir_text else "set_temp" if "ضبطت" in _ir_text else "scene" if "مشهد" in _ir_text else "query" if "الحالة" in _ir_text else None
                     _sbtns = get_suggestions(_sact) if _sact else []
                     if _sbtns:
