@@ -98,7 +98,7 @@ except Exception:
     TG_NEWS_OK = False
 
 try:
-    from tg_stocks import get_portfolio, get_price, update_stock
+    from tg_stocks import cmd_stocks, cmd_price, stock_alert_loop
     TG_STOCKS_OK = True
 except Exception:
     TG_STOCKS_OK = False
@@ -2155,6 +2155,10 @@ async def lifespan(app):
         async def _news_sender(text):
             _cid = ADMIN_TELEGRAM_ID or "669769765"
             await tg_send(int(_cid), text)
+        async def _stock_sender(text):
+            _cid = ADMIN_TELEGRAM_ID or "669769765"
+            await tg_send(int(_cid), text)
+        asyncio.create_task(stock_alert_loop(_stock_sender))
         asyncio.create_task(news_scheduler(_news_sender))
         logger.info("News scheduler scheduled")
     # Phase 4: Proactive monitoring engine
@@ -3680,9 +3684,11 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         return "الاستخدام: /update_stock TICKER PRICE [note]"
 
     if cmd == "/stocks":
-        if not TG_STOCKS_OK:
-            return "Stock module not loaded"
-        return await get_portfolio()
+        return await cmd_stocks()
+    if cmd.startswith("/price"):
+        parts = text.strip().split(maxsplit=1)
+        ticker = parts[1] if len(parts) > 1 else ""
+        return await cmd_price(ticker)
     if cmd.startswith("/price"):
         if not TG_STOCKS_OK:
             return "Stock module not loaded"
