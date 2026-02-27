@@ -156,10 +156,19 @@ VERB_ACTION_MAP = {
     "خلها": "set_temp", "خليها": "set_temp", "خلهم": "set_temp", "خليهم": "set_temp",
     # return/reset
     "رجع": "on", "رجعه": "on", "رجعها": "on", "رجعهم": "on",
+    # Kuwaiti extras
+    "كفي": "off", "بس": "off",                   # كفي / بس = enough/stop
+    "عله": "increase", "عليه": "increase",        # علّه = raise it
+    "وطيه": "decrease", "وطه": "decrease",        # وطّيه = lower it
+    "شغلوه": "on", "طفوه": "off",                 # plural commands
+    "فكه": "on", "فكها": "on",                    # فكّه = unlock/open
 }
 
 CORRECTION_WORDS = {
     "لا", "مو", "غلط", "أقصد", "اقصد", "غير",
+    "موهذا", "موهذي", "موهذاك",   # مو هذا/هذي/هذاك
+    "موالصح", "خطأ",                       # مو الصح / خطأ
+    "نفسقبل",                                 # نفس قبل = same as before
 }
 
 def _extract_number(text: str):
@@ -185,7 +194,12 @@ def detect_followup(text: str, session: dict) -> dict:
 
     # Correction
     if words & CORRECTION_WORDS:
-        return {"type": "correction", "last_entities": session.get("last_entities", []), "last_room": session.get("last_room", "")}
+        return {"type": "correction", "last_entities": session.get("last_entities", []), "last_room": session.get("last_room", ""), "last_intent": session.get("last_intent", "")}
+
+    # Repeat last action: "نفس قبل" / "نفس الشي" / "ثاني"
+    repeat_words = {"نفسقبل", "ثاني", "مرةثانية", "كرره", "نفسالشي"}
+    if words_set & repeat_words:
+        return {"type": "repeat", "last_entities": session.get("last_entities", []), "last_intent": session.get("last_intent", "")}
 
     # Check for action verb
     action = None

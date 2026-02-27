@@ -3889,11 +3889,50 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         session = tg_session_get(str(chat_id))
         if session:
             followup = detect_followup(text, session)
-            if followup.get("type") == "followup":
+            ftype = followup.get("type")
+
+            if ftype == "followup":
                 logger.info(f"TG followup: {followup}")
                 result = await resolve_followup_action(followup, HA_URL, HA_TOKEN)
                 await tg_send(chat_id, result, parse_mode="Markdown")
                 return
+
+            elif ftype == "correction":
+                # Show disambiguation with last entities as buttons
+                last_ents = followup.get("last_entities", [])
+                if last_ents:
+                    btns = []
+                    for eid in last_ents[:6]:
+                        name = eid.split(".")[-1].replace("_", " ").title()
+                        btns.append([{"text": name, "callback_data": f"devctl:toggle:{eid}"}])
+                    kb = json.dumps({"inline_keyboard": btns})
+                    await _tg_client.post(f"{TG_BASE}/sendMessage", json={
+                        "chat_id": chat_id,
+                        "text": "❓ أي واحد تقصد؟",
+                        "reply_markup": kb
+                    })
+                else:
+                    await tg_send(chat_id, "❓ وش تقصد؟ جرب /find")
+                return
+
+            elif ftype == "repeat":
+                # Re-run last action on same entities
+                last_ents = followup.get("last_entities", [])
+                last_intent = followup.get("last_intent", "")
+                if last_ents and last_intent == "action":
+                    followup_repeat = {"type": "followup", "action": "on", "last_entities": last_ents}
+                    result = await resolve_followup_action(followup_repeat, HA_URL, HA_TOKEN)
+                    await tg_send(chat_id, result, parse_mode="Markdown")
+                else:
+                    await tg_send(chat_id, "❓ ما فيه سياق سابق — جرب /find")
+                return
+
+    # Save to context window for LLM
+    if TG_SESSION_OK:
+        try:
+            tg_session_append_context(str(chat_id), "user", text[:200])
+        except Exception:
+            pass
 
     # Send typing indicator
     try:
@@ -3904,6 +3943,15 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
     trace = RequestTrace()
     task_id = TaskManager.create_task(text, trace.request_id)
     trace.task_id = task_id
+    # Inject session context into short-term memory
+    if TG_SESSION_OK:
+        try:
+            _sess = tg_session_get(str(chat_id))
+            if _sess and _sess.get("context_window"):
+                for _cm in _sess["context_window"][-4:]:  # last 4 context items
+                    memory_add_short_term(_cm.get("role","user"), _cm.get("text",""))
+        except Exception:
+            pass
     memory_add_short_term("user", f"[Telegram/{user_name}] {text}")
 
     t0 = time.time()
@@ -3934,6 +3982,13 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         request_id=trace.request_id, task_id=task_id,
     )
     await tg_send_with_feedback(chat_id, response, request_id=trace.request_id)
+
+    # Save AI response to session context
+    if TG_SESSION_OK:
+        try:
+            tg_session_append_context(str(chat_id), "assistant", response[:200])
+        except Exception:
+            pass
 
 
 async def telegram_polling_loop():
