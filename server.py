@@ -3688,9 +3688,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         import subprocess
         result = subprocess.run(["tail", "-15", "/home/pi/master_ai/server.log"], capture_output=True, text=True)
         log_text = result.stdout[-2000:] if result.stdout else "empty"
-        return "📜 Log:
-
-" + log_text
+        return "📜 Log:\n" + log_text
     if cmd == "/tasks" or cmd.startswith("/tasks "):
         args = text.strip()[6:].strip() if len(text.strip()) > 6 else ""
         return await cmd_tasks(args)
