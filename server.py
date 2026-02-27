@@ -2228,6 +2228,36 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(APIKeyMiddleware)
 
+# --- Rate Limiter (in-memory, per-IP) ---
+import time as _rl_time
+_rate_limits = {}  # {ip: [(timestamp, ...], ...}
+_RATE_WINDOWS = {
+    "/webhook/": (10, 60),   # 10 req/60s
+    "/win/": (30, 60),       # 30 req/60s
+    "/agent": (5, 60),       # 5 req/60s
+    "/ask": (10, 60),        # 10 req/60s
+}
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        client_ip = request.client.host if request.client else "unknown"
+        for prefix, (max_req, window) in _RATE_WINDOWS.items():
+            if path.startswith(prefix) or path == prefix:
+                key = f"{client_ip}:{prefix}"
+                now = _rl_time.time()
+                hits = _rate_limits.get(key, [])
+                hits = [t for t in hits if now - t < window]
+                if len(hits) >= max_req:
+                    logger.warning(f"Rate limit: {client_ip} on {prefix} ({len(hits)}/{max_req})")
+                    return JSONResponse({"error": "rate limit exceeded"}, status_code=429)
+                hits.append(now)
+                _rate_limits[key] = hits
+                break
+        return await call_next(request)
+
+app.add_middleware(RateLimitMiddleware)
+
 # --- Module: Panel ---
 try:
     from modules.panel import register_panel_routes
@@ -3249,12 +3279,26 @@ async def get_event_rules():
     return {"event_rules": rules, "count": sum(len(v) for v in rules.values())}
 
 
-@app.post("/webhook/event/{token}", tags=["webhook"])
-async def webhook_event(token: str, req: EventRequest):
+@app.post("/webhook/event/{token}", tags=["webhook"], deprecated=True)
+async def webhook_event_legacy(token: str, req: EventRequest):
+    """Legacy: token in path. Use /webhook/event with X-Webhook-Token header instead."""
     policy = load_policy()
     expected = policy.get("webhook_token")
     if not expected:
         return JSONResponse({"error": "webhook not configured"}, status_code=503)
+    if token != expected:
+        return JSONResponse({"error": "invalid token"}, status_code=403)
+    return await ingest_event(req)
+
+
+@app.post("/webhook/event", tags=["webhook"])
+async def webhook_event(request: Request, req: EventRequest):
+    """Secure: token in X-Webhook-Token header."""
+    policy = load_policy()
+    expected = policy.get("webhook_token")
+    if not expected:
+        return JSONResponse({"error": "webhook not configured"}, status_code=503)
+    token = request.headers.get("X-Webhook-Token", "")
     if token != expected:
         return JSONResponse({"error": "invalid token"}, status_code=403)
     return await ingest_event(req)
