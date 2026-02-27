@@ -52,6 +52,15 @@ get_head() { git -C "$DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown";
 
 get_journal() { journalctl -u master-ai --no-pager -n 8 --output=cat 2>/dev/null | tail -5 || echo "(no journal)"; }
 
+collect_fingerprint() {
+    # Run crash fingerprint and capture TG summary
+    if [ -x "$DIR/scripts/crash_fingerprint.sh" ]; then
+        "$DIR/scripts/crash_fingerprint.sh" 2>/dev/null || echo "(fingerprint error)"
+    else
+        echo "(no fingerprint script)"
+    fi
+}
+
 # --- Main Logic ---
 log "CHECK: starting"
 
@@ -143,20 +152,22 @@ if check_health; then
     git -C "$DIR" rev-parse HEAD > "${LAST_GOOD}.tmp" 2>/dev/null
     mv "${LAST_GOOD}.tmp" "$LAST_GOOD" 2>/dev/null || true
     log "STEP3: rollback SUCCESS ($(get_head))"
+    FP=$(collect_fingerprint)
     tg_notify "⚠️ *Master AI ROLLBACK*
 From: `$BEFORE_HEAD` → `$(get_head)`
-Service restored automatically." "true"
+Service restored automatically.
+
+$FP" "true"
     exit 0
 fi
 
 # Step 4: Everything failed
 log "STEP3: rollback did NOT fix it"
+FP=$(collect_fingerprint)
 tg_notify "🚨 *Master AI DOWN*
 Restart ❌ | Recovery ❌ | Rollback ❌
-From: `$BEFORE_HEAD` → `$(get_head)`
-Last 5 journal lines:
-```
-$(get_journal)
-```
+
+$FP
+
 Manual intervention required." "true"
 exit 1

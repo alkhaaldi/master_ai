@@ -3712,6 +3712,10 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         result = await asyncio.to_thread(subprocess.run, ["tail", "-15", "/home/pi/master_ai/server.log"], capture_output=True, text=True)
         log_text = result.stdout[-2000:] if result.stdout else "empty"
         return "📜 Log:\n" + log_text
+    if cmd == "/crash":
+        import subprocess as _sp2, asyncio as _aio2
+        _cr = await _aio2.to_thread(_sp2.run, ["/home/pi/master_ai/scripts/crash_fingerprint.sh"], capture_output=True, text=True)
+        return _cr.stdout[-3500:] if _cr.stdout else "❌ Fingerprint failed"
     if cmd == "/tasks" or cmd.startswith("/tasks "):
         args = text.strip()[6:].strip() if len(text.strip()) > 6 else ""
         return await cmd_tasks(args)
