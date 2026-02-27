@@ -3355,7 +3355,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/report":
         try:
             report = await build_morning_report()
-            await tg_send(chat_id, report, parse_mode="Markdown")
+            await tg_send(chat_id, report)
         except Exception as e:
             await tg_send(chat_id, f"Report error: {str(e)[:100]}")
         return "__inline_sent__"
