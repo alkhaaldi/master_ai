@@ -21,11 +21,12 @@ _prev_hot_acs = set()
 _alert_cooldown = {}  # entity_id -> last_alert_time
 
 OFFLINE_DOMAINS = ["light.", "switch.", "climate.", "cover.", "fan."]
+EXCLUDE_KEYWORDS = ["_backlight", "_indicator", "alexa", "iphone"]  # Skip noise entities
 AC_TEMP_LIMIT = 24.0  # Alert if current temp > this
 NIGHT_START = 23  # 11 PM
 NIGHT_END = 6     # 6 AM
 CHECK_INTERVAL = 300  # 5 minutes
-COOLDOWN_MINUTES = 120  # Don't re-alert same entity within 30 min
+COOLDOWN_MINUTES = 120  # Don't re-alert same entity within 2 hours
 
 
 def _in_cooldown(entity_id: str) -> bool:
@@ -78,7 +79,7 @@ async def check_alerts(send_fn) -> list[str]:
         for s in states:
             eid = s.get("entity_id", "")
             st = s.get("state", "")
-            if st == "unavailable" and any(eid.startswith(d) for d in OFFLINE_DOMAINS):
+            if st == "unavailable" and any(eid.startswith(d) for d in OFFLINE_DOMAINS) and not any(kw in eid for kw in EXCLUDE_KEYWORDS):
                 _prev_offline.add(eid)
             if eid.startswith("cover.") and st == "open":
                 _prev_open_covers.add(eid)
@@ -90,7 +91,7 @@ async def check_alerts(send_fn) -> list[str]:
     for s in states:
         eid = s.get("entity_id", "")
         state = s.get("state", "")
-        if state == "unavailable" and any(eid.startswith(d) for d in OFFLINE_DOMAINS):
+        if state == "unavailable" and any(eid.startswith(d) for d in OFFLINE_DOMAINS) and not any(kw in eid for kw in EXCLUDE_KEYWORDS):
             current_offline.add(eid)
     
     new_offline = current_offline - _prev_offline

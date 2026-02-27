@@ -171,8 +171,8 @@ def _in_quiet_hours(policy):
 
 
 def _rate_limit_ok(policy):
-    max_hour = policy.get("rate_limit_per_hour", 4)
-    max_day = policy.get("rate_limit_per_day", 15)
+    max_hour = policy.get("rate_limit_per_hour", 10)
+    max_day = policy.get("rate_limit_per_day", 30)
     if _count_alerts_last_hour() >= max_hour:
         return False
     if _count_alerts_today() >= max_day:
@@ -224,7 +224,7 @@ async def _run_checks(states):
             })
 
         # Light on > 3 hours
-        if eid.startswith("light.") and state == "on" and duration_min > 180:
+        if eid.startswith("light.") and state == "on" and duration_min > 180 and "_backlight" not in eid:
             alerts.append({
                 "type": "light_on_long",
                 "entity_id": eid,
