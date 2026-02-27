@@ -3827,32 +3827,6 @@ async def tg_handle_message(chat_id, text: str, user: dict):
                 await tg_send(chat_id, result, parse_mode="Markdown")
                 return
 
-    # --- Remaining: AI Agent ---
-    # (intent router block was here, now moved above)
-    # 
-    if TG_INTENT_OK:
-        try:
-            intent_result = await route_intent(text)
-            if intent_result:
-                logger.info(f"TG intent routed: {text[:50]}")
-                if TG_SESSION_OK:
-                    tg_session_upsert(str(chat_id), last_intent="action")
-                # Send with suggestions if available
-                if TG_SUGGEST_OK:
-                    # Detect action type from result
-                    _sact = "on" if "شغّلت" in intent_result else "off" if "طفّيت" in intent_result else "set_temp" if "ضبطت" in intent_result else "scene" if "مشهد" in intent_result else "query" if "الحالة" in intent_result else None
-                    _sbtns = get_suggestions(_sact) if _sact else []
-                    if _sbtns:
-                        flat = [b for row in _sbtns for b in row]
-                        await tg_send_inline(chat_id, intent_result, _sbtns, columns=len(_sbtns[0]) if _sbtns else 2)
-                    else:
-                        await tg_send(chat_id, intent_result, parse_mode="Markdown")
-                else:
-                    await tg_send(chat_id, intent_result, parse_mode="Markdown")
-                return
-        except Exception as e:
-            logger.error(f"Intent router error: {e}")
-
     # Send typing indicator
     try:
         await _tg_client.post(f"{TG_BASE}/sendChatAction", json={"chat_id": chat_id, "action": "typing"})
