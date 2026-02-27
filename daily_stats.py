@@ -1,7 +1,7 @@
 import json, subprocess, sqlite3, os
 from datetime import datetime
 
-DB_PATH = "/home/pi/master_ai/data/tasks.db"
+DB_PATH = "/home/pi/master_ai/data/audit.db"  # consolidated from tasks.db
 
 # Create daily_stats table
 conn = sqlite3.connect(DB_PATH)

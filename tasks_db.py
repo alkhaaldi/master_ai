@@ -8,7 +8,7 @@ import aiosqlite
 import os
 from datetime import datetime
 
-TASKS_DB = "/home/pi/master_ai/data/tasks.db"
+TASKS_DB = "/home/pi/master_ai/data/audit.db"
 
 def init_tasks_db():
     os.makedirs(os.path.dirname(TASKS_DB), exist_ok=True)

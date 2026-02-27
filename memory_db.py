@@ -2,7 +2,7 @@
 """Smart Memory System for Master AI v4.0"""
 import aiosqlite, json
 from datetime import datetime
-TASKS_DB = "/home/pi/master_ai/data/tasks.db"
+TASKS_DB = "/home/pi/master_ai/data/audit.db"  # consolidated from tasks.db
 
 def init_memory_db():
     import sqlite3
