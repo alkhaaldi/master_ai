@@ -12,10 +12,10 @@ logger = logging.getLogger("tg_news")
 
 # RSS Feeds
 FEEDS = [
-    {"name": "\u0627\u0644\u0642\u0628\u0633", "url": "https://alqabas.com/rss", "icon": "KW", "max": 3},
-    {"name": "\u0627\u0644\u0631\u0627\u0626\u064a", "url": "https://www.alraimedia.com/rss", "icon": "📰", "max": 3},
+    {"name": "الكويت", "url": "https://news.google.com/rss/search?q=Kuwait&hl=ar&gl=KW&ceid=KW:ar", "icon": "KW", "max": 3},
+    {"name": "BBC عربي", "url": "https://feeds.bbci.co.uk/arabic/rss.xml", "icon": "📰", "max": 3},
     {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "icon": "💻", "max": 3},
-    {"name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index", "icon": "\u2699\ufe0f", "max": 2},
+    {"name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index", "icon": "⚙️", "max": 2},
 ]
 
 _sender_fn = None
@@ -33,7 +33,7 @@ def _strip_html(text: str) -> str:
 async def _fetch_feed(client: httpx.AsyncClient, feed: dict) -> list:
     """Fetch and parse a single RSS feed."""
     try:
-        resp = await client.get(feed["url"], timeout=10)
+        resp = await client.get(feed["url"], timeout=10, follow_redirects=True)
         if resp.status_code != 200:
             logger.warning(f"Feed {feed['name']} returned {resp.status_code}")
             return []
