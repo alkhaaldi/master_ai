@@ -73,6 +73,18 @@ except Exception:
     TG_INTENT_OK = False
 
 try:
+    from smart_router import classify_message
+    SMART_ROUTER_OK = True
+except Exception:
+    SMART_ROUTER_OK = False
+
+try:
+    from discovery import get_home_summary, sync_entities, get_discovery_stats
+    DISCOVERY_OK = True
+except Exception:
+    DISCOVERY_OK = False
+
+try:
     from tg_suggestions import get_suggestions
     from tg_morning_report import build_morning_report, send_morning_report
     TG_SUGGEST_OK = True
