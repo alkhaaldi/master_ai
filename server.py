@@ -4146,6 +4146,8 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 _ir_entities = intent_result.get("entities", []) if isinstance(intent_result, dict) else []
                 _ir_action = intent_result.get("action", "") if isinstance(intent_result, dict) else ""
                 logger.info(f"TG intent routed: {text[:50]} -> {_ir_action} ({len(_ir_entities)} entities)")
+                _router_stats['intent'] = _router_stats.get('intent', 0) + 1
+                _router_stats['total'] += 1
                 if TG_SESSION_OK:
                     tg_session_upsert(str(chat_id), last_intent="action", last_entities=_ir_entities)
                 if TG_SUGGEST_OK and _should_send_suggestions(str(chat_id)):
@@ -4177,6 +4179,8 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
 
             if ftype == "followup":
                 logger.info(f"TG followup: {followup}")
+                _router_stats["followup"] = _router_stats.get("followup", 0) + 1
+                _router_stats["total"] += 1
                 # Disambiguation: action but no specific target + multiple entities
                 f_action = followup.get("action")
                 f_target = followup.get("target_entity")
@@ -4322,13 +4326,26 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
 @app.get("/router/stats")
 async def router_stats_endpoint():
     total = _router_stats.get("total", 0) or 1
+    db_stats = {}
+    try:
+        import sqlite3 as _sq
+        _c = _sq.connect(str(AUDIT_DB))
+        for row in _c.execute("SELECT status, count(*) FROM audit_log GROUP BY status").fetchall():
+            db_stats[row[0]] = row[1]
+        db_stats["db_total"] = _c.execute("SELECT count(*) FROM audit_log").fetchone()[0]
+        _c.close()
+    except Exception:
+        pass
     return {
-        **_router_stats,
-        "percentages": {
-            k: round(v / total * 100, 1)
-            for k, v in _router_stats.items()
-            if k != "total" and k != "started_at" and isinstance(v, (int, float))
+        "session": {
+            **_router_stats,
+            "percentages": {
+                k: round(v / total * 100, 1)
+                for k, v in _router_stats.items()
+                if k != "total" and k != "started_at" and isinstance(v, (int, float))
+            },
         },
+        "persistent": db_stats,
     }
 
 async def morning_report_scheduler():
