@@ -21,7 +21,7 @@ _prev_hot_acs = set()
 _alert_cooldown = {}  # entity_id -> last_alert_time
 
 OFFLINE_DOMAINS = ["light.", "switch.", "climate.", "cover.", "fan."]
-EXCLUDE_KEYWORDS = ["_backlight", "_indicator", "alexa", "iphone"]  # Skip noise entities
+EXCLUDE_KEYWORDS = ["_backlight", "_indicator", "alexa", "iphone", "abajora", "air_freshener", "filter_cartridge", "child_lock", "repeat_switch", "shuffle_switch", "room_5_bathroom", "bathroom_4_vent", "dining_room_switch"]  # Skip noise + persistent offline
 AC_TEMP_LIMIT = 24.0  # Alert if current temp > this
 NIGHT_START = 23  # 11 PM
 NIGHT_END = 6     # 6 AM

@@ -59,13 +59,13 @@ def _ensure_alerts_table():
         logger.error(f"Failed to create alerts table: {e}")
 
 
-def _save_alert(alert_type, entity_id, message, severity="low"):
+def _save_alert(alert_type, entity_id, message, severity="low", sent=True):
     try:
         msg = message.encode("utf-8", errors="replace").decode("utf-8")
         conn = sqlite3.connect(str(DB_PATH))
         conn.execute(
-            "INSERT INTO proactive_alerts (alert_type, entity_id, message, severity, sent) VALUES (?,?,?,?,1)",
-            (alert_type, entity_id, msg, severity)
+            "INSERT INTO proactive_alerts (alert_type, entity_id, message, severity, sent) VALUES (?,?,?,?,?)",
+            (alert_type, entity_id, msg, severity, 1 if sent else 0)
         )
         conn.commit()
         conn.close()
@@ -416,7 +416,10 @@ async def proactive_loop():
                 continue
 
             if not _rate_limit_ok(policy):
-                logger.warning("Rate limit hit, skipping alerts")
+                logger.debug("Rate limit hit, skipping alerts")
+                # Save as unsent so dedup still works next cycle
+                for a in filtered:
+                    _save_alert(a["type"], a["entity_id"], a.get("message", ""), a["severity"], sent=False)
                 await asyncio.sleep(CHECK_INTERVAL)
                 continue
 
