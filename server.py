@@ -120,6 +120,51 @@ def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "") -> str:
     return base
 
 
+
+
+async def _fetch_live_ha_context(user_msg: str) -> str:
+    """Fetch relevant HA entity states when user asks about rooms/devices/house status."""
+    import re as _re
+    # Keywords that indicate user wants real-time status
+    status_kw = ["حال", "وضع", "حالة", "شغال", "مطفي", "درجة", "حرارة", "ستائر", "ستاير",
+                 "اضاءة", "أضواء", "مكيف", "بيت", "غرفة", "مكتب", "ديوانية", "معيشة",
+                 "مطبخ", "استقبال", "ماستر", "نوم", "status", "office", "room"]
+    if not any(k in user_msg for k in status_kw):
+        return ""
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{HA_URL}/api/states",
+                                 headers={"Authorization": f"Bearer {HA_TOKEN}"},
+                                 timeout=8)
+            if r.status_code != 200:
+                return ""
+            all_states = r.json()
+        # Filter to useful domains
+        dominated = ("light", "climate", "cover", "fan", "media_player", "switch")
+        relevant = [s for s in all_states if s.get("entity_id","").split(".")[0] in dominated
+                    and s.get("state") not in ("unavailable",)]
+        # Build compact summary
+        lines = []
+        for s in relevant:
+            eid = s["entity_id"]
+            name = s.get("attributes", {}).get("friendly_name", eid)
+            state = s["state"]
+            attrs = s.get("attributes", {})
+            extra = ""
+            if "current_temperature" in attrs:
+                extra = f" (temp:{attrs['current_temperature']}°, target:{attrs.get('temperature','?')}°)"
+            elif "brightness" in attrs and state == "on":
+                extra = f" (brightness:{round(attrs['brightness']/255*100)}%)"
+            elif "current_position" in attrs:
+                extra = f" (pos:{attrs['current_position']}%)"
+            lines.append(f"{name}: {state}{extra}")
+        if not lines:
+            return ""
+        hdr = '\n=== حالات الأجهزة الفعلية الآن ===\n'
+        return hdr + '\n'.join(lines)
+    except Exception:
+        return ""
+
 def _should_send_suggestions(user_id, intent_type=None):
     """Check if suggestions should be sent (30s cooldown, except correction/disambiguation)."""
     if intent_type in ("correction", "disambiguation", "ambiguity"):
@@ -4287,7 +4332,10 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 except Exception:
                     _brain_prompt = ""
                 _chat_sys = build_chat_system_prompt(_brain_prompt, _home_ctx)
-                _chat_resp = await llm_call(_chat_sys, text, max_tokens=1500)
+                # Fetch live HA states for status questions
+                _live_ctx = await _fetch_live_ha_context(text)
+                _enriched_text = text + _live_ctx if _live_ctx else text
+                _chat_resp = await llm_call(_chat_sys, _enriched_text, max_tokens=1500)
                 # Strip any <action>...</action> XML that LLM might emit
                 _chat_resp = re.sub(r'<action>.*?</action>', '', _chat_resp, flags=re.DOTALL).strip()
                 memory_add_short_term("assistant", _chat_resp)
