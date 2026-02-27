@@ -3459,12 +3459,28 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
 
     # --- Level 2: Home commands ---
     if cmd == "/rooms":
-        if not TG_HOME_OK:
-            return "tg_home module not loaded"
-        result = await cmd_rooms()
-        if TG_SESSION_OK:
-            tg_session_upsert(str(chat_id), last_intent="rooms")
-        return result
+        # --- Phase B2: Room selector with inline buttons ---
+        import json as _json_rooms
+        try:
+            _emap = _json_rooms.load(open("/home/pi/master_ai/entity_map.json"))
+        except Exception:
+            return "entity_map.json not found"
+        _floor_groups = [
+            ("🏠 الأرضي", ["الأرضي/Ground", "الديوانية/Diwaniya", "المطبخ/Kitchen", "غرفة الطعام/Dining", "صالة الاستقبال/Reception", "صالة المعيشة/Living", "الخارجي/Outdoor"]),
+            ("🔼 الأول", ["غرفة الماستر/Master", "حمام الماستر", "ملابس الماستر", "صالتي/Salon", "المكتب/Office", "غرفة عيشة/Aisha", "ممر الدور الأول", "البلكونة/Balcony", "غرفة ماما/Mama"]),
+            ("🔼 الثاني", ["غرفة الضيوف/Guest", "غرفة 2", "غرفة 3", "غرفة 4", "غرفة 5", "الدرج/Stairs"]),
+            ("🔧 خدمات", ["غرفة الغسيل/Laundry", "غرفة الخادمة/Maid"]),
+        ]
+        for _fn, _fr in _floor_groups:
+            _btns = []
+            for _rm in _fr:
+                if _rm in _emap:
+                    _cnt = len([e for e in _emap[_rm] if "=" in e and not e.split("=")[0].startswith("scene.")])
+                    _short = _rm.split("/")[0] if "/" in _rm else _rm
+                    _btns.append({"text": f"{_short} ({_cnt})", "callback_data": f"room:{_rm[:40]}"})
+            if _btns:
+                await tg_send_inline(chat_id, _fn, _btns, columns=2)
+        return "__inline_sent__"
 
     if cmd.startswith("/devices"):
         if not TG_HOME_OK:
@@ -3820,6 +3836,46 @@ async def tg_handle_callback(callback_query: dict):
         else:
             answer = "Invalid"
 
+
+    elif data.startswith("room:"):
+        # --- Phase B2: Show room devices with toggle buttons ---
+        _room_name = data[5:]
+        import json as _json_room
+        try:
+            _emap_r = _json_room.load(open("/home/pi/master_ai/entity_map.json"))
+        except Exception:
+            _emap_r = {}
+        if _room_name in _emap_r:
+            _entities = _emap_r[_room_name]
+            _dev_btns = []
+            _ha_headers = {"Authorization": f"Bearer {HA_TOKEN}"}
+            for _entry in _entities:
+                if "=" not in _entry:
+                    continue
+                _eid, _fname = _entry.split("=", 1)
+                if _eid.startswith("scene."):
+                    continue
+                _domain = _eid.split(".")[0]
+                if _domain not in ("light", "switch", "fan", "climate", "cover", "media_player"):
+                    continue
+                # Get current state
+                try:
+                    async with httpx.AsyncClient(timeout=5) as _hc:
+                        _sr = await _hc.get(f"{HA_URL}/api/states/{_eid}", headers=_ha_headers)
+                        _st = _sr.json().get("state", "?") if _sr.status_code == 200 else "?"
+                except Exception:
+                    _st = "?"
+                _icon = "🟢" if _st == "on" else ("🔴" if _st == "off" else "⚪")
+                _short_name = _fname[:18]
+                _act = "off" if _st == "on" else "on"
+                _dev_btns.append({"text": f"{_icon} {_short_name}", "callback_data": f"devctl:{_act}:{_eid}"})
+            if _dev_btns:
+                _short_room = _room_name.split("/")[0] if "/" in _room_name else _room_name
+                _dev_btns.append({"text": "🏠 رجوع", "callback_data": "cmd:rooms"})
+                await tg_send_inline(chat_id, f"🏠 {_short_room}", _dev_btns, columns=2)
+            else:
+                await tg_send(chat_id, "⚠️ لا توجد أجهزة قابلة للتحكم")
+        answer_text = "✅"
 
     else:
         answer = ""
