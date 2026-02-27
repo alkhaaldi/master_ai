@@ -98,6 +98,7 @@ except Exception:
     TG_NEWS_OK = False
 
 try:
+    from tg_tasks import cmd_tasks, cmd_task_add, cmd_task_done
     from tg_stocks import cmd_stocks, cmd_price, stock_alert_loop
     TG_STOCKS_OK = True
 except Exception:
@@ -3683,6 +3684,24 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 return "الاستخدام: /update_stock TICKER PRICE [note]"
         return "الاستخدام: /update_stock TICKER PRICE [note]"
 
+    if cmd == "/log":
+        import subprocess
+        result = subprocess.run(["tail", "-15", "/home/pi/master_ai/server.log"], capture_output=True, text=True)
+        log_text = result.stdout[-2000:] if result.stdout else "empty"
+        return "📜 Log:
+
+" + log_text
+    if cmd == "/tasks" or cmd.startswith("/tasks "):
+        args = text.strip()[6:].strip() if len(text.strip()) > 6 else ""
+        return await cmd_tasks(args)
+    if cmd.startswith("/task "):
+        sub = text.strip()[6:].strip()
+        if sub.startswith("add "):
+            return await cmd_task_add(sub[4:])
+        elif sub.startswith("done "):
+            return await cmd_task_done(sub[5:])
+        else:
+            return "الاستخدام: /task add <عنوان> | /task done <رقم>"
     if cmd == "/stocks":
         return await cmd_stocks()
     if cmd.startswith("/price"):

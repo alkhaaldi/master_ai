@@ -171,8 +171,8 @@ def _in_quiet_hours(policy):
 
 
 def _rate_limit_ok(policy):
-    max_hour = policy.get("rate_limit_per_hour", 10)
-    max_day = policy.get("rate_limit_per_day", 30)
+    max_hour = policy.get("rate_limit_per_hour", 20)
+    max_day = policy.get("rate_limit_per_day", 60)
     if _count_alerts_last_hour() >= max_hour:
         return False
     if _count_alerts_today() >= max_day:
