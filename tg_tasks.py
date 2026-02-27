@@ -22,10 +22,22 @@ async def cmd_tasks(args: str = "") -> str:
             return "\u2705 \u0645\u0627 \u0641\u064a\u0647 \u0645\u0647\u0627\u0645!"
         
         lines = ["\U0001f4cb \u0645\u0644\u062e\u0635 \u0627\u0644\u0645\u0647\u0627\u0645:\n"]
-        for item in summary:
-            cat = item.get("category", "other")
-            icon = CAT_ICONS.get(cat, "\U0001f4cc")
-            lines.append(f"{icon} {cat}: {item.get('pending',0)} \u0645\u0639\u0644\u0642 / {item.get('total',0)} \u0625\u062c\u0645\u0627\u0644\u064a")
+        lines.append(f"\u0625\u062c\u0645\u0627\u0644\u064a: {summary.get('total', 0)} | \u0646\u0634\u0637: {summary.get('active', 0)}\n")
+        
+        by_cat = summary.get("by_category", {})
+        if by_cat:
+            lines.append("\U0001f4c2 \u062d\u0633\u0628 \u0627\u0644\u0641\u0626\u0629:")
+            for cat, count in by_cat.items():
+                icon = CAT_ICONS.get(cat, "\U0001f4cc")
+                lines.append(f"  {icon} {cat}: {count}")
+        
+        urgent = summary.get("urgent_tasks", [])
+        if urgent:
+            lines.append("\n\U0001f6a8 \u0639\u0627\u062c\u0644:")
+            for t in urgent:
+                pri = PRIORITY_ICONS.get(t.get("priority", "high"), "\U0001f534")
+                lines.append(f"  {pri} #{t['id']} {t['title']}")
+        
         return "\n".join(lines)
     
     # Filter by category
