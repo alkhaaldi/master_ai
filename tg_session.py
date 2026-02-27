@@ -198,7 +198,7 @@ def detect_followup(text: str, session: dict) -> dict:
 
     # Repeat last action: "نفس قبل" / "نفس الشي" / "ثاني"
     repeat_words = {"نفسقبل", "ثاني", "مرةثانية", "كرره", "نفسالشي"}
-    if words_set & repeat_words:
+    if words & repeat_words:
         return {"type": "repeat", "last_entities": session.get("last_entities", []), "last_intent": session.get("last_intent", "")}
 
     # Check for action verb
