@@ -85,6 +85,12 @@ try:
 except Exception:
     TG_ALERTS_OK = False
 
+try:
+    from tg_reminders import add_reminder, list_reminders, cancel_reminder, reminder_loop
+    TG_REMIND_OK = True
+except Exception:
+    TG_REMIND_OK = False
+
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # CONFIGURATION
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
@@ -2126,6 +2132,12 @@ async def lifespan(app):
             await tg_send(int(_cid), text)
         asyncio.create_task(tg_alert_loop(_alert_sender))
         logger.info("Alert monitor task scheduled")
+    # Phase B4: Reminders
+    if TG_REMIND_OK:
+        async def _remind_sender(cid, text):
+            await tg_send(cid, text)
+        asyncio.create_task(reminder_loop(_remind_sender))
+        logger.info("Reminder loop scheduled")
     # Phase 4: Proactive monitoring engine
     if BRAIN_AVAILABLE:
         try:
@@ -3636,6 +3648,27 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"Error: {e}"
 
+
+    if cmd == "/remind" or cmd == "/reminder":
+        if not TG_REMIND_OK:
+            return "Reminder module not loaded"
+        parts = text.split(None, 2)  # /remind 5m message
+        if len(parts) < 3:
+            return "u23f0 /remind <u0648u0642u062a> <u0631u0633u0627u0644u0629>\nu0645u062bu0627u0644: /remind 5m u0634u064au0643 u0627u0644u0641u0631u0646 | /remind 14:30 u0627u062au0635u0644 | /remind 2h u0627u062cu062au0645u0627u0639"
+        return add_reminder(chat_id, parts[1], parts[2])
+
+    if cmd == "/reminders":
+        if not TG_REMIND_OK:
+            return "Reminder module not loaded"
+        return list_reminders(chat_id)
+
+    if cmd.startswith("/cancel"):
+        if not TG_REMIND_OK:
+            return "Reminder module not loaded"
+        parts = text.split()
+        if len(parts) == 2 and parts[1].isdigit():
+            return cancel_reminder(int(parts[1]), chat_id)
+        return "الاستخدام: /cancel <رقم>"
 
     if cmd == "/help":
         return "\U0001f3e0 Master AI\n\n/status - \u0627\u0644\u0646\u0638\u0627\u0645\n/lights - \u0627\u0644\u0623\u0636\u0648\u0627\u0621\n/temp - \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a\n/brain - \u0627\u0644\u0639\u0642\u0644\n/diag - \u062a\u0634\u062e\u064a\u0635\n\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \U0001f44d"
