@@ -2763,15 +2763,6 @@ async def shift_info(date: str = Query(default=None)):
         week.append({"date": d.strftime("%Y-%m-%d"), "shift": s, "name": SHIFT_NAMES[s],
                       "is_today": i == 0})
 
-    # Quick response template (skip LLM if simple action)
-    if BRAIN_AVAILABLE and all_actions:
-        try:
-            quick = get_quick_response(all_actions, all_results)
-            if quick:
-                final_response = quick
-                logger.info(f"QUICK_RESPONSE: {quick[:50]}")
-        except Exception as e:
-            logger.error(f"Quick response error: {e}")
     return {
         "date": target.strftime("%Y-%m-%d"),
         "shift": shift, "name": SHIFT_NAMES[shift],

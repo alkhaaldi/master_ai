@@ -142,6 +142,25 @@ fi
 # ============================================================
 # PHASE 5: Success — update last_good + notify
 # ============================================================
+# ============================================================
+# PHASE 4b: Pytest integration tests
+# ============================================================
+echo "== Running pytest =="
+PYTEST_OUT=$("$VENV" -m pytest tests/test_smoke.py -v --tb=line 2>&1)
+PYTEST_RC=$?
+echo "$PYTEST_OUT" | tail -5
+if [ "$PYTEST_RC" -ne 0 ]; then
+    echo "!! Pytest FAILED — rolling back"
+    git reset --hard "$PREV"
+    "$VENV" -m py_compile server.py
+    sudo systemctl restart master-ai
+    sleep 3
+    tg_notify "❌ *Deploy FAILED* (pytest)
+\`$NEW_SHORT\` → rolled back to \`$PREV_SHORT\`"
+    exit 1
+fi
+echo "== Pytest passed =="
+
 echo "$NEW" > "$DIR/data/last_good_commit.txt"
 echo ""
 echo "========================================="
