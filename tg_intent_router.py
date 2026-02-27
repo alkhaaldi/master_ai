@@ -337,9 +337,11 @@ async def _handle_action(text, words, emap):
     icon = icons.get(action, "✅")
     verb = verbs.get(action, action)
 
+    eids = [eid for eid, _, _ in entities]
+
     if len(success) == 1:
         name, detail = success[0]
-        return f"{icon} {verb} *{name}* {detail}".strip()
+        return {"text": f"{icon} {verb} *{name}* {detail}".strip(), "entities": eids, "action": action}
 
     lines = [f"{icon} {verb} *{len(success)}* أجهزة:"]
     for name, detail in success:
@@ -347,4 +349,4 @@ async def _handle_action(text, words, emap):
     if failed:
         for name, detail in failed:
             lines.append(f"  ❌ {name}")
-    return "\n".join(lines)
+    return {"text": "\n".join(lines), "entities": eids, "action": action}
