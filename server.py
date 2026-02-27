@@ -59,6 +59,13 @@ try:
 except Exception:
     TG_HOME_OK = False
 
+try:
+    from tg_session import tg_session_get, tg_session_upsert, tg_session_append_context, tg_session_reset, detect_followup
+    from tg_session_resolver import resolve_followup_action
+    TG_SESSION_OK = True
+except Exception:
+    TG_SESSION_OK = False
+
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # CONFIGURATION
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
@@ -3331,6 +3338,11 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/start":
         return "\U0001f3e0 Master AI Bot\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \u0623\u0648 \u0623\u0645\u0631.\n\n/status \u2014 \u062d\u0627\u0644\u0629 \u0627\u0644\u0646\u0638\u0627\u0645\n/lights \u2014 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0627\u0644\u0645\u0634\u063a\u0644\u0629\n/temp \u2014 \u062d\u0631\u0627\u0631\u0629 \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a"
 
+    if cmd == "/reset":
+        if TG_SESSION_OK:
+            tg_session_reset(str(chat_id))
+        return "Session cleared"
+
     if cmd == "/status":
         uptime = int(time.time() - START_TIME)
         h, m = divmod(uptime // 60, 60)
@@ -3427,7 +3439,10 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/rooms":
         if not TG_HOME_OK:
             return "tg_home module not loaded"
-        return await cmd_rooms()
+        result = await cmd_rooms()
+        if TG_SESSION_OK:
+            tg_session_upsert(str(chat_id), last_intent="rooms")
+        return result
 
     if cmd.startswith("/devices"):
         if not TG_HOME_OK:
@@ -3435,7 +3450,10 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         room_q = text[len("/devices"):].strip()
         if not room_q:
             return "Usage: /devices <room name>"
-        return await cmd_devices(room_q)
+        result = await cmd_devices(room_q)
+        if TG_SESSION_OK:
+            tg_session_upsert(str(chat_id), last_intent="devices", last_room=room_q)
+        return result
 
     if cmd.startswith("/find"):
         if not TG_HOME_OK:
@@ -3445,6 +3463,9 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             result = await cmd_find(kw)
             if isinstance(result, tuple):
                 msg, results = result
+                if TG_SESSION_OK:
+                    eids = [r[0] for r in results]
+                    tg_session_upsert(str(chat_id), last_intent="find", last_query=kw, last_entities=eids)
                 btns = find_buttons(results)
                 if btns:
                     flat = [b for row in btns for b in row]
@@ -3761,6 +3782,17 @@ async def tg_handle_message(chat_id, text: str, user: dict):
     if quick:
         await tg_send(chat_id, quick)
         return
+
+    # --- Follow-up Resolution (Phase A2) ---
+    if TG_SESSION_OK:
+        session = tg_session_get(str(chat_id))
+        if session:
+            followup = detect_followup(text, session)
+            if followup.get("type") == "followup":
+                logger.info(f"TG followup: {followup}")
+                result = await resolve_followup_action(followup, HA_URL, HA_TOKEN)
+                await tg_send(chat_id, result, parse_mode="Markdown")
+                return
 
     # Send typing indicator
     try:
