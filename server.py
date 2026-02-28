@@ -1318,7 +1318,6 @@ _SPEED_SVC_MAP = {
 
 async def quick_execute(plan: dict) -> dict:
     """Execute a quick_classify plan using CB-protected HA calls. Returns {success, detail}."""
-    eid = plan["entity_id"]
     action = plan["action"]
     domain = plan["domain"]
     value = plan.get("value")
@@ -1327,6 +1326,36 @@ async def quick_execute(plan: dict) -> dict:
     if not svc:
         return {"success": False, "detail": f"unsupported: {action}/{domain}"}
 
+    # Step 4: Multi-device support
+    if plan.get("multi"):
+        eids = plan["entity_ids"]
+        t0 = __import__("time").time()
+        ok_count = 0
+        fail_count = 0
+        for _eid in eids:
+            _r = await _exec_ha_call_service(domain, svc, {"entity_id": _eid})
+            if _r.get("success"):
+                ok_count += 1
+            else:
+                fail_count += 1
+        dur = __import__("time").time() - t0
+        _status = "ok" if ok_count > 0 else "failed"
+        try:
+            await audit_log(
+                task=f"speed_multi:{action}:{len(eids)}x{domain}",
+                actions=[f"{domain}.{svc} x{len(eids)}"],
+                results=[f"ok={ok_count},fail={fail_count}"],
+                status=_status,
+                duration=dur,
+                route_type="template"
+            )
+        except Exception:
+            pass
+        return {"success": ok_count > 0, "detail": f"{ok_count}/{len(eids)} ok",
+                "ok_count": ok_count, "fail_count": fail_count}
+
+    # Single entity (original)
+    eid = plan["entity_id"]
     svc_data = {"entity_id": eid}
     if action == "set_temp" and value is not None:
         svc_data["temperature"] = value
@@ -1397,10 +1426,24 @@ def get_quick_response(plan: dict, exec_result: dict) -> str:
     if not exec_result.get("success"):
         return "⚠️ نظام الأجهزة غير متاح حالياً"
 
-    raw_name = plan.get("entity_name", plan.get("entity_id", ""))
-    name = _arabize_name(raw_name)
     action = plan.get("action", "")
     value = plan.get("value")
+
+    # Step 4: Multi-device response
+    if plan.get("multi"):
+        count = plan.get("count", 0)
+        room = _arabize_name(plan.get("room", ""))
+        ok = exec_result.get("ok_count", count)
+        _DOMAIN_AR = {"light": "نور", "fan": "مروحة", "switch": "سويتش", "cover": "ستارة"}
+        dtype = _DOMAIN_AR.get(plan.get("domain", ""), "جهاز")
+        if action == "on":
+            return f"شغّلت {ok} {dtype} بـ{room} ✓"
+        elif action == "off":
+            return f"طفيت {ok} {dtype} بـ{room} ✓"
+        return f"تم {ok} جهاز ✓"
+
+    raw_name = plan.get("entity_name", plan.get("entity_id", ""))
+    name = _arabize_name(raw_name)
 
     templates = {
         "on": f"شغّلت {name} ✓",

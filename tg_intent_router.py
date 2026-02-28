@@ -67,6 +67,7 @@ ACTION_VERBS = {
 # Device keywords → entity domain + name fragment
 DEVICE_KEYWORDS = {
     "نور": ("light", ""), "النور": ("light", ""), "الأنوار": ("light", ""),
+    "أنوار": ("light", ""), "انوار": ("light", ""),
     "اضاءة": ("light", ""), "اضاءات": ("light", ""), "إضاءة": ("light", ""), "الاضاءة": ("light", ""), "الإضاءة": ("light", ""), "اضاءه": ("light", ""),
     "سبوت": ("light", "spot"), "ستريب": ("light", "strip"),
     "مكيف": ("climate", ""), "المكيف": ("climate", ""),
@@ -89,6 +90,7 @@ ROOM_KEYWORDS = {
     "الاستقبال": ["استقبال", "Reception"],
     "غرفتي": ["My room"],
     "غرفة": ["غرفة", "room"],
+    "غرفه": ["غرفة", "room"],
     "ماستر": ["ماستر", "Master"],
     "ماما": ["mama", "ناهد"],
     "أمي": ["mama", "ناهد"],
@@ -498,14 +500,26 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
     domain_filter = None
     name_frag = ""
     room_frags = []
-    for w in words[1:]:
+    _rest = words[1:]
+    _i = 0
+    while _i < len(_rest):
+        w = _rest[_i]
         if w in DEVICE_KEYWORDS:
             d, nf = DEVICE_KEYWORDS[w]
             domain_filter = d
             if nf:
                 name_frag = nf
         elif w in ROOM_KEYWORDS:
-            room_frags = ROOM_KEYWORDS[w]
+            # Step 4: Combine room word + following number (e.g. "غرفة 3")
+            compound = w
+            if _i + 1 < len(_rest) and _rest[_i + 1].isdigit():
+                compound = w + " " + _rest[_i + 1]
+                _i += 1
+            if compound in ROOM_KEYWORDS:
+                room_frags = ROOM_KEYWORDS[compound]
+            else:
+                room_frags = [compound]  # use compound as-is for matching
+        _i += 1
 
     if not domain_filter:
         return None
@@ -521,14 +535,36 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
         _master = [e for e in entities if "master" in e[2].lower() or "ماستر" in e[2]]
         if len(_master) == 1:
             entities = _master
-    if len(entities) != 1:
-        return None  # Ambiguous or not found
-
-    eid, name, room = entities[0]
-    _domain = eid.split(".")[0]
-    if _domain in _GUARDED_DOMAINS:
+    if len(entities) == 0:
         return None
+    
+    # Single entity - original behavior
+    if len(entities) == 1:
+        eid, name, room = entities[0]
+        _domain = eid.split(".")[0]
+        if _domain in _GUARDED_DOMAINS:
+            return None
+        return {"intent": action, "action": action, "entity_id": eid,
+                "entity_name": name, "domain": _domain, "value": temp,
+                "room": room, "source": "classify"}
 
-    return {"intent": action, "action": action, "entity_id": eid,
-            "entity_name": name, "domain": _domain, "value": temp,
-            "room": room, "source": "classify"}
+    # Step 4: Multi-device support for simple on/off only
+    MAX_MULTI = 20
+    if action in ("on", "off") and len(entities) <= MAX_MULTI and room_frags:
+        # Filter out guarded domains
+        safe = [(e, n, r) for e, n, r in entities if e.split(".")[0] not in _GUARDED_DOMAINS]
+        if not safe:
+            return None
+        # Build multi-entity plan
+        eids = [e for e, n, r in safe]
+        names = [n for e, n, r in safe]
+        _domain = eids[0].split(".")[0]
+        _room = safe[0][2]
+        return {"intent": action, "action": action,
+                "entity_ids": eids, "entity_names": names,
+                "entity_id": eids[0], "entity_name": names[0],
+                "domain": _domain, "value": None,
+                "room": _room, "multi": True, "count": len(safe),
+                "source": "classify_multi"}
+    
+    return None  # Too many or unsupported action for multi
