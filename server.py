@@ -4356,7 +4356,8 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
     # --- Speed Engine (Step 2) --- template-eligible commands skip LLM ---
     if FEATURE_SPEED_TEMPLATES and FEATURE_SMART_ROUTER_V2 and TG_INTENT_OK and _cb_ha.is_available():
         try:
-            _speed_plan = quick_classify(text)
+            _speed_session = tg_session_get(str(chat_id)) if TG_SESSION_OK else None
+            _speed_plan = quick_classify(text, session_ctx=_speed_session)
             if _speed_plan:
                 logger.info(f"Speed template: {text[:50]} -> {_speed_plan['action']} {_speed_plan['entity_id']}")
                 _speed_result = await quick_execute(_speed_plan)

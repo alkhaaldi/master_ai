@@ -442,7 +442,23 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
 
     first = words[0]
 
-    # --- Scene activation ---
+    # --- Step 2: Pronoun followup (طفيه/شغله/أطفيه) ---
+    _PRONOUN_SUFFIXED = {
+        "طفيه": "off", "أطفيه": "off", "اطفيه": "off",
+        "شغله": "on", "أشغله": "on", "اشغله": "on",
+        "سكره": "off", "افتحه": "on", "فتحه": "on",
+    }
+    if text_s in _PRONOUN_SUFFIXED and session_ctx:
+        _last_ents = session_ctx.get("last_entities") or []
+        if len(_last_ents) == 1:
+            _pe = _last_ents[0]
+            _pd = _pe.split(".")[0]
+            if _pd not in _GUARDED_DOMAINS:
+                return {"intent": _PRONOUN_SUFFIXED[text_s], "action": _PRONOUN_SUFFIXED[text_s],
+                        "entity_id": _pe, "entity_name": _pe.split(".")[-1].replace("_", " "),
+                        "domain": _pd, "value": None, "room": None, "source": "followup_pronoun"}
+
+        # --- Scene activation ---
     if any(sw in text_s for sw in SCENE_WORDS) or text_s.startswith("فعّل "):
         scene_text = text_s
         for sw in SCENE_WORDS:
@@ -492,6 +508,16 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
         return None
 
     entities = _find_entities(emap, domain_filter, name_frag, room_frags)
+    # Step 2: Smart disambiguation for generic "نور" → prefer chandelier
+    if len(entities) > 1 and domain_filter == "light" and not name_frag:
+        _chandelier = [e for e in entities if any(kw in e[1].lower() for kw in ("chandl", "ثريا", "switch_1")) and "strip" not in e[1].lower() and "spot" not in e[1].lower() and "backlight" not in e[1].lower() and "mirror" not in e[1].lower()]
+        if len(_chandelier) == 1:
+            entities = _chandelier
+    # Step 2: Default room for climate when no room specified
+    if len(entities) > 1 and domain_filter == "climate" and not room_frags:
+        _master = [e for e in entities if "master" in e[2].lower() or "ماستر" in e[2]]
+        if len(_master) == 1:
+            entities = _master
     if len(entities) != 1:
         return None  # Ambiguous or not found
 
