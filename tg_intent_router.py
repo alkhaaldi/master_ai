@@ -61,6 +61,7 @@ ACTION_VERBS = {
     "شغل": "on", "افتح": "on", "فتح": "on", "ولع": "on", "نور": "on",
     "طفي": "off", "سكر": "off", "وقف": "off", "أغلق": "off",
     "زيد": "increase", "نقص": "decrease", "نزل": "decrease",
+    "خفف": "dim", "عتم": "dim", "خفّف": "dim", "عتّم": "dim",
     "اضبط": "set_temp", "حط": "set_temp", "خل": "set_temp",
 }
 
@@ -396,8 +397,8 @@ async def _handle_action(text, words, emap):
     if not success and not failed:
         return None
 
-    icons = {"on": "🟢", "off": "⚫", "set_temp": "🌡️", "increase": "🔥", "decrease": "❄️"}
-    verbs = {"on": "شغّلت", "off": "طفّيت", "set_temp": "ضبطت", "increase": "رفعت حرارة", "decrease": "نزّلت حرارة"}
+    icons = {"on": "🟢", "off": "⚫", "set_temp": "🌡️", "set_brightness": "💡", "dim": "💡", "increase": "🔥", "decrease": "❄️"}
+    verbs = {"on": "شغّلت", "off": "طفّيت", "set_temp": "ضبطت", "set_brightness": "ضبطت إضاءة", "increase": "رفعت حرارة", "decrease": "نزّلت حرارة"}
     icon = icons.get(action, "✅")
     verb = verbs.get(action, action)
 
@@ -647,9 +648,11 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
     if first not in ACTION_VERBS:
         return None
     action = ACTION_VERBS[first]
-    # Step 6: query now handled above, increase/decrease still blocked
+    # Step 9: Brightness + temperature increase/decrease
+    if action == "dim":
+        action = "set_brightness"  # will extract % from rest
     if action in ("increase", "decrease"):
-        return None  # Not template-eligible
+        pass  # Allow through for temperature control
 
     rest = " ".join(words[1:])
 
@@ -700,6 +703,27 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
         _master = [e for e in entities if "master" in e[2].lower() or "ماستر" in e[2]]
         if len(_master) == 1:
             entities = _master
+    # Step 9: Brightness control
+    _brightness_pct = None
+    if action in ("dim", "set_brightness") and domain_filter == "light":
+        import re as _reb
+        _bm = _reb.search(r"(\d+)", rest)
+        _brightness_pct = int(_bm.group(1)) if _bm else 30  # default dim=30%
+        action = "set_brightness"
+    elif action == "set_temp" and domain_filter == "light":
+        # "خل النور 50" -> brightness not temp
+        import re as _reb2
+        _bm2 = _reb2.search(r"(\d+)", rest)
+        if _bm2:
+            _brightness_pct = int(_bm2.group(1))
+            action = "set_brightness"
+    elif action == "increase" and domain_filter == "light":
+        _brightness_pct = -1  # signal: increase by 25%
+        action = "set_brightness"
+    elif action == "decrease" and domain_filter == "light":
+        _brightness_pct = -2  # signal: decrease by 25%
+        action = "set_brightness"
+
     if len(entities) == 0:
         return None
     
@@ -710,12 +734,12 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
         if _domain in _GUARDED_DOMAINS:
             return None
         return {"intent": action, "action": action, "entity_id": eid,
-                "entity_name": name, "domain": _domain, "value": temp,
+                "entity_name": name, "domain": _domain, "value": _brightness_pct if _brightness_pct is not None else temp,
                 "room": room, "source": "classify"}
 
     # Step 4: Multi-device support for simple on/off only
     MAX_MULTI = 20
-    if action in ("on", "off") and len(entities) <= MAX_MULTI and (room_frags or name_frag):
+    if action in ("on", "off", "set_brightness") and len(entities) <= MAX_MULTI and (room_frags or name_frag or action == "set_brightness"):
         # Filter out guarded domains
         safe = [(e, n, r) for e, n, r in entities if e.split(".")[0] not in _GUARDED_DOMAINS]
         if not safe:
@@ -728,7 +752,7 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
         return {"intent": action, "action": action,
                 "entity_ids": eids, "entity_names": names,
                 "entity_id": eids[0], "entity_name": names[0],
-                "domain": _domain, "value": None,
+                "domain": _domain, "value": _brightness_pct if _brightness_pct is not None else temp,
                 "room": _room, "multi": True, "count": len(safe),
                 "source": "classify_multi"}
     

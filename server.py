@@ -96,6 +96,19 @@ _suggest_cooldown = {}
 _SUGGEST_COOLDOWN_SEC = 30
 
 # Router analytics (in-memory, resets on restart)
+_router_cmd_log = []  # Step 9: Ring buffer of last 50 commands
+_ROUTER_CMD_MAX = 50
+
+def _log_cmd(text, route, source="", entity=""):
+    """Step 9: Log command to ring buffer."""
+    import datetime
+    _router_cmd_log.append({
+        "t": datetime.datetime.now().strftime("%H:%M:%S"),
+        "cmd": text[:50], "route": route, "src": source, "ent": entity[:30]
+    })
+    if len(_router_cmd_log) > _ROUTER_CMD_MAX:
+        _router_cmd_log.pop(0)
+
 _router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "template": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
 _tg_disambig_context = {}  # Step 9: {chat_id: original_text} for alias learning
 
@@ -1314,6 +1327,9 @@ _SPEED_SVC_MAP = {
             "cover": "close_cover", "media_player": "turn_off"},
     "set_temp": {"climate": "set_temperature"},
     "scene": {"scene": "turn_on"},
+    "set_brightness": {"light": "turn_on"},
+    "increase": {"climate": "set_temperature"},
+    "decrease": {"climate": "set_temperature"},
 }
 
 async def quick_execute(plan: dict) -> dict:
@@ -1357,7 +1373,15 @@ async def quick_execute(plan: dict) -> dict:
     # Single entity (original)
     eid = plan["entity_id"]
     svc_data = {"entity_id": eid}
-    if action == "set_temp" and value is not None:
+    # Step 9: Brightness control
+    if action == "set_brightness" and value is not None:
+        if value == -1:
+            svc_data["brightness_step_pct"] = 25
+        elif value == -2:
+            svc_data["brightness_step_pct"] = -25
+        else:
+            svc_data["brightness_pct"] = max(1, min(100, value))
+    elif action == "set_temp" and value is not None:
         svc_data["temperature"] = value
 
     t0 = __import__("time").time()
@@ -4459,6 +4483,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                         await tg_send(chat_id, _chat_msg)
                         _router_stats["template"] = _router_stats.get("template", 0) + 1
                         _router_stats["total"] += 1
+                        _log_cmd(text, "template", _speed_plan.get("source",""), _speed_plan.get("entity_name",""))
                         return
                 # Step 6: Query branch
                 if _speed_plan.get("action") == "query":
@@ -4475,6 +4500,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                         await tg_send(chat_id, _speed_response)
                         _router_stats["template"] = _router_stats.get("template", 0) + 1
                         _router_stats["total"] += 1
+                        _log_cmd(text, "template", _speed_plan.get("source",""), _speed_plan.get("entity_name",""))
                         return
                 logger.info(f"Speed template: {text[:50]} -> {_speed_plan['action']} {_speed_plan['entity_id']}")
                 _speed_result = await quick_execute(_speed_plan)
@@ -4482,6 +4508,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 await tg_send(chat_id, _speed_response)
                 _router_stats["template"] = _router_stats.get("template", 0) + 1
                 _router_stats["total"] += 1
+                _log_cmd(text, "template", _speed_plan.get("source",""), _speed_plan.get("entity_name",""))
                 if TG_SESSION_OK:
                     _sess_ents = _speed_plan.get("entity_ids", [_speed_plan["entity_id"]])
                     tg_session_upsert(str(chat_id), last_intent="action", last_entities=_sess_ents, last_room=_speed_plan.get("room", ""))
