@@ -58,7 +58,7 @@ def get_alias_stats():
 # --- Action patterns ---
 # Pattern: (verb)(optional_space)(device_keyword)(optional_space)(room_keyword)
 ACTION_VERBS = {
-    "شغل": "on", "افتح": "on", "فتح": "on", "ولع": "on", "نور": "on",
+    "شغل": "on", "افتح": "on", "فتح": "on", "خل": "set_brightness", "حط": "set_brightness", "ولع": "on", "نور": "on",
     "طفي": "off", "سكر": "off", "وقف": "off", "أغلق": "off",
     "زيد": "increase", "نقص": "decrease", "نزل": "decrease",
     "خفف": "dim", "عتم": "dim", "خفّف": "dim", "عتّم": "dim",
@@ -534,6 +534,26 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
         "اطفاء الاول": "scene.tf_grf_lwl",
         "تنقية الهواء": "scene.tnqy_hw_shml",
         "تنقية هواء": "scene.tnqy_hw_shml",
+        "وقت النوم": "scene.wd_lnwm",
+        "يالله ننام": "scene.wd_lnwm",
+        "مساء الخير": "scene.wd_lnwm",
+        "رايح الدوام": "scene.mgdr_lbyt",
+        "وضع رومانسي": "scene.stryb_fqt",
+        "كل شي طافي": "scene.tfwy_kl_shy",
+        "وضع الصباح": "scene.sbh_lkhyr",
+        "صباح الخير": "scene.sbh_lkhyr",
+        "وضع المغادرة": "scene.mgdr_lbyt",
+        "وضع التنقية": "scene.tnqy_hw_shml",
+        "نور خفيف": "scene.stryb_fqt",
+        "طفي الاول": "scene.tf_grf_lwl",
+        "فتح ستائر": "scene.fth_kl_lstyr",
+        "سكر ستائر": "scene.skwr_kl_lstyr",
+        "سكر كل الشترات": "scene.skwr_kl_lstyr",
+        "فتح كل الشترات": "scene.fth_kl_lstyr",
+        "سكر الشتر": "scene.skwr_kl_lstyr",
+        "فتح الشتر": "scene.fth_kl_lstyr",
+        "سكر ستاير الديوانية": "scene.skwr_kl_lstyr",
+        "فتح ستاير غرفتي": "scene.fth_kl_lstyr",
     }
     _alias_norm = __import__("re").sub(r"[ً-ٟ]", "", text_s)
     if _alias_norm in _SCENE_ALIASES:

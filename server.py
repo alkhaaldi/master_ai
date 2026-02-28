@@ -109,7 +109,7 @@ def _log_cmd(text, route, source="", entity=""):
     if len(_router_cmd_log) > _ROUTER_CMD_MAX:
         _router_cmd_log.pop(0)
 
-_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "template": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
+_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "template": 0, "template_errors": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
 _tg_disambig_context = {}  # Step 9: {chat_id: original_text} for alias learning
 
 # ── Step 10: Circuit Breaker System ──
@@ -4546,7 +4546,8 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                     pass
                 return
         except Exception as _se:
-            logger.warning(f"Speed engine error, falling through: {_se}")
+            _router_stats["template_errors"] = _router_stats.get("template_errors", 0) + 1
+            logger.warning(f"Speed engine error ({type(_se).__name__}), falling through to LLM: {_se}")
 
     # --- Intent Router (Phase A3) — check FIRST for explicit device+room commands ---
     if TG_INTENT_OK:
