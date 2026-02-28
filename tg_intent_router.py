@@ -58,7 +58,7 @@ def get_alias_stats():
 # --- Action patterns ---
 # Pattern: (verb)(optional_space)(device_keyword)(optional_space)(room_keyword)
 ACTION_VERBS = {
-    "شغل": "on", "افتح": "on", "ولع": "on", "نور": "on",
+    "شغل": "on", "افتح": "on", "فتح": "on", "ولع": "on", "نور": "on",
     "طفي": "off", "سكر": "off", "وقف": "off", "أغلق": "off",
     "زيد": "increase", "نقص": "decrease", "نزل": "decrease",
     "اضبط": "set_temp", "حط": "set_temp", "خل": "set_temp",
@@ -72,6 +72,7 @@ DEVICE_KEYWORDS = {
     "سبوت": ("light", "spot"), "ستريب": ("light", "strip"),
     "مكيف": ("climate", ""), "المكيف": ("climate", ""), "المكيفات": ("climate", ""), "مكيفات": ("climate", ""),
     "ستارة": ("cover", ""), "الستارة": ("cover", ""), "ستائر": ("cover", ""),
+    "شتر": ("cover", ""), "الشتر": ("cover", ""), "شتارات": ("cover", ""),  "الشتارات": ("cover", ""),
     "شفاط": ("switch", "شفاط"), "الشفاط": ("switch", "شفاط"),
     "منقي": ("fan", "منقي"), "المنقي": ("fan", "منقي"),
     "تلفزيون": ("media_player", "tv"), "التلفزيون": ("media_player", "tv"),
@@ -442,6 +443,13 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
 
     text_s = text.strip()
     words = text_s.split()
+    # Step 7: Reject compound commands (شغل X وطفي Y)
+    if " و" in text_s:
+        _cp = text_s.split(" و")
+        if len(_cp) >= 2:
+            _nv = sum(1 for _p in _cp if any(_v in _p.split() for _v in list(ACTION_VERBS.keys())[:15]))
+            if _nv >= 2:
+                return None
     if not words:
         return None
 
@@ -526,7 +534,9 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
             _clean_low = __import__("re").sub(r"[ً-ٟ]", "", _clean).lower()
             # Check: does text match or closely match scene name?
             _txt_low = text_s.lower()
-            if _txt_low == _clean_low or _txt_low in _clean_low or _clean_low in _txt_low:
+            # Step 7: Require min 60% overlap to avoid false positives
+            _match_ratio = min(len(_txt_low), len(_clean_low)) / max(len(_clean_low), 1)
+            if (_txt_low == _clean_low) or (_txt_low in _clean_low and _match_ratio > 0.6) or (_clean_low in _txt_low and _match_ratio > 0.6):
                 _scene_matches.append((_seid, _sname, _sroom, len(_clean)))
     # Also check with SCENE_WORDS stripped
     if not _scene_matches:
@@ -543,7 +553,9 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
                         continue
                     import re as _re4
                     _clean = _re4.sub(r"[🌀-🧿☀-➿]", "", _sname).strip().lower()
-                    if _scene_text.lower() in _clean or _clean in _scene_text.lower():
+                    # Step 7: Same ratio check for fallback
+                    _fr = min(len(_scene_text), len(_clean)) / max(len(_clean), 1)
+                    if (_scene_text.lower() == _clean) or (_scene_text.lower() in _clean and _fr > 0.6) or (_clean in _scene_text.lower() and _fr > 0.6):
                         _scene_matches.append((_seid, _sname, _sroom, len(_clean)))
     if _scene_matches:
         # Pick best: longest name match (most specific)
@@ -660,7 +672,7 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
 
     # Step 4: Multi-device support for simple on/off only
     MAX_MULTI = 20
-    if action in ("on", "off") and len(entities) <= MAX_MULTI and room_frags:
+    if action in ("on", "off") and len(entities) <= MAX_MULTI and (room_frags or name_frag):
         # Filter out guarded domains
         safe = [(e, n, r) for e, n, r in entities if e.split(".")[0] not in _GUARDED_DOMAINS]
         if not safe:
