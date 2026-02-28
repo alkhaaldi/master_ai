@@ -99,6 +99,46 @@ _SUGGEST_COOLDOWN_SEC = 30
 _router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
 _tg_disambig_context = {}  # Step 9: {chat_id: original_text} for alias learning
 
+# ── Step 10: Circuit Breaker System ──
+class CircuitBreaker:
+    """Simple circuit breaker: track failures, auto-open after threshold, auto-close after cooldown."""
+    def __init__(self, name, failure_threshold=3, cooldown_seconds=60):
+        self.name = name
+        self.failure_threshold = failure_threshold
+        self.cooldown = cooldown_seconds
+        self.failures = 0
+        self.last_failure = 0
+        self.state = "closed"  # closed=OK, open=blocking, half_open=testing
+        self.total_trips = 0
+
+    def record_success(self):
+        self.failures = 0
+        self.state = "closed"
+
+    def record_failure(self):
+        self.failures += 1
+        self.last_failure = time.time()
+        if self.failures >= self.failure_threshold:
+            self.state = "open"
+            self.total_trips += 1
+            logger.warning(f"Circuit {self.name} OPEN after {self.failures} failures")
+
+    def is_available(self):
+        if self.state == "closed":
+            return True
+        if self.state == "open" and (time.time() - self.last_failure) > self.cooldown:
+            self.state = "half_open"
+            return True
+        return self.state == "half_open"
+
+    def status(self):
+        return {"name": self.name, "state": self.state, "failures": self.failures,
+                "total_trips": self.total_trips, "last_failure": self.last_failure}
+
+_cb_ha = CircuitBreaker("home_assistant", failure_threshold=3, cooldown_seconds=30)
+_cb_llm = CircuitBreaker("llm", failure_threshold=2, cooldown_seconds=60)
+_cb_tg = CircuitBreaker("telegram", failure_threshold=5, cooldown_seconds=30)
+
 
 def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "") -> str:
     """Build enhanced system prompt for chat-routed messages."""
@@ -711,6 +751,9 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
                    temperature: float = 0.3, trace: RequestTrace = None) -> str:
     """Call LLM with Anthropic primary, OpenAI fallback."""
     t0 = time.time()
+    # Step 10: Circuit breaker check
+    if not _cb_llm.is_available():
+        return "⚠️ خدمة AI مو متوفرة حالياً، جرب بعد شوي"
 
     # Try Anthropic first
     if anthropic_client:
@@ -723,11 +766,13 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
                 temperature=temperature
             )
             text = resp.content[0].text
+            _cb_llm.record_success()
             if trace:
                 trace.llm("claude-sonnet-4", time.time() - t0,
                           tokens_in=resp.usage.input_tokens, tokens_out=resp.usage.output_tokens)
             return text
         except Exception as e:
+            _cb_llm.record_failure()
             logger.warning(f"Anthropic failed: {e}")
 
     # Fallback to OpenAI
@@ -1250,11 +1295,15 @@ def _get_schema_status():
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
 async def _exec_ha_get_state(entity_id: str) -> dict:
+    # Step 10: Circuit breaker check
+    if not _cb_ha.is_available():
+        return {"success": False, "error": "HA circuit breaker open - service temporarily unavailable"}
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {HA_TOKEN}"}
         if entity_id == "*":
             r = await client.get(f"{HA_URL}/api/states", headers=headers, timeout=10)
             states = r.json()
+            _cb_ha.record_success()
             return {"success": True, "count": len(states), "states": states[:50]}
         # Support comma-separated entity IDs
         ids = [e.strip() for e in entity_id.split(",") if e.strip()]
@@ -1277,11 +1326,16 @@ async def _exec_ha_get_state(entity_id: str) -> dict:
 
 
 async def _exec_ha_call_service(domain: str, service: str, service_data: dict = None) -> dict:
+    # Step 10: Circuit breaker check
+    if not _cb_ha.is_available():
+        return {"success": False, "error": "HA circuit breaker open"}
     async with httpx.AsyncClient() as client:
         headers = {"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"}
         r = await client.post(f"{HA_URL}/api/services/{domain}/{service}",
                               headers=headers, json=service_data or {}, timeout=10)
-        return {"success": r.status_code == 200, "status_code": r.status_code}
+        _ok = r.status_code == 200
+        _cb_ha.record_success() if _ok else _cb_ha.record_failure()
+        return {"success": _ok, "status_code": r.status_code}
 
 
 async def _exec_ssh_run(cmd: str) -> dict:
@@ -4215,7 +4269,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
     # --- Intent Router (Phase A3) — check FIRST for explicit device+room commands ---
     if TG_INTENT_OK:
         try:
-            intent_result = await route_intent(text)
+            intent_result = await route_intent(text) if _cb_ha.is_available() else None  # Step 10: skip if HA down
             if intent_result:
                 _ir_text = intent_result["text"] if isinstance(intent_result, dict) else intent_result
                 _ir_entities = intent_result.get("entities", []) if isinstance(intent_result, dict) else []
@@ -4407,6 +4461,21 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
             pass
 
 
+
+@app.get("/stability")
+async def stability_endpoint():
+    """Step 10: Circuit breaker and stability status."""
+    return {
+        "circuit_breakers": {
+            "home_assistant": _cb_ha.status(),
+            "llm": _cb_llm.status(),
+            "telegram": _cb_tg.status(),
+        },
+        "summary": {
+            "all_healthy": all(cb.state == "closed" for cb in [_cb_ha, _cb_llm, _cb_tg]),
+            "open_circuits": [cb.name for cb in [_cb_ha, _cb_llm, _cb_tg] if cb.state == "open"],
+        }
+    }
 
 @app.get("/aliases")
 async def aliases_endpoint():
