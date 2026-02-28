@@ -476,21 +476,78 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
                         "domain": _pd, "value": None, "room": _room,
                         "multi": True, "count": len(_safe), "source": "followup_pronoun_multi"}
 
-        # --- Scene activation ---
-    if any(sw in text_s for sw in SCENE_WORDS) or text_s.startswith("فعّل "):
-        scene_text = text_s
-        for sw in SCENE_WORDS:
-            scene_text = scene_text.replace(sw, "").strip()
-        scene_text = scene_text.replace("فعّل ", "").strip()
-        if scene_text:
-            for room, ents in emap.items():
-                for line in ents:
-                    eid = line.split("=")[0].strip() if "=" in line else line.strip()
-                    name = line.split("=")[1].strip() if "=" in line else line.strip()
-                    if eid.startswith("scene.") and scene_text in name.lower():
-                        return {"intent": "scene_activate", "action": "scene", "entity_id": eid,
-                                "entity_name": name, "domain": "scene", "value": None, "room": room, "source": "classify"}
-        return None  # Scene requested but not found
+        # --- Step 5: Scene activation (direct name match) ---
+    # Common shorthand aliases for scenes
+    _SCENE_ALIASES = {
+        "سكر الستائر": "scene.skwr_kl_lstyr",
+        "سكر كل الستائر": "scene.skwr_kl_lstyr",
+        "فتح الستائر": "scene.fth_kl_lstyr",
+        "افتح الستائر": "scene.fth_kl_lstyr",
+        "افتح كل الستائر": "scene.fth_kl_lstyr",
+        "طفي الحمامات": "scene.tf_kl_lhmmt",
+        "طفي كل الحمامات": "scene.tf_kl_lhmmt",
+        "طفي الشفاطات": "scene.glq_kl_lshftt",
+        "طفي الملابس": "scene.tf_kl_grf_lmlbs",
+        "طفي كل الملابس": "scene.tf_kl_grf_lmlbs",
+        "طفي الارضي": "scene.tf_lrdy",
+        "اطفاء الارضي": "scene.tf_lrdy",
+        "طفي الاول": "scene.tf_grf_lwl",
+        "اطفاء الاول": "scene.tf_grf_lwl",
+        "تنقية الهواء": "scene.tnqy_hw_shml",
+        "تنقية هواء": "scene.tnqy_hw_shml",
+    }
+    _alias_norm = __import__("re").sub(r"[ً-ٟ]", "", text_s)
+    if _alias_norm in _SCENE_ALIASES:
+        _sa_eid = _SCENE_ALIASES[_alias_norm]
+        # Find name from emap
+        for _sar, _saents in emap.items():
+            for _sal in _saents:
+                if "=" in _sal and _sal.split("=")[0] == _sa_eid:
+                    return {"intent": "scene_activate", "action": "scene", "entity_id": _sa_eid,
+                            "entity_name": _sal.split("=")[1], "domain": "scene", "value": None,
+                            "room": _sar, "source": "classify_scene_alias"}
+
+    # Build scene lookup from entity_map
+    _scene_matches = []
+    for _sroom, _sents in emap.items():
+        for _sline in _sents:
+            if "=" not in _sline:
+                continue
+            _seid, _sname = _sline.split("=", 1)
+            if not _seid.startswith("scene."):
+                continue
+            # Clean scene name: remove emojis and normalize
+            import re as _re3
+            _clean = _re3.sub(r"[🌀-🧿☀-➿]", "", _sname).strip()
+            _clean_low = __import__("re").sub(r"[ً-ٟ]", "", _clean).lower()
+            # Check: does text match or closely match scene name?
+            _txt_low = text_s.lower()
+            if _txt_low == _clean_low or _txt_low in _clean_low or _clean_low in _txt_low:
+                _scene_matches.append((_seid, _sname, _sroom, len(_clean)))
+    # Also check with SCENE_WORDS stripped
+    if not _scene_matches:
+        _scene_text = text_s
+        for _sw in list(SCENE_WORDS) + ["فعّل", "شغل", "فعل"]:
+            _scene_text = _scene_text.replace(_sw, "").strip()
+        if _scene_text and _scene_text != text_s:
+            for _sroom, _sents in emap.items():
+                for _sline in _sents:
+                    if "=" not in _sline:
+                        continue
+                    _seid, _sname = _sline.split("=", 1)
+                    if not _seid.startswith("scene."):
+                        continue
+                    import re as _re4
+                    _clean = _re4.sub(r"[🌀-🧿☀-➿]", "", _sname).strip().lower()
+                    if _scene_text.lower() in _clean or _clean in _scene_text.lower():
+                        _scene_matches.append((_seid, _sname, _sroom, len(_clean)))
+    if _scene_matches:
+        # Pick best: longest name match (most specific)
+        _scene_matches.sort(key=lambda x: x[3], reverse=True)
+        _best = _scene_matches[0]
+        return {"intent": "scene_activate", "action": "scene", "entity_id": _best[0],
+                "entity_name": _best[1], "domain": "scene", "value": None,
+                "room": _best[2], "source": "classify_scene"}
 
     # --- Device control ---
     if first not in ACTION_VERBS:
