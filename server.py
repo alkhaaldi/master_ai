@@ -1394,6 +1394,13 @@ def _arabize_name(name: str) -> str:
         "backlight": "خلفية", "mirror": "مرآة", "vent": "شفاط", "shutter": "شتر",
         "air purifier": "منقي", "storage": "مخزن",
     }
+    # Strip bilingual room format
+    if "/" in name:
+        for _p in name.split("/"):
+            import re as _re2
+            if len(_re2.findall(r"[a-zA-Z]", _p)) < len(_p.replace(" ","") or "x") * 0.5:
+                name = _p.strip()
+                break
     nl = name.lower()
     # If already Arabic (>50% non-latin), return as-is
     import re
@@ -4452,7 +4459,8 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 _router_stats["template"] = _router_stats.get("template", 0) + 1
                 _router_stats["total"] += 1
                 if TG_SESSION_OK:
-                    tg_session_upsert(str(chat_id), last_intent="action", last_entities=[_speed_plan["entity_id"]])
+                    _sess_ents = _speed_plan.get("entity_ids", [_speed_plan["entity_id"]])
+                    tg_session_upsert(str(chat_id), last_intent="action", last_entities=_sess_ents, last_room=_speed_plan.get("room", ""))
                 try:
                     tg_session_append_context(str(chat_id), "user", text[:200])
                     tg_session_append_context(str(chat_id), "assistant", _speed_response[:200])

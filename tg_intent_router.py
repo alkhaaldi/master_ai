@@ -452,16 +452,29 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
         "طفيه": "off", "أطفيه": "off", "اطفيه": "off",
         "شغله": "on", "أشغله": "on", "اشغله": "on",
         "سكره": "off", "افتحه": "on", "فتحه": "on",
+        "طفهم": "off", "شغلهم": "on", "سكرهم": "off", "افتحهم": "on",
     }
     if text_s in _PRONOUN_SUFFIXED and session_ctx:
         _last_ents = session_ctx.get("last_entities") or []
+        _pact = _PRONOUN_SUFFIXED[text_s]
         if len(_last_ents) == 1:
             _pe = _last_ents[0]
             _pd = _pe.split(".")[0]
             if _pd not in _GUARDED_DOMAINS:
-                return {"intent": _PRONOUN_SUFFIXED[text_s], "action": _PRONOUN_SUFFIXED[text_s],
+                return {"intent": _pact, "action": _pact,
                         "entity_id": _pe, "entity_name": _pe.split(".")[-1].replace("_", " "),
                         "domain": _pd, "value": None, "room": None, "source": "followup_pronoun"}
+        elif len(_last_ents) > 1 and _pact in ("on", "off"):
+            # Step 4: Multi-device pronoun followup
+            _safe = [e for e in _last_ents if e.split(".")[0] not in _GUARDED_DOMAINS]
+            if _safe:
+                _pd = _safe[0].split(".")[0]
+                _room = session_ctx.get("last_room", "")
+                return {"intent": _pact, "action": _pact,
+                        "entity_ids": _safe, "entity_names": [e.split(".")[-1].replace("_"," ") for e in _safe],
+                        "entity_id": _safe[0], "entity_name": _safe[0].split(".")[-1].replace("_"," "),
+                        "domain": _pd, "value": None, "room": _room,
+                        "multi": True, "count": len(_safe), "source": "followup_pronoun_multi"}
 
         # --- Scene activation ---
     if any(sw in text_s for sw in SCENE_WORDS) or text_s.startswith("فعّل "):
