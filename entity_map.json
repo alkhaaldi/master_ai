@@ -60,7 +60,7 @@
     "switch.kitchen_switch_1_2=Kitchen spot 2",
     "switch.kitchen_switch_2_2=Kitchen strip",
     "switch.kitchen_storage_switch_2=Kitchen storage spot",
-    "climate.mkyf_lmtbkh=Kitchen AC"
+    "climate.mkyf_lmtbkh=مكيف المطبخ"
   ],
   "حمام الماستر": [
     "light.my_bathroom_switch_2=My bathroom mirror light",
@@ -98,7 +98,8 @@
     "switch.sl_lstqbl_switch_2_4=مدخل صالة الاستقبال  strip",
     "switch.sl_lstqbl_switch_1_5=صالة الاستقبال small light",
     "switch.sl_lstqbl_switch_1_6=ثرية مدخل صالة الاستقبال",
-    "switch.sl_lstqbl_switch_2_6=مدخل صالة الاستقبال spot 2"
+    "switch.sl_lstqbl_switch_2_6=مدخل صالة الاستقبال spot 2",
+    "climate.mkyf_sl_ldwr_lwl=مكيف صالة الدور الأول"
   ],
   "الأرضي/Ground": [
     "light.ground_floor_section_2_switch_2=Ground floor  section 1 strip",
@@ -169,7 +170,6 @@
     "cover.living_room_left_shutter_inverted=صالة يسار",
     "cover.living_room_right_shutter_inverted=صالة يمين",
     "media_player.bravia_kd_85x85j=Living room TV",
-    "climate.living_room_ac=مكيف صالة المعيشة",
     "cover.living_room_right_shutter_curtain=Living room right shutter Curtain",
     "cover.living_room_left_shutter_curtain=living room left shutter Curtain",
     "fan.living_room_air_freshener=Living room Air freshener",
@@ -194,7 +194,8 @@
     "media_player.living_room_alexa=Living Room Alexa",
     "switch.living_room_alexa_do_not_disturb_switch=Do not disturb",
     "switch.living_room_alexa_shuffle_switch=Shuffle",
-    "switch.living_room_alexa_repeat_switch=Repeat"
+    "switch.living_room_alexa_repeat_switch=Repeat",
+    "climate.thermostat_13=مكيف المعيشة"
   ],
   "غرفة عيشة/Aisha": [
     "light.aisha_dressing_room_switch_1=Aisha dresser room strip",
@@ -225,7 +226,6 @@
     "light.my_room_lights_switch_1_2=My room strip 1",
     "cover.my_room_left_shutter_inverted=غرفتي يسار",
     "cover.my_room_right_shutter_inverted=غرفتي يمين",
-    "climate.my_room_ac=My room AC",
     "fan.my_room_air_purifier=My room Air Purifier",
     "light.my_room_lights_backlight=My room lights Backlight",
     "switch.my_room_air_purifier_ionizer=My room Air Purifier Ionizer",
@@ -245,7 +245,8 @@
     "light.my_room_left_shutter_backlight=My room left shutter Backlight",
     "light.my_room_right_shutter_backlight=My room right shutter Backlight",
     "switch.my_room_switch_1=My room spot 3",
-    "switch.my_room_switch_2=My room strip 2"
+    "switch.my_room_switch_2=My room strip 2",
+    "climate.my_room_ac=مكيف الماستر"
   ],
   "البلكونة/Balcony": [
     "light.balcony_light_switch_1=balcony light  Switch 1",
@@ -334,7 +335,8 @@
     "switch.bathroom_3_light_switch_2=Room 3 bathroom room spot light",
     "switch.bathroom_3_vent_switch_1=Room 3 bathroom room miror",
     "switch.bathroom_3_vent_switch_2=bathroom 3 vent Switch 2",
-    "media_player.room_3_2=سماعة غرفة 3 Bluesound Room3"
+    "media_player.room_3_2=سماعة غرفة 3 Bluesound Room3",
+    "climate.mkyf_ldwr_lwl_grf_3=مكيف غرفة 3"
   ],
   "غرفة 4": [
     "light.room_4_strip_switch_1=Room 4 empty",
@@ -398,7 +400,8 @@
     "switch.room_5_bathroom_switch_1=room 5 bathroom  Switch 1",
     "switch.room_5_bathroom_switch_2=room 5 bathroom  Switch 2",
     "cover.curtain_switch_wifi_ble_8_curtain=Room 5 Shutter. Curtain",
-    "light.curtain_switch_wifi_ble_8_backlight=Room 5 Shutter. Backlight"
+    "light.curtain_switch_wifi_ble_8_backlight=Room 5 Shutter. Backlight",
+    "climate.mkyf_ldwr_lwl_grf_5=مكيف غرفة 5"
   ],
   "غرفة الطعام/Dining": [
     "light.dining_room_switch_1_2=Dining room Switch 1",
@@ -508,6 +511,6 @@
     "scene.shutters=shutters"
   ],
   "غرفة ماما/Mama": [
-    "climate.mama_room_ac=mama room AC"
+    "climate.mama_room_ac=مكيف غرفة ماما"
   ]
 }
