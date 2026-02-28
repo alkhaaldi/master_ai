@@ -16,6 +16,45 @@ HA_URL = os.getenv("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.getenv("HA_TOKEN", "")
 BASE = os.path.dirname(os.path.abspath(__file__))
 
+# -- Alias Learning System (Step 9) --
+ALIAS_FILE = os.path.join(BASE, "data", "user_aliases.json")
+
+def _load_aliases():
+    try:
+        if os.path.exists(ALIAS_FILE):
+            with open(ALIAS_FILE) as _af:
+                return json.load(_af)
+    except Exception:
+        pass
+    return {}
+
+def _save_aliases(aliases):
+    try:
+        os.makedirs(os.path.dirname(ALIAS_FILE), exist_ok=True)
+        with open(ALIAS_FILE, "w") as _af:
+            json.dump(aliases, _af, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def learn_alias(original_text, entity_id):
+    aliases = _load_aliases()
+    key = original_text.strip().lower()
+    if len(key) < 3 or len(key) > 100:
+        return
+    aliases[key] = entity_id
+    _save_aliases(aliases)
+    logger.info(f"Alias learned: {key} -> {entity_id}")
+
+def resolve_alias(text):
+    aliases = _load_aliases()
+    key = text.strip().lower()
+    return aliases.get(key)
+
+def get_alias_stats():
+    aliases = _load_aliases()
+    return {"total": len(aliases), "aliases": aliases}
+
+
 # --- Action patterns ---
 # Pattern: (verb)(optional_space)(device_keyword)(optional_space)(room_keyword)
 ACTION_VERBS = {
@@ -175,6 +214,21 @@ async def _ha_get_state(entity_id):
 async def route_intent(text: str) -> dict | None:
     """Try to route text to a fast-path handler.
     Returns dict {text, entities, action} or None."""
+    # Step 9: Check learned aliases first
+    _alias_eid = resolve_alias(text)
+    if _alias_eid:
+        _awords = text.strip().split()
+        _act = None
+        for _w in _awords:
+            if _w in ACTION_VERBS:
+                _act = ACTION_VERBS[_w]
+                break
+        if _act and _act != "query":
+            _alias_r = await _ha_call(_alias_eid, _act)
+            if _alias_r:
+                logger.info(f"Alias hit: {text} -> {_alias_eid} ({_act})")
+                return {"text": _alias_r, "entities": [_alias_eid], "action": _act, "source": "alias"}
+
     text = text.strip()
     words = text.split()
     if not words:

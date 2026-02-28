@@ -294,6 +294,41 @@ async def discovery_loop(ha_url: str, ha_tkn: str, interval_hours: int = 6):
         await asyncio.sleep(interval_hours * 3600)
 
 
+
+
+def remap_rooms() -> dict:
+    """Re-apply guess_room to all entities in discovered_entities.json (no HA API needed).
+    Use after updating ROOM_RULES to refresh room assignments.
+    Run: python3 -c "from discovery import remap_rooms; import json; print(json.dumps(remap_rooms(), ensure_ascii=False, indent=1))"
+    """
+    if not os.path.exists(DISCOVERY_FILE):
+        return {"error": "No discovery file"}
+    try:
+        with open(DISCOVERY_FILE) as f:
+            data = json.load(f)
+    except Exception as e:
+        return {"error": str(e)}
+
+    old_rooms = {}
+    new_rooms = {}
+    changed = 0
+    for e in data.get("entities", []):
+        old_room = e.get("room_guess", "غير مصنف")
+        old_rooms[old_room] = old_rooms.get(old_room, 0) + 1
+        new_room = guess_room(e["entity_id"], e.get("friendly_name", ""))
+        new_rooms[new_room] = new_rooms.get(new_room, 0) + 1
+        if old_room != new_room:
+            e["room_guess"] = new_room
+            changed += 1
+
+    if changed > 0:
+        data["rooms_remapped_at"] = datetime.utcnow().isoformat()
+        with open(DISCOVERY_FILE, "w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=1)
+        logger.info(f"Remapped {changed} entities to new rooms")
+
+    return {"changed": changed, "old_rooms": old_rooms, "new_rooms": new_rooms}
+
 def get_home_summary() -> str:
     """Build a concise home summary from discovered entities for LLM context."""
     if not os.path.exists(DISCOVERY_FILE):

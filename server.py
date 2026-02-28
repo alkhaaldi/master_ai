@@ -67,7 +67,7 @@ except Exception:
     TG_SESSION_OK = False
 
 try:
-    from tg_intent_router import route_intent
+    from tg_intent_router import route_intent, learn_alias, get_alias_stats
     TG_INTENT_OK = True
 except Exception:
     TG_INTENT_OK = False
@@ -97,6 +97,7 @@ _SUGGEST_COOLDOWN_SEC = 30
 
 # Router analytics (in-memory, resets on restart)
 _router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
+_tg_disambig_context = {}  # Step 9: {chat_id: original_text} for alias learning
 
 
 def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "") -> str:
@@ -4089,6 +4090,13 @@ async def tg_handle_callback(callback_query: dict):
         if len(parts_d) == 3 and TG_HOME_OK:
             action_d, eid_d = parts_d[1], parts_d[2]
             result_d = await handle_devctl(action_d, eid_d)
+            # Step 9: Learn alias from disambiguation
+            _orig_text = _tg_disambig_context.pop(str(chat_id), None)
+            if _orig_text and TG_INTENT_OK:
+                try:
+                    learn_alias(_orig_text, eid_d)
+                except Exception:
+                    pass
             try:
                 await _tg_client.post(f"https://api.telegram.org/bot{TG_TOKEN}/answerCallbackQuery",
                     json={"callback_query_id": cq_id, "text": result_d[:200]})
@@ -4255,6 +4263,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 f_target = followup.get("target_entity")
                 f_ents = followup.get("last_entities") or []
                 if f_action and not f_target and len(f_ents) > 1:
+                    _tg_disambig_context[str(chat_id)] = text  # Step 9: store for alias learning
                     action_text = {"on": "شغّل", "off": "طفّي", "increase": "ارفع", "decrease": "وطّي"}.get(f_action, f_action)
                     btns = []
                     for eid in f_ents[:6]:
@@ -4270,6 +4279,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
 
             elif ftype == "correction":
                 # Show disambiguation with last entities as buttons (friendly names from entity_map)
+                _tg_disambig_context[str(chat_id)] = text  # Step 9: store for alias learning
                 last_ents = followup.get("last_entities", [])
                 if last_ents:
                     btns = []
@@ -4397,6 +4407,15 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
             pass
 
 
+
+@app.get("/aliases")
+async def aliases_endpoint():
+    """Step 9: View learned aliases."""
+    try:
+        stats = get_alias_stats()
+        return stats
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/router/stats")
 async def router_stats_endpoint():
