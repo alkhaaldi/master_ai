@@ -67,7 +67,7 @@ except Exception:
     TG_SESSION_OK = False
 
 try:
-    from tg_intent_router import route_intent, learn_alias, get_alias_stats
+    from tg_intent_router import route_intent, learn_alias, get_alias_stats, quick_classify
     TG_INTENT_OK = True
 except Exception:
     TG_INTENT_OK = False
@@ -96,7 +96,7 @@ _suggest_cooldown = {}
 _SUGGEST_COOLDOWN_SEC = 30
 
 # Router analytics (in-memory, resets on restart)
-_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
+_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "template": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
 _tg_disambig_context = {}  # Step 9: {chat_id: original_text} for alias learning
 
 # ── Step 10: Circuit Breaker System ──
@@ -270,6 +270,8 @@ HA_TOKEN = os.getenv("HA_TOKEN", "")
 # Phase 1 feature flags
 FEATURE_CIRCUIT_BREAKERS = os.getenv("FEATURE_CIRCUIT_BREAKERS", "1") == "1"
 FEATURE_TIMEOUTS = os.getenv("FEATURE_TIMEOUTS", "1") == "1"
+FEATURE_SPEED_TEMPLATES = os.getenv("FEATURE_SPEED_TEMPLATES", "1") == "1"
+FEATURE_SMART_ROUTER_V2 = os.getenv("FEATURE_SMART_ROUTER_V2", "1") == "1"
 EXTERNAL_TIMEOUT = 8  # seconds max for external calls
 AGENT_SECRET = os.getenv("AGENT_SECRET", "")
 MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
@@ -1303,6 +1305,70 @@ def _get_schema_status():
 
 
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+# ── Speed Engine (Step 2) ──
+_SPEED_SVC_MAP = {
+    "on": {"light": "turn_on", "switch": "turn_on", "fan": "turn_on", "climate": "turn_on",
+           "cover": "open_cover", "media_player": "turn_on"},
+    "off": {"light": "turn_off", "switch": "turn_off", "fan": "turn_off", "climate": "turn_off",
+            "cover": "close_cover", "media_player": "turn_off"},
+    "set_temp": {"climate": "set_temperature"},
+    "scene": {"scene": "turn_on"},
+}
+
+async def quick_execute(plan: dict) -> dict:
+    """Execute a quick_classify plan using CB-protected HA calls. Returns {success, detail}."""
+    eid = plan["entity_id"]
+    action = plan["action"]
+    domain = plan["domain"]
+    value = plan.get("value")
+
+    svc = _SPEED_SVC_MAP.get(action, {}).get(domain)
+    if not svc:
+        return {"success": False, "detail": f"unsupported: {action}/{domain}"}
+
+    svc_data = {"entity_id": eid}
+    if action == "set_temp" and value is not None:
+        svc_data["temperature"] = value
+
+    t0 = __import__("time").time()
+    result = await _exec_ha_call_service(domain, svc, svc_data)
+    dur = __import__("time").time() - t0
+
+    # Audit log
+    _status = "ok" if result.get("success") else "failed"
+    try:
+        await audit_log(
+            task=f"speed:{action}:{eid}",
+            actions=[f"{domain}.{svc}"],
+            results=[str(result)],
+            status=_status,
+            duration=dur,
+            route_type="template"
+        )
+    except Exception as _e:
+        logger.warning(f"Speed audit log failed: {_e}")
+
+    return {"success": result.get("success", False), "detail": result}
+
+
+def get_quick_response(plan: dict, exec_result: dict) -> str:
+    """Generate short Kuwaiti Arabic response for speed template action."""
+    if not exec_result.get("success"):
+        return "⚠️ نظام الأجهزة غير متاح حالياً"
+
+    name = plan.get("entity_name", plan.get("entity_id", ""))
+    action = plan.get("action", "")
+    value = plan.get("value")
+
+    templates = {
+        "on": f"شغّلت {name} ✓",
+        "off": f"طفيت {name} ✓",
+        "set_temp": f"حطّيت {name} على {value}° ✓" if value else f"ضبطت {name} ✓",
+        "scene": f"فعّلت {name} ✓",
+    }
+    return templates.get(action, f"تم ✓")
+
+
 # ACTION EXECUTORS
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
@@ -4287,6 +4353,28 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         await tg_send(chat_id, quick)
         return
 
+    # --- Speed Engine (Step 2) --- template-eligible commands skip LLM ---
+    if FEATURE_SPEED_TEMPLATES and FEATURE_SMART_ROUTER_V2 and TG_INTENT_OK and _cb_ha.is_available():
+        try:
+            _speed_plan = quick_classify(text)
+            if _speed_plan:
+                logger.info(f"Speed template: {text[:50]} -> {_speed_plan['action']} {_speed_plan['entity_id']}")
+                _speed_result = await quick_execute(_speed_plan)
+                _speed_response = get_quick_response(_speed_plan, _speed_result)
+                await tg_send(chat_id, _speed_response)
+                _router_stats["template"] = _router_stats.get("template", 0) + 1
+                _router_stats["total"] += 1
+                if TG_SESSION_OK:
+                    tg_session_upsert(str(chat_id), last_intent="action", last_entities=[_speed_plan["entity_id"]])
+                try:
+                    tg_session_append_context(str(chat_id), "user", text[:200])
+                    tg_session_append_context(str(chat_id), "assistant", _speed_response[:200])
+                except Exception:
+                    pass
+                return
+        except Exception as _se:
+            logger.warning(f"Speed engine error, falling through: {_se}")
+
     # --- Intent Router (Phase A3) — check FIRST for explicit device+room commands ---
     if TG_INTENT_OK:
         try:
@@ -4501,6 +4589,8 @@ async def health_external():
         "feature_flags": {
             "circuit_breakers": FEATURE_CIRCUIT_BREAKERS,
             "timeouts": FEATURE_TIMEOUTS,
+            "speed_templates": FEATURE_SPEED_TEMPLATES,
+            "smart_router_v2": FEATURE_SMART_ROUTER_V2,
             "external_timeout_seconds": EXTERNAL_TIMEOUT,
         }
     }

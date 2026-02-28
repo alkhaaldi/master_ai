@@ -404,3 +404,102 @@ async def _handle_action(text, words, emap):
         for name, detail in failed:
             lines.append(f"  ❌ {name}")
     return {"text": "\n".join(lines), "entities": eids, "action": action}
+
+
+# ── Speed Engine: quick_classify (Step 2) ──
+# Guarded domains that must NOT use speed templates
+_GUARDED_DOMAINS = {"lock", "alarm_control_panel"}
+
+def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
+    """Classify text into a plan WITHOUT executing.
+    Returns {intent, action, entity_id, entity_name, domain, value, room} or None.
+    Only returns a plan if exactly ONE entity matches and intent is clear."""
+    # Step 9: Check aliases first
+    _alias_eid = resolve_alias(text)
+    if _alias_eid:
+        _awords = text.strip().split()
+        _act = None
+        for _w in _awords:
+            if _w in ACTION_VERBS:
+                _act = ACTION_VERBS[_w]
+                break
+        if _act and _act not in ("query", "increase", "decrease"):
+            _domain = _alias_eid.split(".")[0]
+            if _domain in _GUARDED_DOMAINS:
+                return None
+            return {"intent": _act, "action": _act, "entity_id": _alias_eid,
+                    "entity_name": _alias_eid.split(".")[-1].replace("_", " "),
+                    "domain": _domain, "value": None, "room": None, "source": "alias"}
+
+    text_s = text.strip()
+    words = text_s.split()
+    if not words:
+        return None
+
+    emap = _load_entity_map()
+    if not emap:
+        return None
+
+    first = words[0]
+
+    # --- Scene activation ---
+    if any(sw in text_s for sw in SCENE_WORDS) or text_s.startswith("فعّل "):
+        scene_text = text_s
+        for sw in SCENE_WORDS:
+            scene_text = scene_text.replace(sw, "").strip()
+        scene_text = scene_text.replace("فعّل ", "").strip()
+        if scene_text:
+            for room, ents in emap.items():
+                for line in ents:
+                    eid = line.split("=")[0].strip() if "=" in line else line.strip()
+                    name = line.split("=")[1].strip() if "=" in line else line.strip()
+                    if eid.startswith("scene.") and scene_text in name.lower():
+                        return {"intent": "scene_activate", "action": "scene", "entity_id": eid,
+                                "entity_name": name, "domain": "scene", "value": None, "room": room, "source": "classify"}
+        return None  # Scene requested but not found
+
+    # --- Device control ---
+    if first not in ACTION_VERBS:
+        return None
+    action = ACTION_VERBS[first]
+    if action in ("query", "increase", "decrease"):
+        return None  # Not template-eligible
+
+    rest = " ".join(words[1:])
+
+    # Extract temperature
+    temp = None
+    if action == "set_temp":
+        import re as _re
+        m = _re.search(r"(\d+)", rest)
+        if m:
+            temp = int(m.group(1))
+
+    # Find device + room
+    domain_filter = None
+    name_frag = ""
+    room_frags = []
+    for w in words[1:]:
+        if w in DEVICE_KEYWORDS:
+            d, nf = DEVICE_KEYWORDS[w]
+            domain_filter = d
+            if nf:
+                name_frag = nf
+        elif w in ROOM_KEYWORDS:
+            room_frags = ROOM_KEYWORDS[w]
+
+    if not domain_filter:
+        return None
+
+    entities = _find_entities(emap, domain_filter, name_frag, room_frags)
+    if len(entities) != 1:
+        return None  # Ambiguous or not found
+
+    eid, name, room = entities[0]
+    _domain = eid.split(".")[0]
+    if _domain in _GUARDED_DOMAINS:
+        return None
+
+    return {"intent": action, "action": action, "entity_id": eid,
+            "entity_name": name, "domain": _domain, "value": temp,
+            "room": room, "source": "classify"}
