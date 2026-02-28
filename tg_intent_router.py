@@ -67,6 +67,7 @@ ACTION_VERBS = {
 # Device keywords → entity domain + name fragment
 DEVICE_KEYWORDS = {
     "نور": ("light", ""), "النور": ("light", ""), "الأنوار": ("light", ""),
+    "اضاءة": ("light", ""), "اضاءات": ("light", ""), "إضاءة": ("light", ""), "الاضاءة": ("light", ""), "الإضاءة": ("light", ""), "اضاءه": ("light", ""),
     "سبوت": ("light", "spot"), "ستريب": ("light", "strip"),
     "مكيف": ("climate", ""), "المكيف": ("climate", ""),
     "ستارة": ("cover", ""), "الستارة": ("cover", ""), "ستائر": ("cover", ""),
@@ -98,6 +99,8 @@ ROOM_KEYWORDS = {
     "ممر": ["ممر", "Men Room"],
     "حمام": ["حمام", "bath"],
     "ملابس": ["ملابس", "closet"],
+    "مكتب": ["المكتب", "Office"],
+    "المكتب": ["المكتب", "Office"],
 }
 
 # Query patterns
