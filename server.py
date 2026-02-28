@@ -96,7 +96,7 @@ _suggest_cooldown = {}
 _SUGGEST_COOLDOWN_SEC = 30
 
 # Router analytics (in-memory, resets on restart)
-_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat()}
+_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
 
 
 def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "") -> str:
@@ -684,17 +684,17 @@ def init_db():
 
 async def audit_log(task, actions=None, results=None, status="ok", duration=0.0,
                     request_id=None, task_id=None, step_index=0,
-                    approval_id=None, approved_at=None):
+                    approval_id=None, approved_at=None, route_type=None):
     try:
         conn = sqlite3.connect(AUDIT_DB)
         conn.execute(
             """INSERT INTO audit_log
-               (request_id, task_id, step_index, task, actions, results, status, duration_ms, approval_id, approved_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+               (request_id, task_id, step_index, task, actions, results, status, duration_ms, approval_id, approved_at, route_type)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (request_id, task_id, step_index, str(task)[:500],
              json.dumps(actions) if actions else None,
              json.dumps(results) if results else None,
-             status, round(duration * 1000, 1), approval_id, approved_at)
+             status, round(duration * 1000, 1), approval_id, approved_at, route_type)
         )
         conn.commit()
         conn.close()
@@ -903,6 +903,7 @@ SCHEMA_CONTRACT = {
             "approved_at": {"type": "TEXT"},
             "source": {"type": "TEXT", "default": "'api'"},
             "ip_address": {"type": "TEXT"},
+            "route_type": {"type": "TEXT", "default": "NULL"},
         },
         "indexes": {
             "idx_audit_timestamp": ["timestamp"], "idx_audit_request_id": ["request_id"],
@@ -1095,6 +1096,7 @@ def _run_backfills(conn, plan):
         ("events", "risk_score", "UPDATE events SET risk_score=0 WHERE risk_score IS NULL"),
         ("events", "policy_version", "UPDATE events SET policy_version='pre-3.3' WHERE policy_version IS NULL"),
         ("audit_log", "source", "UPDATE audit_log SET source='api' WHERE source IS NULL"),
+        ("audit_log", "route_type", "UPDATE audit_log SET route_type='unknown' WHERE route_type IS NULL"),
     ]
     for table, col, sql in backfills:
         try:
@@ -4212,6 +4214,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 _ir_action = intent_result.get("action", "") if isinstance(intent_result, dict) else ""
                 logger.info(f"TG intent routed: {text[:50]} -> {_ir_action} ({len(_ir_entities)} entities)")
                 _router_stats['intent'] = _router_stats.get('intent', 0) + 1
+                _router_stats['intent_matched'] = _router_stats.get('intent_matched', 0) + 1
                 _router_stats['total'] += 1
                 if TG_SESSION_OK:
                     tg_session_upsert(str(chat_id), last_intent="action", last_entities=_ir_entities)
@@ -4245,6 +4248,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
             if ftype == "followup":
                 logger.info(f"TG followup: {followup}")
                 _router_stats["followup"] = _router_stats.get("followup", 0) + 1
+                _router_stats["followup_resolved"] = _router_stats.get("followup_resolved", 0) + 1
                 _router_stats["total"] += 1
                 # Disambiguation: action but no specific target + multiple entities
                 f_action = followup.get("action")
@@ -4355,6 +4359,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 logger.warning(f"SmartRouter chat fallback: {_ce}")
 
     _router_stats["iterative"] = _router_stats.get("iterative", 0) + 1
+    _router_stats["action_routed"] = _router_stats.get("action_routed", 0) + 1
     t0 = time.time()
     result = {}
     try:
@@ -4406,6 +4411,16 @@ async def router_stats_endpoint():
         _c.close()
     except Exception:
         pass
+    # Route type breakdown from DB
+    route_breakdown = {}
+    try:
+        import sqlite3 as _sq2
+        _c2 = _sq2.connect(str(AUDIT_DB))
+        for row in _c2.execute("SELECT route_type, count(*) FROM audit_log WHERE route_type IS NOT NULL GROUP BY route_type").fetchall():
+            route_breakdown[row[0]] = row[1]
+        _c2.close()
+    except Exception:
+        pass
     return {
         "session": {
             **_router_stats,
@@ -4416,6 +4431,7 @@ async def router_stats_endpoint():
             },
         },
         "persistent": db_stats,
+        "routing": route_breakdown,
     }
 
 async def morning_report_scheduler():
