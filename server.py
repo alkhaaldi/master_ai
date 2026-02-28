@@ -3827,6 +3827,31 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         h, m = divmod(uptime // 60, 60)
         return f"\u2705 Master AI v{VERSION}\n\u23f1 Uptime: {h}h {m}m\n\U0001f50c Plugins: {len(PLUGIN_REGISTRY._plugins)}"
 
+    if cmd == "/stats":
+        # Step 10: Speed Engine stats command
+        _up = int(time.time() - START_TIME)
+        _h, _m = divmod(_up // 60, 60)
+        _t = _router_stats.get("total", 0)
+        _tmpl = _router_stats.get("template", 0)
+        _unk = _router_stats.get("unknown", 0)
+        _rate = round(_tmpl / _t * 100) if _t > 0 else 0
+        _lines = [
+            f"⚡ Speed Engine Stats",
+            f"⏱ Uptime: {_h}h {_m}m",
+            f"",
+            f"📊 Session ({_t} total):",
+            f"  🚀 Template: {_tmpl} ({_rate}%)",
+            f"  🤖 LLM: {_unk}",
+            f"  💬 Chat: {_router_stats.get('chat', 0)}",
+            f"  🎯 Intent: {_router_stats.get('intent', 0)}",
+        ]
+        if _router_cmd_log:
+            _lines.append("")
+            _lines.append("📝 Last 5:")
+            for _cl in _router_cmd_log[-5:]:
+                _lines.append(f"  {_cl.get('t','')} {_cl.get('route',''):5s} {_cl.get('cmd','')[:25]}")
+        return "\n".join(_lines)
+
     if cmd == "/lights":
         try:
             async with httpx.AsyncClient(timeout=10) as c:
