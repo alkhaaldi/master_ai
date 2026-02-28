@@ -67,10 +67,10 @@ ACTION_VERBS = {
 # Device keywords → entity domain + name fragment
 DEVICE_KEYWORDS = {
     "نور": ("light", ""), "النور": ("light", ""), "الأنوار": ("light", ""),
-    "أنوار": ("light", ""), "انوار": ("light", ""),
+    "أنوار": ("light", ""), "انوار": ("light", ""), "الانوار": ("light", ""),
     "اضاءة": ("light", ""), "اضاءات": ("light", ""), "إضاءة": ("light", ""), "الاضاءة": ("light", ""), "الإضاءة": ("light", ""), "اضاءه": ("light", ""),
     "سبوت": ("light", "spot"), "ستريب": ("light", "strip"),
-    "مكيف": ("climate", ""), "المكيف": ("climate", ""),
+    "مكيف": ("climate", ""), "المكيف": ("climate", ""), "المكيفات": ("climate", ""), "مكيفات": ("climate", ""),
     "ستارة": ("cover", ""), "الستارة": ("cover", ""), "ستائر": ("cover", ""),
     "شفاط": ("switch", "شفاط"), "الشفاط": ("switch", "شفاط"),
     "منقي": ("fan", "منقي"), "المنقي": ("fan", "منقي"),
@@ -107,6 +107,10 @@ ROOM_KEYWORDS = {
 
 # Query patterns
 QUERY_WORDS = {"كم", "شنو", "وش", "حالة", "شحال", "درجة", "حرارة"}
+# Step 6: Query verbs
+QUERY_VERBS = {"شيك", "شيكي", "شلون", "كيف", "وريني", "ورني"}
+QUERY_PREFIX = {"شنو", "وش", "كم", "هل"}
+
 SCENE_WORDS = {"مشهد", "سين", "scene"}
 
 
@@ -549,11 +553,47 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
                 "entity_name": _best[1], "domain": "scene", "value": None,
                 "room": _best[2], "source": "classify_scene"}
 
+    # --- Step 6: Status query detection ---
+    _is_query = False
+    _q_domain = None
+    _q_room = []
+    _q_name_frag = ""
+    if first in QUERY_VERBS or first in QUERY_PREFIX or any(qw in text_s for qw in ("حالة", "حرارة", "درجة", "شغال", "شغالة", "مفتوح", "مسكر")):
+        _is_query = True
+        _rest_q = words[1:] if first in QUERY_VERBS or first in QUERY_PREFIX else words
+        _qi = 0
+        while _qi < len(_rest_q):
+            _qw = _rest_q[_qi]
+            if _qw in DEVICE_KEYWORDS:
+                _q_domain, _q_name_frag = DEVICE_KEYWORDS[_qw]
+            elif _qw in ROOM_KEYWORDS:
+                _qcomp = _qw
+                if _qi + 1 < len(_rest_q) and _rest_q[_qi + 1].isdigit():
+                    _qcomp = _qw + " " + _rest_q[_qi + 1]
+                    _qi += 1
+                if _qcomp in ROOM_KEYWORDS:
+                    _q_room = ROOM_KEYWORDS[_qcomp]
+                else:
+                    _q_room = [_qcomp]
+            _qi += 1
+        if _q_domain or _q_room:
+            _q_ents = _find_entities(emap, _q_domain or "light", _q_name_frag, _q_room)
+            if _q_ents:
+                return {"intent": "query", "action": "query",
+                        "entity_ids": [e[0] for e in _q_ents[:15]],
+                        "entity_names": [e[1] for e in _q_ents[:15]],
+                        "entity_id": _q_ents[0][0], "entity_name": _q_ents[0][1],
+                        "domain": _q_domain or _q_ents[0][0].split(".")[0],
+                        "value": None, "room": _q_ents[0][2],
+                        "query_type": "status", "count": len(_q_ents[:15]),
+                        "source": "classify_query"}
+
     # --- Device control ---
     if first not in ACTION_VERBS:
         return None
     action = ACTION_VERBS[first]
-    if action in ("query", "increase", "decrease"):
+    # Step 6: query now handled above, increase/decrease still blocked
+    if action in ("increase", "decrease"):
         return None  # Not template-eligible
 
     rest = " ".join(words[1:])

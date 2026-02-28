@@ -4452,6 +4452,19 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
             _speed_session = tg_session_get(str(chat_id)) if TG_SESSION_OK else None
             _speed_plan = quick_classify(text, session_ctx=_speed_session)
             if _speed_plan:
+                # Step 6: Query branch
+                if _speed_plan.get("action") == "query":
+                    try:
+                        from quick_query import execute_query as _qq
+                        _speed_response = await _qq(_speed_plan)
+                    except Exception as _qe:
+                        logger.warning(f"Quick query error: {_qe}")
+                        _speed_response = None
+                    if _speed_response:
+                        await tg_send(chat_id, _speed_response)
+                        _router_stats["template"] = _router_stats.get("template", 0) + 1
+                        _router_stats["total"] += 1
+                        return
                 logger.info(f"Speed template: {text[:50]} -> {_speed_plan['action']} {_speed_plan['entity_id']}")
                 _speed_result = await quick_execute(_speed_plan)
                 _speed_response = get_quick_response(_speed_plan, _speed_result)
