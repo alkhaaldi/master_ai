@@ -101,43 +101,51 @@ _tg_disambig_context = {}  # Step 9: {chat_id: original_text} for alias learning
 
 # ── Step 10: Circuit Breaker System ──
 class CircuitBreaker:
-    """Simple circuit breaker: track failures, auto-open after threshold, auto-close after cooldown."""
+    """Circuit breaker: track failures, auto-open after threshold, auto-close after cooldown.
+    Phase 1: added open_until, feature-flag gating, proper half-open logic."""
     def __init__(self, name, failure_threshold=3, cooldown_seconds=60):
         self.name = name
         self.failure_threshold = failure_threshold
         self.cooldown = cooldown_seconds
         self.failures = 0
         self.last_failure = 0
+        self.open_until = 0  # Phase 1: timestamp when breaker should try half-open
         self.state = "closed"  # closed=OK, open=blocking, half_open=testing
         self.total_trips = 0
 
     def record_success(self):
         self.failures = 0
         self.state = "closed"
+        self.open_until = 0
 
     def record_failure(self):
         self.failures += 1
         self.last_failure = time.time()
         if self.failures >= self.failure_threshold:
             self.state = "open"
+            self.open_until = time.time() + self.cooldown
             self.total_trips += 1
-            logger.warning(f"Circuit {self.name} OPEN after {self.failures} failures")
+            logger.warning(f"Circuit {self.name} OPEN until {self.open_until:.0f} ({self.cooldown}s cooldown)")
 
     def is_available(self):
+        if not FEATURE_CIRCUIT_BREAKERS:
+            return True  # Feature disabled = always available
         if self.state == "closed":
             return True
-        if self.state == "open" and (time.time() - self.last_failure) > self.cooldown:
+        if self.state == "open" and time.time() >= self.open_until:
             self.state = "half_open"
+            logger.info(f"Circuit {self.name} HALF-OPEN, testing...")
             return True
         return self.state == "half_open"
 
     def status(self):
         return {"name": self.name, "state": self.state, "failures": self.failures,
-                "total_trips": self.total_trips, "last_failure": self.last_failure}
+                "total_trips": self.total_trips, "last_failure": self.last_failure,
+                "open_until": self.open_until}
 
-_cb_ha = CircuitBreaker("home_assistant", failure_threshold=3, cooldown_seconds=30)
-_cb_llm = CircuitBreaker("llm", failure_threshold=2, cooldown_seconds=60)
-_cb_tg = CircuitBreaker("telegram", failure_threshold=5, cooldown_seconds=30)
+_cb_ha = CircuitBreaker("home_assistant", failure_threshold=3, cooldown_seconds=60)
+_cb_llm = CircuitBreaker("llm", failure_threshold=3, cooldown_seconds=60)
+_cb_tg = CircuitBreaker("telegram", failure_threshold=3, cooldown_seconds=60)
 
 
 def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "") -> str:
@@ -259,6 +267,10 @@ api_key = os.getenv("OPENAI_API_KEY", "")
 anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
 HA_URL = os.getenv("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.getenv("HA_TOKEN", "")
+# Phase 1 feature flags
+FEATURE_CIRCUIT_BREAKERS = os.getenv("FEATURE_CIRCUIT_BREAKERS", "1") == "1"
+FEATURE_TIMEOUTS = os.getenv("FEATURE_TIMEOUTS", "1") == "1"
+EXTERNAL_TIMEOUT = 8  # seconds max for external calls
 AGENT_SECRET = os.getenv("AGENT_SECRET", "")
 MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -1295,13 +1307,14 @@ def _get_schema_status():
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
 async def _exec_ha_get_state(entity_id: str) -> dict:
-    # Step 10: Circuit breaker check
+    # Phase 1: Circuit breaker + timeout
     if not _cb_ha.is_available():
-        return {"success": False, "error": "HA circuit breaker open - service temporarily unavailable"}
-    async with httpx.AsyncClient() as client:
+        return {"success": False, "error": "⚠️ نظام الأجهزة غير متاح حالياً"}
+    _ha_timeout = EXTERNAL_TIMEOUT if FEATURE_TIMEOUTS else 30
+    async with httpx.AsyncClient(timeout=_ha_timeout) as client:
         headers = {"Authorization": f"Bearer {HA_TOKEN}"}
         if entity_id == "*":
-            r = await client.get(f"{HA_URL}/api/states", headers=headers, timeout=10)
+            r = await client.get(f"{HA_URL}/api/states", headers=headers, timeout=_ha_timeout)
             states = r.json()
             _cb_ha.record_success()
             return {"success": True, "count": len(states), "states": states[:50]}
@@ -1311,7 +1324,7 @@ async def _exec_ha_get_state(entity_id: str) -> dict:
             results = []
             for eid in ids:
                 try:
-                    r = await client.get(f"{HA_URL}/api/states/{eid}", headers=headers, timeout=10)
+                    r = await client.get(f"{HA_URL}/api/states/{eid}", headers=headers, timeout=_ha_timeout)
                     if r.status_code == 200:
                         results.append(r.json())
                     else:
@@ -1319,20 +1332,21 @@ async def _exec_ha_get_state(entity_id: str) -> dict:
                 except Exception as e:
                     results.append({"entity_id": eid, "state": f"error: {e}"})
             return {"success": True, "count": len(results), "states": results}
-        r = await client.get(f"{HA_URL}/api/states/{ids[0]}", headers=headers, timeout=10)
+        r = await client.get(f"{HA_URL}/api/states/{ids[0]}", headers=headers, timeout=_ha_timeout)
         if r.status_code == 200:
             return {"success": True, "state": r.json()}
         return {"success": False, "error": f"HTTP {r.status_code}"}
 
 
 async def _exec_ha_call_service(domain: str, service: str, service_data: dict = None) -> dict:
-    # Step 10: Circuit breaker check
+    # Phase 1: Circuit breaker + timeout
     if not _cb_ha.is_available():
-        return {"success": False, "error": "HA circuit breaker open"}
-    async with httpx.AsyncClient() as client:
+        return {"success": False, "error": "⚠️ نظام الأجهزة غير متاح حالياً"}
+    _ha_timeout = EXTERNAL_TIMEOUT if FEATURE_TIMEOUTS else 30
+    async with httpx.AsyncClient(timeout=_ha_timeout) as client:
         headers = {"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"}
         r = await client.post(f"{HA_URL}/api/services/{domain}/{service}",
-                              headers=headers, json=service_data or {}, timeout=10)
+                              headers=headers, json=service_data or {}, timeout=_ha_timeout)
         _ok = r.status_code == 200
         _cb_ha.record_success() if _ok else _cb_ha.record_failure()
         return {"success": _ok, "status_code": r.status_code}
@@ -3559,11 +3573,15 @@ def tg_split_message(text: str) -> list[str]:
     return parts
 async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
     """Send message to Telegram, auto-split if >4096 chars."""
-
+    # Phase 1: CB check for Telegram
+    if not _cb_tg.is_available():
+        logger.warning(f"TG circuit open, dropping message to {chat_id}")
+        return False
 
     global _tg_client
+    _tg_timeout = EXTERNAL_TIMEOUT if FEATURE_TIMEOUTS else 30
     if not _tg_client:
-        _tg_client = httpx.AsyncClient(timeout=30)
+        _tg_client = httpx.AsyncClient(timeout=_tg_timeout)
     for part in tg_split_message(text):
         try:
             payload = {"chat_id": chat_id, "text": part}
@@ -3571,9 +3589,12 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
                 payload["parse_mode"] = parse_mode
             resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json=payload)
             if resp.status_code != 200:
+                _cb_tg.record_failure()
                 logger.error(f"TG send fail: {resp.text[:200]}")
                 return False
+            _cb_tg.record_success()
         except Exception as e:
+            _cb_tg.record_failure()
             logger.error(f"TG send error: {e}")
             return False
     return True
@@ -4461,6 +4482,28 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
             pass
 
 
+
+@app.get("/health/external")
+async def health_external():
+    """Phase 1: External service health status."""
+    def _fmt(cb):
+        return {
+            "status": cb.state,
+            "failures": cb.failures,
+            "total_trips": cb.total_trips,
+            "open_until": cb.open_until,
+            "last_failure": cb.last_failure,
+        }
+    return {
+        "ha": _fmt(_cb_ha),
+        "telegram": _fmt(_cb_tg),
+        "llm": _fmt(_cb_llm),
+        "feature_flags": {
+            "circuit_breakers": FEATURE_CIRCUIT_BREAKERS,
+            "timeouts": FEATURE_TIMEOUTS,
+            "external_timeout_seconds": EXTERNAL_TIMEOUT,
+        }
+    }
 
 @app.get("/stability")
 async def stability_endpoint():
