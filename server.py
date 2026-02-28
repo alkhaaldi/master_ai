@@ -4719,100 +4719,78 @@ async def router_stats_endpoint():
     }
 
 
+
+# ─── Entity Health (Step 3) ───
 @app.get("/entity-map/health", tags=["system"])
-async def entity_map_health(request: Request):
-    """Validate entity_map.json against live HA states."""
+async def entity_map_health():
+    """Validate entity_map.json against live HA state."""
     if not FEATURE_ENTITY_HEALTH:
         return {"error": "FEATURE_ENTITY_HEALTH disabled"}
-    import re as _re
-    _ha_states = {}
     try:
-        _ha_token = os.getenv("HA_TOKEN", "")
-        _r = httpx.get(f"{HA_URL}/api/states", headers={"Authorization": f"Bearer {_ha_token}"}, timeout=10)
-        _ha_states = {s["entity_id"]: s for s in _r.json()}
-    except Exception as _e:
-        return {"error": f"Cannot reach HA: {_e}"}
-    dead = []
-    english = []
-    missing = []
-    ok_count = 0
-    map_ids = set()
-    for _room, _ents in entity_map.items():
-        for _e in _ents:
-            if "=" not in _e:
-                continue
-            _eid, _name = _e.split("=", 1)
-            map_ids.add(_eid)
-            if _eid not in _ha_states:
-                dead.append({"entity_id": _eid, "name": _name, "room": _room})
-            else:
-                ok_count += 1
-                _latin = len(_re.findall(r"[a-zA-Z]", _name))
-                _total = len(_name.replace(" ", "")) or 1
-                if _latin / _total > 0.5:
-                    english.append({"entity_id": _eid, "name": _name, "room": _room})
-    _ctrl = {"light", "switch", "climate", "cover", "fan", "scene"}
-    for _eid, _s in _ha_states.items():
-        if _eid.split(".")[0] in _ctrl and _eid not in map_ids:
-            missing.append({"entity_id": _eid, "name": _s["attributes"].get("friendly_name", "?")})
-    return {
-        "total_entries": ok_count + len(dead),
-        "healthy": ok_count,
-        "dead": {"count": len(dead), "entities": dead},
-        "english_names": {"count": len(english), "sample": english[:20]},
-        "missing_from_map": {"count": len(missing), "entities": missing[:20]},
-        "rooms": len(entity_map),
-    }
+        from entity_health import validate_entity_map
+        report = await validate_entity_map(HA_URL, HA_TOKEN)
+        return report
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/entity-map/arabize", tags=["system"])
+async def entity_map_arabize(apply: bool = False):
+    """Preview or apply Arabic translation of English entity names."""
+    if not FEATURE_ENTITY_HEALTH:
+        return {"error": "FEATURE_ENTITY_HEALTH disabled"}
+    try:
+        from entity_health import load_entity_map, arabize_entity_map, ENTITY_MAP_PATH
+        import json as _j
+        emap = load_entity_map()
+        new_map, changes = arabize_entity_map(emap)
+        if apply and changes:
+            ENTITY_MAP_PATH.write_text(_j.dumps(new_map, ensure_ascii=False, indent=2), encoding="utf-8")
+            return {"applied": True, "changes": len(changes), "details": changes}
+        return {"preview": True, "changes": len(changes), "details": changes}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 
 
 
 async def entity_health_check_loop():
-    """Periodic entity map health check - alerts on dead/new entities via Telegram."""
+    """Periodic entity map health check - alerts on dead/new entities via Telegram (Part C)."""
     if not FEATURE_ENTITY_HEALTH:
         return
     logger.info("Entity health check loop started (every 6h)")
     await asyncio.sleep(300)  # wait 5min after startup
     while True:
         try:
-            _ha_token = os.getenv("HA_TOKEN", "")
-            _r = httpx.get(f"{HA_URL}/api/states", headers={"Authorization": f"Bearer {_ha_token}"}, timeout=15)
-            _ha_states = {s["entity_id"]: s for s in _r.json()}
+            from entity_health import validate_entity_map
+            report = await validate_entity_map(HA_URL, HA_TOKEN)
+            if not report.get("ha_reachable"):
+                logger.warning("Entity health: HA unreachable")
+                await asyncio.sleep(6 * 3600)
+                continue
+            s = report.get("summary", {})
+            dead = s.get("dead", 0)
+            missing = s.get("missing", 0)
+            eng = s.get("english", 0)
             
-            import re as _re
-            map_ids = set()
-            dead = []
-            for _room, _ents in entity_map.items():
-                for _e in _ents:
-                    if "=" not in _e:
-                        continue
-                    _eid, _name = _e.split("=", 1)
-                    map_ids.add(_eid)
-                    if _eid not in _ha_states:
-                        dead.append(f"❌ {_name} ({_eid})")
-            
-            _ctrl = {"light", "switch", "climate", "cover", "fan", "scene"}
-            new_ents = []
-            for _eid, _s in _ha_states.items():
-                if _eid.split(".")[0] in _ctrl and _eid not in map_ids:
-                    _fn = _s["attributes"].get("friendly_name", "?")
-                    new_ents.append(f"🆕 {_fn} ({_eid})")
-            
-            # Only alert if there are issues
             alerts = []
-            if dead:
-                _dead_txt = chr(10).join(dead[:10])
-                alerts.append(f"⚠️ أجهزة ميتة ({len(dead)}):" + chr(10) + _dead_txt)
-            if new_ents:
-                _new_txt = chr(10).join(new_ents[:10])
-                alerts.append(f"🆕 أجهزة جديدة ({len(new_ents)}):" + chr(10) + _new_txt)
+            if dead > 0:
+                dead_list = report.get("dead_entities", [])[:10]
+                txt = chr(10).join(f"  ❌ {d['name']} ({d['entity_id']})" for d in dead_list)
+                alerts.append(f"⚠️ أجهزة ميتة ({dead}):" + chr(10) + txt)
+            if missing > 0:
+                miss_list = report.get("missing_entities", [])[:10]
+                txt = chr(10).join(f"  🆕 {m['name']} ({m['entity_id']})" for m in miss_list)
+                alerts.append(f"🆕 أجهزة جديدة ({missing}):" + chr(10) + txt)
             
             if alerts:
-                _msg = "🔍 فحص Entity Map:" + chr(10) + chr(10) + (chr(10) + chr(10)).join(alerts)
+                _msg = "🔍 فحص صحة الأجهزة:" + chr(10) + chr(10).join(alerts)
                 try:
                     _tg_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
                     _chat_id = ADMIN_TELEGRAM_ID or "669769765"
                     httpx.post(_tg_url, json={"chat_id": _chat_id, "text": _msg}, timeout=10)
-                    logger.info(f"Entity health alert sent: {len(dead)} dead, {len(new_ents)} new")
+                    logger.info(f"Entity health alert sent: {dead} dead, {missing} new")
                 except Exception as _te:
                     logger.error(f"Entity health TG alert failed: {_te}")
             else:
