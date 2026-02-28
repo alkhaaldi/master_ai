@@ -97,3 +97,58 @@ async def execute_query(plan: dict) -> str:
             st = s.get("state", "?")
             lines.append(f"  {fn}: {st}")
         return "\n".join(lines)
+
+async def execute_active_devices() -> str:
+    """Step 8: Show all currently ON devices grouped by type."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.get(f"{HA_URL}/api/states",
+                          headers={"Authorization": f"Bearer {HA_TOKEN}"})
+            if r.status_code != 200:
+                return "\u26a0\ufe0f \u0645\u0627 \u0642\u062f\u0631\u062a \u0623\u0648\u0635\u0644 HA"
+            states = r.json()
+    except Exception as e:
+        return f"\u26a0\ufe0f \u062e\u0637\u0623: {e}"
+    
+    # Filter ON devices from relevant domains
+    active = {"light": [], "switch": [], "fan": [], "climate": [], "cover": [], "media_player": []}
+    for s in states:
+        eid = s.get("entity_id", "")
+        domain = eid.split(".")[0]
+        if domain not in active:
+            continue
+        st = s.get("state", "off")
+        if domain == "climate" and st not in ("off", "unavailable"):
+            fn = s.get("attributes", {}).get("friendly_name", eid)
+            ct = s.get("attributes", {}).get("current_temperature", "?")
+            active[domain].append(f"{fn} ({ct}\u00b0)")
+        elif domain == "cover" and st == "open":
+            fn = s.get("attributes", {}).get("friendly_name", eid)
+            active[domain].append(fn)
+        elif st == "on":
+            fn = s.get("attributes", {}).get("friendly_name", eid)
+            active[domain].append(fn)
+    
+    # Build response
+    icons = {"light": "\U0001f4a1", "switch": "\U0001f50c", "fan": "\U0001f32c", 
+             "climate": "\U0001f321", "cover": "\U0001fa9f", "media_player": "\U0001f4fa"}
+    names = {"light": "\u0623\u0646\u0648\u0627\u0631", "switch": "\u0633\u0648\u064a\u062a\u0634\u0627\u062a", 
+             "fan": "\u0645\u0631\u0627\u0648\u062d/\u0634\u0641\u0627\u0637\u0627\u062a", 
+             "climate": "\u0645\u0643\u064a\u0641\u0627\u062a", "cover": "\u0633\u062a\u0627\u0626\u0631 \u0645\u0641\u062a\u0648\u062d\u0629", 
+             "media_player": "\u0645\u064a\u062f\u064a\u0627"}
+    
+    total = sum(len(v) for v in active.values())
+    if total == 0:
+        return "\u2705 \u0645\u0627 \u0641\u064a \u0634\u064a \u0634\u063a\u0627\u0644 \u0628\u0627\u0644\u0628\u064a\u062a"
+    
+    lines = [f"\U0001f3e0 \u0634\u063a\u0627\u0644 \u0628\u0627\u0644\u0628\u064a\u062a ({total}):"]
+    for dom in ["light", "climate", "fan", "switch", "cover", "media_player"]:
+        items = active[dom]
+        if items:
+            icon = icons[dom]
+            name = names[dom]
+            if len(items) <= 3:
+                lines.append(f"  {icon} {name}: " + ", ".join(items))
+            else:
+                lines.append(f"  {icon} {name} ({len(items)}): " + ", ".join(items[:3]) + "...")
+    return "\n".join(lines)

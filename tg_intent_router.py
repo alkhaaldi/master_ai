@@ -459,6 +459,32 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
 
     first = words[0]
 
+    # --- Step 8: Quick chat responses ---
+    _QUICK_CHAT = {
+        # Greetings
+        "مرحبا": "أهلين! شلون أقدر أساعدك؟ 👋",
+        "هلا": "هلا والله! أمر 👋",
+        "السلام عليكم": "وعليكم السلام! شلون أقدر أخدمك؟",
+        "سلام": "وعليكم السلام ✌️",
+        "هاي": "هلا! 👋",
+        # Gratitude
+        "شكرا": "العفو! إذا تحتاج شي ثاني أمر 😊",
+        "مشكور": "ولا يهمك! 😊",
+        "يعطيك العافية": "الله يعافيك! 💪",
+        "تسلم": "الله يسلمك! 🙏",
+        # Status
+        "شلونك": "الحمدلله تمام! جاهز لأي أمر ⚡",
+        "كيفك": "تمام الحمدلله! شلون أساعدك؟ ⚡",
+        "شخبارك": "بخير الحمدلله! أمر 😊",
+        # Capabilities
+        "شنو تقدر تسوي": "أقدر أتحكم بالأنوار والمكيفات والستائر والشفاطات 💡🌡️🪟\nوأشيك الحالة وأفعّل المشاهد 🎬\nجرب: شغل نور المعيشة، وضع النوم، شيك المكيفات",
+        "وش تسوي": "أقدر أتحكم بالأنوار والمكيفات والستائر والشفاطات 💡🌡🪟. جرب: شغل نور المعيشة / وضع النوم / شيك المكيفات",
+    }
+    _chat_norm = __import__("re").sub(r"[ً-ٟ?!؟]", "", text_s).strip()
+    if _chat_norm in _QUICK_CHAT:
+        return {"intent": "chat", "action": "chat", "entity_id": "", "entity_name": "",
+                "domain": "", "value": _QUICK_CHAT[_chat_norm], "room": "", "source": "quick_chat"}
+
     # --- Step 2: Pronoun followup (طفيه/شغله/أطفيه) ---
     _PRONOUN_SUFFIXED = {
         "طفيه": "off", "أطفيه": "off", "اطفيه": "off",
@@ -564,6 +590,23 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
         return {"intent": "scene_activate", "action": "scene", "entity_id": _best[0],
                 "entity_name": _best[1], "domain": "scene", "value": None,
                 "room": _best[2], "source": "classify_scene"}
+
+    # --- Step 8: Global status queries ---
+    _GLOBAL_QUERIES = {
+        "شنو شغال": "active_devices",
+        "شنو شغال بالبيت": "active_devices",
+        "وش شغال": "active_devices",
+        "وش مفتوح": "active_devices",
+        "شنو مفتوح": "active_devices",
+    }
+    _gq_norm = __import__("re").sub(r"[ً-ٟ?؟]", "", text_s).strip()
+    if _gq_norm in _GLOBAL_QUERIES:
+        return {"intent": "query", "action": "query",
+                "entity_ids": [], "entity_names": [],
+                "entity_id": "", "entity_name": "",
+                "domain": "all", "value": None, "room": "",
+                "query_type": _GLOBAL_QUERIES[_gq_norm], "count": 0,
+                "source": "classify_query_global"}
 
     # --- Step 6: Status query detection ---
     _is_query = False
