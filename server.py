@@ -4507,8 +4507,10 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                     if _chat_msg:
                         await tg_send(chat_id, _chat_msg)
                         _router_stats["template"] = _router_stats.get("template", 0) + 1
+                        _router_stats["chat"] = _router_stats.get("chat", 0) + 1
                         _router_stats["total"] += 1
-                        _log_cmd(text, "template", _speed_plan.get("source",""), _speed_plan.get("entity_name",""))
+                        _log_cmd(text, "template_chat", _speed_plan.get("source",""), "")
+                        await audit_log(task=text, actions="chat", results=_chat_msg[:80], status="chat_routed", duration=0, route_type="template_chat")
                         return
                 # Step 6: Query branch
                 if _speed_plan.get("action") == "query":
