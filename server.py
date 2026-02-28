@@ -155,8 +155,13 @@ async def _fetch_live_ha_context(user_msg: str) -> str:
                 extra = f" (temp:{attrs['current_temperature']}°, target:{attrs.get('temperature','?')}°)"
             elif "brightness" in attrs and state == "on":
                 extra = f" (brightness:{round(attrs['brightness']/255*100)}%)"
-            elif "current_position" in attrs:
-                extra = f" (pos:{attrs['current_position']}%)"
+            elif eid.startswith("cover."):
+                # ALL covers inverted: open=closed physically, 100%=closed
+                pos = attrs.get("current_position", 0)
+                real_pos = 100 - pos
+                real_state = "مسكرة" if state == "open" else "مفتوحة"
+                extra = f" ({real_state} {real_pos}%)"
+                state = real_state
             lines.append(f"{name}: {state}{extra}")
         if not lines:
             return ""
