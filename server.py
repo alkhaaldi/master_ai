@@ -156,12 +156,14 @@ async def _fetch_live_ha_context(user_msg: str) -> str:
             elif "brightness" in attrs and state == "on":
                 extra = f" (brightness:{round(attrs['brightness']/255*100)}%)"
             elif eid.startswith("cover."):
-                # ALL covers inverted: open=closed physically, 100%=closed
+                # Skip original entities, only show _inverted (already corrected by HA)
+                if "_inverted" not in eid:
+                    continue
                 pos = attrs.get("current_position", 0)
-                real_pos = 100 - pos
-                real_state = "مسكرة" if state == "open" else "مفتوحة"
-                extra = f" ({real_state} {real_pos}%)"
-                state = real_state
+                # _inverted: closed+0%=physically closed, open+100%=physically open
+                ar_state = "مسكرة" if state == "closed" else "مفتوحة"
+                extra = f" ({ar_state} {int(pos)}%)"
+                state = ar_state
             lines.append(f"{name}: {state}{extra}")
         if not lines:
             return ""
