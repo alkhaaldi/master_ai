@@ -4505,6 +4505,24 @@ async def health_external():
         }
     }
 
+@app.post("/health/external/test")
+async def health_external_test(request: Request):
+    """Phase 1: Simulate CB failures for testing. Admin-only."""
+    body = await request.json()
+    target = body.get("target", "ha")  # ha, llm, telegram
+    action = body.get("action", "fail")  # fail, reset
+    cb_map = {"ha": _cb_ha, "llm": _cb_llm, "telegram": _cb_tg}
+    cb = cb_map.get(target)
+    if not cb:
+        return {"error": f"Unknown target: {target}"}
+    if action == "fail":
+        cb.record_failure()
+        return {"target": target, "action": "fail", "state": cb.state, "failures": cb.failures, "open_until": cb.open_until}
+    elif action == "reset":
+        cb.record_success()
+        return {"target": target, "action": "reset", "state": cb.state, "failures": cb.failures}
+    return {"error": f"Unknown action: {action}"}
+
 @app.get("/stability")
 async def stability_endpoint():
     """Step 10: Circuit breaker and stability status."""
