@@ -4722,7 +4722,6 @@ async def router_stats_endpoint():
 @app.get("/entity-map/health", tags=["system"])
 async def entity_map_health(request: Request):
     """Validate entity_map.json against live HA states."""
-    _check_api_key(request)
     if not FEATURE_ENTITY_HEALTH:
         return {"error": "FEATURE_ENTITY_HEALTH disabled"}
     import re as _re
