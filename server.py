@@ -1351,12 +1351,53 @@ async def quick_execute(plan: dict) -> dict:
     return {"success": result.get("success", False), "detail": result}
 
 
+def _arabize_name(name: str) -> str:
+    """Translate common English device names to Arabic for response."""
+    _ROOM_AR = {
+        "living room": "المعيشة", "kitchen": "المطبخ", "office": "المكتب",
+        "master": "الماستر", "mama": "ماما", "reception": "الاستقبال",
+        "men room": "الديوانية", "ground": "الأرضي", "room 3": "غرفة 3",
+        "room 5": "غرفة 5", "first floor": "الدور الأول", "diwaniya": "الديوانية",
+    }
+    _TYPE_AR = {
+        "chandler": "ثريا", "chandelier": "ثريا", "spot": "سبوت", "strip": "ستريب",
+        "backlight": "خلفية", "mirror": "مرآة", "vent": "شفاط", "shutter": "شتر",
+        "air purifier": "منقي", "storage": "مخزن",
+    }
+    nl = name.lower()
+    # If already Arabic (>50% non-latin), return as-is
+    import re
+    latin = len(re.findall(r"[a-zA-Z]", name))
+    total = len(name.replace(" ", "")) or 1
+    if latin / total < 0.5:
+        return name
+    # Build Arabic name: type + room
+    room_part = ""
+    type_part = ""
+    for eng, ar in _ROOM_AR.items():
+        if eng in nl:
+            room_part = ar
+            break
+    for eng, ar in _TYPE_AR.items():
+        if eng in nl:
+            type_part = ar
+            break
+    if type_part and room_part:
+        return f"{type_part} {room_part}"
+    if type_part:
+        return type_part
+    if room_part:
+        return f"نور {room_part}"
+    return name
+
+
 def get_quick_response(plan: dict, exec_result: dict) -> str:
     """Generate short Kuwaiti Arabic response for speed template action."""
     if not exec_result.get("success"):
         return "⚠️ نظام الأجهزة غير متاح حالياً"
 
-    name = plan.get("entity_name", plan.get("entity_id", ""))
+    raw_name = plan.get("entity_name", plan.get("entity_id", ""))
+    name = _arabize_name(raw_name)
     action = plan.get("action", "")
     value = plan.get("value")
 
