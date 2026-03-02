@@ -148,6 +148,33 @@ def _log_cmd(text, route, source="", entity=""):
         _router_cmd_log.pop(0)
 
 _router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "life_stocks": 0, "life_expenses": 0, "life_health": 0, "life_work": 0, "template": 0, "template_errors": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
+_router_cmd_log = []
+_STATS_FILE = Path(__file__).parent / "data" / "router_stats.json"
+
+def _save_router_stats():
+    """Save router stats to disk for persistence across restarts."""
+    try:
+        _STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _STATS_FILE.write_text(json.dumps(_router_stats, default=str), encoding="utf-8")
+    except Exception as e:
+        pass  # Silent fail
+
+def _load_router_stats():
+    """Load router stats from disk on startup."""
+    global _router_stats
+    try:
+        if _STATS_FILE.exists():
+            saved = json.loads(_STATS_FILE.read_text(encoding="utf-8"))
+            # Merge saved into current (keep started_at from current session)
+            _started = _router_stats.get("started_at")
+            for k, v in saved.items():
+                if k != "started_at" and isinstance(v, (int, float)):
+                    _router_stats[k] = _router_stats.get(k, 0) + v
+            _router_stats["_prev_total"] = saved.get("total", 0)
+            _router_stats["_sessions"] = saved.get("_sessions", 0) + 1
+    except Exception:
+        pass
+
 _tg_disambig_context = {}  # Step 9: {chat_id: original_text} for alias learning
 
 # ── Step 10: Circuit Breaker System ──
@@ -379,6 +406,9 @@ logger = logging.getLogger("master_ai")
 logger.setLevel(logging.INFO)
 logger.addHandler(_file_h)
 logger.addHandler(_console_h)
+_load_router_stats()
+logger.info(f"Stats loaded: prev_total={_router_stats.get('_prev_total', 0)}, session #{_router_stats.get('_sessions', 1)}")
+import atexit; atexit.register(_save_router_stats)
 
 # LLM Clients
 openai_client = AsyncOpenAI(api_key=api_key) if api_key else None
@@ -2502,6 +2532,7 @@ async def lifespan(app):
         # Phase 4.5: Observability backup engine
         try:
             asyncio.create_task(backup_loop())
+            asyncio.create_task(stats_save_loop())
             logger.info("Backup engine scheduled")
         except Exception as e:
             logger.error(f"Backup engine failed to start (non-fatal): {e}")
@@ -5025,6 +5056,8 @@ async def tg_stats():
             "work": LIFE_WORK_OK,
         },
         "last_commands": _router_cmd_log[-10:] if _router_cmd_log else [],
+        "version": VERSION,
+        "persistent_stats": True,
     }
 
 @app.post("/health/external/test")
