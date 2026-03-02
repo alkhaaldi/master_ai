@@ -163,7 +163,7 @@ async def delete_task(task_id):
 async def get_summary():
     async with aiosqlite.connect(TASKS_DB) as db:
         # By status
-        cursor = await db.execute("SELECT status, COUNT(*) FROM tasks GROUP BY status")
+        cursor = await db.execute("SELECT status, COUNT(*) FROM user_tasks GROUP BY status")
         by_status = {r[0]: r[1] async for r in cursor}
 
         # By category
