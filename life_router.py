@@ -30,6 +30,7 @@ EXPENSE_WORDS = [
 ]
 
 WORK_WORDS = [
+    "اوفرتايم", "overtime", "اجازة", "اجازتي", "صباحي", "عصري", "ليلي", "جدولي",
     "شفتي", "شفت", "دوام", "دوامي", "جدول",
     "OT", "أوفرتايم", "اوتي", "overtime",
     "إجازة", "اجازة", "leave", "مرضية", "sick",
@@ -89,7 +90,7 @@ def detect_life_domain(text: str) -> str:
     best = max(scores, key=scores.get)
 
     # Domain-specific thresholds (stocks=1, others=2)
-    _thresholds = {"stocks": 1, "expenses": 2, "work": 2, "health": 2}
+    _thresholds = {"stocks": 1, "expenses": 2, "work": 1, "health": 2}
     if scores[best] >= _thresholds.get(best, 2):
         logger.info(f"ROUTE life: '{text_lower[:40]}' -> {best} (score={scores[best]})")
         return best
