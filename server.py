@@ -4001,6 +4001,63 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"\u26a0\ufe0f diag: {e}"
 
+    if cmd == "/summary":
+        # Daily summary dashboard
+        try:
+            _up = int(time.time() - START_TIME)
+            _h, _m = divmod(_up // 60, 60)
+            _t = _router_stats.get("total", 0)
+            _greet = _router_stats.get("greeting", 0)
+            _chat = _router_stats.get("chat", 0)
+            _action = _router_stats.get("action", 0)
+            _intent = _router_stats.get("intent", 0)
+            _unk = _router_stats.get("unknown", 0)
+            _fup = _router_stats.get("followup", 0)
+            _ls = _router_stats.get("life_stocks", 0) + _router_stats.get("life_expenses", 0) + _router_stats.get("life_health", 0) + _router_stats.get("life_work", 0)
+            _saved = _greet + _intent + _ls
+            _pct = round(_saved / _t * 100) if _t > 0 else 0
+            # HA status
+            _ha_ok = False
+            try:
+                async with httpx.AsyncClient(timeout=5) as _hc:
+                    _hr = await _hc.get(f"{HA_URL}/api/", headers={"Authorization": f"Bearer {HA_TOKEN}"})
+                    _ha_ok = _hr.status_code == 200
+            except Exception:
+                pass
+            # Error count from log
+            import os as _os3
+            _errs = 0
+            try:
+                with open("server.log", "r") as _lf:
+                    _errs = sum(1 for l in _lf if "ERROR" in l)
+            except Exception:
+                pass
+            # DB size
+            _db_mb = 0
+            try:
+                _db_mb = round(_os3.path.getsize("data/audit.db") / 1024 / 1024, 1)
+            except Exception:
+                pass
+            _mc = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, TG_NEWS_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
+            _lines = [
+                f"\U0001f4cb Daily Summary",
+                f"",
+                f"\u23f1 Up: {_h}h {_m}m | v{VERSION}",
+                f"{'\u2705' if _ha_ok else '\u274c'} HA | \u2705 {_mc}/16 modules",
+                f"",
+                f"\U0001f4e8 Messages: {_t}",
+                f"  \U0001f44b Greeting: {_greet} (0 API)",
+                f"  \U0001f3af Intent: {_intent} | \U0001f504 Followup: {_fup}",
+                f"  \U0001f4ac Chat: {_chat} | \u2699\ufe0f Action: {_action}",
+                f"  \U0001f3e0 Life: {_ls} | \u2753 Unknown: {_unk}",
+                f"",
+                f"\U0001f4a1 LLM saved: {_saved}/{_t} ({_pct}%)",
+                f"\u26a0\ufe0f Errors: {_errs} | DB: {_db_mb}MB",
+            ]
+            return chr(10).join(_lines)
+        except Exception as e:
+            return f"\u26a0\ufe0f summary: {e}"
+
     if cmd == "/home":
         buttons = [
             {"text": "💡 الأضواء", "callback_data": "cmd:lights"},
@@ -4309,7 +4366,32 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         return "life_health not loaded"
 
     if cmd == "/help":
-        return '🏠 Master AI\n\n/status - النظام\n/lights - الأضواء\n/temp - المكيفات\n/rooms - الغرف\n/scenes - المشاهد\n/morning - تقرير صباحي\n/report - تقرير\n/remind - تذكير\n/reminders - التذكيرات\n/news - أخبار\n/stocks - المحفظة\n/price X - سعر سهم\n/tasks - المهام\n/shift - الشفت\n/schedule - جدول\n/expense - مصروف\n/expenses - مصاريف\n/health - الصحة\n/brain - العقل\n/diag - تشخيص\n\nأرسل أي رسالة 👍'
+        _cmds = [
+            "🏠 Master AI", "",
+            "/status - النظام",
+            "/lights - الأضواء",
+            "/temp - المكيفات",
+            "/rooms - الغرف",
+            "/scenes - المشاهد",
+            "/morning - تقرير صباحي",
+            "/remind - تذكير",
+            "/reminders - التذكيرات",
+            "/news - أخبار",
+            "/stocks - المحفظة",
+            "/price X - سعر سهم",
+            "/tasks - المهام",
+            "/shift - الشفت",
+            "/schedule - جدول",
+            "/expense - مصروف",
+            "/expenses - مصاريف",
+            "/health - الصحة",
+            "/brain - العقل",
+            "/diag - تشخيص",
+            "/stats - إحصائيات",
+            "/summary - ملخص يومي",
+            "", "أرسل أي رسالة 👍",
+        ]
+        return chr(10).join(_cmds)
 
     return None
 
