@@ -2143,24 +2143,6 @@ class TaskManager:
 # PLANNER_SYSTEM_PROMPT removed — using build_system_prompt() from brain_core
 
 
-def build_entity_context() -> str:
-    """Build concise entity context for planner."""
-    if not entity_map:
-        return "(no entity map loaded)"
-    parts = []
-    rooms = entity_map.get("rooms", entity_map)
-    if isinstance(rooms, dict):
-        for room_name, room_data in list(rooms.items())[:25]:
-            entities = room_data if isinstance(room_data, list) else room_data.get("entities", [])
-            if isinstance(entities, list):
-                ids = [e.get("entity_id", e) if isinstance(e, dict) else str(e) for e in entities[:10]]
-                parts.append(f"{room_name}: {', '.join(ids)}")
-            elif isinstance(entities, dict):
-                ids = list(entities.keys())[:10]
-                parts.append(f"{room_name}: {', '.join(ids)}")
-    return "\n".join(parts) if parts else "(entity map format unknown)"
-
-
 async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
                     previous_results: list = None, retry: bool = False) -> dict:
     """Single planning step ÃÂ¢ÃÂÃÂ LLM generates next action(s)."""
@@ -4382,60 +4364,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         await tg_send(chat_id, quick)
         return
 
-    # --- Speed Engine (Step 2) --- template-eligible commands skip LLM ---
-    if FEATURE_SPEED_TEMPLATES and FEATURE_SMART_ROUTER_V2 and TG_INTENT_OK and _cb_ha.is_available():
-        try:
-            _speed_session = tg_session_get(str(chat_id)) if TG_SESSION_OK else None
-            _speed_plan = quick_classify(text, session_ctx=_speed_session)
-            if _speed_plan:
-                # Step 8: Chat responses (no HA call needed)
-                if _speed_plan.get("action") == "chat":
-                    _chat_msg = _speed_plan.get("value", "")
-                    if _chat_msg:
-                        await tg_send(chat_id, _chat_msg)
-                        _router_stats["template"] = _router_stats.get("template", 0) + 1
-                        _router_stats["chat"] = _router_stats.get("chat", 0) + 1
-                        _router_stats["total"] += 1
-                        _log_cmd(text, "template_chat", _speed_plan.get("source",""), "")
-                        await audit_log(task=text, actions="chat", results=_chat_msg[:80], status="chat_routed", duration=0, route_type="template_chat")
-                        return
-                # Step 6: Query branch
-                if _speed_plan.get("action") == "query":
-                    try:
-                        from quick_query import execute_query as _qq, execute_active_devices as _qad
-                        if _speed_plan.get("query_type") == "active_devices":
-                            _speed_response = await _qad()
-                        else:
-                            _speed_response = await _qq(_speed_plan)
-                    except Exception as _qe:
-                        logger.warning(f"Quick query error: {_qe}")
-                        _speed_response = None
-                    if _speed_response:
-                        await tg_send(chat_id, _speed_response)
-                        _router_stats["template"] = _router_stats.get("template", 0) + 1
-                        _router_stats["total"] += 1
-                        _log_cmd(text, "template", _speed_plan.get("source",""), _speed_plan.get("entity_name",""))
-                        return
-                logger.info(f"Speed template: {text[:50]} -> {_speed_plan['action']} {_speed_plan['entity_id']}")
-                _speed_result = await quick_execute(_speed_plan)
-                _speed_response = get_quick_response(_speed_plan, _speed_result)
-                await tg_send(chat_id, _speed_response)
-                _router_stats["template"] = _router_stats.get("template", 0) + 1
-                _router_stats["total"] += 1
-                _log_cmd(text, "template", _speed_plan.get("source",""), _speed_plan.get("entity_name",""))
-                if TG_SESSION_OK:
-                    _sess_ents = _speed_plan.get("entity_ids", [_speed_plan["entity_id"]])
-                    tg_session_upsert(str(chat_id), last_intent="action", last_entities=_sess_ents, last_room=_speed_plan.get("room", ""))
-                try:
-                    tg_session_append_context(str(chat_id), "user", text[:200])
-                    tg_session_append_context(str(chat_id), "assistant", _speed_response[:200])
-                except Exception:
-                    pass
-                return
-        except Exception as _se:
-            _router_stats["template_errors"] = _router_stats.get("template_errors", 0) + 1
-            logger.warning(f"Speed engine error ({type(_se).__name__}), falling through to LLM: {_se}")
-
+    # Speed Engine removed — all requests go to Opus LLM
     # --- Intent Router (Phase A3) — check FIRST for explicit device+room commands ---
     if TG_INTENT_OK:
         try:
