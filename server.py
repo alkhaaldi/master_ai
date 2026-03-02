@@ -3843,30 +3843,51 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         return f"\u2705 Master AI v{VERSION}\n\u23f1 Uptime: {h}h {m}m\n\U0001f50c Plugins: {len(PLUGIN_REGISTRY._plugins)}"
 
     if cmd == "/stats":
-        # Step 10: Speed Engine stats command
         _up = int(time.time() - START_TIME)
         _h, _m = divmod(_up // 60, 60)
         _t = _router_stats.get("total", 0)
-        _tmpl = _router_stats.get("template", 0)
+        _greet = _router_stats.get("greeting", 0)
+        _chat = _router_stats.get("chat", 0)
+        _action = _router_stats.get("action", 0)
+        _intent = _router_stats.get("intent", 0)
+        _followup = _router_stats.get("followup", 0)
         _unk = _router_stats.get("unknown", 0)
-        _rate = round(_tmpl / _t * 100) if _t > 0 else 0
+        _stocks = _router_stats.get("life_stocks", 0)
+        _exp = _router_stats.get("life_expenses", 0)
+        _work = _router_stats.get("life_work", 0)
+        _lhealth = _router_stats.get("life_health", 0)
+        _saved = _greet + _intent + _stocks + _exp + _work + _lhealth
+        _pct = round(_saved / _t * 100) if _t > 0 else 0
+        _m_ok = lambda v: "\u2705" if v else "\u274c"
         _lines = [
-            f"⚡ Speed Engine Stats",
-            f"⏱ Uptime: {_h}h {_m}m",
+            f"\U0001f4ca Master AI Stats",
+            f"\u23f1 Uptime: {_h}h {_m}m | \U0001f4e8 {_t} msgs",
             f"",
-            f"📊 Session ({_t} total):",
-            f"  🚀 Template: {_tmpl} ({_rate}%)",
-            f"  🤖 LLM: {_unk}",
-            f"  💬 Chat: {_router_stats.get('chat', 0)}",
-            f"  🎯 Intent: {_router_stats.get('intent', 0)}",
+            f"\U0001f6a6 Router:",
+            f"  \U0001f44b Greeting: {_greet} (0 API)",
+            f"  \U0001f3af Intent: {_intent}",
+            f"  \U0001f4ac Chat: {_chat}",
+            f"  \u2699\ufe0f Action: {_action}",
+            f"  \u2753 Unknown: {_unk}",
+            f"  \U0001f504 Followup: {_followup}",
+            f"",
+            f"\U0001f3e0 Life:",
+            f"  \U0001f4c8 Stocks: {_stocks} | \U0001f4b0 Exp: {_exp}",
+            f"  \U0001f477 Work: {_work} | \U0001f3e5 Health: {_lhealth}",
+            f"",
+            f"\U0001f4a1 Saved: {_saved}/{_t} ({_pct}%)",
+            f"",
+            f"\U0001f9e9 Modules:",
+            f"  {_m_ok(TG_INTENT_OK)} Intent  {_m_ok(LIFE_ROUTER_OK)} Life  {_m_ok(SMART_ROUTER_OK)} Router",
+            f"  {_m_ok(BRAIN_AVAILABLE)} Brain  {_m_ok(TG_MORNING_OK)} Morning  {_m_ok(TG_ALERTS_OK)} Alerts",
+            f"  {_m_ok(TG_REMIND_OK)} Remind  {_m_ok(TG_NEWS_OK)} News  {_m_ok(DISCOVERY_OK)} Discovery",
         ]
         if _router_cmd_log:
             _lines.append("")
-            _lines.append("📝 Last 5:")
+            _lines.append("\U0001f4dd Last 5:")
             for _cl in _router_cmd_log[-5:]:
-                _lines.append(f"  {_cl.get('t','')} {_cl.get('route',''):5s} {_cl.get('cmd','')[:25]}")
+                _lines.append(f"  {_cl.get('t','')[-5:]} {_cl.get('route',''):6s} {_cl.get('cmd','')[:22]}")
         return "\n".join(_lines)
-
     if cmd == "/lights":
         try:
             async with httpx.AsyncClient(timeout=10) as c:
@@ -4860,6 +4881,35 @@ async def health_external():
             "entity_health": FEATURE_ENTITY_HEALTH,
             "external_timeout_seconds": EXTERNAL_TIMEOUT,
         }
+    }
+
+
+@app.get("/tg/stats")
+async def tg_stats():
+    """Router stats + module health for monitoring."""
+    _up = int(time.time() - START_TIME)
+    return {
+        "uptime_seconds": _up,
+        "router": dict(_router_stats),
+        "modules": {
+            "intent_router": TG_INTENT_OK,
+            "life_router": LIFE_ROUTER_OK,
+            "smart_router": SMART_ROUTER_OK,
+            "brain": BRAIN_AVAILABLE,
+            "morning_report": TG_MORNING_OK,
+            "alerts": TG_ALERTS_OK,
+            "reminders": TG_REMIND_OK,
+            "news": TG_NEWS_OK,
+            "discovery": DISCOVERY_OK,
+            "session": TG_SESSION_OK,
+            "home": TG_HOME_OK,
+            "ops": TG_OPS_OK,
+            "stocks": LIFE_STOCKS_OK,
+            "expenses": LIFE_EXPENSES_OK,
+            "health": LIFE_HEALTH_OK,
+            "work": LIFE_WORK_OK,
+        },
+        "last_commands": _router_cmd_log[-10:] if _router_cmd_log else [],
     }
 
 @app.post("/health/external/test")
