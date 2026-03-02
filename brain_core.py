@@ -255,29 +255,106 @@ def _get_room_entities_for_query(text):
 # 3. BUILD SYSTEM PROMPT
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-def build_system_prompt():
-    """Build concise system prompt optimized for Opus 4.6."""
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OWNER LIFE CONTEXT
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_SHIFT_EPOCH = datetime(2024, 1, 4)
+_SHIFT_PATTERN = ["A", "A", "B", "B", "C", "C", "D", "D"]
+
+def get_owner_context() -> str:
+    """Build real-time life context for the system prompt.
+    
+    This is the KEY to making Opus a true personal assistant.
+    Instead of hardcoding behaviors, we give Opus the CONTEXT
+    and let it figure out the right behavior itself.
+    
+    Shift pattern AABBCCDD (epoch 2024-01-04):
+      A = morning shift (7:00-15:00)
+      B = afternoon shift (15:00-23:00)  
+      C = night shift (23:00-07:00)
+      D = day off
+    """
+    now = datetime.now()
+    hour = now.hour
+    day_name = ["الاثنين", "الثلاثاء", "الاربعاء", "الخميس", "الجمعة", "السبت", "الاحد"][now.weekday()]
+    days_since = (now - _SHIFT_EPOCH).days
+    shift = _SHIFT_PATTERN[days_since % len(_SHIFT_PATTERN)]
+    
+    # Tomorrow's shift
+    tmrw_shift = _SHIFT_PATTERN[(days_since + 1) % len(_SHIFT_PATTERN)]
+    shift_names = {"A": "صباحي", "B": "عصري", "C": "ليلي", "D": "إجازة"}
+    
+    # Location + status based on shift and hour
+    if shift == "A":
+        if 7 <= hour < 15:
+            location = "بالدوام"
+            status = "مشغول"
+        elif hour < 7:
+            location = "بالبيت"
+            status = "يستعد للدوام"
+        else:
+            location = "بالبيت"
+            status = "راجع من الدوام"
+    elif shift == "B":
+        if 15 <= hour < 23:
+            location = "بالدوام"
+            status = "مشغول"
+        elif hour < 15:
+            location = "بالبيت"
+            status = "فاضي الصبح"
+        else:
+            location = "بالبيت"
+            status = "راجع متأخر"
+    elif shift == "C":
+        if 23 <= hour or hour < 7:
+            location = "بالدوام"
+            status = "مشغول"
+        elif 7 <= hour < 14:
+            location = "بالبيت"
+            status = "نايم (راجع من الليل)"
+        else:
+            location = "بالبيت"
+            status = "يستعد للدوام"
+    else:  # D = off
+        location = "بالبيت"
+        status = "إجازة"
+    
+    return (
+        f"الوقت: {day_name} {now.strftime('%H:%M')} | "
+        f"الشفت: {shift_names[shift]} | "
+        f"باكر: {shift_names[tmrw_shift]} | "
+        f"{location} | {status}"
+    )
+
+
+def build_system_prompt():
+    """Build system prompt: context-rich, behavior-minimal.
+    
+    Philosophy: Don't program behaviors. Give Opus the full context
+    of bu-khalifa's life and let it figure out the right action.
+    Opus is a personal life assistant, not a home automation bot.
+    """
     home = _knowledge.get("home", {})
     room_index = build_room_index()
+    owner_ctx = get_owner_context()
 
-    prompt = f"""Master AI v5 — بيت {home.get('owner', 'بو خليفة')}. عربي كويتي.
+    owner = home.get("owner", "بو خليفة")
+
+    prompt = f"""{owner_ctx}
+
+أنت المساعد الشخصي لـ{owner} — Unit Controller, Shift A, KNPC MAB. عربي كويتي.
+دورك مو بس بيت ذكي — أنت تنفّذ كل شي: منزل/تداول/مواعيد/تخطيط/مشتريات/ايميلات.
+استخدم سياق الشفت والوقت عشان تفهم وينه ومزاجه بدون ما يشرحلك.
 
 Tools: ha_get_state, ha_call_service, ssh_run, respond_text, http_request, memory_store, win_diagnostics, win_powershell, win_winget_install
-
-ملاحظات: الستائر (covers) inverted: open=مسكرة, closed=مفتوحة. entity_id="*" لاكتشاف.
+الستائر inverted: open=مسكرة, closed=مفتوحة. entity_id="*" لاكتشاف.
 
 {room_index}
 
-JSON: {{{{"mode":"single_step|multi_step","thought":"","next_step":{{{{"type":"","args":{{{{}}}}}}}},"task_state":"running|waiting|complete","response":""}}}}
+JSON: {{"mode":"single_step|multi_step","thought":"","next_step":{{"type":"","args":{{}}}},"task_state":"running|waiting|complete","response":""}}
 """
     return prompt
-
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 4. BUILD USER MESSAGE
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 
 def build_user_message(goal, context=None, previous_results=None):
     """Build enriched user message with aliases, targeted entity details, and context."""
