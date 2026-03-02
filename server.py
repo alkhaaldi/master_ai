@@ -4704,9 +4704,14 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 try:
                     _stock_result = await handle_stock_command(text)
                 except Exception:
-                    _stock_result = await portfolio_summary()
+                    try:
+                        _stock_result = await portfolio_summary()
+                    except Exception:
+                        _stock_result = None
                 if _stock_result:
                     await tg_send(chat_id, _stock_result, parse_mode="Markdown")
+                else:
+                    await tg_send(chat_id, "⚠️ ما قدرت أجيب بيانات الأسهم حالياً")
                     if globals().get("BRAIN_LEARN_HOOK"):
                         try:
                             asyncio.create_task(learn_from_result(text, _stock_result, "life_stocks"))
@@ -4755,6 +4760,19 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         logger.info(f"SmartRouter: '{text[:40]}' -> {_msg_class}")
         _router_stats[_msg_class] = _router_stats.get(_msg_class, 0) + 1
         _router_stats["total"] += 1
+
+        # Greeting → template response (zero LLM cost)
+        if _msg_class == "greeting":
+            import random as _rnd
+            _greetings = [
+                "هلا بو خليفة! شلونك؟ 👋",
+                "السلام عليكم! شنو تبي؟ 😊",
+                "أهلين بو خليفة! تأمر 🏠",
+                "يا هلا! خل أساعدك 💪",
+            ]
+            await tg_send(chat_id, _rnd.choice(_greetings))
+            return
+
         if _msg_class == "chat" and BRAIN_AVAILABLE:
             try:
                 _home_ctx = get_home_summary() if DISCOVERY_OK else ""
