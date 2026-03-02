@@ -79,6 +79,13 @@ try:
 except Exception:
     SMART_ROUTER_OK = False
 
+QUICK_QUERY_OK = False
+try:
+    from quick_query import quick_answer
+    QUICK_QUERY_OK = True
+except Exception as _qqe:
+    pass
+
 try:
     from discovery import get_home_summary, sync_entities, get_discovery_stats
     DISCOVERY_OK = True
@@ -4098,6 +4105,10 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             {"text": "📷 الكاميرات", "callback_data": "cmd:cam"},
             {"text": "🧠 العقل", "callback_data": "cmd:brain"},
             {"text": "📊 النظام", "callback_data": "cmd:diag"},
+            {"text": "\U0001f4cb \u0645\u0644\u062e\u0635", "callback_data": "cmd:summary"},
+            {"text": "\U0001f4c5 \u0627\u0644\u0634\u0641\u062a", "callback_data": "cmd:shift"},
+            {"text": "\U0001f4c6 \u0627\u0644\u0623\u0633\u0628\u0648\u0639", "callback_data": "cmd:week"},
+            {"text": "\U0001f4b0 \u0627\u0644\u0623\u0633\u0647\u0645", "callback_data": "cmd:stocks"},
         ]
         await tg_send_inline(chat_id, "🏠 *القائمة الرئيسية*", buttons, columns=2)
         return "__inline_sent__"
@@ -4952,6 +4963,17 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
             await tg_send(chat_id, _rnd.choice(_greetings))
             return
 
+        # Quick Query — try answering without LLM first
+        if QUICK_QUERY_OK:
+            try:
+                _qq = await quick_answer(text)
+                if _qq:
+                    _router_stats["quick_query"] = _router_stats.get("quick_query", 0) + 1
+                    await tg_send(chat_id, _qq)
+                    return
+            except Exception as _qqe:
+                logger.warning(f"quick_query error: {_qqe}")
+        
         if _msg_class == "chat" and BRAIN_AVAILABLE:
             try:
                 _home_ctx = get_home_summary() if DISCOVERY_OK else ""

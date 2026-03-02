@@ -1,5 +1,5 @@
-"""SmartRouter v2.1 — classify messages into greeting/chat/action/unknown.
-Learns from unknown patterns to reduce LLM costs.
+"""SmartRouter v2.2 — classify messages into greeting/chat/action/unknown.
+Persistent learning from unknown patterns. Zero LLM cost for greetings.
 """
 import re
 
@@ -24,48 +24,45 @@ CHAT_KEYWORDS = [
     "عطني", "فسر", "وضح", "عرف", "ترجم", "قارن",
     "اقترح", "نصيحة", "رأيك", "تنصح", "شرايك", "وش تقول",
     "طيب ليش",
-    # English
-    "what", "why", "how", "explain", "when", "where", "who",
-    "tell me", "describe", "compare", "suggest", "recommend",
-    # Stocks
+    # Work/shift
+    "شفت", "شفتي", "دوام", "وردية", "اجازة", "إجازة",
+    "اوفرتايم", "اتجهز", "استعد",
+    "أول", "ثاني", "ليل",
+    "من كم", "الى كم", "الى",
+    # Stocks  
     "محفظ", "اسهم", "سهم", "أسهم", "بورصة", "تداول",
-    # Work
-    "شفت", "دوام", "وردية", "اجازة", "اوفرتايم",
+    "محفظتي", "وش اسهم",
     # Expenses
     "مصروف", "مصاريف", "صرفت", "حساب",
     # Health
     "صحت", "صحة", "وزن", "ضغط", "نوم",
     # Home status
-    "حالة البيت", "كم مكيف",
-    # Conversational context (shift talk, preparation, etc)
-    "اتجهز", "استعد", "رايح", "طالع",
-    "أول", "ثاني", "ليل", "صباح", "عصر",
-    "الساعة", "يبدأ", "ينتهي", "يخلص",
-    "من", "الى", "بالليل", "بالصبح",
+    "حالة البيت", "كم مكيف", "اضواء", "وضع البيت",
+    # Conversational
+    "تمام", "اوكي", "اوكيه", "خلاص", "شكرا", "مشكور",
+    "اي", "ايي", "لا", "اكيد", "تقرير",
+    "وضع", "حالة", "معلومات",
+    # English
+    "what", "why", "how", "explain", "when", "where", "who",
+    "tell me", "help", "info", "about", "thanks", "ok", "yes", "no",
+    "status", "report", "suggest", "recommend",
 ]
 
 # ── Greeting patterns ──
 GREETING_RE = re.compile(
     r"^\s*("
-    r"هلا|السلام عليكم|صباح الخير|مساء الخير|"
-    r"كيف حالك|شلونك|اهلا|مرحبا|"
-    r"hi|hello|hey|good morning|good evening"
-    r")\s*[!\?\.\u061f]*\s*$",
-    re.IGNORECASE
+    r"هلا|اهلين|السلام عليكم|سلام|مرحبا?"
+    r"|صباح الخير|مساء الخير|مسا الخير"
+    r"|hi|hello|hey|yo|good morning|good evening"
+    r")\b",
+    re.IGNORECASE,
 )
-
-GREETING_TEMPLATES = [
-    "هلا بو خليفة! شلونك؟ 👋",
-    "السلام عليكم! شنو تبي؟ 😊",
-    "هلا وغلا! شلون الحال؟ 🌟",
-    "أهلاً! شلونك اليوم؟",
-    "مرحبا بو خليفة 👋 شلونك؟",
-]
 
 
 def classify(text: str) -> str:
-    """Classify message: greeting, chat, action, or unknown."""
     t = text.strip().lower()
+    if not t or t.startswith("/"):
+        return "unknown"
 
     # 1) Greeting check
     if GREETING_RE.match(t):
@@ -81,9 +78,13 @@ def classify(text: str) -> str:
         if kw in t:
             return "chat"
 
-    # 4) Short messages (< 5 words) are likely conversational
+    # 4) Short Arabic messages (< 6 words) are likely conversational
     words = t.split()
-    if len(words) <= 4 and any(c > "\u0600" for c in t):
+    if len(words) <= 5 and any(c > "\u0600" for c in t):
+        return "chat"
+
+    # 5) Short English messages
+    if len(words) <= 4:
         return "chat"
 
     return "unknown"
