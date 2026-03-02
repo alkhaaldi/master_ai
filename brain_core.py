@@ -199,19 +199,25 @@ _DOMAIN_ICONS = {
 
 
 def _build_compact_room_line(room_name, entities):
-    """Build compact one-line summary: 'Room: 💡x5 🌡x1 🪟x2'."""
+    """Build compact one-line summary with key entity IDs for climate/cover."""
     types = {}
+    key_ids = []  # climate + cover entity IDs shown explicitly
     for entry in entities:
-        eid = str(entry).split("=")[0] if "=" in str(entry) else str(entry)
+        eid = str(entry).split("=")[0].strip() if "=" in str(entry) else str(entry).strip()
         domain = eid.split(".")[0] if "." in eid else "?"
         types[domain] = types.get(domain, 0) + 1
+        if domain in ("climate", "cover"):
+            key_ids.append(eid)
     parts = []
     for domain, count in types.items():
         if domain in ("switch", "button", "sensor", "binary_sensor", "number", "select"):
             continue
         icon = _DOMAIN_ICONS.get(domain, "•")
         parts.append(f"{icon}x{count}")
-    return f"{room_name}: {' '.join(parts)}"
+    line = f"{room_name}: {' '.join(parts)}"
+    if key_ids:
+        line += " [" + ",".join(key_ids) + "]"
+    return line
 
 
 
