@@ -3956,21 +3956,44 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/lights":
         try:
             async with httpx.AsyncClient(timeout=10) as c:
-                resp = await c.get(
-                    f"{HA_URL}/api/states",
-                    headers={"Authorization": f"Bearer {HA_TOKEN}"}
-                )
+                resp = await c.get(f"{HA_URL}/api/states", headers={"Authorization": f"Bearer {HA_TOKEN}"})
                 states = resp.json()
-                on_lights = [
-                    s["attributes"].get("friendly_name", s["entity_id"])
-                    for s in states
-                    if s["entity_id"].startswith("light.") and s["state"] == "on"
-                ]
+                on_lights = [(s["entity_id"], s["attributes"].get("friendly_name", s["entity_id"])) for s in states if s["entity_id"].startswith("light.") and s["state"] == "on"]
             if on_lights:
-                return f"\U0001f4a1 ({len(on_lights)}):\n" + "\n".join(f"\u2022 {n}" for n in on_lights)
+                _txt = f"\U0001f4a1 {len(on_lights)} \u0636\u0648\u0621 \u0634\u063a\u0627\u0644:"
+                for eid, name in on_lights[:15]:
+                    _txt += chr(10) + f"  \u2022 {name}"
+                if len(on_lights) > 15:
+                    _txt += chr(10) + f"  ... +{len(on_lights)-15} \u062b\u0627\u0646\u064a"
+                _btns = [
+                    {"text": "\U0001f534 \u0637\u0641\u064a \u0643\u0644 \u0634\u064a", "callback_data": "sc:scene.tfwy_kl_shy"},
+                    {"text": "\U0001f3e0 \u0631\u062c\u0648\u0639", "callback_data": "cmd:home"},
+                ]
+                await tg_send_inline(chat_id, _txt, _btns, columns=2)
+                return "__inline_sent__"
             return "\U0001f4a1 \u0643\u0644 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0645\u0637\u0641\u064a\u0629"
         except Exception as e:
             return f"\u26a0\ufe0f {e}"
+
+    if cmd == "/locks":
+        if QUICK_QUERY_OK:
+            try:
+                from quick_query import _locks_status
+                r = await _locks_status()
+                return r or "\u26a0\ufe0f \u0645\u0627 \u0641\u064a\u0647 \u0623\u0642\u0641\u0627\u0644"
+            except Exception as e:
+                return f"\u26a0\ufe0f {e}"
+        return "\u26a0\ufe0f quick_query not loaded"
+
+    if cmd == "/media":
+        if QUICK_QUERY_OK:
+            try:
+                from quick_query import _media_status
+                r = await _media_status()
+                return r or "\U0001f3b5 \u0645\u0627 \u0641\u064a\u0647 \u0634\u064a \u064a\u0634\u063a\u0644"
+            except Exception as e:
+                return f"\u26a0\ufe0f {e}"
+        return "\u26a0\ufe0f quick_query not loaded"
 
     if cmd == "/temp":
         try:
@@ -4110,6 +4133,9 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             {"text": "\U0001f4c5 \u0627\u0644\u0634\u0641\u062a", "callback_data": "cmd:shift"},
             {"text": "\U0001f4c6 \u0627\u0644\u0623\u0633\u0628\u0648\u0639", "callback_data": "cmd:week"},
             {"text": "\U0001f4b0 \u0627\u0644\u0623\u0633\u0647\u0645", "callback_data": "cmd:stocks"},
+            {"text": "\U0001f510 \u0627\u0644\u0623\u0642\u0641\u0627\u0644", "callback_data": "cmd:locks"},
+            {"text": "\U0001f3b5 \u0627\u0644\u0633\u0645\u0627\u0639\u0627\u062a", "callback_data": "cmd:media"},
+            {"text": "\U0001f534 \u0637\u0641\u064a \u0643\u0644 \u0634\u064a", "callback_data": "sc:scene.tfwy_kl_shy"},
         ]
         await tg_send_inline(chat_id, "🏠 *القائمة الرئيسية*", buttons, columns=2)
         return "__inline_sent__"
