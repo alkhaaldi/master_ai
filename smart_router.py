@@ -1,11 +1,11 @@
-"""SmartRouter v2 — classify messages into chat/action/unknown.
-Enhanced: life domain keywords, greeting detection, better coverage.
+"""SmartRouter v2.1 — classify messages into greeting/chat/action/unknown.
+Learns from unknown patterns to reduce LLM costs.
 """
 import re
 
 # ── Action keywords (device commands) ──
 ACTION_KEYWORDS = [
-    # Arabic
+    # Arabic device control
     "شغل", "طفي", "ولع", "اطفي", "فتح", "سكر", "افتح", "اسكر",
     "حط", "خل", "زيد", "نقص", "ارفع", "وطي", "غير", "بدل",
     "شغله", "طفيه", "ولعه", "فتحه", "سكره",
@@ -16,7 +16,7 @@ ACTION_KEYWORDS = [
     "lock", "unlock", "play", "stop", "pause", "volume",
 ]
 
-# ── Chat keywords (questions, info, greetings) ──
+# ── Chat keywords (questions, info, conversation) ──
 CHAT_KEYWORDS = [
     # Questions
     "ليش", "ليه", "شنو", "شنهو", "اشرح", "معنى", "كيف", "شلون",
@@ -26,74 +26,64 @@ CHAT_KEYWORDS = [
     "طيب ليش",
     # English
     "what", "why", "how", "explain", "when", "where", "who",
-    "tell me", "describe", "compare", "recommend", "opinion",
-    # Greetings
-    "هلا", "السلام", "صباح", "مساء", "كيف حالك", "شخبارك",
-    "hi", "hello", "good morning", "hey",
-    # System
-    "حالة النظام", "status", "version", "كم", "عدد",
-    # Life domains (answered locally, no LLM needed for routing)
+    "tell me", "describe", "compare", "suggest", "recommend",
+    # Stocks
     "محفظ", "اسهم", "سهم", "أسهم", "بورصة", "تداول",
+    # Work
     "شفت", "دوام", "وردية", "اجازة", "اوفرتايم",
+    # Expenses
     "مصروف", "مصاريف", "صرفت", "حساب",
+    # Health
     "صحت", "صحة", "وزن", "ضغط", "نوم",
-    "حالة البيت", "كم مكيف", "اضواء",
+    # Home status
+    "حالة البيت", "كم مكيف",
+    # Conversational context (shift talk, preparation, etc)
+    "اتجهز", "استعد", "رايح", "طالع",
+    "أول", "ثاني", "ليل", "صباح", "عصر",
+    "الساعة", "يبدأ", "ينتهي", "يخلص",
+    "من", "الى", "بالليل", "بالصبح",
 ]
 
-# ── Room keywords ──
-ROOM_KEYWORDS = [
-    "صالة", "معيشة", "مطبخ", "ديوانية", "غرفة", "حمام",
-    "ماستر", "ملابس", "ممر", "استقبال", "ضيوف", "خادمة",
-    "درج", "بلكونة", "مكتب", "سفرة", "خارج", "outdoor",
-    "room", "kitchen", "living", "bedroom", "bathroom",
-]
-
-# ── Greeting patterns (ultra-fast, no LLM) ──
-_GREETING_RE = re.compile(
-    r'^(هلا|السلام عليكم|صباح الخير|مساء الخير|مساء النور|'
-    r'كيف حالك|شخبارك|شلونك|hi|hello|hey|good morning|'
-    r'مرحبا|اهلين|يا هلا|شحالك)$',
+# ── Greeting patterns ──
+GREETING_RE = re.compile(
+    r"^\s*("
+    r"هلا|السلام عليكم|صباح الخير|مساء الخير|"
+    r"كيف حالك|شلونك|اهلا|مرحبا|"
+    r"hi|hello|hey|good morning|good evening"
+    r")\s*[!\?\.\u061f]*\s*$",
     re.IGNORECASE
 )
 
+GREETING_TEMPLATES = [
+    "هلا بو خليفة! شلونك؟ 👋",
+    "السلام عليكم! شنو تبي؟ 😊",
+    "هلا وغلا! شلون الحال؟ 🌟",
+    "أهلاً! شلونك اليوم؟",
+    "مرحبا بو خليفة 👋 شلونك؟",
+]
 
-def classify_message(text: str) -> str:
-    """
-    Classify a message into: 'greeting', 'chat', 'action', or 'unknown'.
-    'greeting' = simple greeting → template response (no LLM)
-    'chat' = info/question → direct LLM (lighter prompt)
-    'action' = device command → iterative_engine
-    'unknown' = ambiguous → iterative_engine (safe default)
-    """
+
+def classify(text: str) -> str:
+    """Classify message: greeting, chat, action, or unknown."""
     t = text.strip().lower()
 
-    # Ultra-short → unknown (followup handled elsewhere)
-    if len(t) < 2:
-        return "unknown"
-
-    # Pure greetings → no LLM needed at all
-    if _GREETING_RE.match(t.strip()):
+    # 1) Greeting check
+    if GREETING_RE.match(t):
         return "greeting"
 
-    # Action keywords (high priority)
+    # 2) Action keywords (device commands)
     for kw in ACTION_KEYWORDS:
         if kw in t:
             return "action"
 
-    # Room + verb pattern
-    has_room = any(r in t for r in ROOM_KEYWORDS)
-    has_verb = any(v in t for v in ["نور", "ضوء", "لايت", "light"])
-    if has_room and has_verb:
-        return "action"
-
-    # Chat/question keywords
+    # 3) Chat keywords (questions, life domains, conversation)
     for kw in CHAT_KEYWORDS:
         if kw in t:
             return "chat"
 
-    # Question mark → chat
-    if "?" in t or "\u061f" in t:
+    # 4) Short messages (< 5 words) are likely conversational
+    words = t.split()
+    if len(words) <= 4 and any(c > "\u0600" for c in t):
         return "chat"
 
-    # Fallback
     return "unknown"
