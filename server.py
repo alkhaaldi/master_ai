@@ -2496,6 +2496,7 @@ async def lifespan(app):
     if TELEGRAM_TOKEN:
         asyncio.create_task(telegram_polling_loop())
         asyncio.create_task(morning_report_scheduler())
+        asyncio.create_task(shift_alert_loop())
         asyncio.create_task(entity_health_check_loop())
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
@@ -4355,7 +4356,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 return f"error: {e}"
         return "life_work not loaded"
 
-    if cmd == "/schedule":
+    if cmd == "/schedule" or cmd == "/week":
         if LIFE_WORK_OK:
             try:
                 from life_work import get_week_schedule
@@ -4931,12 +4932,23 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         # Greeting → template response (zero LLM cost)
         if _msg_class == "greeting":
             import random as _rnd
+            _h = datetime.now().hour
+            _tod = "\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631" if 5 <= _h < 12 else "\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631" if 12 <= _h < 21 else "\u062a\u0633\u0647\u0631 \u0639\u0644\u0649 \u062e\u064a\u0631"
+            _shift_txt = ""
+            if LIFE_WORK_OK:
+                try:
+                    from life_work import get_shift
+                    _sh = get_shift()["shift"]
+                    _shift_txt = f" ({_sh})"
+                except Exception:
+                    pass
             _greetings = [
-                "هلا بو خليفة! شلونك؟ 👋",
-                "السلام عليكم! شنو تبي؟ 😊",
-                "أهلين بو خليفة! تأمر 🏠",
-                "يا هلا! خل أساعدك 💪",
+                f"\u0647\u0644\u0627 \u0628\u0648 \u062e\u0644\u064a\u0641\u0629! {_tod} \U0001f44b{_shift_txt}",
+                f"\u0627\u0644\u0633\u0644\u0627\u0645 \u0639\u0644\u064a\u0643\u0645! \u0634\u0646\u0648 \u062a\u0628\u064a\u061f \U0001f60a{_shift_txt}",
+                f"\u0623\u0647\u0644\u064a\u0646 \u0628\u0648 \u062e\u0644\u064a\u0641\u0629! \u062a\u0623\u0645\u0631 \U0001f3e0{_shift_txt}",
+                f"\u064a\u0627 \u0647\u0644\u0627! \u062e\u0644 \u0623\u0633\u0627\u0639\u062f\u0643 \U0001f4aa{_shift_txt}",
             ]
+            _router_stats["greeting"] = _router_stats.get("greeting", 0) + 1
             await tg_send(chat_id, _rnd.choice(_greetings))
             return
 
@@ -5182,6 +5194,59 @@ async def stats_save_loop():
         await asyncio.sleep(1800)
         _save_router_stats()
         logger.info(f"Stats saved: total={_router_stats.get('total', 0)}")
+
+
+async def shift_alert_loop():
+    """Send shift reminders: 1h before shift start + day-before if shift type changes."""
+    if not LIFE_WORK_OK:
+        logger.info("Shift alert: life_work not loaded, skipping")
+        return
+    logger.info("Shift alert loop started")
+    from life_work import get_shift, SHIFT_EMOJI
+    _last_notified_date = None
+    while True:
+        try:
+            now = datetime.now()
+            today = get_shift(now.date())
+            tomorrow = get_shift(now.date() + timedelta(days=1))
+            shift = today["shift"]
+            t_shift = tomorrow["shift"]
+            _chat = ADMIN_TELEGRAM_ID or "669769765"
+
+            # 1) Pre-shift reminder (1h before)
+            hour = now.hour
+            should_remind = False
+            if shift == "\u0635\u0628\u0627\u062d\u064a" and hour == 6 and now.minute < 15:
+                should_remind = True
+            elif shift == "\u0639\u0635\u0631\u064a" and hour == 14 and now.minute < 15:
+                should_remind = True
+            elif shift == "\u0644\u064a\u0644\u064a" and hour == 22 and now.minute < 15:
+                should_remind = True
+
+            if should_remind and _last_notified_date != f"{now.date()}-pre":
+                msg = f"{SHIFT_EMOJI[shift]} \u062a\u0630\u0643\u064a\u0631: \u0634\u0641\u062a\u0643 \u0627\u0644{shift} \u064a\u0628\u062f\u0623 \u0628\u0639\u062f \u0633\u0627\u0639\u0629\n{today['times']}"
+                try:
+                    await tg_send(_chat, msg)
+                    _last_notified_date = f"{now.date()}-pre"
+                    logger.info(f"Shift pre-alert sent: {shift}")
+                except Exception as e:
+                    logger.error(f"Shift pre-alert error: {e}")
+
+            # 2) Tomorrow shift change alert (at 9 PM)
+            if hour == 21 and now.minute < 15 and shift != t_shift and _last_notified_date != f"{now.date()}-tmrw":
+                msg = f"{SHIFT_EMOJI[t_shift]} \u0628\u0627\u0643\u0631: {t_shift} ({tomorrow['times']})"
+                if t_shift == "\u0625\u062c\u0627\u0632\u0629":
+                    msg += "\n\U0001f389 \u0627\u0633\u062a\u0645\u062a\u0639 \u0628\u0625\u062c\u0627\u0632\u062a\u0643!"
+                try:
+                    await tg_send(_chat, msg)
+                    _last_notified_date = f"{now.date()}-tmrw"
+                    logger.info(f"Shift tomorrow alert sent: {t_shift}")
+                except Exception as e:
+                    logger.error(f"Shift tomorrow alert error: {e}")
+
+        except Exception as e:
+            logger.error(f"Shift alert loop error: {e}")
+        await asyncio.sleep(900)  # check every 15 min
 
 async def entity_health_check_loop():
     """Periodic entity map health check - alerts on dead/new entities via Telegram (Part C)."""
