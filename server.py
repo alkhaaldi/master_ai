@@ -2502,6 +2502,7 @@ async def lifespan(app):
     # Telegram bot polling
     if TELEGRAM_TOKEN:
         asyncio.create_task(telegram_polling_loop())
+        asyncio.create_task(nightly_summary_scheduler())
         asyncio.create_task(morning_report_scheduler())
         asyncio.create_task(shift_alert_loop())
         asyncio.create_task(entity_health_check_loop())
@@ -5326,6 +5327,72 @@ async def entity_health_check_loop():
         
         await asyncio.sleep(6 * 3600)  # every 6 hours
 
+
+
+async def nightly_summary_scheduler():
+    """Send daily summary at 11 PM and reset daily counters."""
+    logger.info("Nightly summary scheduler started")
+    while True:
+        now = datetime.now()
+        target = now.replace(hour=23, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target += timedelta(days=1)
+        wait_secs = (target - now).total_seconds()
+        logger.info(f"Next nightly summary in {wait_secs/3600:.1f} hours")
+        await asyncio.sleep(wait_secs)
+        try:
+            _chat = ADMIN_TELEGRAM_ID or "669769765"
+            _up = int(time.time() - START_TIME)
+            _h, _m = divmod(_up // 60, 60)
+            _t = _router_stats.get("total", 0)
+            _greet = _router_stats.get("greeting", 0)
+            _intent = _router_stats.get("intent", 0)
+            _chat_c = _router_stats.get("chat", 0)
+            _action = _router_stats.get("action", 0)
+            _qq = _router_stats.get("quick_query", 0)
+            _unk = _router_stats.get("unknown", 0)
+            _fup = _router_stats.get("followup", 0)
+            _ls = _router_stats.get("life_stocks", 0) + _router_stats.get("life_expenses", 0) + _router_stats.get("life_health", 0) + _router_stats.get("life_work", 0)
+            _saved = _greet + _intent + _ls + _qq
+            _pct = round(_saved / _t * 100) if _t > 0 else 0
+            _errs = 0
+            try:
+                with open("server.log", "r") as _lf:
+                    _errs = sum(1 for l in _lf if "ERROR" in l)
+            except Exception:
+                pass
+            # Shift tomorrow
+            _tmrw = ""
+            if LIFE_WORK_OK:
+                try:
+                    from life_work import get_shift, SHIFT_EMOJI
+                    _ts = get_shift(datetime.now().date() + timedelta(days=1))
+                    _tmrw = f"\n\n{SHIFT_EMOJI[_ts['shift']]} \u0628\u0627\u0643\u0631: {_ts['shift']} ({_ts['times']})"
+                except Exception:
+                    pass
+            _msg = chr(10).join([
+                "\U0001f319 \u0645\u0644\u062e\u0635 \u0627\u0644\u064a\u0648\u0645:",
+                f"",
+                f"\u23f1 Uptime: {_h}h {_m}m",
+                f"\U0001f4e8 \u0631\u0633\u0627\u0626\u0644: {_t}",
+                f"  \U0001f44b \u062a\u062d\u064a\u0629: {_greet} | \U0001f3af Intent: {_intent}",
+                f"  \U0001f4ac Chat: {_chat_c} | \u26a1 Quick: {_qq}",
+                f"  \U0001f504 Followup: {_fup} | \u2753 Unknown: {_unk}",
+                f"",
+                f"\U0001f4b0 LLM \u0648\u0641\u0631\u0646\u0627: {_saved}/{_t} ({_pct}%)",
+                f"\u26a0\ufe0f Errors: {_errs}",
+            ]) + _tmrw
+            await tg_send(_chat, _msg)
+            logger.info(f"Nightly summary sent: {_t} msgs, {_pct}% saved")
+            # Save stats and reset daily counters
+            _save_router_stats()
+            for k in list(_router_stats.keys()):
+                if k not in ("started_at", "_sessions", "_prev_total"):
+                    _router_stats[k] = 0
+            _router_stats["started_at"] = datetime.now().isoformat()
+            logger.info("Daily stats reset")
+        except Exception as e:
+            logger.error(f"Nightly summary error: {e}")
 
 async def morning_report_scheduler():
     # Send morning report daily at 5:30 AM Kuwait time
