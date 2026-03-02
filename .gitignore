@@ -1,80 +1,69 @@
-# Environment & secrets
-.env
 
-# Python cache
-__pycache__/
-*.pyc
-
-# Runtime data
-data/
-audit/
-*.log
-*.db
-
-# Backups
-*.bak*
-*.pre_*
-*.save
-*.tmp
-
-# Old patches & fixes (cleanup)
-fix_*.py
-patch_*.py
-safe_*_patch.py
-apply_patch.py
-
-# Old install scripts
-install_*.py
-install_*.sh
-
-# Test files
-rtest*.py
-
-# Migration scripts
-migrate_*.py
-add_stats_*.py
 add_entities.py
-
-# Build/scan helpers
-build_map.py
-build_rooms.py
-scan_entities.py
-
-# Old deployment artifacts
-v5c_*
-v5_chunk_*
-recv_file.py
-upload_server.py
-*.deb
-
-# Old service files (managed by systemd directly)
-master-ai-telegram.service
-
-# Backup copies
-server.py.v4_final
-server.py.pre_*
+add_stats_*.py
 analyze_v4.py
+apply_patch.py
 apply_phase1.py
-cleanup_git.py
-memory_patch.py
-server.py.backup_v4
-setup_cron.py
-test_upload.txt
-v5_assembler.py
-
-# Deployment scripts (local ops only)
-update.sh
-deploy_tag.sh
-entities.json
-phase4_split.py
-server_v531_backup.py
-tunnel_url.txt
-daily_stats.py
-ruijie_integration.py
-PROJECT_STATE.md
-*.md.tmp
-server.py.step*
-server.py.bak*
-
+audit/
+# Backup copies
 # Backup data (on-device only)
 backups/
+# Backups
+*.bak*
+build_map.py
+build_rooms.py
+# Build/scan helpers
+cleanup_git.py
+daily_stats.py
+data/
+*.db
+*.deb
+# Deployment scripts (local ops only)
+deploy_tag.sh
+_deprecated/
+entities.json
+.env
+# Environment & secrets
+fix_*.py
+install_*.py
+install_*.sh
+*.log
+master-ai-telegram.service
+*.md.tmp
+memory_patch.py
+migrate_*.py
+# Migration scripts
+# Old deployment artifacts
+# Old install scripts
+# Old patches & fixes (cleanup)
+# Old service files (managed by systemd directly)
+patch_*.py
+phase4_split.py
+*.pre_*
+PROJECT_STATE.md
+*.pyc
+__pycache__/
+# Python cache
+recv_file.py
+rtest*.py
+ruijie_integration.py
+# Runtime data
+safe_*_patch.py
+*.save
+scan_entities.py
+server.py.backup_v4
+server.py.bak*
+server.py.pre_*
+server.py.step*
+server.py.v4_final
+server_v531_backup.py
+setup_cron.py
+# Test files
+test_upload.txt
+*.tmp
+tunnel_url.txt
+update.sh
+upload_server.py
+v5_assembler.py
+v5c_*
+v5_chunk_*
