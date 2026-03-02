@@ -75,6 +75,15 @@ async def quick_answer(text: str):
         if room_ar in t:
             return await _room_status(room_ar, room_keys)
 
+
+    # 6) Locks status
+    if re.search(r"أقفال|قفل|أبواب|باب", t):
+        return await _locks_status()
+
+    # 7) Media players
+    if re.search(r"سماعات|ميديا|تلفزيون|موسيقى|قرآن|يشغل", t):
+        return await _media_status()
+
     return None
 
 
@@ -179,4 +188,38 @@ async def _room_status(room_ar, room_keys):
             state_ar = "مفتوح" if s["state"] == "open" else "مسكر"
             lines.append(f"U0001f3ea {name}: {state_ar}")
 
+    return chr(10).join(lines)
+
+
+async def _locks_status():
+    states = await _ha_states()
+    if not states: return None
+    locks = [s for s in states if s["entity_id"].startswith("lock.")]
+    if not locks: return "🔐 ما فيه أقفال"
+    locked = sum(1 for s in locks if s["state"] == "locked")
+    lines = [f"🔐 الأقفال: {locked}/{len(locks)} مقفل"]
+    for s in locks:
+        name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
+        icon = "🔒" if s["state"] == "locked" else "🔓"
+        state_ar = "مقفل" if s["state"] == "locked" else "مفتوح"
+        lines.append(f"  {icon} {name}: {state_ar}")
+    return chr(10).join(lines)
+
+
+async def _media_status():
+    states = await _ha_states()
+    if not states: return None
+    media = [s for s in states if s["entity_id"].startswith("media_player.") and s["state"] not in ("unavailable", "unknown")]
+    playing = [s for s in media if s["state"] == "playing"]
+    if not playing:
+        return "🎵 ما فيه شي يشغل حالياً"
+    lines = [f"🎵 {len(playing)} جهاز يشغل:"]
+    for s in playing:
+        name = s.get("attributes", {}).get("friendly_name", "")
+        title = s.get("attributes", {}).get("media_title", "")
+        artist = s.get("attributes", {}).get("media_artist", "")
+        vol = s.get("attributes", {}).get("volume_level")
+        vol_pct = f" ({int(vol*100)}%)" if vol else ""
+        desc = title or artist or ""
+        lines.append(f"  🔊 {name}: {desc}{vol_pct}")
     return chr(10).join(lines)
