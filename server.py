@@ -62,7 +62,7 @@ except Exception:
 try:
     from tg_session import tg_session_get, tg_session_upsert, tg_session_append_context, tg_session_reset, detect_followup
     from tg_session_resolver import resolve_followup_action
-    logger.info("tg_session_resolver loaded successfully")
+    pass  # logger not ready yet
     TG_SESSION_OK = True
 except Exception:
     TG_SESSION_OK = False
@@ -176,7 +176,7 @@ class CircuitBreaker:
             self.state = "open"
             self.open_until = time.time() + self.cooldown
             self.total_trips += 1
-            logger.warning(f"Circuit {self.name} OPEN until {self.open_until:.0f} ({self.cooldown}s cooldown)")
+            pass  # logger not ready yet
 
     def is_available(self):
         if not FEATURE_CIRCUIT_BREAKERS:
@@ -185,7 +185,7 @@ class CircuitBreaker:
             return True
         if self.state == "open" and time.time() >= self.open_until:
             self.state = "half_open"
-            logger.info(f"Circuit {self.name} HALF-OPEN, testing...")
+            pass  # logger not ready yet
             return True
         return self.state == "half_open"
 
@@ -355,7 +355,7 @@ def load_policy() -> dict:
             with open(POLICY_FILE, "r") as f:
                 return json.load(f)
     except Exception as e:
-        logger.error(f"Policy load failed: {e}")
+        pass  # logger not ready yet
     return DEFAULT_POLICY.copy()
 
 def save_policy(policy: dict):
@@ -364,7 +364,7 @@ def save_policy(policy: dict):
         with open(POLICY_FILE, "w") as f:
             json.dump(policy, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Policy save failed: {e}")
+        pass  # logger not ready yet
 
 
 START_TIME = time.time()
