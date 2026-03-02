@@ -13,6 +13,8 @@ import logging
 logger = logging.getLogger("life_router")
 
 STOCK_WORDS = [
+    # === Added: common Arabic stock queries ===
+    "اسهمي", "أسهمي", "محفظتي", "المحفظة", "سهمي", "أسهم", "كلينينج", "سنرجي", "انوفست", "سعر", "شراء",
     "شريت", "اشتريت", "بعت", "سهم", "أسهم", "اسهم", "محفظة", "بورصة",
     "ستوب", "target", "stop loss",
     "CLEANING", "SENERGY", "INOVEST", "ZAIN", "KFH", "NBK",
@@ -86,8 +88,9 @@ def detect_life_domain(text: str) -> str:
     }
     best = max(scores, key=scores.get)
 
-    # Require score >= 2 to avoid false positives
-    if scores[best] >= 2:
+    # Domain-specific thresholds (stocks=1, others=2)
+    _thresholds = {"stocks": 1, "expenses": 2, "work": 2, "health": 2}
+    if scores[best] >= _thresholds.get(best, 2):
         logger.info(f"ROUTE life: '{text_lower[:40]}' -> {best} (score={scores[best]})")
         return best
 

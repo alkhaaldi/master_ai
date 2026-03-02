@@ -92,6 +92,21 @@ try:
 except Exception:
     TG_SUGGEST_OK = False
 
+try:
+    from life_router import detect_life_domain
+    LIFE_ROUTER_OK = True
+    logger.info("life_router loaded")
+except Exception:
+    LIFE_ROUTER_OK = False
+
+try:
+    from life_stocks import handle_stock_command, portfolio_summary
+    LIFE_STOCKS_OK = True
+    logger.info("life_stocks loaded")
+except Exception:
+    LIFE_STOCKS_OK = False
+
+
 # Suggestion rate limit: {user_id: last_suggest_timestamp}
 _suggest_cooldown = {}
 _SUGGEST_COOLDOWN_SEC = 30
@@ -110,7 +125,7 @@ def _log_cmd(text, route, source="", entity=""):
     if len(_router_cmd_log) > _ROUTER_CMD_MAX:
         _router_cmd_log.pop(0)
 
-_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "template": 0, "template_errors": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
+_router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "life_stocks": 0, "life_expenses": 0, "life_health": 0, "life_work": 0, "template": 0, "template_errors": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
 _tg_disambig_context = {}  # Step 9: {chat_id: original_text} for alias learning
 
 # ── Step 10: Circuit Breaker System ──
@@ -4599,6 +4614,31 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
         except Exception:
             pass
     memory_add_short_term("user", f"[Telegram/{user_name}] {text}")
+
+
+    # -- Life Domain Router -- route stocks/expenses/health/work BEFORE LLM
+    if LIFE_ROUTER_OK:
+        try:
+            _life_domain = detect_life_domain(text)
+            if _life_domain == "stocks" and LIFE_STOCKS_OK:
+                logger.info(f"Life router: stocks -> handle_stock_command")
+                _router_stats["life_stocks"] = _router_stats.get("life_stocks", 0) + 1
+                _router_stats["total"] += 1
+                _log_cmd(text, "life_stocks", source="life_router")
+                try:
+                    _stock_result = await handle_stock_command(text)
+                except Exception:
+                    _stock_result = await portfolio_summary()
+                if _stock_result:
+                    await tg_send(chat_id, _stock_result, parse_mode="Markdown")
+                    if BRAIN_LEARN_HOOK:
+                        try:
+                            asyncio.create_task(learn_from_result(text, _stock_result, "life_stocks"))
+                        except Exception:
+                            pass
+                    return
+        except Exception as e:
+            logger.error(f"Life router error: {e}")
 
     # ── SmartRouter: fast chat path for questions/greetings ──
     if SMART_ROUTER_OK:
