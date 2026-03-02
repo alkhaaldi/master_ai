@@ -4190,6 +4190,60 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return cancel_reminder(int(parts[1]), chat_id)
         return "الاستخدام: /cancel <رقم>"
 
+    if cmd == "/shift" or cmd.startswith("/shift "):
+        if LIFE_WORK_OK:
+            try:
+                args = text.strip().split(None, 1)
+                if len(args) > 1:
+                    _wr = handle_work_command(args[1])
+                else:
+                    _wr = get_shift_display()
+                return _wr or "no data"
+            except Exception as e:
+                return f"error: {e}"
+        return "life_work not loaded"
+
+    if cmd == "/schedule":
+        if LIFE_WORK_OK:
+            try:
+                from life_work import get_week_schedule
+                return get_week_schedule() or "no schedule"
+            except Exception as e:
+                return f"error: {e}"
+        return "life_work not loaded"
+
+    if cmd.startswith("/expense") and not cmd.startswith("/expenses"):
+        if LIFE_EXPENSES_OK:
+            try:
+                args = text.strip().split(None, 1)
+                if len(args) > 1:
+                    return handle_expense_command(args[1]) or "usage: /expense 5 food"
+                return "usage: /expense <amount> <desc>"
+            except Exception as e:
+                return f"error: {e}"
+        return "life_expenses not loaded"
+
+    if cmd == "/expenses":
+        if LIFE_EXPENSES_OK:
+            try:
+                from life_expenses import get_expenses
+                return get_expenses("today") or "no expenses today"
+            except Exception as e:
+                return f"error: {e}"
+        return "life_expenses not loaded"
+
+    if cmd.startswith("/health"):
+        if LIFE_HEALTH_OK:
+            try:
+                args = text.strip().split(None, 1)
+                if len(args) > 1:
+                    return handle_health_command(args[1]) or "not understood"
+                from life_health import health_summary
+                return health_summary() or "no health data"
+            except Exception as e:
+                return f"error: {e}"
+        return "life_health not loaded"
+
     if cmd == "/help":
         return "U0001f3e0 Master AI\n\n/status - u0627u0644u0646u0638u0627u0645\n/lights - u0627u0644u0623u0636u0648u0627u0621\n/temp - u0627u0644u0645u0643u064au0641u0627u062a\n/rooms - u0627u0644u063au0631u0641\n/scenes - u0627u0644u0645u0634u0627u0647u062f\n/report - u062au0642u0631u064au0631\n/remind - u062au0630u0643u064au0631\n/news - u0623u062eu0628u0627u0631\n/stocks - u0627u0644u0645u062du0641u0638u0629\n/price X - u0633u0639u0631 u0633u0647u0645\n/brain - u0627u0644u0639u0642u0644\n/diag - u062au0634u062eu064au0635\n\nu0623u0631u0633u0644 u0623u064a u0631u0633u0627u0644u0629 U0001f44d"
 
