@@ -3842,7 +3842,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         h, m = divmod(uptime // 60, 60)
         _mc = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, TG_NEWS_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
         _t = _router_stats.get("total", 0)
-        return chr(10).join([f'✅ Master AI v{VERSION}', f'⏱ Uptime: {h}h {m}m', f'🔌 Plugins: {len(PLUGIN_REGISTRY._plugins)} | 🧩 {_mc}/16', f'📨 Msgs: {_t}'])
+        return chr(10).join([f'✅ Master AI v{VERSION}', f'⭐ Uptime: {h}h {m}m', f'🔧 Plugins: {len(PLUGIN_REGISTRY._plugins)} | ✅ {_mc}/16', f'💬 Msgs: {_t}'])
 
     if cmd == "/stats":
         _up = int(time.time() - START_TIME)

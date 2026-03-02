@@ -14,7 +14,7 @@ def init_tasks_db():
     os.makedirs(os.path.dirname(TASKS_DB), exist_ok=True)
     conn = sqlite3.connect(TASKS_DB)
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
+        CREATE TABLE IF NOT EXISTS user_tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL DEFAULT 'personal',
             title TEXT NOT NULL,
@@ -36,7 +36,7 @@ def init_tasks_db():
             action TEXT NOT NULL,
             details TEXT DEFAULT '',
             timestamp TEXT NOT NULL,
-            FOREIGN KEY (task_id) REFERENCES tasks(id)
+            FOREIGN KEY (task_id) REFERENCES user_tasks(id)
         )
     """)
     conn.commit()
@@ -47,7 +47,7 @@ async def add_task(category, title, description="", priority="medium", due_date=
     now = datetime.utcnow().isoformat() + "Z"
     async with aiosqlite.connect(TASKS_DB) as db:
         cursor = await db.execute(
-            """INSERT INTO tasks (category, title, description, priority, status, due_date, tags, created_at, updated_at)
+            """INSERT INTO user_tasks (category, title, description, priority, status, due_date, tags, created_at, updated_at)
                VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)""",
             (category, title, description, priority, due_date, tags, now, now)
         )
@@ -62,7 +62,7 @@ async def add_task(category, title, description="", priority="medium", due_date=
 async def get_tasks(category=None, status=None, priority=None, limit=50):
     async with aiosqlite.connect(TASKS_DB) as db:
         db.row_factory = aiosqlite.Row
-        query = "SELECT * FROM tasks WHERE 1=1"
+        query = "SELECT * FROM user_tasks WHERE 1=1"
         params = []
         if category:
             query += " AND category = ?"
@@ -82,7 +82,7 @@ async def get_tasks(category=None, status=None, priority=None, limit=50):
 async def get_task(task_id):
     async with aiosqlite.connect(TASKS_DB) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+        cursor = await db.execute("SELECT * FROM user_tasks WHERE id = ?", (task_id,))
         row = await cursor.fetchone()
         if row:
             # Get log
@@ -98,7 +98,7 @@ async def update_task(task_id, **kwargs):
     now = datetime.utcnow().isoformat() + "Z"
     async with aiosqlite.connect(TASKS_DB) as db:
         # Check task exists
-        cursor = await db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+        cursor = await db.execute("SELECT * FROM user_tasks WHERE id = ?", (task_id,))
         existing = await cursor.fetchone()
         if not existing:
             return None
@@ -125,7 +125,7 @@ async def update_task(task_id, **kwargs):
         params.append(now)
         params.append(task_id)
 
-        await db.execute(f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?", params)
+        await db.execute(f"UPDATE user_tasks SET {', '.join(updates)} WHERE id = ?", params)
         await db.execute(
             "INSERT INTO task_log (task_id, action, details, timestamp) VALUES (?, 'updated', ?, ?)",
             (task_id, "; ".join(changes), now)
@@ -136,13 +136,13 @@ async def update_task(task_id, **kwargs):
 async def add_note(task_id, note):
     now = datetime.utcnow().isoformat() + "Z"
     async with aiosqlite.connect(TASKS_DB) as db:
-        cursor = await db.execute("SELECT notes FROM tasks WHERE id = ?", (task_id,))
+        cursor = await db.execute("SELECT notes FROM user_tasks WHERE id = ?", (task_id,))
         row = await cursor.fetchone()
         if not row:
             return None
         existing_notes = row[0] or ""
         new_notes = f"{existing_notes}\n[{now}] {note}".strip()
-        await db.execute("UPDATE tasks SET notes = ?, updated_at = ? WHERE id = ?", (new_notes, now, task_id))
+        await db.execute("UPDATE user_tasks SET notes = ?, updated_at = ? WHERE id = ?", (new_notes, now, task_id))
         await db.execute(
             "INSERT INTO task_log (task_id, action, details, timestamp) VALUES (?, 'note_added', ?, ?)",
             (task_id, note, now)
@@ -152,11 +152,11 @@ async def add_note(task_id, note):
 
 async def delete_task(task_id):
     async with aiosqlite.connect(TASKS_DB) as db:
-        cursor = await db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,))
+        cursor = await db.execute("SELECT id FROM user_tasks WHERE id = ?", (task_id,))
         if not await cursor.fetchone():
             return None
         await db.execute("DELETE FROM task_log WHERE task_id = ?", (task_id,))
-        await db.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+        await db.execute("DELETE FROM user_tasks WHERE id = ?", (task_id,))
         await db.commit()
         return {"deleted": True}
 
@@ -167,11 +167,11 @@ async def get_summary():
         by_status = {r[0]: r[1] async for r in cursor}
 
         # By category
-        cursor = await db.execute("SELECT category, COUNT(*) FROM tasks WHERE status != 'done' AND status != 'cancelled' GROUP BY category")
+        cursor = await db.execute("SELECT category, COUNT(*) FROM user_tasks WHERE status != 'done' AND status != 'cancelled' GROUP BY category")
         by_category = {r[0]: r[1] async for r in cursor}
 
         # By priority (active only)
-        cursor = await db.execute("SELECT priority, COUNT(*) FROM tasks WHERE status != 'done' AND status != 'cancelled' GROUP BY priority")
+        cursor = await db.execute("SELECT priority, COUNT(*) FROM user_tasks WHERE status != 'done' AND status != 'cancelled' GROUP BY priority")
         by_priority = {r[0]: r[1] async for r in cursor}
 
         # Total
@@ -179,11 +179,11 @@ async def get_summary():
         total = (await cursor.fetchone())[0]
 
         # Active
-        cursor = await db.execute("SELECT COUNT(*) FROM tasks WHERE status IN ('pending', 'in_progress')")
+        cursor = await db.execute("SELECT COUNT(*) FROM user_tasks WHERE status IN ('pending', 'in_progress')")
         active = (await cursor.fetchone())[0]
 
         # Critical/High pending
-        cursor = await db.execute("SELECT id, category, title, priority FROM tasks WHERE priority IN ('critical', 'high') AND status IN ('pending', 'in_progress') ORDER BY CASE priority WHEN 'critical' THEN 0 ELSE 1 END")
+        cursor = await db.execute("SELECT id, category, title, priority FROM user_tasks WHERE priority IN ('critical', 'high') AND status IN ('pending', 'in_progress') ORDER BY CASE priority WHEN 'critical' THEN 0 ELSE 1 END")
         urgent = [{"id": r[0], "category": r[1], "title": r[2], "priority": r[3]} async for r in cursor]
 
         return {
