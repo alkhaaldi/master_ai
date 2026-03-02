@@ -23,14 +23,22 @@ def get_shift(target_date=None):
     days_since = (target_date - EPOCH).days
     idx = days_since % 8
     shift = SHIFT_PATTERN[idx]
-    return {"date": target_date.isoformat(), "shift": shift, "emoji": SHIFT_EMOJI[shift], "times": SHIFT_TIMES[shift], "day_name": _arabic_day(target_date)}
+    return {"date": target_date.isoformat(), "shift": shift, "emoji": SHIFT_EMOJI[shift], "times": SHIFT_TIMES[shift], "day_name": _arabic_day(target_date), "_target": target_date}
 
 def _arabic_day(d):
     return ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"][d.weekday()]
 
 def get_shift_display(target_date=None):
     s = get_shift(target_date)
-    return f"{s['emoji']} {s['day_name']} {s['date']}\n🏭 شفت {s['shift']} ({s['times']})"
+    # Determine 1st or 2nd day of shift pair
+    days_since = (s["_target"] - EPOCH).days
+    pair_pos = days_since % 2  # 0=first, 1=second
+    order = "أول" if pair_pos == 0 else "ثاني"
+    if s["shift"] == "إجازة":
+        order_label = ""
+    else:
+        order_label = f" ({order} {s['shift']})"
+    return f"{s['emoji']} {s['day_name']} {s['date']}{order_label}\n🏭 شفت {s['shift']} ({s['times']})"
 
 def get_week_schedule(start=None):
     if not start: start = date.today()
@@ -98,12 +106,45 @@ def get_leave_balance():
     return msg
 
 def parse_work_command(text):
+    """Parse Arabic work commands with date extraction."""
+    import re
     text = text.strip()
-    if any(w in text for w in ["شفتي", "شفت", "دوام"]):
-        if "باكر" in text or "بكرة" in text:
+    MONTHS = {"يناير": 1, "فبراير": 2, "مارس": 3, "ابريل": 4, "مايو": 5, "يونيو": 6,
+             "يوليو": 7, "اغسطس": 8, "سبتمبر": 9, "اكتوبر": 10, "نوفمبر": 11, "ديسمبر": 12}
+
+    # Check for "first/second" questions
+    if any(w in text for w in ["اول", "أول", "ثاني", "ثانى"]):
+        return {"action": "shift", "date": date.today()}  # will show 1st/2nd in display
+
+    if any(w in text for w in ["شفتي", "شفت", "دوام", "دوامي"]):
+        # Tomorrow/yesterday
+        if "باكر" in text or "بكرة" in text or "بكره" in text:
             return {"action": "shift", "date": date.today() + timedelta(days=1)}
-        if "أمس" in text:
+        if "أمس" in text or "امس" in text:
             return {"action": "shift", "date": date.today() - timedelta(days=1)}
+
+        # Date: "9 مارس" or "تاريخ 9 مارس" or "9/3"
+        m = re.search(r"(\d{1,2})\s*[/\-]\s*(\d{1,2})", text)
+        if m:
+            day, month = int(m.group(1)), int(m.group(2))
+            year = date.today().year
+            try:
+                return {"action": "shift", "date": date(year, month, day)}
+            except ValueError:
+                pass
+
+        for month_name, month_num in MONTHS.items():
+            if month_name in text:
+                dm = re.search(r"(\d{1,2})", text)
+                if dm:
+                    day = int(dm.group(1))
+                    year = date.today().year
+                    try:
+                        return {"action": "shift", "date": date(year, month_num, day)}
+                    except ValueError:
+                        pass
+
+        # Day names
         day_map = {"الأحد": 6, "الاثنين": 0, "الثلاثاء": 1, "الأربعاء": 2, "الخميس": 3, "الجمعة": 4, "السبت": 5}
         for day_name, weekday in day_map.items():
             if day_name in text:
@@ -111,17 +152,20 @@ def parse_work_command(text):
                 days_ahead = weekday - today.weekday()
                 if days_ahead <= 0: days_ahead += 7
                 return {"action": "shift", "date": today + timedelta(days=days_ahead)}
+
         return {"action": "shift", "date": date.today()}
+
     if "جدول" in text and ("أسبوع" in text or "الاسبوع" in text): return {"action": "week"}
     if "شفتات" in text and "شهر" in text: return {"action": "month"}
-    m = re.search(r'(?:سجل\s+)?(?:OT|اوتي|أوفرتايم|overtime)\s*([\d.]+)', text, re.IGNORECASE)
-    if m: return {"action": "ot", "hours": float(m.group(1))}
-    if any(w in text for w in ["إجازة", "اجازة", "leave"]):
-        if any(w in text for w in ["مرضية", "sick"]): return {"action": "leave", "type": "sick"}
-        if any(w in text for w in ["باقي", "رصيد", "كم"]): return {"action": "leave_balance"}
+    if "اوفرتايم" in text or "overtime" in text:
+        m = re.search(r"(\d+)", text)
+        if m: return {"action": "ot", "hours": float(m.group(1))}
+        return {"action": "ot_summary"}
+    if "اجازة" in text or "اجازتي" in text:
+        if "رصيد" in text or "باقي" in text: return {"action": "leave_balance"}
         return {"action": "leave", "type": "annual"}
-    if "OT" in text.upper() and any(w in text for w in ["كم", "مجموع"]): return {"action": "ot_summary"}
-    return {"action": "unknown"}
+    return {"action": "shift", "date": date.today()}
+
 
 def handle_work_command(text):
     cmd = parse_work_command(text)
