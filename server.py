@@ -155,6 +155,11 @@ def _log_cmd(text, route, source="", entity=""):
         _router_cmd_log.pop(0)
 
 _router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "life_stocks": 0, "life_expenses": 0, "life_health": 0, "life_work": 0, "template": 0, "template_errors": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
+
+# LLM response cache (simple exact-match, TTL 30min, max 50)
+_llm_cache = {}  # key=text_hash -> {"resp": str, "ts": float}
+_LLM_CACHE_TTL = 1800  # 30 minutes
+_LLM_CACHE_MAX = 50
 _router_cmd_log = []
 import pathlib as _pl; _STATS_FILE = _pl.Path(__file__).parent / "data" / "router_stats.json"
 
@@ -4077,7 +4082,9 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             _unk = _router_stats.get("unknown", 0)
             _fup = _router_stats.get("followup", 0)
             _ls = _router_stats.get("life_stocks", 0) + _router_stats.get("life_expenses", 0) + _router_stats.get("life_health", 0) + _router_stats.get("life_work", 0)
-            _saved = _greet + _intent + _ls
+            _qq = _router_stats.get("quick_query", 0)
+            _cache = _router_stats.get("cache_hit", 0)
+            _saved = _greet + _intent + _ls + _qq + _cache
             _pct = round(_saved / _t * 100) if _t > 0 else 0
             # HA status
             _ha_ok = False
@@ -5009,6 +5016,15 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                     _brain_prompt = build_system_prompt()
                 except Exception:
                     _brain_prompt = ""
+                # LLM Cache check
+                import hashlib as _hl
+                _cache_key = _hl.md5(text.strip().lower().encode()).hexdigest()
+                _cached = _llm_cache.get(_cache_key)
+                if _cached and (time.time() - _cached["ts"]) < _LLM_CACHE_TTL:
+                    _router_stats["cache_hit"] = _router_stats.get("cache_hit", 0) + 1
+                    logger.info(f"LLM cache hit: {text[:30]}")
+                    await tg_send(chat_id, _cached["resp"])
+                    return
                 _chat_sys = build_chat_system_prompt(_brain_prompt, _home_ctx, user_msg=text)
                 # Fetch live HA states for status questions
                 _live_ctx = await _fetch_live_ha_context(text)
@@ -5016,6 +5032,11 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 _chat_resp = await llm_call(_chat_sys, _enriched_text, max_tokens=1500)
                 # Strip any <action>...</action> XML that LLM might emit
                 _chat_resp = re.sub(r'<action>.*?</action>', '', _chat_resp, flags=re.DOTALL).strip()
+                # Store in LLM cache
+                if len(_llm_cache) >= _LLM_CACHE_MAX:
+                    _oldest = min(_llm_cache, key=lambda k: _llm_cache[k]["ts"])
+                    del _llm_cache[_oldest]
+                _llm_cache[_cache_key] = {"resp": _chat_resp, "ts": time.time()}
                 memory_add_short_term("assistant", _chat_resp)
                 await audit_log(task=text, actions=None, results=None, status="chat_routed", duration=0, request_id=trace.request_id, task_id=task_id)
                 await tg_send_with_feedback(chat_id, _chat_resp, request_id=trace.request_id)
