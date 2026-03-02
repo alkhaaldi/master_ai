@@ -5175,6 +5175,14 @@ async def entity_map_arabize(apply: bool = False):
 
 
 
+
+async def stats_save_loop():
+    """Save router stats every 30 minutes."""
+    while True:
+        await asyncio.sleep(1800)
+        _save_router_stats()
+        logger.info(f"Stats saved: total={_router_stats.get('total', 0)}")
+
 async def entity_health_check_loop():
     """Periodic entity map health check - alerts on dead/new entities via Telegram (Part C)."""
     if not FEATURE_ENTITY_HEALTH:
