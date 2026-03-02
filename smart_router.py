@@ -87,3 +87,7 @@ def classify(text: str) -> str:
         return "chat"
 
     return "unknown"
+
+
+# Backward-compatible alias
+classify_message = classify
