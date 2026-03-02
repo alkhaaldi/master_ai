@@ -161,12 +161,22 @@ _cb_llm = CircuitBreaker("llm", failure_threshold=3, cooldown_seconds=60)
 _cb_tg = CircuitBreaker("telegram", failure_threshold=3, cooldown_seconds=60)
 
 
-def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "") -> str:
-    """Concise chat prompt for Opus."""
-    base = "Master AI — مساعد بيت بو خليفة. رد بعربي كويتي مختصر. الستائر inverted: open=مسكرة. نص فقط بدون JSON/XML.\n"
+def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "", user_msg: str = "") -> str:
+    """Chat prompt enriched with memory + owner context."""
+    from brain_core import get_owner_context, get_relevant_memories
+    owner_ctx = get_owner_context()
+    parts = [owner_ctx]
+    parts.append("Master AI — المساعد الشخصي لبو خليفة. عربي كويتي مختصر.")
+    parts.append("دورك: منزل ذكي + تداول + مواعيد + تخطيط + كل شي يطلبه.")
+    parts.append("الستائر inverted: open=مسكرة. نص فقط بدون JSON/XML.")
     if home_ctx:
-        base += "\n" + home_ctx + "\n"
-    return base
+        parts.append(home_ctx)
+    if user_msg:
+        mem = get_relevant_memories(user_msg)
+        if mem:
+            parts.append("--- ذاكرة ---")
+            parts.append(mem)
+    return "\n".join(parts)
 
 async def _fetch_live_ha_context(user_msg: str) -> str:
     """Fetch relevant HA entity states when user asks about rooms/devices/house status."""
@@ -4446,7 +4456,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                     _brain_prompt = build_system_prompt()
                 except Exception:
                     _brain_prompt = ""
-                _chat_sys = build_chat_system_prompt(_brain_prompt, _home_ctx)
+                _chat_sys = build_chat_system_prompt(_brain_prompt, _home_ctx, user_msg=text)
                 # Fetch live HA states for status questions
                 _live_ctx = await _fetch_live_ha_context(text)
                 _enriched_text = text + _live_ctx if _live_ctx else text

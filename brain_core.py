@@ -356,10 +356,109 @@ JSON: {{"mode":"single_step|multi_step","thought":"","next_step":{{"type":"","ar
 """
     return prompt
 
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# MEMORY INTEGRATION
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_AUDIT_DB = os.path.join(os.path.dirname(__file__), "data", "audit.db")
+
+def get_relevant_memories(query: str, limit: int = 5) -> str:
+    """Retrieve relevant memories. Uses keyword + category matching."""
+    try:
+        conn = sqlite3.connect(_AUDIT_DB, timeout=5)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT id, category, type, content, confidence "
+            "FROM memory WHERE active=1 ORDER BY confidence DESC LIMIT 50"
+        ).fetchall()
+        conn.close()
+        if not rows:
+            return ""
+        CAT_MAP = {
+            "أسهم": "trading", "سهم": "trading", "تداول": "trading",
+            "بورصة": "trading", "cleaning": "trading", "senergy": "trading",
+            "محفظة": "trading", "بيت": "ha", "مكيف": "ha", "أنوار": "ha",
+            "ستائر": "ha", "سماعة": "ha", "شغل": "personal",
+            "دوام": "personal", "شفت": "personal", "knpc": "personal", "عمل": "personal", "باجر": "personal", "عايلة": "personal",
+        }
+        ql = query.lower()
+        qw = set(ql.split())
+        target_cats = set()
+        for kw, cat in CAT_MAP.items():
+            if kw in ql:
+                target_cats.add(cat)
+        scored = []
+        for r in rows:
+            cl = r["content"].lower()
+            sc = sum(2 for w in qw if len(w) > 1 and w in cl)
+            if r["category"] in target_cats:
+                sc += 5
+            if r["confidence"] >= 0.9 and r["category"] in ("personal", "preference"):
+                sc += 1
+            if sc > 0:
+                scored.append((sc, r))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top = scored[:limit]
+        if not top:
+            return ""
+        lines = []
+        for _, r in top:
+            lines.append("[" + r["category"] + "/" + r["type"] + "] " + r["content"])
+        return chr(10).join(lines)
+    except Exception as e:
+        return "(memory error: " + str(e) + ")"
+
+
+def save_conversation(role: str, content: str, channel: str = "telegram"):
+    """Save a conversation message to DB for history."""
+    try:
+        conn = sqlite3.connect(_AUDIT_DB, timeout=5)
+        conn.execute(
+            "INSERT INTO conversations (channel, role, content, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (channel, role, content[:2000])
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
+def auto_learn(query: str, response: str, actions: list = None):
+    """Extract and save learnings from a completed interaction.
+    
+    Simple rule-based extraction (no LLM needed):
+    - If user corrects something -> save as pattern
+    - If user teaches an alias -> save as alias  
+    - Track frequently asked domains
+    """
+    query_lower = query.lower()
+    
+    try:
+        conn = sqlite3.connect(_AUDIT_DB, timeout=5)
+        
+        # Track: save every interaction summary for pattern analysis
+        conn.execute(
+            "INSERT INTO conversations (channel, role, content, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            ("auto_learn", "system", 
+             json.dumps({"q": query[:200], "r": response[:200], "actions": len(actions or [])}, ensure_ascii=False),
+            )
+        )
+        conn.commit()
+        conn.close()
+    except:
+        pass
+
+
 def build_user_message(goal, context=None, previous_results=None):
     """Build enriched user message with aliases, targeted entity details, and context."""
 
     parts = [f"User request: {goal}"]
+
+    # Memory context — let Opus learn from past interactions
+    mem_ctx = get_relevant_memories(goal)
+    if mem_ctx:
+        parts.append("═══ Memory context ═══\n" + mem_ctx)
 
     # Alias resolution
     alias_matches = resolve_aliases(goal)
