@@ -1415,6 +1415,18 @@ async def _exec_ha_get_state(entity_id: str) -> dict:
 
 
 async def _exec_ha_call_service(domain: str, service: str, service_data: dict = None) -> dict:
+    # Phase 0: Validate entity_id exists
+    eid = (service_data or {}).get("entity_id", "")
+    if eid and "." in eid:
+        try:
+            async with httpx.AsyncClient(timeout=5) as vc:
+                vr = await vc.get(f"{HA_URL}/api/states/{eid}",
+                    headers={"Authorization": f"Bearer {HA_TOKEN}"})
+                if vr.status_code == 404:
+                    logger.warning(f"Entity {eid} not found in HA")
+                    return {"success": False, "error": f"Entity '{eid}' not found. Check entity_id."}
+        except Exception:
+            pass  # validation failure shouldn't block execution
     # Phase 1: Circuit breaker + timeout
     if not _cb_ha.is_available():
         return {"success": False, "error": "⚠️ نظام الأجهزة غير متاح حالياً"}
@@ -4792,7 +4804,7 @@ async def entity_health_check_loop():
             if alerts:
                 _msg = "🔍 فحص صحة الأجهزة:" + chr(10) + chr(10).join(alerts)
                 try:
-                    _tg_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                    _tg_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
                     _chat_id = ADMIN_TELEGRAM_ID or "669769765"
                     httpx.post(_tg_url, json={"chat_id": _chat_id, "text": _msg}, timeout=10)
                     logger.info(f"Entity health alert sent: {dead} dead, {missing} new")
@@ -4818,7 +4830,7 @@ async def morning_report_scheduler():
         logger.info(f"Next morning report in {wait_secs/3600:.1f} hours")
         await asyncio.sleep(wait_secs)
         try:
-            await send_morning_report(TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_ID or "669769765")
+            await send_morning_report(TELEGRAM_TOKEN, ADMIN_TELEGRAM_ID or "669769765")
         except Exception as e:
             logger.error(f"Morning report error: {e}")
 
