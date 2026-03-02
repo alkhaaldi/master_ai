@@ -61,7 +61,7 @@ except Exception:
 
 try:
     from tg_session import tg_session_get, tg_session_upsert, tg_session_append_context, tg_session_reset, detect_followup
-    from tg_session_resolver import resolve_followup_action
+    # from tg_session_resolver import resolve_followup_action  # not connected
     TG_SESSION_OK = True
 except Exception:
     TG_SESSION_OK = False
@@ -162,27 +162,11 @@ _cb_tg = CircuitBreaker("telegram", failure_threshold=3, cooldown_seconds=60)
 
 
 def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "") -> str:
-    """Build enhanced system prompt for chat-routed messages."""
-    parts = [
-        "\u0623\u0646\u062a Master AI \u2014 \u0645\u0633\u0627\u0639\u062f \u0628\u064a\u062a \u0630\u0643\u064a \u0644\u0628\u0648 \u062e\u0644\u064a\u0641\u0629.",
-        "\u0647\u0630\u064a \u0645\u062d\u0627\u062f\u062b\u0629 \u0639\u0627\u062f\u064a\u0629 (\u0645\u0648 \u0623\u0645\u0631 \u062a\u0646\u0641\u064a\u0630). \u0631\u062f \u0628\u0639\u0631\u0628\u064a \u0643\u0648\u064a\u062a\u064a \u0645\u062e\u062a\u0635\u0631 \u0648\u0648\u062f\u0648\u062f.",
-        "\u0644\u0648 \u0633\u0623\u0644\u0643 \u0639\u0646 \u062c\u0647\u0627\u0632 \u0623\u0648 \u063a\u0631\u0641\u0629\u060c \u0639\u0637\u064a\u0647 \u0645\u0639\u0644\u0648\u0645\u0627\u062a \u0645\u0641\u064a\u062f\u0629 \u0645\u0646 \u0645\u0639\u0631\u0641\u062a\u0643 \u0628\u0627\u0644\u0628\u064a\u062a.",
-        "لو ما تعرف الجواب قول ما أعرف. لا ترد بـ JSON أو XML أو <action>. ردك لازم يكون نص عادي فقط بدون أي tags.",
-        "مهم: الستائر (covers) معكوسة (inverted). position 100% = مسكرة, 0% = مفتوحة. open/closed معكوس أيضا: open = مسكرة فعلياً, closed = مفتوحة فعلياً.",
-    ]
-    base = "\n".join(parts) + "\n\n"
-    if brain_prompt:
-        # Extract useful sections from brain prompt (skip JSON format instructions)
-        for section in brain_prompt.split("\u2550\u2550\u2550"):
-            sec_lower = section.strip().lower()
-            if any(k in sec_lower for k in ["\u0628\u064a\u062a \u0628\u0648 \u062e\u0644\u064a\u0641\u0629", "\u0648\u0635\u0641 \u0627\u0644\u063a\u0631\u0641", "\u0645\u0644\u0627\u062d\u0638\u0627\u062a \u0627\u0644\u0623\u062c\u0647\u0632\u0629", "\u0642\u0648\u0627\u0639\u062f \u0635\u0627\u0631\u0645\u0629"]):
-                base += "\u2550" * 30 + "\n" + section.strip() + "\n"
+    """Concise chat prompt for Opus."""
+    base = "Master AI — مساعد بيت بو خليفة. رد بعربي كويتي مختصر. الستائر inverted: open=مسكرة. نص فقط بدون JSON/XML.\n"
     if home_ctx:
-        base += "\n\u2550\u2550\u2550 \u0645\u0644\u062e\u0635 \u0627\u0644\u0623\u062c\u0647\u0632\u0629 \u0627\u0644\u0645\u0643\u062a\u0634\u0641\u0629 \u2550\u2550\u2550\n" + home_ctx + "\n"
+        base += "\n" + home_ctx + "\n"
     return base
-
-
-
 
 async def _fetch_live_ha_context(user_msg: str) -> str:
     """Fetch relevant HA entity states when user asks about rooms/devices/house status."""
@@ -234,17 +218,7 @@ async def _fetch_live_ha_context(user_msg: str) -> str:
     except Exception:
         return ""
 
-def _should_send_suggestions(user_id, intent_type=None):
-    """Check if suggestions should be sent (30s cooldown, except correction/disambiguation)."""
-    if intent_type in ("correction", "disambiguation", "ambiguity"):
-        return True
-    import time as _t
-    now = _t.time()
-    last = _suggest_cooldown.get(str(user_id), 0)
-    if now - last < _SUGGEST_COOLDOWN_SEC:
-        return False
-    _suggest_cooldown[str(user_id)] = now
-    return True
+# _should_send_suggestions removed — Opus handles suggestions natively
 
 try:
     from tg_alerts import alert_loop as tg_alert_loop
@@ -1372,41 +1346,8 @@ def _arabize_name(name: str) -> str:
     return name
 
 
-def get_quick_response(plan: dict, exec_result: dict) -> str:
-    """Generate short Kuwaiti Arabic response for speed template action."""
-    if not exec_result.get("success"):
-        return "⚠️ نظام الأجهزة غير متاح حالياً"
+# get_quick_response removed — Speed Engine deleted
 
-    action = plan.get("action", "")
-    value = plan.get("value")
-
-    # Step 4: Multi-device response
-    if plan.get("multi"):
-        count = plan.get("count", 0)
-        room = _arabize_name(plan.get("room", ""))
-        ok = exec_result.get("ok_count", count)
-        _DOMAIN_AR = {"light": "نور", "fan": "مروحة", "switch": "سويتش", "cover": "ستارة"}
-        dtype = _DOMAIN_AR.get(plan.get("domain", ""), "جهاز")
-        if action == "on":
-            return f"شغّلت {ok} {dtype} بـ{room} ✓"
-        elif action == "off":
-            return f"طفيت {ok} {dtype} بـ{room} ✓"
-        return f"تم {ok} جهاز ✓"
-
-    raw_name = plan.get("entity_name", plan.get("entity_id", ""))
-    name = _arabize_name(raw_name)
-
-    templates = {
-        "on": f"شغّلت {name} ✓",
-        "off": f"طفيت {name} ✓",
-        "set_temp": f"حطّيت {name} على {value}° ✓" if value else f"ضبطت {name} ✓",
-        "scene": f"فعّلت {name} ✓",
-    }
-    return templates.get(action, f"تم ✓")
-
-
-# ACTION EXECUTORS
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
 async def _exec_ha_get_state(entity_id: str) -> dict:
     # Phase 1: Circuit breaker + timeout
@@ -4379,7 +4320,7 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                 _router_stats['total'] += 1
                 if TG_SESSION_OK:
                     tg_session_upsert(str(chat_id), last_intent="action", last_entities=_ir_entities)
-                if TG_SUGGEST_OK and _should_send_suggestions(str(chat_id)):
+                if False:  # suggestions removed — Opus handles natively
                     _sact = "on" if "شغّلت" in _ir_text else "off" if "طفّيت" in _ir_text else "set_temp" if "ضبطت" in _ir_text else "scene" if "مشهد" in _ir_text else "query" if "الحالة" in _ir_text else None
                     _sbtns = get_suggestions(_sact) if _sact else []
                     if _sbtns:
