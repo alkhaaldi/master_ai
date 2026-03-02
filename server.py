@@ -96,7 +96,6 @@ try:
     TG_MORNING_OK = True
 except Exception:
     TG_MORNING_OK = False
-    logger.warning("tg_morning_report not loaded")
 
 try:
     from life_router import detect_life_domain
@@ -4180,7 +4179,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         if len(parts) == 2:
             return add_reminder(chat_id, parts[1], "⏰")
         if len(parts) < 2:
-            return "u23f0 /remind <u0648u0642u062a> <u0631u0633u0627u0644u0629>\nu0645u062bu0627u0644: /remind 5m u0634u064au0643 u0627u0644u0641u0631u0646 | /remind 14:30 u0627u062au0635u0644 | /remind 2h u0627u062cu062au0645u0627u0639"
+            return '⏰ /remind <وقت> <رسالة>\nمثال: /remind 5m شيك الفرن | /remind 14:30 اتصل | /remind 2h اجتماع'
         return add_reminder(chat_id, parts[1], parts[2])
 
     if cmd == "/reminders":
@@ -4251,7 +4250,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         return "life_health not loaded"
 
     if cmd == "/help":
-        return "U0001f3e0 Master AI\n\n/status - u0627u0644u0646u0638u0627u0645\n/lights - u0627u0644u0623u0636u0648u0627u0621\n/temp - u0627u0644u0645u0643u064au0641u0627u062a\n/rooms - u0627u0644u063au0631u0641\n/scenes - u0627u0644u0645u0634u0627u0647u062f\n/report - u062au0642u0631u064au0631\n/remind - u062au0630u0643u064au0631\n/news - u0623u062eu0628u0627u0631\n/stocks - u0627u0644u0645u062du0641u0638u0629\n/price X - u0633u0639u0631 u0633u0647u0645\n/shift - u0627u0644u0634u0641u062a\n/schedule - u062cu062fu0648u0644\n/expense - u0645u0635u0631u0648u0641\n/expenses - u0645u0635u0627u0631u064au0641\n/health - u0627u0644u0635u062du0629\n/brain - u0627u0644u0639u0642u0644\n/diag - u062au0634u062eu064au0635\n\nu0623u0631u0633u0644 u0623u064a u0631u0633u0627u0644u0629 U0001f44d"
+        return '🏠 Master AI\n\n/status - النظام\n/lights - الأضواء\n/temp - المكيفات\n/rooms - الغرف\n/scenes - المشاهد\n/morning - تقرير صباحي\n/report - تقرير\n/remind - تذكير\n/reminders - التذكيرات\n/news - أخبار\n/stocks - المحفظة\n/price X - سعر سهم\n/tasks - المهام\n/shift - الشفت\n/schedule - جدول\n/expense - مصروف\n/expenses - مصاريف\n/health - الصحة\n/brain - العقل\n/diag - تشخيص\n\nأرسل أي رسالة 👍'
 
     return None
 
