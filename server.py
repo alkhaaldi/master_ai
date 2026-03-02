@@ -2252,9 +2252,25 @@ async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
     parsed = repair_json(raw)
     if not parsed:
         logger.error(f"Failed to parse planner output: {raw[:200]}")
+        # If LLM returned plain text, use it directly
+        if raw and len(raw) > 2 and raw[0] not in '{[' and not raw.startswith('```'):
+            return {
+                "mode": "single_step",
+                "next_step": {"type": "respond_text", "args": {"text": raw[:500]}},
+                "task_state": "complete",
+                "response": raw[:500]
+            }
+        # If LLM returned plain text, use it directly
+        if raw and len(raw) > 2 and raw[0] not in '{[' and not raw.startswith('```'):
+            return {
+                "mode": "single_step",
+                "next_step": {"type": "respond_text", "args": {"text": raw[:500]}},
+                "task_state": "complete",
+                "response": raw[:500]
+            }
         return {
             "mode": "single_step",
-            "next_step": {"type": "respond_text", "args": {"text": "ÃÂÃÂ¹ÃÂÃÂ°ÃÂÃÂ±ÃÂÃÂ§ÃÂÃÂÃÂÃÂ ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¬ÃÂÃÂÃÂÃÂª ÃÂÃÂÃÂÃÂ´ÃÂÃÂÃÂÃÂÃÂÃÂ© ÃÂÃÂÃÂÃÂ ÃÂÃÂÃÂÃÂ¹ÃÂÃÂ§ÃÂÃÂÃÂÃÂ¬ÃÂÃÂ© ÃÂÃÂ§ÃÂÃÂÃÂÃÂ·ÃÂÃÂÃÂÃÂ¨"}},
+            "next_step": {"type": "respond_text", "args": {"text": "عذراً، واجهت مشكلة في معالجة الطلب"}},
             "task_state": "complete",
             "response": "ÃÂÃÂ¹ÃÂÃÂ°ÃÂÃÂ±ÃÂÃÂ§ÃÂÃÂÃÂÃÂ ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¬ÃÂÃÂÃÂÃÂª ÃÂÃÂÃÂÃÂ´ÃÂÃÂÃÂÃÂÃÂÃÂ© ÃÂÃÂÃÂÃÂ ÃÂÃÂÃÂÃÂ¹ÃÂÃÂ§ÃÂÃÂÃÂÃÂ¬ÃÂÃÂ© ÃÂÃÂ§ÃÂÃÂÃÂÃÂ·ÃÂÃÂÃÂÃÂ¨",
             "_parse_error": True
@@ -2739,7 +2755,7 @@ async def ask(body: AskRequest):
     except Exception as e:
         logger.error(f"Engine error: {e}", exc_info=True)
         TaskManager.fail_task(task_id, str(e))
-        result = {"response": f"ÃÂÃÂ®ÃÂÃÂ·ÃÂÃÂ£: {e}", "actions": [], "results": [], "task_state": "failed", "iterations": 0}
+        result = {"response": f"خطأ: {e}", "actions": [], "task_state": "failed"}
 
     duration = time.time() - t0
 
@@ -2793,7 +2809,6 @@ async def agent_endpoint(body: AgentRequest):
 
     memory_add_short_term("user", body.message)
 
-    t0 = time.time()
     try:
         result = await iterative_engine(
             body.message, context=body.context, trace=trace, task_id=task_id
@@ -2801,7 +2816,7 @@ async def agent_endpoint(body: AgentRequest):
     except Exception as e:
         logger.error(f"Agent error: {e}", exc_info=True)
         TaskManager.fail_task(task_id, str(e))
-        return {"response": f"ÃÂÃÂ®ÃÂÃÂ·ÃÂÃÂ£: {e}", "task_id": task_id}
+        return {"response": f"خطأ: {e}", "task_id": task_id}
 
     duration = time.time() - t0
     memory_add_short_term("assistant", result["response"])
@@ -4735,11 +4750,6 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                     await tg_send(chat_id, _stock_result, parse_mode="Markdown")
                 else:
                     await tg_send(chat_id, "⚠️ ما قدرت أجيب بيانات الأسهم حالياً")
-                    if globals().get("BRAIN_LEARN_HOOK"):
-                        try:
-                            asyncio.create_task(learn_from_result(text, _stock_result, "life_stocks"))
-                        except Exception:
-                            pass
                     return
             elif _life_domain == "expenses" and LIFE_EXPENSES_OK:
                 logger.info(f"Life router: expenses -> handle_expense_command")
