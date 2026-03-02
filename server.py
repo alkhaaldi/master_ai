@@ -1382,14 +1382,29 @@ async def _exec_ha_get_state(entity_id: str) -> dict:
             states = r.json()
             _cb_ha.record_success()
             return {"success": True, "count": len(states), "states": states[:50]}
-        # Pattern matching: *climate*, sensor.*temp*, etc
+        # Pattern matching: *climate*, sensor.*temp*, comma-separated patterns
         if "*" in entity_id and entity_id != "*":
             import fnmatch
             r = await client.get(f"{HA_URL}/api/states", headers=headers, timeout=_ha_timeout)
             all_states = r.json()
-            # Support filter arg too
-            pattern = entity_id.lower()
-            matched = [s for s in all_states if fnmatch.fnmatch(s.get("entity_id","").lower(), pattern)]
+            # Support comma-separated patterns: "light.*foo*,light.*bar*"
+            patterns = [p.strip().lower() for p in entity_id.split(",") if p.strip()]
+            matched = []
+            seen = set()
+            for pat in patterns:
+                if "*" in pat:
+                    for s in all_states:
+                        eid = s.get("entity_id", "").lower()
+                        if eid not in seen and fnmatch.fnmatch(eid, pat):
+                            matched.append(s)
+                            seen.add(eid)
+                else:
+                    # Exact ID in comma list
+                    for s in all_states:
+                        eid = s.get("entity_id", "").lower()
+                        if eid == pat and eid not in seen:
+                            matched.append(s)
+                            seen.add(eid)
             _cb_ha.record_success()
             if matched:
                 return {"success": True, "count": len(matched), "states": matched[:30]}
