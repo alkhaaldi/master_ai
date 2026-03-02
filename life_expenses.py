@@ -78,7 +78,7 @@ def get_category_expenses(category, period="month"):
 
 def parse_expense_command(text):
     text = text.strip()
-    m = re.search(r'(?:صرفت|دفعت)\s+([\d.]+)\s*(?:دينار|د\.ك)$)?\s*(.*)', text)
+    m = re.search(r'(?:صرفت|دفعت)\s+([\d.]+)\s*(?:دينار|د\.ك)?\s*(.*)', text)
     if m: return {"action": "add", "amount": float(m.group(1)), "description": m.group(2).strip()}
     if "مصاريف اليوم" in text: return {"action": "query", "period": "today"}
     if "مصاريف الشهر" in text or "هالشهر" in text: return {"action": "query", "period": "month"}
