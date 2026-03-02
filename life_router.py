@@ -25,7 +25,7 @@ STOCK_WORDS = [
 
 EXPENSE_WORDS = [
     "صرفت", "دفعت", "مصاريف", "مصروف", "حسابي",
-    "دينار", "د.ك", "kd", "فلوس", "ميزانية",
+    "دينار", "د.ك", "kd", "فلوس", "ميزانية", "مصاريفي", "المصاريف", "كم صرفت",
     "فاتورة", "اشتراك",
 ]
 
@@ -55,6 +55,10 @@ SMART_HOME_OVERRIDE = {
 
 
 def detect_life_domain(text: str) -> str:
+    # Exclude HA device commands to prevent false routing
+    HA_WORDS = ["شغل", "طفي", "اضاءة", "نور", "مكيف", "ستارة", "حرارة", "كهربا", "مكيفات", "شفاط", "turn on", "turn off", "light", "ac", "cover"]
+    if any(w in text for w in HA_WORDS):
+        return None
     """Detect which life domain a message belongs to.
 
     Returns domain name or None if not a life domain message.
@@ -65,6 +69,11 @@ def detect_life_domain(text: str) -> str:
     # If message contains smart home keywords, skip life routing
     if words_set & SMART_HOME_OVERRIDE:
         return None
+
+    # Phrase shortcuts
+    WORK_PHRASES = ["اول ليل", "ثاني ليل", "اول صباح", "ثاني صباح", "اول عصر", "ثاني عصر", "اول و لا ثاني", "أول ولا ثاني"]
+    if any(p in text for p in WORK_PHRASES):
+        return "work"
 
     def _score(keywords):
         score = 0
@@ -90,7 +99,7 @@ def detect_life_domain(text: str) -> str:
     best = max(scores, key=scores.get)
 
     # Domain-specific thresholds (stocks=1, others=2)
-    _thresholds = {"stocks": 1, "expenses": 2, "work": 1, "health": 2}
+    _thresholds = {"stocks": 1, "expenses": 1, "work": 1, "health": 1}
     if scores[best] >= _thresholds.get(best, 2):
         logger.info(f"ROUTE life: '{text_lower[:40]}' -> {best} (score={scores[best]})")
         return best
