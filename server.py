@@ -149,7 +149,7 @@ def _log_cmd(text, route, source="", entity=""):
 
 _router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative": 0, "total": 0, "started_at": __import__("datetime").datetime.now().isoformat(), "unknown": 0, "life_stocks": 0, "life_expenses": 0, "life_health": 0, "life_work": 0, "template": 0, "template_errors": 0, "intent_matched": 0, "followup_resolved": 0, "action_routed": 0}
 _router_cmd_log = []
-_STATS_FILE = Path(__file__).parent / "data" / "router_stats.json"
+import pathlib as _pl; _STATS_FILE = _pl.Path(__file__).parent / "data" / "router_stats.json"
 
 def _save_router_stats():
     """Save router stats to disk for persistence across restarts."""
