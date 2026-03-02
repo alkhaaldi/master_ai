@@ -256,74 +256,20 @@ def _get_room_entities_for_query(text):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def build_system_prompt():
-    """Build enhanced system prompt with knowledge, compact index, rules, and device notes."""
+    """Build concise system prompt optimized for Opus 4.6."""
 
     home = _knowledge.get("home", {})
-    prefs = _knowledge.get("user_preferences", {})
-    device_notes = _knowledge.get("device_notes", {})
-    rules = _knowledge.get("rules", [])
-    room_descs = _knowledge.get("room_descriptions", {})
-
     room_index = build_room_index()
 
-    notes_lines = [f"- {d}: {n}" for d, n in device_notes.items()]
-    device_notes_text = "\n".join(notes_lines)
+    prompt = f"""Master AI v5 — بيت {home.get('owner', 'بو خليفة')}. عربي كويتي.
 
-    rules_text = "\n".join(f"- {r}" for r in rules)
+Tools: ha_get_state, ha_call_service, ssh_run, respond_text, http_request, memory_store, win_diagnostics, win_powershell, win_winget_install
 
-    room_desc_lines = [f"- {r}: {d}" for r, d in room_descs.items()]
-    room_desc_text = "\n".join(room_desc_lines)
+ملاحظات: الستائر (covers) inverted: open=مسكرة, closed=مفتوحة. entity_id="*" لاكتشاف.
 
-    prompt = f"""أنت Master AI v5 — العقل المركزي لبيت {home.get('owner', 'بو خليفة')}.
-{home.get('description', '')}
-العائلة: {', '.join(home.get('family', []))}
-
-Available action types:
-- ha_get_state: {{entity_id}} → get HA entity state (use "*" for all)
-- ha_call_service: {{domain, service, service_data}} → call HA service
-- ssh_run: {{cmd}} → run shell command on Raspberry Pi
-- respond_text: {{text}} → respond to user with text
-- win_diagnostics: {{checks[]}} → run Windows diagnostics
-- win_powershell: {{script}} → run PowerShell on Windows PC
-- win_winget_install: {{package}} → install via winget
-- http_request: {{url, method, headers, body}} → HTTP request
-- memory_store: {{category, content, type}} → store to long-term memory
-
-═══ بيت بو خليفة — خريطة الغرف (مختصرة) ═══
 {room_index}
 
-═══ وصف الغرف ═══
-{room_desc_text}
-
-═══ ملاحظات الأجهزة ═══
-{device_notes_text}
-
-═══ قواعد صارمة ═══
-{rules_text}
-
-═══ Lookup Hint ═══
-الخريطة أعلاه مختصرة. لما تحتاج entity_id دقيق:
-- شيك الـ entity IDs المرفقة بالرسالة (إذا موجودة)
-- أو استخدم ha_get_state مع entity_id="*" + domain filter
-
-You MUST respond ONLY with valid JSON (no markdown, no explanation):
-{{
-  "mode": "single_step" | "multi_step",
-  "thought": "brief reasoning",
-  "next_step": {{"type": "action_type", "args": {{...}}}},
-  "plan": [list of steps if multi_step],
-  "task_state": "running" | "waiting" | "complete",
-  "response": "text response to user"
-}}
-
-Rules:
-- For simple questions/greetings → mode: single_step, next_step: respond_text, task_state: complete
-- For device control → mode: single_step or multi_step with ha_call_service actions
-- For complex tasks → mode: multi_step with a plan array
-- If you need more info → task_state: waiting
-- Always include "response" with user-facing message in عربي كويتي
-- NEVER invent entity IDs — use ONLY from entity map or aliases
-- Language: {prefs.get('language', 'عربي كويتي')} — {prefs.get('tone', 'casual')}
+JSON: {{{{"mode":"single_step|multi_step","thought":"","next_step":{{{{"type":"","args":{{{{}}}}}}}},"task_state":"running|waiting|complete","response":""}}}}
 """
     return prompt
 

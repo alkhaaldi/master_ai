@@ -67,7 +67,7 @@ except Exception:
     TG_SESSION_OK = False
 
 try:
-    from tg_intent_router import route_intent, learn_alias, get_alias_stats, quick_classify
+    from tg_intent_router import route_intent, learn_alias, get_alias_stats  # quick_classify removed
     TG_INTENT_OK = True
 except Exception:
     TG_INTENT_OK = False
@@ -1320,89 +1320,9 @@ def _get_schema_status():
 
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # ── Speed Engine (Step 2) ──
-_SPEED_SVC_MAP = {
-    "on": {"light": "turn_on", "switch": "turn_on", "fan": "turn_on", "climate": "turn_on",
-           "cover": "open_cover", "media_player": "turn_on"},
-    "off": {"light": "turn_off", "switch": "turn_off", "fan": "turn_off", "climate": "turn_off",
-            "cover": "close_cover", "media_player": "turn_off"},
-    "set_temp": {"climate": "set_temperature"},
-    "scene": {"scene": "turn_on"},
-    "set_brightness": {"light": "turn_on"},
-    "increase": {"climate": "set_temperature"},
-    "decrease": {"climate": "set_temperature"},
-}
+# _SPEED_SVC_MAP removed — Speed Engine disabled
 
-async def quick_execute(plan: dict) -> dict:
-    """Execute a quick_classify plan using CB-protected HA calls. Returns {success, detail}."""
-    action = plan["action"]
-    domain = plan["domain"]
-    value = plan.get("value")
-
-    svc = _SPEED_SVC_MAP.get(action, {}).get(domain)
-    if not svc:
-        return {"success": False, "detail": f"unsupported: {action}/{domain}"}
-
-    # Step 4: Multi-device support
-    if plan.get("multi"):
-        eids = plan["entity_ids"]
-        t0 = __import__("time").time()
-        ok_count = 0
-        fail_count = 0
-        for _eid in eids:
-            _r = await _exec_ha_call_service(domain, svc, {"entity_id": _eid})
-            if _r.get("success"):
-                ok_count += 1
-            else:
-                fail_count += 1
-        dur = __import__("time").time() - t0
-        _status = "ok" if ok_count > 0 else "failed"
-        try:
-            await audit_log(
-                task=f"speed_multi:{action}:{len(eids)}x{domain}",
-                actions=[f"{domain}.{svc} x{len(eids)}"],
-                results=[f"ok={ok_count},fail={fail_count}"],
-                status=_status,
-                duration=dur,
-                route_type="template"
-            )
-        except Exception:
-            pass
-        return {"success": ok_count > 0, "detail": f"{ok_count}/{len(eids)} ok",
-                "ok_count": ok_count, "fail_count": fail_count}
-
-    # Single entity (original)
-    eid = plan["entity_id"]
-    svc_data = {"entity_id": eid}
-    # Step 9: Brightness control
-    if action == "set_brightness" and value is not None:
-        if value == -1:
-            svc_data["brightness_step_pct"] = 25
-        elif value == -2:
-            svc_data["brightness_step_pct"] = -25
-        else:
-            svc_data["brightness_pct"] = max(1, min(100, value))
-    elif action == "set_temp" and value is not None:
-        svc_data["temperature"] = value
-
-    t0 = __import__("time").time()
-    result = await _exec_ha_call_service(domain, svc, svc_data)
-    dur = __import__("time").time() - t0
-
-    # Audit log
-    _status = "ok" if result.get("success") else "failed"
-    try:
-        await audit_log(
-            task=f"speed:{action}:{eid}",
-            actions=[f"{domain}.{svc}"],
-            results=[str(result)],
-            status=_status,
-            duration=dur,
-            route_type="template"
-        )
-    except Exception as _e:
-        logger.warning(f"Speed audit log failed: {_e}")
-
-    return {"success": result.get("success", False), "detail": result}
+# quick_execute removed — Speed Engine disabled
 
 
 def _arabize_name(name: str) -> str:
@@ -2220,40 +2140,7 @@ class TaskManager:
 # [UPGRADE 2] ITERATIVE PLANNING LOOP
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
-PLANNER_SYSTEM_PROMPT = """You are Master AI v5, a central intelligence system controlling a smart home and PC.
-
-Available action types:
-- ha_get_state: {entity_id} ÃÂ¢ÃÂÃÂ get HA entity state (use "*" for all)
-- ha_call_service: {domain, service, service_data} ÃÂ¢ÃÂÃÂ call HA service
-- ssh_run: {cmd} ÃÂ¢ÃÂÃÂ run shell command on Raspberry Pi
-- respond_text: {text} ÃÂ¢ÃÂÃÂ respond to user with text
-- win_diagnostics: {checks[]} ÃÂ¢ÃÂÃÂ run Windows diagnostics
-- win_powershell: {script} ÃÂ¢ÃÂÃÂ run PowerShell on Windows PC
-- win_winget_install: {package} ÃÂ¢ÃÂÃÂ install via winget
-- http_request: {url, method, headers, body} ÃÂ¢ÃÂÃÂ HTTP request
-- memory_store: {category, content, type} ÃÂ¢ÃÂÃÂ store to long-term memory
-
-Entity map (rooms and devices):
-{entity_context}
-
-You MUST respond ONLY with valid JSON (no markdown, no explanation):
-{{
-  "mode": "single_step" | "multi_step",
-  "thought": "brief reasoning",
-  "next_step": {{"type": "action_type", "args": {{...}}}},
-  "plan": [list of steps if multi_step],
-  "task_state": "running" | "waiting" | "complete",
-  "response": "text response to user"
-}}
-
-Rules:
-- For simple questions/greetings ÃÂ¢ÃÂÃÂ mode: single_step, next_step: respond_text, task_state: complete
-- For device control ÃÂ¢ÃÂÃÂ mode: single_step or multi_step with ha_call_service actions
-- For complex tasks ÃÂ¢ÃÂÃÂ mode: multi_step with a plan array
-- If you need more info before continuing ÃÂ¢ÃÂÃÂ task_state: waiting
-- Always include "response" with a user-facing message in Arabic
-- NEVER invent entity IDs ÃÂ¢ÃÂÃÂ use ONLY from the entity map above
-"""
+# PLANNER_SYSTEM_PROMPT removed — using build_system_prompt() from brain_core
 
 
 def build_entity_context() -> str:
@@ -2282,7 +2169,7 @@ async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
     else:
         pass
         entity_ctx = build_entity_context()
-        system = PLANNER_SYSTEM_PROMPT.replace("{entity_context}", entity_ctx)
+        system = "Master AI v5 fallback. Respond in JSON."
 
     if BRAIN_AVAILABLE:
         user_msg = build_user_message(goal, context, previous_results)
