@@ -2461,7 +2461,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/health", "/panel"}
+    OPEN_PATHS = {"/health", "/panel", "/dev/context"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -3684,6 +3684,29 @@ async def system_context():
 # WEB PANEL - moved to modules/panel.py
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# DEV CONTEXT endpoint
+@app.get("/dev/context", tags=["system"])
+async def dev_context():
+    from fastapi.responses import PlainTextResponse
+    ctx_path = os.path.join(BASE_DIR, "CLAUDE_CONTEXT.md")
+    parts = []
+    if os.path.exists(ctx_path):
+        with open(ctx_path) as f:
+            parts.append(f.read())
+    try:
+        uptime = round(time.time() - START_TIME)
+        parts.append("")
+        parts.append("## Live Status")
+        parts.append("- Uptime: " + str(uptime) + "s")
+        parts.append("- Plugins: " + str(len(PLUGIN_REGISTRY._plugins)))
+        parts.append("- STM: " + str(len(short_term_memory)))
+        parts.append("- Memory: " + str(MEMORY_AVAILABLE))
+        parts.append("- Brain: " + str(BRAIN_AVAILABLE))
+    except Exception as e:
+        parts.append("Status error: " + str(e))
+    return PlainTextResponse(chr(10).join(parts))
+
 # TELEGRAM BOT (v5.4.6)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
