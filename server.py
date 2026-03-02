@@ -61,7 +61,8 @@ except Exception:
 
 try:
     from tg_session import tg_session_get, tg_session_upsert, tg_session_append_context, tg_session_reset, detect_followup
-    # from tg_session_resolver import resolve_followup_action  # not connected
+    from tg_session_resolver import resolve_followup_action
+    logger.info("tg_session_resolver loaded successfully")
     TG_SESSION_OK = True
 except Exception:
     TG_SESSION_OK = False
@@ -3596,6 +3597,39 @@ async def system_context():
         result["plugins"] = None
         warnings.append(f"plugins: {e}")
 
+    # --- brain & memory ---
+    try:
+        result["brain"] = {
+            "available": BRAIN_AVAILABLE,
+            "modules": [m for m in ["brain_core", "brain_learning", "brain_analytics",
+                        "brain_personality", "brain_observability", "brain_proactive"]
+                        if m in sys.modules],
+        }
+        result["memory"] = {
+            "available": MEMORY_AVAILABLE,
+            "short_term_size": len(short_term_memory),
+        }
+        if MEMORY_AVAILABLE:
+            try:
+                from memory_db import get_memory_stats as _ms
+                result["memory"]["stats"] = await _ms()
+            except: pass
+    except Exception as e:
+        warnings.append(f"brain: {e}")
+
+    # --- features ---
+    try:
+        result["features"] = {
+            "pattern_matching": True,  # ha_get_state wildcard support
+            "room_aliases": True,      # غرفة النوم → الماستر
+            "entity_id_inline": True,  # climate/cover IDs in room index
+            "conversation_context": True,  # short-term memory in /ask
+            "response_synthesis": True,   # fallback response when empty
+            "auto_learning": True,      # brain_learning LLM extraction
+        }
+    except Exception as e:
+        warnings.append(f"features: {e}")
+
     # --- git ---
     try:
         import subprocess as _sp
@@ -3613,7 +3647,10 @@ async def system_context():
 
     if warnings:
         result["warnings"] = warnings
-    return result
+    # Force safe JSON serialization via JSONResponse
+    from starlette.responses import JSONResponse
+    safe_json = json.loads(json.dumps(result, ensure_ascii=False, default=str))
+    return JSONResponse(content=safe_json)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
