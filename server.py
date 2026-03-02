@@ -369,8 +369,16 @@ def save_policy(policy: dict):
 
 START_TIME = time.time()
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+from logging.handlers import RotatingFileHandler as _RFH
+_log_fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+_file_h = _RFH("server.log", maxBytes=2*1024*1024, backupCount=3, encoding="utf-8")
+_file_h.setFormatter(_log_fmt)
+_console_h = logging.StreamHandler()
+_console_h.setFormatter(_log_fmt)
 logger = logging.getLogger("master_ai")
+logger.setLevel(logging.INFO)
+logger.addHandler(_file_h)
+logger.addHandler(_console_h)
 
 # LLM Clients
 openai_client = AsyncOpenAI(api_key=api_key) if api_key else None
@@ -3976,7 +3984,20 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             disk = si.get("disk_percent", 0)
             db = diag.get("db_size_mb", 0)
             errs = diag.get("errors_last_hour", 0)
-            return f"\U0001f4ca Diagnostics\n\nCPU: {cpu}%\nRAM: {ram}%\nTemp: {temp}\u00b0C\nDisk: {disk}%\nDB: {db}MB\nErrors/h: {errs}"
+            _up = int(time.time() - START_TIME)
+            _h2, _m2 = divmod(_up // 60, 60)
+            _mc2 = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, TG_NEWS_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
+            _t2 = _router_stats.get("total", 0)
+            import os as _os2
+            _lkb = round(_os2.path.getsize("server.log") / 1024) if _os2.path.exists("server.log") else 0
+            return chr(10).join([
+                f"📊 Diag v{VERSION}",
+                f"CPU: {cpu}% | RAM: {ram}%",
+                f"Temp: {temp}°C | Disk: {disk}%",
+                f"Up: {_h2}h {_m2}m | Msgs: {_t2}",
+                f"Modules: {_mc2}/16 | Plugins: {len(PLUGIN_REGISTRY._plugins)}",
+                f"DB: {db}MB | Log: {_lkb}KB | Err/h: {errs}",
+            ])
         except Exception as e:
             return f"\u26a0\ufe0f diag: {e}"
 
