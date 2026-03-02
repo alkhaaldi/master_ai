@@ -5188,6 +5188,11 @@ async def entity_health_check_loop():
     if not FEATURE_ENTITY_HEALTH:
         return
     logger.info("Entity health check loop started (every 6h)")
+    _notified_file = _pl.Path(__file__).parent / "data" / "notified_entities.json"
+    try:
+        _notified_entities = set(json.loads(_notified_file.read_text())) if _notified_file.exists() else set()
+    except Exception:
+        _notified_entities = set()
     await asyncio.sleep(300)  # wait 5min after startup
     while True:
         try:
@@ -5208,7 +5213,10 @@ async def entity_health_check_loop():
                 txt = chr(10).join(f"  ❌ {d['name']} ({d['entity_id']})" for d in dead_list)
                 alerts.append(f"⚠️ أجهزة ميتة ({dead}):" + chr(10) + txt)
             if missing > 0:
-                miss_list = report.get("missing_entities", [])[:10]
+                _all_missing = report.get("missing_entities", [])
+                _new_missing = [m for m in _all_missing if m["entity_id"] not in _notified_entities]
+                miss_list = _new_missing[:10]
+                missing = len(_new_missing)
                 txt = chr(10).join(f"  🆕 {m['name']} ({m['entity_id']})" for m in miss_list)
                 alerts.append(f"🆕 أجهزة جديدة ({missing}):" + chr(10) + txt)
             
@@ -5219,6 +5227,9 @@ async def entity_health_check_loop():
                     _chat_id = ADMIN_TELEGRAM_ID or "669769765"
                     httpx.post(_tg_url, json={"chat_id": _chat_id, "text": _msg}, timeout=10)
                     logger.info(f"Entity health alert sent: {dead} dead, {missing} new")
+                    _notified_entities.update(m["entity_id"] for m in _all_missing)
+                    try: _notified_file.write_text(json.dumps(list(_notified_entities)))
+                    except Exception: pass
                 except Exception as _te:
                     logger.error(f"Entity health TG alert failed: {_te}")
             else:
