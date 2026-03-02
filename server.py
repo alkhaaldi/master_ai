@@ -1424,7 +1424,15 @@ async def _exec_ha_call_service(domain: str, service: str, service_data: dict = 
                               headers=headers, json=service_data or {}, timeout=_ha_timeout)
         _ok = r.status_code == 200
         _cb_ha.record_success() if _ok else _cb_ha.record_failure()
-        return {"success": _ok, "status_code": r.status_code}
+        result = {"success": _ok, "status_code": r.status_code}
+        if not _ok:
+            try:
+                err_body = r.text[:300]
+                result["error"] = err_body
+                logger.warning(f"HA service {domain}/{service} failed ({r.status_code}): {err_body[:150]} | data={json.dumps(service_data, ensure_ascii=False)[:200]}")
+            except Exception:
+                pass
+        return result
 
 
 async def _exec_ssh_run(cmd: str) -> dict:
@@ -1551,7 +1559,19 @@ class HAGetStatePlugin(BasePlugin):
 class HACallServicePlugin(BasePlugin):
     def __init__(self): super().__init__("ha_call_service")
     async def execute(self, args, trace=None, step_index=0):
-        return await _exec_ha_call_service(args["domain"], args["service"], args.get("service_data"))
+        # Smart args normalization: Opus may put entity_id/temperature/etc at top level
+        sdata = args.get("service_data") or {}
+        # Merge any extra keys (not domain/service/type/service_data) into service_data
+        _reserved = {"domain", "service", "type", "service_data", "target", "_action"}
+        for k, v in args.items():
+            if k not in _reserved and k not in sdata:
+                sdata[k] = v
+        # Handle "target" format (some Opus versions use it)
+        if "target" in args and isinstance(args["target"], dict):
+            for tk, tv in args["target"].items():
+                if tk not in sdata:
+                    sdata[tk] = tv
+        return await _exec_ha_call_service(args["domain"], args["service"], sdata)
 
 class SSHRunPlugin(BasePlugin):
     def __init__(self): super().__init__("ssh_run")
@@ -2279,6 +2299,19 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
                 logger.info(f"QUICK_RESPONSE: {quick[:50]}")
         except Exception as e:
             logger.error(f"Quick response error: {e}")
+
+    # Response Synthesis Fallback: if no response but successful results, summarize via LLM
+    if not final_response and all_results and any(r.get("success") for r in all_results if isinstance(r, dict)):
+        try:
+            summary_data = json.dumps(all_results[:3], ensure_ascii=False, default=str)[:2000]
+            synth_prompt = "لخّص النتائج التالية بجملة أو جملتين بالعربي الكويتي:" + chr(10) + "طلب: " + goal[:200] + chr(10) + "نتائج: " + summary_data
+            synth_resp = await llm_call([{"role": "user", "content": synth_prompt}], max_tokens=200, temperature=0.3)
+            if synth_resp and not synth_resp.startswith("{"):
+                final_response = synth_resp.strip()
+                logger.info(f"RESPONSE_SYNTH: {final_response[:60]}")
+        except Exception as e:
+            logger.warning(f"Response synthesis failed: {e}")
+
     return {
         "response": final_response,
         "actions": all_actions,
@@ -2631,8 +2664,12 @@ async def ask(body: AskRequest):
     # Run iterative engine
     t0 = time.time()
     try:
+        # Inject short-term conversation context for follow-up understanding
+        _ctx = dict(body.context) if body.context else {}
+        if short_term_memory:
+            _ctx["short_term"] = list(short_term_memory)[-3:]
         result = await iterative_engine(
-            body.message, context=body.context, trace=trace, task_id=task_id
+            body.message, context=_ctx, trace=trace, task_id=task_id
         )
     except Exception as e:
         logger.error(f"Engine error: {e}", exc_info=True)

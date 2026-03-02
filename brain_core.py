@@ -505,6 +505,12 @@ def build_user_message(goal, context=None, previous_results=None):
 
     parts = [f"User request: {goal}"]
 
+    # Short-term conversation context (for follow-up understanding)
+    if context and context.get("short_term"):
+        stm_lines = context["short_term"][-3:]  # last 3 exchanges
+        stm_text = chr(10).join(f"[{m.get('role','?')}] {m.get('content','')[:200]}" for m in stm_lines)
+        parts.append("Recent conversation:" + chr(10) + stm_text)
+
     # Memory context — let Opus learn from past interactions
     mem_ctx = get_relevant_memories(goal)
     if mem_ctx:
