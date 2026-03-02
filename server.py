@@ -87,10 +87,16 @@ except Exception:
 
 try:
     from tg_suggestions import get_suggestions
-    from tg_morning_report import build_morning_report, send_morning_report
     TG_SUGGEST_OK = True
 except Exception:
     TG_SUGGEST_OK = False
+
+try:
+    from tg_morning_report import build_morning_report, send_morning_report
+    TG_MORNING_OK = True
+except Exception:
+    TG_MORNING_OK = False
+    logger.warning("tg_morning_report not loaded")
 
 try:
     from life_router import detect_life_domain
