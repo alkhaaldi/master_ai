@@ -1,37 +1,44 @@
-# Master AI — Claude Development Context
-> Auto-updated: 2026-03-03. Read this at start of every new conversation.
-> Served via: GET /dev/context
-
+# Master AI — Claude Context (auto-generated)
 ## System
-- Version: v5.4.0 (code v5.4.6+life+router), Port 9000, Tunnel: https://ai.salem-home.com
-- Git: main, commit b3c0307. Truth: GET /system/context (X-API-Key)
-- DB: audit.db, 11 tables, WAL. Memory: 24 active. Autonomy: L3
-- LLM: Claude Sonnet 4 (primary), GPT-4o-mini (fallback)
+- Version: v5.4.0 (code v5.4.6)
+- server.py: ~5301 lines
+- Port: 9000
+- Git: 5cbdedf (main)
+- Modules: 16/16 all active
+- Plugins: 9
 
-## Files
-- server.py(~5145) - endpoints, plugins, iterative_engine, TG bot, life+smart routers
-- smart_router.py(99) - classify: greeting/chat/action/unknown
-- tg_morning_report.py(198) - daily report 5:30AM (shift+weather+HA+stocks)
-- tg_intent_router.py - device+room command matching
-- tg_session.py + tg_session_resolver.py - followup context
-- tg_alerts/reminders/news/tasks/stocks/home/ops.py - TG modules
-- life_router/stocks/expenses/health/work.py - life domain modules
-- brain_core/personality/learning/analytics/observability/proactive.py
-- entity_map.json(25 rooms, 566 entities)
+## Brain Modules
+brain_core, brain_learning, brain_personality, brain_proactive, brain_observability, brain_multiuser, brain_analytics
 
-## TG Message Flow
-1. /commands (39 incl /morning /help /stats /remind /stocks /shift)
-2. Intent Router (device+room: shghl nwr almishh)
-3. Session Followup (context-aware)
-4. Life Router (stocks/expenses/health/work - no LLM)
-5. SmartRouter (greeting=template 0 API / chat=Sonnet / action=iterative / unknown=iterative)
-6. Iterative Engine (Sonnet LLM with 9 plugins)
+## Key Files
+- server.py (~5301) — main FastAPI server
+- brain_core.py (~590) — LLM prompt builder, room aliases, entity map
+- smart_router.py (~105) — SmartRouter v2.1 (greeting/chat/action/unknown)
+- tg_intent_router.py — device command NLU
+- tg_morning_report.py — daily morning report
+- tasks_db.py — user tasks (user_tasks table in audit.db)
+- entity_map.json — 25 rooms, 566 entities
 
-## Modules (16/16 active)
-intent_router, life_router, smart_router, brain, morning_report,
-alerts, reminders, news, discovery, session, home, ops,
-stocks, expenses, health, work
+## Features (this session)
+- SmartRouter v2.1: greeting templates (0 API), life domain keywords, short Arabic=chat
+- RotatingFileHandler: 2MB max x 3 backups
+- Stats persistence: router_stats.json, save every 30min + atexit
+- /summary: daily dashboard (msgs, LLM savings, HA status, errors)
+- /diag enhanced: CPU/RAM/Temp + uptime + modules + log size
+- /help updated: includes /stats + /summary
+- user_tasks table (fixed collision with TaskManager tasks table)
 
-## Monitoring
-- GET /tg/stats - router stats + module health JSON
-- GET /health - system status
+## TG Commands
+/status /stats /summary /diag /morning /help /lights /temp /rooms /scenes
+/remind /reminders /news /stocks /price /tasks /shift /schedule /expense /expenses /health /brain
+/errors /log /crash /clearlog /backup /restart /approvals /cam /find
+
+## Schedulers
+telegram_polling, morning_report(5:30AM), entity_health(6h), tg_alerts(5min), reminders, stock_alerts, news, backup, stats_save(30min)
+
+## Message Flow
+1. /commands → direct handler
+2. Intent router → device NLU (شغل/طفي/مكيف)
+3. Session followup → context-aware actions
+4. Life router → stocks/expenses/work/health
+5. SmartRouter → greeting(template) / chat(brain LLM) / action(planner) / unknown(LLM)
