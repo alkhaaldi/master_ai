@@ -3972,6 +3972,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                     _txt += chr(10) + f"  ... +{len(on_lights)-15} \u062b\u0627\u0646\u064a"
                 _btns = [
                     {"text": "\U0001f534 \u0637\u0641\u064a \u0643\u0644 \u0634\u064a", "callback_data": "sc:scene.tfwy_kl_shy"},
+            {"text": "\U0001f321 \u0627\u0644\u0637\u0642\u0633", "callback_data": "cmd:weather"},
                     {"text": "\U0001f3e0 \u0631\u062c\u0648\u0639", "callback_data": "cmd:home"},
                 ]
                 await tg_send_inline(chat_id, _txt, _btns, columns=2)
@@ -3979,6 +3980,16 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return "\U0001f4a1 \u0643\u0644 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0645\u0637\u0641\u064a\u0629"
         except Exception as e:
             return f"\u26a0\ufe0f {e}"
+
+    if cmd == "/weather":
+        if QUICK_QUERY_OK:
+            try:
+                from quick_query import _weather
+                r = await _weather()
+                return r or "\u26a0\ufe0f \u0645\u0627 \u0642\u062f\u0631\u062a \u0623\u062c\u064a\u0628 \u0627\u0644\u0637\u0642\u0633"
+            except Exception as e:
+                return f"\u26a0\ufe0f {e}"
+        return "\u26a0\ufe0f quick_query not loaded"
 
     if cmd == "/locks":
         if QUICK_QUERY_OK:
@@ -4143,6 +4154,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             {"text": "\U0001f510 \u0627\u0644\u0623\u0642\u0641\u0627\u0644", "callback_data": "cmd:locks"},
             {"text": "\U0001f3b5 \u0627\u0644\u0633\u0645\u0627\u0639\u0627\u062a", "callback_data": "cmd:media"},
             {"text": "\U0001f534 \u0637\u0641\u064a \u0643\u0644 \u0634\u064a", "callback_data": "sc:scene.tfwy_kl_shy"},
+            {"text": "\U0001f321 \u0627\u0644\u0637\u0642\u0633", "callback_data": "cmd:weather"},
         ]
         await tg_send_inline(chat_id, "🏠 *القائمة الرئيسية*", buttons, columns=2)
         return "__inline_sent__"
@@ -4227,6 +4239,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             {"text": "☕ ديوانية", "callback_data": "sc:scene.wd_ldywny"},
             {"text": "🎬 سينما", "callback_data": "sc:scene.wd_lsynm"},
             {"text": "🛑 طفّي كل شي", "callback_data": "sc:scene.tfwy_kl_shy"},
+            {"text": "\U0001f321 \u0627\u0644\u0637\u0642\u0633", "callback_data": "cmd:weather"},
             {"text": "➡️ المزيد", "callback_data": "cmd:scenes2"},
         ]
         await tg_send_inline(chat_id, "🎬 *المشاهد* (1/2)", sc, columns=2)

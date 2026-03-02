@@ -84,6 +84,11 @@ async def quick_answer(text: str):
     if re.search(r"سماعات|ميديا|تلفزيون|موسيقى|قرآن|يشغل", t):
         return await _media_status()
 
+
+    # 8) Weather
+    if re.search(r"طقس|جو|حرارة برا|درجة الحرارة|weather|هواء", t):
+        return await _weather()
+
     return None
 
 
@@ -223,3 +228,38 @@ async def _media_status():
         desc = title or artist or ""
         lines.append(f"  🔊 {name}: {desc}{vol_pct}")
     return chr(10).join(lines)
+
+
+async def _weather():
+    """Quick weather from Open-Meteo."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.get("https://api.open-meteo.com/v1/forecast", params={
+                "latitude": 29.3375, "longitude": 47.9775,
+                "current": "temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m",
+                "timezone": "Asia/Kuwait",
+                "forecast_days": 1,
+                "daily": "temperature_2m_max,temperature_2m_min",
+            })
+            d = r.json()
+            cur = d.get("current", {})
+            daily = d.get("daily", {})
+            temp = cur.get("temperature_2m", "?")
+            code = cur.get("weather_code", 0)
+            wind = cur.get("wind_speed_10m", "?")
+            humid = cur.get("relative_humidity_2m", "?")
+            hi = daily.get("temperature_2m_max", ["?"])[0]
+            lo = daily.get("temperature_2m_min", ["?"])[0]
+            
+            CODES = {0:"☀️",1:"🌤",2:"⛅",3:"☁️",45:"🌫",48:"🌫",51:"🌦",53:"🌦",55:"🌧",61:"🌧",63:"🌧",65:"🌧️",71:"❄️",73:"❄️",75:"❄️",80:"🌦",81:"🌧",82:"⛈",95:"⚡",96:"⚡",99:"⚡"}
+            icon = CODES.get(code, "🌡")
+            
+            return chr(10).join([
+                f"{icon} الطقس الكويت:",
+                f"🌡 حالياً: {temp}°C",
+                f"⬆ أعلى: {hi}° | ⬇ أدنى: {lo}°",
+                f"💨 رياح: {wind} km/h",
+                f"💧 رطوبة: {humid}%",
+            ])
+    except Exception as e:
+        return f"⚠️ {e}"
