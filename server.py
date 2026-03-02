@@ -3824,7 +3824,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/start":
         return "\U0001f3e0 Master AI Bot\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \u0623\u0648 \u0623\u0645\u0631.\n\n/status \u2014 \u062d\u0627\u0644\u0629 \u0627\u0644\u0646\u0638\u0627\u0645\n/lights \u2014 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0627\u0644\u0645\u0634\u063a\u0644\u0629\n/temp \u2014 \u062d\u0631\u0627\u0631\u0629 \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a"
 
-    if cmd == "/report":
+    if cmd == "/report" or cmd == "/morning":
         try:
             report = await build_morning_report()
             await tg_send(chat_id, report)
@@ -3840,7 +3840,9 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/status":
         uptime = int(time.time() - START_TIME)
         h, m = divmod(uptime // 60, 60)
-        return f"\u2705 Master AI v{VERSION}\n\u23f1 Uptime: {h}h {m}m\n\U0001f50c Plugins: {len(PLUGIN_REGISTRY._plugins)}"
+        _mc = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, TG_NEWS_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
+        _t = _router_stats.get("total", 0)
+        return chr(10).join([f'✅ Master AI v{VERSION}', f'⏱ Uptime: {h}h {m}m', f'🔌 Plugins: {len(PLUGIN_REGISTRY._plugins)} | 🧩 {_mc}/16', f'📨 Msgs: {_t}'])
 
     if cmd == "/stats":
         _up = int(time.time() - START_TIME)
