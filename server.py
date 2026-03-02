@@ -95,16 +95,33 @@ except Exception:
 try:
     from life_router import detect_life_domain
     LIFE_ROUTER_OK = True
-    logger.info("life_router loaded")
 except Exception:
     LIFE_ROUTER_OK = False
 
 try:
     from life_stocks import handle_stock_command, portfolio_summary
     LIFE_STOCKS_OK = True
-    logger.info("life_stocks loaded")
 except Exception:
     LIFE_STOCKS_OK = False
+
+try:
+    from life_expenses import handle_expense_command
+    LIFE_EXPENSES_OK = True
+except Exception:
+    LIFE_EXPENSES_OK = False
+
+try:
+    from life_health import handle_health_command
+    LIFE_HEALTH_OK = True
+except Exception:
+    LIFE_HEALTH_OK = False
+
+try:
+    from life_work import handle_work_command, get_shift_display
+    LIFE_WORK_OK = True
+except Exception:
+    LIFE_WORK_OK = False
+
 
 
 # Suggestion rate limit: {user_id: last_suggest_timestamp}
@@ -4631,12 +4648,45 @@ async def _tg_handle_message_inner(chat_id, text: str, user: dict):
                     _stock_result = await portfolio_summary()
                 if _stock_result:
                     await tg_send(chat_id, _stock_result, parse_mode="Markdown")
-                    if BRAIN_LEARN_HOOK:
+                    if globals().get("BRAIN_LEARN_HOOK"):
                         try:
                             asyncio.create_task(learn_from_result(text, _stock_result, "life_stocks"))
                         except Exception:
                             pass
                     return
+            elif _life_domain == "expenses" and LIFE_EXPENSES_OK:
+                logger.info(f"Life router: expenses -> handle_expense_command")
+                _router_stats["life_expenses"] = _router_stats.get("life_expenses", 0) + 1
+                _router_stats["total"] += 1
+                _log_cmd(text, "life_expenses", source="life_router")
+                _exp_result = handle_expense_command(text)
+                if _exp_result:
+                    await tg_send(chat_id, _exp_result, parse_mode="Markdown")
+                    return
+
+            elif _life_domain == "health" and LIFE_HEALTH_OK:
+                logger.info(f"Life router: health -> handle_health_command")
+                _router_stats["life_health"] = _router_stats.get("life_health", 0) + 1
+                _router_stats["total"] += 1
+                _log_cmd(text, "life_health", source="life_router")
+                _health_result = handle_health_command(text)
+                if _health_result:
+                    await tg_send(chat_id, _health_result, parse_mode="Markdown")
+                    return
+
+            elif _life_domain == "work" and LIFE_WORK_OK:
+                logger.info(f"Life router: work -> handle_work_command")
+                _router_stats["life_work"] = _router_stats.get("life_work", 0) + 1
+                _router_stats["total"] += 1
+                _log_cmd(text, "life_work", source="life_router")
+                try:
+                    _work_result = handle_work_command(text)
+                except Exception:
+                    _work_result = get_shift_display()
+                if _work_result:
+                    await tg_send(chat_id, _work_result, parse_mode="Markdown")
+                    return
+
         except Exception as e:
             logger.error(f"Life router error: {e}")
 
