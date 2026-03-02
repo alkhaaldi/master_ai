@@ -226,20 +226,52 @@ def build_room_index():
     return "\n".join(lines)
 
 
+# Room name aliases: maps common Arabic names to entity_map keys
+_ROOM_ALIASES = {
+    "غرفة النوم": "الماستر",
+    "غرفة نوم": "الماستر",
+    "النوم": "الماستر",
+    "bedroom": "master",
+    "غرفتي": "الماستر",
+    "الصالة": "المعيشة",
+    "صالة": "المعيشة",
+    "living": "living",
+    "الحوش": "الخارجي",
+    "برا": "الخارجي",
+    "outside": "outdoor",
+    "الأكل": "الطعام",
+    "dining": "الطعام",
+    "غرفة أمي": "ماما",
+    "أم سالم": "ماما",
+    "الشغالة": "الخادمة",
+    "maid": "الخادمة",
+}
+
 def _get_room_entities_for_query(text):
     """Find specific room entity IDs that match the user query (targeted details)."""
     details = []
     text_lower = text.lower()
-
+    expanded = text_lower
+    for alias, canonical in _ROOM_ALIASES.items():
+        if alias in text_lower:
+            expanded = expanded + " " + canonical.lower()
     for room_name, entities in _entity_map.items():
         room_parts = re.split(r'[/|]', room_name)
         matched = False
         for part in room_parts:
             part_clean = part.strip().lower()
-            if len(part_clean) > 1 and part_clean in text_lower:
-                matched = True
+            if len(part_clean) > 1:
+                # Match: full part in expanded, or any significant word from part in expanded
+                if part_clean in expanded:
+                    matched = True
+                else:
+                    # Skip generic words that match too broadly
+                    _GENERIC = {"غرفة", "حمام", "صالة", "ممر", "باب", "نافذة", "room", "hall"}
+                    words = [w for w in part_clean.split() if len(w) > 2 and w not in _GENERIC]
+                    if words and any(w in expanded for w in words):
+                        matched = True
+            if matched:
                 break
-
         if matched:
             for entry in entities:
                 if "=" in str(entry):
@@ -247,9 +279,7 @@ def _get_room_entities_for_query(text):
                     details.append(f"  {eid} = {name}")
                 else:
                     details.append(f"  {entry}")
-
     return details
-
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 3. BUILD SYSTEM PROMPT
