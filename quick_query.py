@@ -1,101 +1,182 @@
-"""Quick Query — fast HA status without LLM calls.
-Handles: "وضع البيت", "كم مكيف شغال", "اضواء شغالة", etc.
+"""Quick Query v2 — fast answers without LLM calls.
+Handles: home status, room status, shift queries, AC/lights count.
 """
 import httpx
 import logging
 import os
 import re
+from datetime import datetime, timedelta
 
 logger = logging.getLogger("quick_query")
 
 HA_URL = os.environ.get("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.environ.get("HA_TOKEN", "")
 
-# Pattern -> handler mapping
-PATTERNS = [
-    (r"\u0648\u0636\u0639 \u0627\u0644\u0628\u064a\u062a|\u062d\u0627\u0644\u0629 \u0627\u0644\u0628\u064a\u062a|\u0634\u0646\u0648 \u0648\u0636\u0639|\u0634\u0644\u0648\u0646 \u0627\u0644\u0628\u064a\u062a", "home_status"),
-    (r"\u0643\u0645 \u0645\u0643\u064a\u0641|\u0645\u0643\u064a\u0641\u0627\u062a \u0634\u063a\u0627\u0644|ac \u0634\u063a\u0627\u0644", "ac_count"),
-    (r"\u0643\u0645 \u0636\u0648\u0621|\u0627\u0636\u0648\u0627\u0621 \u0634\u063a\u0627\u0644|\u0646\u0648\u0631 \u0634\u063a\u0627\u0644", "lights_count"),
-]
+# Shift data (same as life_work.py)
+_SHIFT_PATTERN = ["صباحي", "صباحي", "عصري", "عصري", "ليلي", "ليلي", "إجازة", "إجازة"]
+_SHIFT_EMOJI = {"صباحي": "U0001f305", "عصري": "U0001f307", "ليلي": "U0001f319", "إجازة": "U0001f3d6"}
+_SHIFT_TIMES = {"صباحي": "7:00 AM - 3:00 PM", "عصري": "3:00 PM - 11:00 PM", "ليلي": "11:00 PM - 7:00 AM", "إجازة": "يوم إجازة"}
+_EPOCH = datetime(2024, 1, 4).date()
+_DAYS_AR = {0: "الاثنين", 1: "الثلاثاء", 2: "الأربعاء", 3: "الخميس", 4: "الجمعة", 5: "السبت", 6: "الأحد"}
+
+def _get_shift(d=None):
+    if d is None: d = datetime.now().date()
+    idx = (d - _EPOCH).days % 8
+    s = _SHIFT_PATTERN[idx]
+    return s, _SHIFT_EMOJI[s], _SHIFT_TIMES[s]
+
+# Room name mapping for entity filtering
+ROOM_MAP = {
+    "الديوانية": ["diwaniya", "diwan"],
+    "المعيشة": ["living", "living_room"],
+    "الصالة": ["living", "living_room"],
+    "المطبخ": ["kitchen"],
+    "غرفة النوم": ["master", "bedroom"],
+    "الماستر": ["master"],
+    "غرفة ماما": ["mama", "mom"],
+    "غرفة 3": ["room_3", "room3"],
+    "غرفة 5": ["room_5", "room5"],
+    "الاستقبال": ["reception", "guest"],
+}
 
 
 async def _ha_states():
-    """Fetch all HA states."""
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(
-                f"{HA_URL}/api/states",
-                headers={"Authorization": f"Bearer {HA_TOKEN}"}
-            )
-            if r.status_code == 200:
-                return r.json()
+            r = await client.get(f"{HA_URL}/api/states", headers={"Authorization": f"Bearer {HA_TOKEN}"})
+            if r.status_code == 200: return r.json()
     except Exception as e:
-        logger.error(f"HA states error: {e}")
+        logger.error(f"HA states: {e}")
     return []
 
 
-async def quick_answer(text: str) -> str | None:
+async def quick_answer(text: str):
     """Try to answer quickly without LLM. Returns None if no match."""
-    t = text.strip().lower()
-    
-    for pattern, handler in PATTERNS:
-        if re.search(pattern, t):
-            return await globals()[f"_handle_{handler}"]()
+    t = text.strip()
+
+    # 1) Home status
+    if re.search(r"وضع البيت|حالة البيت|شلون البيت", t):
+        return await _home_status()
+
+    # 2) AC count
+    if re.search(r"كم مكيف|مكيفات شغال", t):
+        return await _ac_count()
+
+    # 3) Lights count
+    if re.search(r"كم ضوء|اضواء شغال|كم نور", t):
+        return await _lights_count()
+
+    # 4) Shift queries
+    if re.search(r"شفتي|دوامي|شنو شفت|شنو دوام", t):
+        return _shift_answer(t)
+
+    # 5) Room status
+    for room_ar, room_keys in ROOM_MAP.items():
+        if room_ar in t:
+            return await _room_status(room_ar, room_keys)
+
     return None
 
 
-async def _handle_home_status():
-    """Quick home status summary."""
-    states = await _ha_states()
-    if not states:
-        return None
+def _shift_answer(t):
+    """Answer shift-related questions."""
+    today = datetime.now().date()
     
+    # "باكر" or "غدا"
+    if "باكر" in t or "غدا" in t or "باخر" in t:
+        d = today + timedelta(days=1)
+        s, emoji, times = _get_shift(d)
+        day_name = _DAYS_AR.get(d.weekday(), "")
+        return f"{emoji} باكر {day_name}: {s}\n⏰ {times}"
+
+    # "اليوم" or default
+    s, emoji, times = _get_shift(today)
+    day_name = _DAYS_AR.get(today.weekday(), "")
+    return f"{emoji} اليوم {day_name}: {s}\n⏰ {times}"
+
+
+async def _home_status():
+    states = await _ha_states()
+    if not states: return None
     lights_on = sum(1 for s in states if s["entity_id"].startswith("light.") and s["state"] == "on")
     lights_total = sum(1 for s in states if s["entity_id"].startswith("light."))
-    ac_on = sum(1 for s in states if s["entity_id"].startswith("climate.") and s["state"] != "off")
-    ac_total = sum(1 for s in states if s["entity_id"].startswith("climate."))
+    ac_on = [s for s in states if s["entity_id"].startswith("climate.") and s["state"] != "off"]
     covers_open = sum(1 for s in states if s["entity_id"].startswith("cover.") and s["state"] == "open")
     covers_total = sum(1 for s in states if s["entity_id"].startswith("cover."))
-    
-    # AC temps
-    ac_temps = []
-    for s in states:
-        if s["entity_id"].startswith("climate.") and s["state"] != "off":
-            temp = s.get("attributes", {}).get("temperature")
-            name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
-            if temp:
-                ac_temps.append(f"  {name}: {temp}\u00b0")
-    
+
     lines = [
-        "\U0001f3e0 \u0648\u0636\u0639 \u0627\u0644\u0628\u064a\u062a:",
-        f"\U0001f4a1 \u0623\u0636\u0648\u0627\u0621: {lights_on}/{lights_total} \u0634\u063a\u0627\u0644",
-        f"\u2744\ufe0f \u0645\u0643\u064a\u0641\u0627\u062a: {ac_on}/{ac_total} \u0634\u063a\u0627\u0644",
+        "U0001f3e0 وضع البيت:",
+        f"U0001f4a1 أضواء: {lights_on}/{lights_total} شغال",
+        f"❄️ مكيفات: {len(ac_on)}/{sum(1 for s in states if s['entity_id'].startswith('climate.'))} شغال",
     ]
-    if ac_temps:
-        lines.extend(ac_temps)
-    lines.append(f"\U0001f3ea \u0633\u062a\u0627\u0626\u0631: {covers_open}/{covers_total} \u0645\u0641\u062a\u0648\u062d")
-    
-    return chr(10).join(lines)
-
-
-async def _handle_ac_count():
-    states = await _ha_states()
-    if not states:
-        return None
-    ac_on = [s for s in states if s["entity_id"].startswith("climate.") and s["state"] != "off"]
-    if not ac_on:
-        return "\u2744\ufe0f \u0643\u0644 \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a \u0645\u0637\u0641\u064a\u0629"
-    lines = [f"\u2744\ufe0f {len(ac_on)} \u0645\u0643\u064a\u0641 \u0634\u063a\u0627\u0644:"]
     for s in ac_on:
         name = s.get("attributes", {}).get("friendly_name", "")
         temp = s.get("attributes", {}).get("temperature", "?")
-        lines.append(f"  {name}: {temp}\u00b0")
+        lines.append(f"  {name}: {temp}°")
+    lines.append(f"U0001f3ea ستائر: {covers_open}/{covers_total} مفتوح")
     return chr(10).join(lines)
 
 
-async def _handle_lights_count():
+async def _ac_count():
     states = await _ha_states()
-    if not states:
-        return None
-    on = [s for s in states if s["entity_id"].startswith("light.") and s["state"] == "on"]
-    return f"\U0001f4a1 {len(on)} \u0636\u0648\u0621 \u0634\u063a\u0627\u0644"
+    if not states: return None
+    ac_on = [s for s in states if s["entity_id"].startswith("climate.") and s["state"] != "off"]
+    if not ac_on: return "❄️ كل المكيفات مطفية"
+    lines = [f"❄️ {len(ac_on)} مكيف شغال:"]
+    for s in ac_on:
+        name = s.get("attributes", {}).get("friendly_name", "")
+        temp = s.get("attributes", {}).get("temperature", "?")
+        lines.append(f"  {name}: {temp}°")
+    return chr(10).join(lines)
+
+
+async def _lights_count():
+    states = await _ha_states()
+    if not states: return None
+    on = sum(1 for s in states if s["entity_id"].startswith("light.") and s["state"] == "on")
+    return f"U0001f4a1 {on} ضوء شغال"
+
+
+async def _room_status(room_ar, room_keys):
+    """Status for a specific room."""
+    states = await _ha_states()
+    if not states: return None
+
+    # Filter entities by room keys in entity_id or friendly_name
+    room_entities = []
+    for s in states:
+        eid = s["entity_id"].lower()
+        fname = s.get("attributes", {}).get("friendly_name", "").lower()
+        if any(k in eid or k in fname for k in room_keys):
+            room_entities.append(s)
+
+    if not room_entities:
+        return f"❓ ما لقيت أجهزة لـ{room_ar}"
+
+    lights = [s for s in room_entities if s["entity_id"].startswith("light.")]
+    acs = [s for s in room_entities if s["entity_id"].startswith("climate.")]
+    covers = [s for s in room_entities if s["entity_id"].startswith("cover.")]
+
+    lines = [f"U0001f3e0 {room_ar}:"]
+
+    if lights:
+        on = sum(1 for s in lights if s["state"] == "on")
+        lines.append(f"U0001f4a1 أضواء: {on}/{len(lights)} شغال")
+
+    if acs:
+        for s in acs:
+            state = s["state"]
+            temp = s.get("attributes", {}).get("temperature", "?")
+            curr = s.get("attributes", {}).get("current_temperature", "?")
+            if state == "off":
+                lines.append(f"❄️ مكيف: مطفي")
+            else:
+                lines.append(f"❄️ مكيف: {temp}° (حالي: {curr}°)")
+
+    if covers:
+        for s in covers:
+            name = s.get("attributes", {}).get("friendly_name", "")
+            state_ar = "مفتوح" if s["state"] == "open" else "مسكر"
+            lines.append(f"U0001f3ea {name}: {state_ar}")
+
+    return chr(10).join(lines)
