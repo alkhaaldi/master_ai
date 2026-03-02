@@ -402,6 +402,20 @@ def get_relevant_memories(query: str, limit: int = 5) -> str:
         top = scored[:limit]
         if not top:
             return ""
+        # Track hits on retrieved memories
+        try:
+            conn2 = sqlite3.connect(_AUDIT_DB, timeout=3)
+            for _, r in top:
+                conn2.execute(
+                    "UPDATE memory SET hit_count=COALESCE(hit_count,0)+1, "
+                    "hits=COALESCE(hits,0)+1, last_used=datetime('now') WHERE id=?",
+                    (r["id"],)
+                )
+            conn2.commit()
+            conn2.close()
+        except Exception:
+            pass
+
         lines = []
         for _, r in top:
             lines.append("[" + r["category"] + "/" + r["type"] + "] " + r["content"])

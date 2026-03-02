@@ -814,6 +814,15 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
 # JSON REPAIR UTILITY
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
+
+# Register llm_call with brain_learning for memory extraction
+try:
+    from brain_learning import set_llm_call
+    set_llm_call(llm_call)
+    logger.info("llm_call registered with brain_learning")
+except Exception as e:
+    logger.warning(f"Could not register llm_call with brain_learning: {e}")
+
 def repair_json(text: str) -> dict:
     """Attempt to parse and repair malformed JSON from LLM."""
     # Strip markdown code fences
@@ -2628,6 +2637,18 @@ async def ask(body: AskRequest):
         status=result.get("task_state", "complete"), duration=duration,
         request_id=request_id, task_id=task_id
     )
+
+    # Brain learning from /ask interaction (async, non-blocking)
+    if BRAIN_AVAILABLE:
+        try:
+            _ask_actions = result.get("actions", [])
+            _ask_results = result.get("results", [])
+            if _ask_actions:
+                asyncio.create_task(learn_from_result(
+                    body.message, _ask_actions, _ask_results, result["response"]
+                ))
+        except Exception:
+            pass
 
     return AskResponse(
         response=result["response"],

@@ -156,6 +156,15 @@ async def _process_learn_item(item):
                             source="user_correction")
                         logger.info(f"Learned alias: {kw} -> {successful_entities[:3]}")
 
+    # LLM-powered extraction (for non-trivial interactions)
+    if len(actions) >= 1 and _llm_call_ref:
+        actions_desc = ", ".join(a.get("type","?") for a in actions if isinstance(a, dict))
+        response = item.get("response", "")
+        try:
+            await llm_extract_memories(goal, response, actions_desc)
+        except Exception as e:
+            logger.debug(f"LLM extraction skipped: {e}")
+
 
 
 def _extract_keywords(text):
@@ -205,6 +214,80 @@ def _store_learning(category, content, context_json, source="unknown", confidenc
 
 
 
+
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 5b. LLM-POWERED MEMORY EXTRACTION
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EXTRACT_PROMPT = """حلل هالتفاعل واستخرج معلومات مهمة تنحفظ بالذاكرة.
+لكل معلومة رجع JSON array:
+- category: personal/ha/trading/work/pattern/preference
+- content: المعلومة بالعربي (مختصرة، سطر واحد)
+- confidence: 0.5-1.0
+رجع [] إذا ما فيه شي جديد يتعلم.
+رجع JSON array فقط بدون أي شي ثاني."""
+
+_llm_call_ref = None
+
+def set_llm_call(fn):
+    """Register the llm_call function from server.py"""
+    global _llm_call_ref
+    _llm_call_ref = fn
+    logger.info("LLM call registered for learning")
+
+async def llm_extract_memories(goal, response, actions_summary=""):
+    """Use LLM to extract new memories from interaction."""
+    global _llm_call_ref
+    if not _llm_call_ref:
+        return []
+    try:
+        interaction = "طلب: " + goal[:300] + "\nرد: " + response[:500]
+        if actions_summary:
+            interaction += "\nأوامر: " + actions_summary[:200]
+        raw = await _llm_call_ref(EXTRACT_PROMPT, interaction, max_tokens=512, temperature=0.2)
+        # Parse JSON
+        raw = raw.strip()
+        if raw.startswith("["):
+            memories = json.loads(raw)
+        else:
+            # Try to find JSON array in response
+            match = re.search(r'\[.*?\]', raw, re.DOTALL)
+            if match:
+                memories = json.loads(match.group())
+            else:
+                return []
+        saved = 0
+        for mem in memories:
+            if not isinstance(mem, dict) or "content" not in mem:
+                continue
+            cat = mem.get("category", "general")
+            content = mem["content"][:200]
+            conf = min(max(float(mem.get("confidence", 0.6)), 0.3), 1.0)
+            # Skip if already exists
+            try:
+                conn = sqlite3.connect(str(AUDIT_DB))
+                existing = conn.execute(
+                    "SELECT id FROM memory WHERE content=? AND active=1", (content,)
+                ).fetchone()
+                conn.close()
+                if existing:
+                    continue
+            except:
+                pass
+            _store_learning(cat, content, json.dumps({"source_goal": goal[:100]}, ensure_ascii=False),
+                           source="llm_extract", confidence=conf)
+            saved += 1
+        if saved:
+            logger.info(f"LLM extracted {saved} new memories from: {goal[:50]}")
+        return memories
+    except json.JSONDecodeError:
+        logger.debug("LLM extract returned non-JSON")
+        return []
+    except Exception as e:
+        logger.warning(f"llm_extract_memories error: {e}")
+        return []
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 6. PUBLIC API (called from server.py)
