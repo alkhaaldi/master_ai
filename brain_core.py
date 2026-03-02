@@ -348,7 +348,7 @@ def build_system_prompt():
 استخدم سياق الشفت والوقت عشان تفهم وينه ومزاجه بدون ما يشرحلك.
 
 Tools: ha_get_state, ha_call_service, ssh_run, respond_text, http_request, memory_store, win_diagnostics, win_powershell, win_winget_install
-الستائر inverted: open=مسكرة, closed=مفتوحة. entity_id="*" لاكتشاف.
+الستائر inverted: open=مسكرة, closed=مفتوحة. entity_id: exact ID أو pattern مثل "climate.*" أو "sensor.*temp*" أو "*" للكل. استخدم exact IDs من Room Index أولاً.
 
 {room_index}
 

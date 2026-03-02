@@ -1375,11 +1375,24 @@ async def _exec_ha_get_state(entity_id: str) -> dict:
     _ha_timeout = EXTERNAL_TIMEOUT if FEATURE_TIMEOUTS else 30
     async with httpx.AsyncClient(timeout=_ha_timeout) as client:
         headers = {"Authorization": f"Bearer {HA_TOKEN}"}
+        # Wildcard: fetch all and filter
         if entity_id == "*":
             r = await client.get(f"{HA_URL}/api/states", headers=headers, timeout=_ha_timeout)
             states = r.json()
             _cb_ha.record_success()
             return {"success": True, "count": len(states), "states": states[:50]}
+        # Pattern matching: *climate*, sensor.*temp*, etc
+        if "*" in entity_id and entity_id != "*":
+            import fnmatch
+            r = await client.get(f"{HA_URL}/api/states", headers=headers, timeout=_ha_timeout)
+            all_states = r.json()
+            # Support filter arg too
+            pattern = entity_id.lower()
+            matched = [s for s in all_states if fnmatch.fnmatch(s.get("entity_id","").lower(), pattern)]
+            _cb_ha.record_success()
+            if matched:
+                return {"success": True, "count": len(matched), "states": matched[:30]}
+            return {"success": True, "count": 0, "states": [], "note": f"No entities matching {entity_id}"}
         # Support comma-separated entity IDs
         ids = [e.strip() for e in entity_id.split(",") if e.strip()]
         if len(ids) > 1:
