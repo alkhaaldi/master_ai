@@ -103,6 +103,7 @@ except Exception:
 DOCTOR_OK = False
 try:
     from ha_doctor import detect_anomalies, format_health_report, suggest_fixes, get_unavailable_entities, check_ac_performance
+    from ha_history import get_entity_history, analyze_entity, format_history_report as format_history
     DOCTOR_OK = True
 except Exception:
     pass
@@ -2761,6 +2762,25 @@ async def health():
         "last_migration_ok": (schema.get("last_migration") or {}).get("ok"),
         "plugins": len(PLUGIN_REGISTRY._plugins),
     }
+
+
+# ── Entity History Endpoint ──────────
+@app.get("/history/{entity_id:path}")
+async def entity_history_endpoint(entity_id: str, hours: int = 24,
+                                   start: str = None, end: str = None,
+                                   format: str = "report", detail: str = "normal"):
+    """Entity history: GET /history/climate.my_room_ac?hours=24&format=report|json|raw"""
+    if not DOCTOR_OK:
+        return {"error": "ha_history not loaded"}
+    if format == "raw":
+        data = await get_entity_history(entity_id, hours, start, end)
+        return {"entity_id": entity_id, "count": len(data), "history": data}
+    elif format == "json":
+        return await analyze_entity(entity_id, hours, start, end)
+    else:
+        text = await format_history(entity_id, hours, start, end, detail)
+        return {"entity_id": entity_id, "report": text}
+
 
 
 def _count_queued_jobs():
