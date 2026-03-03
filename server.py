@@ -2507,6 +2507,7 @@ async def lifespan(app):
     # Telegram bot polling
     if TELEGRAM_TOKEN:
         asyncio.create_task(telegram_polling_loop())
+        asyncio.create_task(weather_alert_loop())
         asyncio.create_task(nightly_summary_scheduler())
         asyncio.create_task(morning_report_scheduler())
         asyncio.create_task(shift_alert_loop())
@@ -4456,32 +4457,26 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         return "life_health not loaded"
 
     if cmd == "/help":
-        _cmds = [
-            "🏠 Master AI", "",
-            "/status - النظام",
-            "/lights - الأضواء",
-            "/temp - المكيفات",
-            "/rooms - الغرف",
-            "/scenes - المشاهد",
-            "/morning - تقرير صباحي",
-            "/remind - تذكير",
-            "/reminders - التذكيرات",
-            "/news - أخبار",
-            "/stocks - المحفظة",
-            "/price X - سعر سهم",
-            "/tasks - المهام",
-            "/shift - الشفت",
-            "/schedule - جدول",
-            "/expense - مصروف",
-            "/expenses - مصاريف",
-            "/health - الصحة",
-            "/brain - العقل",
-            "/diag - تشخيص",
-            "/stats - إحصائيات",
-            "/summary - ملخص يومي",
-            "", "أرسل أي رسالة 👍",
+        _help_text = chr(10).join([
+            "\U0001f3e0 *Master AI v5.4*", "",
+            "\U0001f3e0 *\u0627\u0644\u0628\u064a\u062a:*",
+            "/lights /temp /rooms /scenes /locks /media /find", "",
+            "\U0001f4c5 *\u0627\u0644\u062d\u064a\u0627\u0629:*",
+            "/shift /week /weather /morning", "",
+            "\U0001f4b0 *\u0627\u0644\u0645\u0627\u0644:*",
+            "/stocks /price /expense /expenses", "",
+            "\U0001f4dd *\u0627\u0644\u0645\u0647\u0627\u0645:*",
+            "/tasks /remind /reminders", "",
+            "\U0001f4ca *\u0627\u0644\u0646\u0638\u0627\u0645:*",
+            "/status /diag /stats /summary /brain", "",
+            "\U0001f4ac \u0623\u0648 \u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \U0001f44d",
+        ])
+        _btns = [
+            {"text": "\U0001f3e0 \u0627\u0644\u0642\u0627\u0626\u0645\u0629", "callback_data": "cmd:home"},
+            {"text": "\U0001f4cb \u0645\u0644\u062e\u0635", "callback_data": "cmd:summary"},
         ]
-        return chr(10).join(_cmds)
+        await tg_send_inline(chat_id, _help_text, _btns, columns=2)
+        return "__inline_sent__"
 
     return None
 
@@ -5388,6 +5383,48 @@ async def entity_health_check_loop():
         await asyncio.sleep(6 * 3600)  # every 6 hours
 
 
+
+
+async def weather_alert_loop():
+    """Check weather every 3 hours, alert on extreme conditions."""
+    logger.info("Weather alert loop started")
+    _last_alert_date = None
+    await asyncio.sleep(600)  # wait 10min after startup
+    while True:
+        try:
+            import httpx as _wx
+            async with _wx.AsyncClient(timeout=10) as c:
+                r = await c.get("https://api.open-meteo.com/v1/forecast", params={
+                    "latitude": 29.3375, "longitude": 47.9775,
+                    "current": "temperature_2m,weather_code,wind_speed_10m",
+                    "timezone": "Asia/Kuwait",
+                })
+                d = r.json()
+                cur = d.get("current", {})
+                temp = cur.get("temperature_2m", 0)
+                code = cur.get("weather_code", 0)
+                wind = cur.get("wind_speed_10m", 0)
+                today = datetime.now().strftime("%Y-%m-%d")
+                alerts = []
+                if temp >= 45:
+                    alerts.append(f"\U0001f525 \u062d\u0631\u0627\u0631\u0629 \u0634\u062f\u064a\u062f\u0629: {temp}\u00b0C!")
+                if temp <= 5:
+                    alerts.append(f"\u2744\ufe0f \u0628\u0631\u062f \u0634\u062f\u064a\u062f: {temp}\u00b0C!")
+                if code in (95, 96, 99):
+                    alerts.append("\u26a1 \u0639\u0648\u0627\u0635\u0641 \u0631\u0639\u062f\u064a\u0629!")
+                if wind >= 50:
+                    alerts.append(f"\U0001f4a8 \u0631\u064a\u0627\u062d \u0642\u0648\u064a\u0629: {wind} km/h!")
+                if code in (45, 48):
+                    alerts.append("\U0001f32b \u0636\u0628\u0627\u0628 \u0643\u062b\u064a\u0641 \u2014 \u0627\u0646\u062a\u0628\u0647 \u0639\u0627\u0644\u0637\u0631\u064a\u0642!")
+                if alerts and _last_alert_date != today:
+                    _chat = ADMIN_TELEGRAM_ID or "669769765"
+                    _msg = "\u26a0\ufe0f \u062a\u0646\u0628\u064a\u0647 \u0637\u0642\u0633:\n" + chr(10).join(alerts)
+                    await tg_send(_chat, _msg)
+                    _last_alert_date = today
+                    logger.info(f"Weather alert sent: {alerts}")
+        except Exception as e:
+            logger.error(f"Weather alert error: {e}")
+        await asyncio.sleep(3 * 3600)  # every 3 hours
 
 async def nightly_summary_scheduler():
     """Send daily summary at 11 PM and reset daily counters."""
