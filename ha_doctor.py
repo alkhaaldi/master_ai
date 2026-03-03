@@ -12,6 +12,13 @@ logger = logging.getLogger("ha_doctor")
 HA_URL = os.environ.get("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.environ.get("HA_TOKEN", "")
 
+# Only report these domains as issues (ignore scene, button, sensor, stt, tts, ai_task)
+IMPORTANT_DOMAINS = {"light", "switch", "climate", "cover", "fan", "media_player"}
+# Skip known entities that are normally unavailable
+SKIP_ENTITIES = {"stt.", "tts.", "ai_task.", "scene.", "button.", "number.", "select.", "update."}
+# Skip by substring in entity_id
+SKIP_SUBSTRINGS = {"alexa_", "blaupunkt", "everywhere_", "air_freshener", "_cartridge_", "_ionizer"}
+
 DOMAIN_AR = {
     "light": "\u0636\u0648\u0621", "switch": "\u0645\u0641\u062a\u0627\u062d",
     "climate": "\u0645\u0643\u064a\u0641", "cover": "\u0633\u062a\u0627\u0631\u0629",
@@ -34,6 +41,10 @@ async def get_unavailable_entities():
             st = s["state"]
             if st in ("unavailable", "unknown"):
                 domain = eid.split(".")[0]
+                if domain not in IMPORTANT_DOMAINS: continue
+                if any(skip in eid for skip in SKIP_ENTITIES): continue
+                if any(sub in eid for sub in SKIP_SUBSTRINGS): continue
+                if "backlight" in eid: continue
                 name = s.get("attributes", {}).get("friendly_name", eid)
                 bad.append({"entity_id": eid, "name": name, "state": st, "domain": domain})
         return bad
