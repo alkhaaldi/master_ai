@@ -292,7 +292,7 @@ async def _weather():
 async def _covers_status():
     states = await _ha_states()
     if not states: return None
-    covers = [s for s in states if s["entity_id"].startswith("cover.") and s["state"] not in ("unavailable", "unknown")]
+    covers = [s for s in states if s["entity_id"].startswith("cover.") and s["state"] not in ("unavailable", "unknown") and "_curtain" not in s["entity_id"]]
     if not covers: return "🎪 ما فيه ستائر"
     opened = [s for s in covers if s["state"] == "open"]
     closed = [s for s in covers if s["state"] == "closed"]
