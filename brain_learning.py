@@ -726,18 +726,43 @@ async def detect_anomalies():
     
     conn.close()
     
-    # Dedup: keep one anomaly per entity_id+type, prefer higher severity
-    seen = set()
+    # Dedup: use friendly name + type + hour, prefer Arabic names
+    seen_names = set()
+    seen_bases = set()
     deduped = []
     for a in anomalies:
-        key = (a["entity_id"], a["type"])
-        base_eid = a["entity_id"].split(".")[-1]
-        base_key = (base_eid, a["type"])
-        if key not in seen and base_key not in seen:
-            seen.add(key)
-            seen.add(base_key)
-            deduped.append(a)
+        eid = a["entity_id"]
+        name = a.get("name", "")
+        atype = a["type"]
+        hour = a.get("expected_hour", "")
+        
+        # Key by name similarity
+        name_key = (name.lower().strip(), atype, hour)
+        
+        # Also key by entity base (strip domain + trailing numbers/suffixes)
+        base = eid.split(".")[-1]
+        # Remove trailing _N, _switch_N patterns
+        import re as _dedup_re
+        base_clean = _dedup_re.sub(r'(_switch)?(_\d+)+$', '', base)
+        base_key = (base_clean, atype, hour)
+        
+        if name_key in seen_names or base_key in seen_bases:
+            continue
+        seen_names.add(name_key)
+        seen_bases.add(base_key)
+        
+        # Skip entities whose friendly name is just the entity_id (no Arabic name)
+        # if there's already an entity with Arabic name for same base
+        deduped.append(a)
     anomalies = deduped
+    
+    # Filter out likely automated entities (100% confidence at unusual hours like 0:00)
+    # These are automations, not human patterns
+    anomalies = [a for a in anomalies if not (
+        a["type"] == "missing_on" and 
+        a.get("expected_hour") in (0, 1, 2, 3, 4, 5) and 
+        a.get("confidence", 0) >= 0.95
+    )]
     
     # Sort by severity
     sev_order = {"high": 0, "medium": 1, "low": 2}
@@ -823,7 +848,7 @@ async def create_ha_automation(entity_id, action, hour, name=""):
 
 
 def get_top_suggestions(limit=5):
-    """Get top automation suggestions for interactive display."""
+    """Get top automation suggestions for interactive display, diversified across rooms."""
     if not os.path.exists(DB_PATH):
         return []
     conn = sqlite3.connect(DB_PATH)
@@ -837,17 +862,55 @@ def get_top_suggestions(limit=5):
     """).fetchall()
     conn.close()
     
+    # Load entity_map for room lookup
+    import json as _json
+    emap_path = os.path.join(BASE_DIR, "entity_map.json")
+    room_lookup = {}
+    try:
+        with open(emap_path) as ef:
+            emap = _json.load(ef)
+        for room, entries in emap.items():
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if "=" in entry:
+                    eid_key = entry.split("=", 1)[0]
+                    room_lookup[eid_key] = room.split("/")[0].strip()
+    except Exception:
+        pass
+    
     # Dedup by entity base name
     seen = set()
-    results = []
+    all_candidates = []
     for eid, ptype, hour, conf, samples in rows:
-        base = eid.split(".")[-1]
+        import re as _re_sug
+        base = _re_sug.sub(r"(_switch)?(_\d+)+$", "", eid.split(".")[-1])
         key = (base, ptype, hour)
         if key in seen:
             continue
         seen.add(key)
         name = _get_friendly_name(eid)
-        action_ar = "\u064a\u0634\u062a\u063a\u0644" if ptype == "on" else "\u064a\u0646\u0637\u0641\u064a"
+        room = room_lookup.get(eid, "other")
+        all_candidates.append((eid, ptype, hour, conf, samples, name, room))
+    
+    # Diversify: 1 best suggestion per room, on preferred
+    from collections import defaultdict
+    by_room = defaultdict(list)
+    for item in all_candidates:
+        by_room[item[6]].append(item)
+    
+    # Sort each room: on first, then confidence desc
+    for _r in by_room:
+        by_room[_r].sort(key=lambda x: (0 if x[1]=='on' else 1, -x[3]))
+    
+    results = []
+    room_keys = sorted(by_room.keys(), key=lambda r: -by_room[r][0][3] if by_room[r] else 0)
+    for _rk in room_keys:
+        if not by_room[_rk] or len(results) >= limit:
+            break
+        item = by_room[_rk][0]
+        eid, ptype, hour, conf, samples, name, _room = item
+        action_ar = "يشتغل" if ptype == "on" else "ينطفي"
         results.append({
             "entity_id": eid,
             "action": ptype,
@@ -858,7 +921,5 @@ def get_top_suggestions(limit=5):
             "label": f"{name}: {action_ar} {hour}:00 ({int(conf*100)}%)",
             "callback_data": f"auto:{eid}:{ptype}:{hour}"
         })
-        if len(results) >= limit:
-            break
     
     return results

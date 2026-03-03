@@ -256,6 +256,24 @@ async def route_intent(text: str) -> dict | None:
         return await _handle_scene(text, emap)
 
     # --- 2. State query ---
+    # Anomaly queries: "شذوذ اليوم", "شي غريب؟"
+    if any(aw in text for aw in ANOMALY_WORDS):
+        try:
+            from brain_learning import format_anomaly_report
+            report = await format_anomaly_report()
+            return {"text": report, "action": "anomaly", "source": "brain"}
+        except Exception:
+            pass
+
+    # Brain status: "حالة الذكاء", "مستوى الثقة"
+    if any(bw in text for bw in BRAIN_WORDS):
+        try:
+            from brain_learning import format_maturity_report
+            report = format_maturity_report()
+            return {"text": report, "action": "brain_status", "source": "brain"}
+        except Exception:
+            pass
+
     if any(qw in text for qw in QUERY_WORDS):
         return await _handle_query(text, words, emap)
 
@@ -795,6 +813,9 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
 HISTORY_WORDS = {"لوق", "لوج", "سجل", "تاريخ", "history", "log", "لوگ"}
 
 PATTERN_WORDS = {"أنماط", "نمط", "عادة", "عادات", "patterns", "pattern", "تعلم", "عاداته"}
+
+ANOMALY_WORDS = {"شذوذ", "الشذوذ", "غريب", "غريبة", "غير طبيعي", "مختلف", "شاذ", "anomaly", "anomalies", "غلط", "خطأ اليوم", "شي غلط"}
+BRAIN_WORDS = {"ذكاء", "الذكاء", "brain", "مخ", "دماغ", "ثقة", "الثقة", "maturity", "نضج", "مستوى التعلم", "حالة التعلم"}
 _TIME_PATTERNS = {
     "ساعة": 1, "ساعتين": 2, "٣ ساعات": 3, "3 ساعات": 3,
     "٦ ساعات": 6, "6 ساعات": 6, "١٢ ساعة": 12, "12 ساعة": 12,
