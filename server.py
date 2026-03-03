@@ -106,6 +106,7 @@ try:
     from ha_doctor import detect_anomalies, format_health_report, suggest_fixes, get_unavailable_entities, check_ac_performance
     from ha_history import get_entity_history, analyze_entity, format_history_report as format_history
     from brain_learning import learn_patterns as bl_learn, get_patterns as bl_get_patterns, suggest_automations as bl_suggest, format_patterns_report as bl_format_patterns, get_learning_stats as bl_stats
+    from brain_learning import format_maturity_report as bl_maturity
     LEARNING_OK = True
     DOCTOR_OK = True
 except Exception:
@@ -4186,21 +4187,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         if not LEARNING_OK:
             return "brain_learning not loaded"
         try:
-            stats = bl_stats()
-            tp = stats.get("total_patterns", 0)
-            if not tp:
-                return "No patterns yet - use /learn"
-            ew = stats.get("entities_with_patterns", 0)
-            lr = stats.get("last_run")
-            ld = lr["date"][:16] if lr else "?"
-            suggestions = await bl_suggest()
-            strong = [s for s in suggestions if s.get("confidence", 0) >= 0.8][:10]
-            lines = [f"\U0001f9e0 {tp} patterns from {ew} entities", f"Last: {ld}", ""]
-            for s in strong:
-                eid = s["entity_id"].split(".")[1][:25]
-                sa = s.get("suggestion_ar", "")[:60]
-                lines.append(f"  {eid}: {sa}")
-            return "\n".join(lines)
+            return bl_maturity()
         except Exception as e:
             return f"patterns error: {e}"
 

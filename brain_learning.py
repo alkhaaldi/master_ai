@@ -438,3 +438,164 @@ def get_learning_stats():
         "entities_with_patterns": entities,
         "last_run": {"date": last[0], "patterns": last[1], "duration": last[2]} if last else None,
     }
+
+
+def get_maturity_report():
+    """Get brain learning maturity assessment."""
+    if not os.path.exists(DB_PATH):
+        return {"level": 0, "label": "لم يبدأ", "label_en": "not_started"}
+    
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Stats
+    runs = c.execute("SELECT COUNT(*) FROM learning_runs").fetchone()[0]
+    total_patterns = c.execute("SELECT COUNT(*) FROM device_patterns").fetchone()[0]
+    entities = c.execute("SELECT COUNT(DISTINCT entity_id) FROM device_patterns").fetchone()[0]
+    
+    # Confidence distribution
+    high = c.execute("SELECT COUNT(*) FROM device_patterns WHERE confidence >= 0.8").fetchone()[0]
+    medium = c.execute("SELECT COUNT(*) FROM device_patterns WHERE confidence >= 0.5 AND confidence < 0.8").fetchone()[0]
+    low = c.execute("SELECT COUNT(*) FROM device_patterns WHERE confidence < 0.5").fetchone()[0]
+    
+    # Days of data
+    days_data = c.execute("SELECT COUNT(DISTINCT date) FROM daily_summary").fetchone()[0]
+    
+    # Last run
+    last = c.execute("SELECT run_date, days_analyzed FROM learning_runs ORDER BY id DESC LIMIT 1").fetchone()
+    
+    # Top suggestions (confidence >= 80%)
+    top_sugs = c.execute("""
+        SELECT entity_id, pattern_type, hour, confidence, sample_count
+        FROM device_patterns WHERE confidence >= 0.8 AND pattern_type IN ('on','off')
+        ORDER BY confidence DESC, sample_count DESC LIMIT 20
+    """).fetchall()
+    
+    conn.close()
+    
+    # Calculate maturity level
+    # Level 1: started (< 3 days data)
+    # Level 2: learning (3-7 days, some patterns)
+    # Level 3: confident (7-14 days, many high-confidence patterns)
+    # Level 4: expert (14+ days, stable patterns)
+    # Level 5: master (30+ days, very stable)
+    
+    if days_data < 3:
+        level, label = 1, "مبتدئ"
+        emoji = "\U0001f331"
+        advice = "يحتاج أيام أكثر عشان يتعلم أنماطك — خله يجمع بيانات"
+    elif days_data < 7:
+        level, label = 2, "يتعلم"
+        emoji = "\U0001f4d6"
+        advice = "بدأ يشوف أنماط بس يحتاج أسبوع كامل عشان يثبت"
+    elif days_data < 14:
+        if high > 50:
+            level, label = 3, "واثق"
+            emoji = "\U0001f4aa"
+            advice = "الأنماط القوية (80%+) تقدر تعتمد عليها"
+        else:
+            level, label = 2, "يتعلم"
+            emoji = "\U0001f4d6"
+            advice = "عنده بيانات بس الأنماط لسا ما ثبتت بالكامل"
+    elif days_data < 30:
+        level, label = 4, "خبير"
+        emoji = "\U0001f393"
+        advice = "أنماطه ثابتة — اقتراحاته موثوقة"
+    else:
+        level, label = 5, "متمكن"
+        emoji = "\U0001f9e0"
+        advice = "بيانات شهر+ — يعرف عاداتك بدقة عالية"
+    
+    # Trust meter
+    if total_patterns == 0:
+        trust_pct = 0
+    else:
+        trust_pct = round(high / total_patterns * 100)
+    
+    trust_bar_len = trust_pct // 5
+    trust_bar = "\u2588" * trust_bar_len + "\u2591" * (20 - trust_bar_len)
+    
+    return {
+        "level": level,
+        "label": label,
+        "emoji": emoji,
+        "advice": advice,
+        "runs": runs,
+        "days_data": days_data,
+        "total_patterns": total_patterns,
+        "entities": entities,
+        "high_confidence": high,
+        "medium_confidence": medium,
+        "low_confidence": low,
+        "trust_pct": trust_pct,
+        "trust_bar": trust_bar,
+        "last_run": last[0][:16] if last else None,
+        "top_suggestions": [
+            {"entity_id": r[0], "type": r[1], "hour": r[2], "confidence": r[3], "samples": r[4]}
+            for r in top_sugs
+        ],
+    }
+
+
+def _get_friendly_name(entity_id):
+    """Get Arabic friendly name from entity_map.json."""
+    try:
+        import json
+        emap_path = os.path.join(BASE_DIR, "entity_map.json")
+        if not os.path.exists(emap_path):
+            return entity_id.split(".")[-1].replace("_", " ")
+        with open(emap_path) as ef:
+            emap = json.load(ef)
+        for room, entries in emap.items():
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if "=" in entry:
+                    eid, ename = entry.split("=", 1)
+                    if eid == entity_id:
+                        return ename
+        return entity_id.split(".")[-1].replace("_", " ")
+    except Exception:
+        return entity_id.split(".")[-1].replace("_", " ")
+
+
+def format_maturity_report():
+    """Telegram-ready maturity report."""
+    m = get_maturity_report()
+    if m["level"] == 0:
+        return "\U0001f9e0 Brain Learning\n\nلم يبدأ التعلم بعد — استخدم /learn"
+    
+    lines = [
+        f"{m['emoji']} Brain Learning — {m['label']} (مستوى {m['level']}/5)",
+        "",
+        f"\U0001f4ca البيانات:",
+        f"  \U0001f4c5 {m['days_data']} يوم بيانات",
+        f"  \U0001f504 {m['runs']} عملية تعلم",
+        f"  \U0001f50d {m['total_patterns']} نمط من {m['entities']} جهاز",
+        f"  \u23f0 آخر تعلم: {m['last_run'] or '—'}",
+        "",
+        f"\U0001f3af مقياس الثقة: {m['trust_pct']}%",
+        f"  [{m['trust_bar']}]",
+        f"  \U0001f7e2 قوي (80%+): {m['high_confidence']}",
+        f"  \U0001f7e1 متوسط: {m['medium_confidence']}",
+        f"  \U0001f534 مبكر: {m['low_confidence']}",
+        "",
+        f"\U0001f4ac {m['advice']}",
+    ]
+    
+    if m["top_suggestions"]:
+        lines.append("")
+        lines.append("\U0001f4a1 أقوى الاقتراحات (تقدر تعتمد عليها):")
+        seen = set()
+        for s in m["top_suggestions"]:
+            eid = s["entity_id"]
+            if eid in seen:
+                continue
+            seen.add(eid)
+            name = _get_friendly_name(eid)
+            action = "يشتغل" if s["type"] == "on" else "ينطفي"
+            lines.append(f"  \u2705 {name}: {action} الساعة {s['hour']}:00 ({int(s['confidence']*100)}% ثبات)")
+            if len(seen) >= 8:
+                break
+    
+    return "\n".join(lines)
