@@ -100,6 +100,13 @@ try:
 except Exception:
     pass
 
+DOCTOR_OK = False
+try:
+    from ha_doctor import detect_anomalies, format_health_report, suggest_fixes, get_unavailable_entities
+    DOCTOR_OK = True
+except Exception:
+    pass
+
 try:
     from discovery import get_home_summary, sync_entities, get_discovery_stats
     DISCOVERY_OK = True
@@ -4075,6 +4082,19 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"\u26a0\ufe0f {e}"
 
+    if cmd == "/health":
+        if not DOCTOR_OK: return "ha_doctor not loaded"
+        await tg_send_typing(chat_id)
+        _hr = await format_health_report()
+        # Add fix suggestions
+        _issues = await detect_anomalies()
+        _fixes = await suggest_fixes(_issues)
+        if _fixes:
+            _hr += chr(10) + chr(10) + "🔧 *اقتراحات:*"
+            for fx in _fixes[:5]:
+                _hr += chr(10) + fx
+        return _hr
+
     if cmd == "/brain":
         try:
             stats = get_brain_stats()
@@ -5333,6 +5353,7 @@ async def health_external():
             "smart_router_v2": FEATURE_SMART_ROUTER_V2,
             "entity_health": FEATURE_ENTITY_HEALTH,
             "home_brain": BRAIN_OK,
+            "ha_doctor": DOCTOR_OK,
             "external_timeout_seconds": EXTERNAL_TIMEOUT,
         }
     }
@@ -5778,6 +5799,13 @@ async def brain_weekly_insight():
                 _wl.append("")
                 _wl.append("💡 تبي أسوي أي وحدة منهم automation؟")
             await tg_send(_chat, chr(10).join(_wl))
+            # Also send health report
+            if DOCTOR_OK:
+                try:
+                    _hr = await format_health_report()
+                    await tg_send(_chat, _hr)
+                except Exception:
+                    pass
             logger.info(f"Brain weekly: {len(pats)} patterns")
         except Exception as e:
             logger.error(f"Brain weekly: {e}")
