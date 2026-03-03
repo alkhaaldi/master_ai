@@ -29,8 +29,16 @@ HA_TOKEN = os.environ.get("HA_TOKEN", "")
 _KW_TZ = timezone(timedelta(hours=3))
 TRACKED_DOMAINS = {"light", "climate", "cover", "fan", "media_player", "switch"}
 SKIP_SUBS = {"backlight", "_curtain", "update.", "sensor.", "binary_sensor.",
+
              "automation.", "script.", "alexa_", "blaupunkt", "everywhere_",
              "none", "googletv"}  # skip known non-trackable
+# Entities managed by external automation (Smart Life etc) — skip in anomaly detection
+ANOMALY_EXCLUDE_SUBS = {
+    "parking_light",      # باركينج — Smart Life sunset automation
+    "outdoor_lights",      # إضاءة خارجية — Smart Life sunset automation
+    "drj_lmwjryn",         # سلم المؤجرين — Smart Life automation
+    "d_drj_ldwr_lwl",      # اضاءة ادرج الدور الأول — Smart Life automation
+}
 
 
 def _init_db():
@@ -628,6 +636,11 @@ async def detect_anomalies():
     
     anomalies = []
     
+    # Filter out externally automated entities
+    def _is_excluded(eid):
+        base = eid.split('.')[-1]
+        return any(sub in base for sub in ANOMALY_EXCLUDE_SUBS)
+
     # 1. Devices that usually turn ON by this hour but haven't (1hr grace)
     grace_hour = max(0, current_hour - 1)
     on_patterns = c.execute("""
@@ -652,6 +665,8 @@ async def detect_anomalies():
     for eid, pattern in expected_on.items():
         ts = today_summary.get(eid)
         if not ts or ts["on_count"] == 0:
+            if _is_excluded(eid):
+                continue
             # Device didn't turn on but usually does
             name = _get_friendly_name(eid)
             anomalies.append({
