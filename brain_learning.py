@@ -553,7 +553,13 @@ def _get_friendly_name(entity_id):
                 if "=" in entry:
                     eid, ename = entry.split("=", 1)
                     if eid == entity_id:
-                        return ename
+                        # Clean duplicate words
+                        words = ename.split()
+                        cleaned = [words[0]] if words else []
+                        for _w in words[1:]:
+                            if _w != cleaned[-1]:
+                                cleaned.append(_w)
+                        return " ".join(cleaned)
         return entity_id.split(".")[-1].replace("_", " ")
     except Exception:
         return entity_id.split(".")[-1].replace("_", " ")
@@ -622,13 +628,14 @@ async def detect_anomalies():
     
     anomalies = []
     
-    # 1. Devices that usually turn ON by this hour but haven't
+    # 1. Devices that usually turn ON by this hour but haven't (1hr grace)
+    grace_hour = max(0, current_hour - 1)
     on_patterns = c.execute("""
         SELECT entity_id, hour, confidence, sample_count
         FROM device_patterns
         WHERE pattern_type='on' AND confidence >= 0.7 AND hour <= ?
         ORDER BY entity_id, hour
-    """, (current_hour,)).fetchall()
+    """, (grace_hour,)).fetchall()
     
     # Group by entity — get the entities that should be on by now
     expected_on = {}

@@ -213,11 +213,11 @@
   "ملابس الماستر": [
     "light.my_dressing_room_backlight=خلفية ملابس",
     "light.my_dressing_room_switch_1=My bathroom strip",
-    "light.my_dressing_room_switch_2=ملابس ملابس",
-    "light.my_dressing_room_switch_3=ملابس ملابس",
+    "light.my_dressing_room_switch_2=سبوت ملابس الماستر",
+    "light.my_dressing_room_switch_3=ستريب ملابس الماستر",
     "switch.my_dressing_room_switch_1=My bathroom strip",
-    "switch.my_dressing_room_switch_2=ملابس ملابس",
-    "switch.my_dressing_room_switch_3=ملابس ملابس"
+    "switch.my_dressing_room_switch_2=سبوت ملابس الماستر",
+    "switch.my_dressing_room_switch_3=ستريب ملابس الماستر"
   ],
   "غرفة ماما/Mama": [
     "climate.mama_room_ac=مكيف غرفة ماما",
