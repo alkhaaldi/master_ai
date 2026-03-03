@@ -102,7 +102,7 @@ except Exception:
 
 DOCTOR_OK = False
 try:
-    from ha_doctor import detect_anomalies, format_health_report, suggest_fixes, get_unavailable_entities
+    from ha_doctor import detect_anomalies, format_health_report, suggest_fixes, get_unavailable_entities, check_ac_performance
     DOCTOR_OK = True
 except Exception:
     pass

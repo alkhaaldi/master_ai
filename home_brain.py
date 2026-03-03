@@ -27,6 +27,9 @@ def _db():
         id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE,
         total_changes INTEGER, summary TEXT, insights TEXT,
         created_at TEXT DEFAULT (datetime('now','localtime')))""")
+    cn.execute("CREATE TABLE IF NOT EXISTS climate_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT DEFAULT (datetime('now','localtime')), entity_id TEXT, current_temp REAL, target_temp REAL, state TEXT, hvac_action TEXT DEFAULT '')")
+    cn.execute("CREATE INDEX IF NOT EXISTS idx_cl_ts ON climate_log(ts)")
+    cn.execute("CREATE INDEX IF NOT EXISTS idx_cl_eid ON climate_log(entity_id)")
     cn.execute("CREATE INDEX IF NOT EXISTS idx_sc_ts ON state_changes(ts)")
     cn.execute("CREATE INDEX IF NOT EXISTS idx_sc_eid ON state_changes(entity_id)")
     cn.commit(); return cn
@@ -62,6 +65,20 @@ async def take_snapshot(shift=""):
                     (c["eid"],c["old"],c["new"],c["domain"],c["hour"],c["dow"],shift))
             cn.commit(); cn.close()
         except: pass
+    # Log climate readings every snapshot
+    try:
+        cn2 = _db()
+        for s in states:
+            eid = s["entity_id"]
+            if not eid.startswith("climate."): continue
+            a = s.get("attributes", {})
+            ct = a.get("current_temperature")
+            tt = a.get("temperature")
+            if ct is not None and tt is not None:
+                cn2.execute("INSERT INTO climate_log (entity_id,current_temp,target_temp,state,hvac_action) VALUES (?,?,?,?,?)",
+                    (eid, ct, tt, s["state"], a.get("hvac_action","")))
+        cn2.commit(); cn2.close()
+    except: pass
     return {"changes": len(changes), "tracked": len(cur)}
 
 def get_daily_summary(date_str=None):
@@ -117,7 +134,7 @@ def get_brain_stats():
     except: return {"total":0,"today":0,"days":0,"patterns":0}
 
 
-def cleanup_old_data(keep_days=30):
+def cleanup_old_data(keep_days=30, climate_keep=7):
     """Delete raw state_changes older than keep_days. Patterns stay forever."""
     try:
         cn = _db()
@@ -125,6 +142,7 @@ def cleanup_old_data(keep_days=30):
             "DELETE FROM state_changes WHERE ts < datetime('now', ? || ' days', 'localtime')",
             (f"-{keep_days}",)
         ).rowcount
+        cn.execute("DELETE FROM climate_log WHERE ts < datetime('now', ? || ' days', 'localtime')", (f"-{climate_keep}",))
         cn.execute("VACUUM")
         cn.commit()
         cn.close()

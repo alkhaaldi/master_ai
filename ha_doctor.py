@@ -162,6 +162,13 @@ async def detect_anomalies():
     except Exception as e:
         logger.error("stuck check: " + str(e))
 
+    # 4. AC underperformance check
+    try:
+        ac_issues = await check_ac_performance(hours=2, threshold=2.0)
+        issues.extend(ac_issues)
+    except Exception as e:
+        logger.error("ac check in anomalies: " + str(e))
+
     return issues
 
 
@@ -215,6 +222,45 @@ async def suggest_fixes(issues=None):
                 fixes.append("\U0001f527 \u0633\u062a\u0627\u0626\u0631: reload Tuya integration")
         elif i["type"] == "flapping":
             fixes.append("\U0001f527 " + i.get("entity_id","") + ": \u0634\u064a\u0643 \u0627\u0644\u0634\u0628\u0643\u0629/\u0627\u0644\u0643\u0647\u0631\u0628\u0627 \u0644\u0647\u0627\u0644\u062c\u0647\u0627\u0632")
+        elif i["type"] == "ac_underperform":
+            fixes.append("\U0001f527 " + i.get("entity_id","").split(".")[-1].replace("_"," ") + ": شيك الفلتر + غاز التبريد + الكمبرسر")
         elif i["type"] == "stuck_on":
             fixes.append("\U0001f4a1 \u0645\u0645\u0643\u0646 \u0646\u0627\u0633\u064a\u0647 \u0634\u063a\u0627\u0644 - \u062a\u0628\u064a \u0623\u0637\u0641\u064a\u0647\u061f")
     return fixes
+
+
+async def check_ac_performance(hours=2, threshold=2.0):
+    """Check if any AC can't reach target for N hours = possibly broken."""
+    issues = []
+    try:
+        import sqlite3
+        db_path = os.path.join(os.path.dirname(__file__), "data", "home_brain.db")
+        if not os.path.exists(db_path): return issues
+        cn = sqlite3.connect(db_path)
+        cn.row_factory = sqlite3.Row
+        rows = cn.execute(
+            "SELECT entity_id, AVG(current_temp) as avg_cur, AVG(target_temp) as avg_tgt, "
+            "COUNT(*) as readings, MIN(ts) as first_ts "
+            "FROM climate_log WHERE ts > datetime('now', ? || ' hours', 'localtime') "
+            "GROUP BY entity_id HAVING readings >= 6",
+            (f"-{hours}",)
+        ).fetchall()
+        cn.close()
+        for r in rows:
+            avg_cur = r["avg_cur"]
+            avg_tgt = r["avg_tgt"]
+            diff = avg_cur - avg_tgt
+            if diff >= threshold:
+                name = r["entity_id"].split(".")[-1].replace("_", " ")
+                issues.append({
+                    "type": "ac_underperform",
+                    "severity": "critical",
+                    "entity_id": r["entity_id"],
+                    "message": "\U0001f525 " + name + ": ما يبرد! " + str(round(avg_cur,1)) + "° والهدف " + str(round(avg_tgt,1)) + "° (فرق +" + str(round(diff,1)) + "° لمدة " + str(hours) + " ساعة)",
+                    "avg_temp": avg_cur,
+                    "target": avg_tgt,
+                    "diff": diff,
+                })
+    except Exception as e:
+        logger.error("ac_performance: " + str(e))
+    return issues
