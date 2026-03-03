@@ -5,6 +5,22 @@ import httpx
 import logging
 import os
 import re
+
+
+def _normalize_ar(text):
+    """Normalize Arabic text for better matching."""
+    import re
+    t = _normalize_ar(text).lower()
+    # Remove tashkeel
+    t = re.sub(r'[ؐ-ًؚ-ٰٟۖ-ۜ۟-ۤۧ-۪ۨ-ۭ]', '', t)
+    # Normalize hamza variants
+    t = t.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ئ', 'ء').replace('ؤ', 'ء')
+    # Normalize taa marboota
+    t = t.replace('ة', 'ه')
+    # Normalize alef maksura
+    t = t.replace('ى', 'ي')
+    return t
+
 from datetime import datetime, timedelta
 
 logger = logging.getLogger("quick_query")
@@ -52,7 +68,7 @@ async def _ha_states():
 
 async def quick_answer(text: str):
     """Try to answer quickly without LLM. Returns None if no match."""
-    t = text.strip()
+    t = _normalize_ar(text)
 
     # 1) Home status
     if re.search(r"وضع البيت|حالة البيت|شلون البيت", t):

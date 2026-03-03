@@ -160,6 +160,8 @@ _router_stats = {"chat": 0, "action": 0, "intent": 0, "followup": 0, "iterative"
 _llm_cache = {}  # key=text_hash -> {"resp": str, "ts": float}
 _LLM_CACHE_TTL = 1800  # 30 minutes
 _LLM_CACHE_MAX = 50
+_response_times = []  # deque-like list of recent response times (seconds)
+_RESPONSE_TIMES_MAX = 100
 _router_cmd_log = []
 import pathlib as _pl; _STATS_FILE = _pl.Path(__file__).parent / "data" / "router_stats.json"
 
@@ -3927,7 +3929,9 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         _exp = _router_stats.get("life_expenses", 0)
         _work = _router_stats.get("life_work", 0)
         _lhealth = _router_stats.get("life_health", 0)
-        _saved = _greet + _intent + _stocks + _exp + _work + _lhealth
+        _qq = _router_stats.get("quick_query", 0)
+        _cache = _router_stats.get("cache_hit", 0)
+        _saved = _greet + _intent + _stocks + _exp + _work + _lhealth + _qq + _cache
         _pct = round(_saved / _t * 100) if _t > 0 else 0
         _m_ok = lambda v: "\u2705" if v else "\u274c"
         _lines = [
@@ -4801,6 +4805,18 @@ async def tg_handle_message(chat_id, text: str, user: dict):
             pass
 
 async def _tg_handle_message_inner(chat_id, text: str, user: dict):
+    _t0 = time.time()
+    try:
+        await _tg_handle_message_core(chat_id, text, user)
+    finally:
+        _elapsed = round(time.time() - _t0, 2)
+        _response_times.append(_elapsed)
+        if len(_response_times) > _RESPONSE_TIMES_MAX:
+            _response_times.pop(0)
+        if _elapsed > 5:
+            logger.warning(f"Slow response: {_elapsed}s for: {text[:50]}")
+
+async def _tg_handle_message_core(chat_id, text: str, user: dict):
     # DEBUG: log to file
     user_name = user.get("first_name", "User")
     tg_user_id = user.get("id")
@@ -5507,6 +5523,8 @@ async def nightly_summary_scheduler():
                 f"  \U0001f504 Followup: {_fup} | \u2753 Unknown: {_unk}",
                 f"",
                 f"\U0001f4b0 LLM \u0648\u0641\u0631\u0646\u0627: {_saved}/{_t} ({_pct}%)",
+            f"\u26a1 Quick Query: {_qq} | \U0001f4be Cache: {_cache}",
+            f"\u23f1 Avg response: {round(sum(_response_times)/len(_response_times),1) if _response_times else 0}s ({len(_response_times)} msgs)",
                 f"\u26a0\ufe0f Errors: {_errs}",
             ]) + _tmrw
             await tg_send(_chat, _msg)
