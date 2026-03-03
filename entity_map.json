@@ -543,16 +543,16 @@
   "الدرج/Stairs": [
     "light.d_drj_ldwr_lwl_backlight=اضاءة ادرج الدور الاول إضاءة خلفية",
     "light.d_drj_ldwr_lwl_switch_1=اضاءة ادرج الدور الاول",
-    "light.drj_lmwjryn_ldwr_lthny_backlight=درج المؤجرين الدور الثاني إضاءة خلفية",
-    "light.drj_lmwjryn_mm_lsnsyr_backlight=درج المؤجرين امام الاصانصير إضاءة خلفية",
+    "light.drj_lmwjryn_ldwr_lthny_backlight=خلفية درج المؤجرين الدور الثاني",
+    "light.drj_lmwjryn_mm_lsnsyr_backlight=خلفية درج المؤجرين امام الاصانصير",
     "light.drj_lmwjryn_mm_lsnsyr_switch_1=درج المؤجرين امام الاصانصير",
     "switch.d_drj_ldwr_lwl_switch_1=اضاءة ادرج الدور الاول",
     "switch.drj_lmwjryn_ldwr_lthny_switch_1=درج المؤجرين الدور الثاني",
     "switch.drj_lmwjryn_mm_lsnsyr_switch_1=درج المؤجرين امام الاصانصير"
   ],
   "الأرضي/Ground": [
-    "light.drj_lmwjryn_ldwr_lthny_switch_1=إضاءة مدخل المؤجرين",
-    "light.drj_lmwjryn_mm_lsnsyr_switch_1=درج المؤجرين امام الاصانصير Switch 1",
+    "light.drj_lmwjryn_ldwr_lthny_switch_1=درج المؤجرين الدور الثاني",
+    "light.drj_lmwjryn_mm_lsnsyr_switch_1=درج المؤجرين امام الاصانصير",
     "light.ground_floor_section_2_backlight=خلفية قسم الأرضي 2",
     "light.ground_floor_section_2_switch_1=سبوت قسم الأرضي 2",
     "light.ground_floor_section_2_switch_2=ستريب قسم الأرضي 1",
@@ -563,14 +563,14 @@
     "light.outdoor_lights_switch_1_2=Outdoor lights  Switch 1",
     "light.outdoor_lights_switch_2=إضاءة مدخل المؤجرين",
     "light.outdoor_lights_switch_2_2=اضاءة مدخل المؤجرين",
-    "light.parking_light_switch_1=Parking light",
-    "light.parking_light_switch_1_2=Parking light",
+    "light.parking_light_switch_1=نور الباركينج 1",
+    "light.parking_light_switch_1_2=نور الباركينج 2",
     "media_player.ground_floor=نور الأرضي",
     "scene.sbwt_slt_lrdy=سبوت صالات الأرضي 💡",
     "scene.stryb_slt_lrdy=ستريب صالات الأرضي 🌙",
     "scene.tf_lrdy=إطفاء الأرضي 🏠",
-    "switch.drj_lmwjryn_ldwr_lthny_switch_1=درج المؤجرين الدور الثاني Switch 1",
-    "switch.drj_lmwjryn_mm_lsnsyr_switch_1=درج المؤجرين امام الاصانصير Switch 1",
+    "switch.drj_lmwjryn_ldwr_lthny_switch_1=درج المؤجرين الدور الثاني",
+    "switch.drj_lmwjryn_mm_lsnsyr_switch_1=درج المؤجرين امام الاصانصير",
     "switch.ground_floor_section_2_switch_1=سبوت قسم الأرضي 2",
     "switch.ground_floor_section_2_switch_2=ستريب قسم الأرضي 1",
     "switch.ground_floors_section_2_switch_1=نور الأرضي",
@@ -578,16 +578,16 @@
     "switch.ground_floors_section_2_switch_3=سبوت قسم الأرضي 1",
     "switch.outdoor_lights_switch_1=Outdoor lights  Switch 1",
     "switch.outdoor_lights_switch_2=إضاءة مدخل المؤجرين",
-    "switch.parking_light_switch_1=Parking light"
+    "switch.parking_light_switch_1=نور الباركينج 1"
   ],
   "الخارجي/Outdoor": [
     "light.outdoor_lights_backlight=خلفية الخارجي",
     "light.outdoor_lights_switch_1_2=نور الخارجي 1",
-    "light.parking_light_backlight=خلفية الخارجي",
-    "light.parking_light_switch_1=نور الخارجي",
-    "light.parking_light_switch_1_2=نور الخارجي",
+    "light.parking_light_backlight=خلفية الباركينج",
+    "light.parking_light_switch_1=نور الباركينج 1",
+    "light.parking_light_switch_1_2=نور الباركينج 2",
     "switch.outdoor_lights_switch_1=نور الخارجي 1",
-    "switch.parking_light_switch_1=نور الخارجي"
+    "switch.parking_light_switch_1=نور الباركينج 1"
   ],
   "المشاهد/Scenes": [
     "scene.force_to_close=نور المشاهد",
