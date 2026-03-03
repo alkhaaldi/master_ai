@@ -2767,19 +2767,28 @@ async def debug_test_approval(request: Request):
 async def gmail_auth_start():
     """Start Gmail OAuth flow — open this in browser."""
     try:
-        from google_auth_oauthlib.flow import Flow
-        import json
-        SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+        import json, secrets
+        from urllib.parse import urlencode
         creds_path = os.path.join(BASE_DIR, "gmail_credentials.json")
         if not os.path.exists(creds_path):
             return {"error": "gmail_credentials.json not found"}
+        creds_data = json.loads(open(creds_path).read())["web"]
+        client_id = creds_data["client_id"]
         
+        state = secrets.token_urlsafe(32)
         redirect_uri = "https://ai.salem-home.com/gmail/callback"
-        flow = Flow.from_client_secrets_file(creds_path, scopes=SCOPES, redirect_uri=redirect_uri)
-        # Disable PKCE (code_verifier) — not needed for web server flow with client_secret
-        auth_url, state = flow.authorization_url(prompt="consent", access_type="offline", code_challenge_method=None)
         
-        # Save state
+        params = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "https://www.googleapis.com/auth/gmail.readonly",
+            "access_type": "offline",
+            "prompt": "consent",
+            "state": state,
+        }
+        auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
+        
         state_file = os.path.join(BASE_DIR, "data", "gmail_oauth_state.json")
         open(state_file, "w").write(json.dumps({"state": state, "redirect_uri": redirect_uri}))
         
@@ -2797,19 +2806,37 @@ async def gmail_auth_callback(code: str = "", state: str = "", error: str = ""):
     if not code:
         return {"error": "no auth code received"}
     try:
-        from google_auth_oauthlib.flow import Flow
-        import json
-        SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+        import json, httpx
         creds_path = os.path.join(BASE_DIR, "gmail_credentials.json")
+        creds_data = json.loads(open(creds_path).read())["web"]
         
-        state_file = os.path.join(BASE_DIR, "data", "gmail_oauth_state.json")
-        saved = json.loads(open(state_file).read()) if os.path.exists(state_file) else {}
-        redirect_uri = saved.get("redirect_uri", "https://ai.salem-home.com/gmail/callback")
+        redirect_uri = "https://ai.salem-home.com/gmail/callback"
         
-        flow = Flow.from_client_secrets_file(str(creds_path), scopes=SCOPES, redirect_uri=redirect_uri, state=state)
-        flow.fetch_token(code=code, code_verifier=None)
+        # Exchange code for tokens manually
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post("https://oauth2.googleapis.com/token", data={
+                "code": code,
+                "client_id": creds_data["client_id"],
+                "client_secret": creds_data["client_secret"],
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            })
+            token_data = resp.json()
         
-        creds = flow.credentials
+        if "error" in token_data:
+            return {"error": token_data.get("error_description", token_data["error"])}
+        
+        # Save as google credentials format
+        from google.oauth2.credentials import Credentials
+        creds = Credentials(
+            token=token_data["access_token"],
+            refresh_token=token_data.get("refresh_token"),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=creds_data["client_id"],
+            client_secret=creds_data["client_secret"],
+            scopes=["https://www.googleapis.com/auth/gmail.readonly"],
+        )
+        
         token_file = os.path.join(BASE_DIR, "data", "gmail_token.json")
         open(token_file, "w").write(creds.to_json())
         
