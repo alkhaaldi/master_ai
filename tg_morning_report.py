@@ -124,7 +124,7 @@ async def _get_ha_summary():
                 summary.append(f"\n❄️ المكيفات ({len(acs)}):")
                 summary.extend(acs)
 
-            lights_on = sum(1 for s in states if s.get("entity_id", "").startswith("light.") and s.get("state") == "on")
+            lights_on = sum(1 for s in states if s.get("entity_id", "").startswith("light.") and s.get("state") == "on" and "backlight" not in s.get("entity_id", ""))
             if lights_on > 0:
                 summary.append(f"\n💡 أضواء شغالة: {lights_on}")
 

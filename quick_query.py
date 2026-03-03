@@ -136,7 +136,7 @@ def _shift_answer(t):
 async def _home_status():
     states = await _ha_states()
     if not states: return None
-    lights_on = sum(1 for s in states if s["entity_id"].startswith("light.") and s["state"] == "on")
+    lights_on = sum(1 for s in states if s["entity_id"].startswith("light.") and s["state"] == "on" and "backlight" not in s["entity_id"])
     lights_total = sum(1 for s in states if s["entity_id"].startswith("light."))
     ac_on = [s for s in states if s["entity_id"].startswith("climate.") and s["state"] != "off"]
     covers_open = sum(1 for s in states if s["entity_id"].startswith("cover.") and s["state"] == "open")
@@ -171,7 +171,7 @@ async def _ac_count():
 async def _lights_count():
     states = await _ha_states()
     if not states: return None
-    on = sum(1 for s in states if s["entity_id"].startswith("light.") and s["state"] == "on")
+    on = sum(1 for s in states if s["entity_id"].startswith("light.") and s["state"] == "on" and "backlight" not in s["entity_id"])
     return f"U0001f4a1 {on} ضوء شغال"
 
 
