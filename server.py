@@ -2610,7 +2610,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/health", "/panel", "/dev/context"}
+    OPEN_PATHS = {"/health", "/panel", "/dev/context", "/gmail/auth", "/gmail/callback"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -2770,8 +2770,8 @@ async def gmail_auth_start():
         from google_auth_oauthlib.flow import Flow
         import json
         SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
-        creds_path = BASE_DIR / "gmail_credentials.json"
-        if not creds_path.exists():
+        creds_path = os.path.join(BASE_DIR, "gmail_credentials.json")
+        if not os.path.exists(creds_path):
             return {"error": "gmail_credentials.json not found"}
         
         redirect_uri = "https://ai.salem-home.com/gmail/callback"
@@ -2779,8 +2779,8 @@ async def gmail_auth_start():
         auth_url, state = flow.authorization_url(prompt="consent", access_type="offline")
         
         # Save state
-        state_file = BASE_DIR / "data" / "gmail_oauth_state.json"
-        state_file.write_text(json.dumps({"state": state, "redirect_uri": redirect_uri}))
+        state_file = os.path.join(BASE_DIR, "data", "gmail_oauth_state.json")
+        open(state_file, "w").write(json.dumps({"state": state, "redirect_uri": redirect_uri}))
         
         from fastapi.responses import RedirectResponse
         return RedirectResponse(auth_url)
@@ -2799,18 +2799,18 @@ async def gmail_auth_callback(code: str = "", state: str = "", error: str = ""):
         from google_auth_oauthlib.flow import Flow
         import json
         SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
-        creds_path = BASE_DIR / "gmail_credentials.json"
+        creds_path = os.path.join(BASE_DIR, "gmail_credentials.json")
         
-        state_file = BASE_DIR / "data" / "gmail_oauth_state.json"
-        saved = json.loads(state_file.read_text()) if state_file.exists() else {}
+        state_file = os.path.join(BASE_DIR, "data", "gmail_oauth_state.json")
+        saved = json.loads(open(state_file).read()) if os.path.exists(state_file) else {}
         redirect_uri = saved.get("redirect_uri", "https://ai.salem-home.com/gmail/callback")
         
         flow = Flow.from_client_secrets_file(str(creds_path), scopes=SCOPES, redirect_uri=redirect_uri, state=state)
         flow.fetch_token(code=code)
         
         creds = flow.credentials
-        token_file = BASE_DIR / "data" / "gmail_token.json"
-        token_file.write_text(creds.to_json())
+        token_file = os.path.join(BASE_DIR, "data", "gmail_token.json")
+        open(token_file, "w").write(creds.to_json())
         
         # Test it
         from googleapiclient.discovery import build
