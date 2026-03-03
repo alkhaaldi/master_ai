@@ -538,7 +538,7 @@
     "light.ground_floors_section_2_switch_1=نور الأرضي",
     "light.ground_floors_section_2_switch_2=ستريب قسم الأرضي 1",
     "light.ground_floors_section_2_switch_3=سبوت قسم الأرضي 1",
-    "light.outdoor_lights_switch_2=إضاءة مدخل المؤجرين",
+    "light.outdoor_lights_switch_2=إضاءة خارجية مدخل المؤجرين",
     "light.parking_light_switch_1=نور الباركينج",
     "media_player.ground_floor=نور الأرضي",
     "scene.sbwt_slt_lrdy=سبوت صالات الأرضي 💡",
@@ -551,15 +551,15 @@
     "switch.ground_floors_section_2_switch_1=نور الأرضي",
     "switch.ground_floors_section_2_switch_2=ستريب قسم الأرضي 1",
     "switch.ground_floors_section_2_switch_3=سبوت قسم الأرضي 1",
-    "switch.outdoor_lights_switch_1=Outdoor lights  Switch 1",
-    "switch.outdoor_lights_switch_2=إضاءة مدخل المؤجرين",
+    "switch.outdoor_lights_switch_1=إضاءة خارجية مدخل البيت",
+    "switch.outdoor_lights_switch_2=إضاءة خارجية مدخل المؤجرين",
     "switch.parking_light_switch_1=نور الباركينج"
   ],
   "الخارجي/Outdoor": [
     "light.outdoor_lights_backlight=خلفية الخارجي",
     "light.parking_light_backlight=خلفية الباركينج",
     "light.parking_light_switch_1=نور الباركينج",
-    "switch.outdoor_lights_switch_1=نور الخارجي 1",
+    "switch.outdoor_lights_switch_1=إضاءة خارجية مدخل البيت",
     "switch.parking_light_switch_1=نور الباركينج"
   ],
   "المشاهد/Scenes": [
