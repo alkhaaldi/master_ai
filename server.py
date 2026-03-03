@@ -93,6 +93,13 @@ try:
 except Exception:
     pass
 
+BRAIN_OK = False
+try:
+    from home_brain import take_snapshot, get_daily_summary, detect_patterns, format_insights_ar, build_digest_prompt, get_brain_stats
+    BRAIN_OK = True
+except Exception:
+    pass
+
 try:
     from discovery import get_home_summary, sync_entities, get_discovery_stats
     DISCOVERY_OK = True
@@ -2521,6 +2528,7 @@ async def lifespan(app):
         asyncio.create_task(morning_report_scheduler())
         asyncio.create_task(shift_alert_loop())
         asyncio.create_task(entity_health_check_loop())
+        if BRAIN_OK: asyncio.create_task(brain_snapshot_loop())
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
     if TG_ALERTS_OK:
@@ -4302,6 +4310,18 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         await tg_send_inline(chat_id, "🎬 *المشاهد* (2/2)", sc2, columns=2)
         return "__inline_sent__"
 
+    if cmd == "/brain":
+        if not BRAIN_OK: return "home_brain not loaded"
+        st = get_brain_stats()
+        _bl = ["🧠 *Home Brain*"]
+        _bl.append(f"  📊 تغييرات: {st['total']} (اليوم: {st['today']})")
+        _bl.append(f"  📅 أيام: {st['days']}")
+        _bl.append(f"  🔍 أنماط: {st['patterns']}")
+        pats = detect_patterns(14, 3)
+        _bl.append("")
+        _bl.append(format_insights_ar(pats) if pats else "⏳ لسا أتعلم... استخدم البوت وبعد كم يوم بقترح عليك")
+        return chr(10).join(_bl)
+
     if cmd == "/alloff":
         # Confirmation before killing everything
         _cb = [
@@ -5311,6 +5331,7 @@ async def health_external():
             "speed_templates": FEATURE_SPEED_TEMPLATES,
             "smart_router_v2": FEATURE_SMART_ROUTER_V2,
             "entity_health": FEATURE_ENTITY_HEALTH,
+            "home_brain": BRAIN_OK,
             "external_timeout_seconds": EXTERNAL_TIMEOUT,
         }
     }
@@ -5521,6 +5542,24 @@ async def shift_alert_loop():
         except Exception as e:
             logger.error(f"Shift alert loop error: {e}")
         await asyncio.sleep(900)  # check every 15 min
+
+async def brain_snapshot_loop():
+    """Take HA snapshot every 5 min for pattern learning."""
+    await asyncio.sleep(30)
+    while True:
+        try:
+            _bshift = ''
+            if LIFE_WORK_OK:
+                try:
+                    from life_work import get_shift as _bgs
+                    _bshift = _bgs(datetime.now().date()).get('shift', '')
+                except: pass
+            result = await take_snapshot(_bshift)
+            if result.get("changes", 0) > 0:
+                logger.info(f"Brain: {result['changes']} changes")
+        except Exception as e:
+            logger.error(f"Brain snapshot: {e}")
+        await asyncio.sleep(300)
 
 async def entity_health_check_loop():
     """Periodic entity map health check - alerts on dead/new entities via Telegram (Part C)."""
