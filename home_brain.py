@@ -10,7 +10,7 @@ logger = logging.getLogger("home_brain")
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "home_brain.db")
 HA_URL = os.environ.get("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.environ.get("HA_TOKEN", "")
-TRACKED = {"light","switch","climate","cover","fan","media_player"}
+TRACKED = {"light","climate","cover","fan","media_player"}
 SKIP = {"backlight","update.","sensor.","binary_sensor.","automation.","script.","_curtain"}
 _last_snap = {}
 

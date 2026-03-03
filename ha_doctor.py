@@ -13,7 +13,7 @@ HA_URL = os.environ.get("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.environ.get("HA_TOKEN", "")
 
 # Only report these domains as issues (ignore scene, button, sensor, stt, tts, ai_task)
-IMPORTANT_DOMAINS = {"light", "switch", "climate", "cover", "fan", "media_player"}
+IMPORTANT_DOMAINS = {"light", "climate", "cover", "fan", "media_player"}
 # Skip known entities that are normally unavailable
 SKIP_ENTITIES = {"stt.", "tts.", "ai_task.", "scene.", "button.", "number.", "select.", "update."}
 # Skip by substring in entity_id
