@@ -115,3 +115,27 @@ def get_brain_stats():
         cn.close()
         return {"total":t,"today":td,"days":ds,"patterns":ps}
     except: return {"total":0,"today":0,"days":0,"patterns":0}
+
+
+def cleanup_old_data(keep_days=30):
+    """Delete raw state_changes older than keep_days. Patterns stay forever."""
+    try:
+        cn = _db()
+        deleted = cn.execute(
+            "DELETE FROM state_changes WHERE ts < datetime('now', ? || ' days', 'localtime')",
+            (f"-{keep_days}",)
+        ).rowcount
+        cn.execute("VACUUM")
+        cn.commit()
+        cn.close()
+        return deleted
+    except Exception as e:
+        logger.error(f"cleanup: {e}")
+        return 0
+
+def get_db_size():
+    """Get DB file size in MB."""
+    try:
+        return round(os.path.getsize(DB_PATH) / 1024 / 1024, 2)
+    except:
+        return 0

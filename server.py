@@ -95,7 +95,7 @@ except Exception:
 
 BRAIN_OK = False
 try:
-    from home_brain import take_snapshot, get_daily_summary, detect_patterns, format_insights_ar, build_digest_prompt, get_brain_stats
+    from home_brain import take_snapshot, get_daily_summary, detect_patterns, format_insights_ar, build_digest_prompt, get_brain_stats, cleanup_old_data, get_db_size
     BRAIN_OK = True
 except Exception:
     pass
@@ -5742,6 +5742,10 @@ async def nightly_summary_scheduler():
                             _bd.append(f"  ⏰ ذروة: {_peak[0]}:00 ({_peak[1]} تغيير)")
                         await tg_send(_chat, chr(10).join(_bd))
                         logger.info(f"Brain digest sent: {_bs['total']} changes")
+                        # Auto-cleanup: keep only 30 days of raw data
+                        _cleaned = cleanup_old_data(30)
+                        if _cleaned > 0:
+                            logger.info(f"Brain cleanup: deleted {_cleaned} old records")
                 except Exception as e:
                     logger.error(f"Brain digest: {e}")
         except Exception as e:
