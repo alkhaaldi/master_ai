@@ -65,8 +65,9 @@ async def take_snapshot(shift=""):
                     (c["eid"],c["old"],c["new"],c["domain"],c["hour"],c["dow"],shift))
             cn.commit(); cn.close()
         except: pass
-    # Log climate readings every snapshot
-    try:
+    # Log climate readings every 2 hours only (minute 0-5 of even hours)
+    if now.hour % 2 == 0 and now.minute < 6:
+      try:
         cn2 = _db()
         for s in states:
             eid = s["entity_id"]
@@ -78,7 +79,7 @@ async def take_snapshot(shift=""):
                 cn2.execute("INSERT INTO climate_log (entity_id,current_temp,target_temp,state,hvac_action) VALUES (?,?,?,?,?)",
                     (eid, ct, tt, s["state"], a.get("hvac_action","")))
         cn2.commit(); cn2.close()
-    except: pass
+      except: pass
     return {"changes": len(changes), "tracked": len(cur)}
 
 def get_daily_summary(date_str=None):

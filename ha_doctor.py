@@ -229,7 +229,7 @@ async def suggest_fixes(issues=None):
     return fixes
 
 
-async def check_ac_performance(hours=2, threshold=2.0):
+async def check_ac_performance(hours=6, threshold=2.0):
     """Check if any AC can't reach target for N hours = possibly broken."""
     issues = []
     try:
