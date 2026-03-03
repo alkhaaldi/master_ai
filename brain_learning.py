@@ -599,3 +599,168 @@ def format_maturity_report():
                 break
     
     return "\n".join(lines)
+
+
+async def detect_anomalies():
+    """Compare today's behavior against learned patterns.
+    Returns list of anomalies with severity and description."""
+    if not os.path.exists(DB_PATH):
+        return []
+    
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Check if we have enough patterns
+    pat_count = c.execute("SELECT COUNT(*) FROM device_patterns WHERE confidence >= 0.6").fetchone()[0]
+    if pat_count < 10:
+        conn.close()
+        return []
+    
+    now = datetime.now(_KW_TZ)
+    current_hour = now.hour
+    today_str = now.strftime("%Y-%m-%d")
+    
+    anomalies = []
+    
+    # 1. Devices that usually turn ON by this hour but haven't
+    on_patterns = c.execute("""
+        SELECT entity_id, hour, confidence, sample_count
+        FROM device_patterns
+        WHERE pattern_type='on' AND confidence >= 0.7 AND hour <= ?
+        ORDER BY entity_id, hour
+    """, (current_hour,)).fetchall()
+    
+    # Group by entity — get the entities that should be on by now
+    expected_on = {}
+    for eid, hour, conf, samples in on_patterns:
+        if eid not in expected_on or conf > expected_on[eid]["confidence"]:
+            expected_on[eid] = {"hour": hour, "confidence": conf, "samples": samples}
+    
+    # Check if they actually turned on today
+    today_summary = {}
+    rows = c.execute("SELECT entity_id, on_count, first_on FROM daily_summary WHERE date=?", (today_str,)).fetchall()
+    for eid, on_cnt, first_on in rows:
+        today_summary[eid] = {"on_count": on_cnt, "first_on": first_on}
+    
+    for eid, pattern in expected_on.items():
+        ts = today_summary.get(eid)
+        if not ts or ts["on_count"] == 0:
+            # Device didn't turn on but usually does
+            name = _get_friendly_name(eid)
+            anomalies.append({
+                "type": "missing_on",
+                "severity": "medium" if pattern["confidence"] >= 0.8 else "low",
+                "entity_id": eid,
+                "name": name,
+                "expected_hour": pattern["hour"],
+                "confidence": pattern["confidence"],
+                "description_ar": f"{name} \u0639\u0627\u062f\u0629 \u064a\u0634\u062a\u063a\u0644 \u0627\u0644\u0633\u0627\u0639\u0629 {pattern['hour']}:00 \u0628\u0633 \u0627\u0644\u064a\u0648\u0645 \u0645\u0627 \u0627\u0634\u062a\u063a\u0644 ({int(pattern['confidence']*100)}% \u062b\u0628\u0627\u062a)",
+            })
+    
+    # 2. Devices ON for unusually long time
+    # Compare today's on_seconds vs historical average
+    hist_avg = {}
+    rows = c.execute("""
+        SELECT entity_id, AVG(total_on_seconds) as avg_on, 
+               MAX(total_on_seconds) as max_on,
+               COUNT(*) as days
+        FROM daily_summary 
+        WHERE date != ? AND total_on_seconds > 0
+        GROUP BY entity_id
+        HAVING days >= 3
+    """, (today_str,)).fetchall()
+    for eid, avg_on, max_on, days in rows:
+        hist_avg[eid] = {"avg": avg_on, "max": max_on, "days": days}
+    
+    for eid, ts in today_summary.items():
+        if eid in hist_avg and ts["on_count"] > 0:
+            hist = hist_avg[eid]
+            today_on = ts.get("on_count", 0)
+            # If today's on_count is 3x the average, flag it
+            if hist["avg"] > 0:
+                daily_avg_on = c.execute(
+                    "SELECT AVG(on_count) FROM daily_summary WHERE entity_id=? AND date!=?",
+                    (eid, today_str)).fetchone()[0]
+                if daily_avg_on and daily_avg_on > 0 and today_on > daily_avg_on * 3:
+                    name = _get_friendly_name(eid)
+                    anomalies.append({
+                        "type": "excessive_usage",
+                        "severity": "medium",
+                        "entity_id": eid,
+                        "name": name,
+                        "today_count": today_on,
+                        "avg_count": round(daily_avg_on, 1),
+                        "description_ar": f"{name} \u0627\u0634\u062a\u063a\u0644 {today_on} \u0645\u0631\u0629 \u0627\u0644\u064a\u0648\u0645 (\u0627\u0644\u0645\u0639\u062f\u0644 {daily_avg_on:.0f}) \u2014 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u063a\u064a\u0631 \u0637\u0628\u064a\u0639\u064a",
+                    })
+    
+    # 3. Climate anomalies — temp set way different than pattern
+    climate_patterns = c.execute("""
+        SELECT entity_id, hour, CAST(value AS REAL) as expected_temp
+        FROM device_patterns
+        WHERE pattern_type='avg_temp' AND hour=?
+    """, (current_hour,)).fetchall()
+    
+    # Get current climate states from HA
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"{HA_URL}/api/states", headers=_headers())
+            all_states = {s["entity_id"]: s for s in r.json()}
+    except:
+        all_states = {}
+    
+    for eid, hour, expected_temp in climate_patterns:
+        state = all_states.get(eid, {})
+        attrs = state.get("attributes", {})
+        current_temp = attrs.get("temperature")
+        if current_temp and abs(current_temp - expected_temp) >= 3:
+            name = _get_friendly_name(eid)
+            anomalies.append({
+                "type": "climate_deviation",
+                "severity": "low",
+                "entity_id": eid,
+                "name": name,
+                "current_temp": current_temp,
+                "expected_temp": expected_temp,
+                "description_ar": f"{name} \u0645\u0636\u0628\u0648\u0637 \u0639\u0644\u0649 {current_temp}\u00b0 \u0628\u0633 \u0639\u0627\u062f\u0629 \u064a\u0643\u0648\u0646 {expected_temp:.0f}\u00b0 \u0647\u0627\u0644\u0648\u0642\u062a",
+            })
+    
+    conn.close()
+    
+    # Dedup: keep one anomaly per entity_id+type, prefer higher severity
+    seen = set()
+    deduped = []
+    for a in anomalies:
+        key = (a["entity_id"], a["type"])
+        base_eid = a["entity_id"].split(".")[-1]
+        base_key = (base_eid, a["type"])
+        if key not in seen and base_key not in seen:
+            seen.add(key)
+            seen.add(base_key)
+            deduped.append(a)
+    anomalies = deduped
+    
+    # Sort by severity
+    sev_order = {"high": 0, "medium": 1, "low": 2}
+    anomalies.sort(key=lambda x: sev_order.get(x["severity"], 3))
+    
+    return anomalies
+
+
+async def format_anomaly_report():
+    """Generate Telegram-ready anomaly report."""
+    anomalies = await detect_anomalies()
+    if not anomalies:
+        return "\u2705 \u0644\u0627 \u064a\u0648\u062c\u062f \u0634\u0630\u0648\u0630 \u0627\u0644\u064a\u0648\u0645 \u2014 \u0643\u0644 \u0634\u064a \u0637\u0628\u064a\u0639\u064a"
+    
+    sev_emoji = {"high": "\U0001f534", "medium": "\U0001f7e1", "low": "\U0001f7e2"}
+    
+    lines = [f"\U0001f50d \u0634\u0630\u0648\u0630 \u0627\u0644\u064a\u0648\u0645 ({len(anomalies)}):", ""]
+    
+    for a in anomalies[:15]:
+        emoji = sev_emoji.get(a["severity"], "\u2753")
+        lines.append(f"{emoji} {a['description_ar']}")
+    
+    if len(anomalies) > 15:
+        lines.append(f"\n... \u0648 {len(anomalies)-15} \u0634\u0630\u0648\u0630 \u0622\u062e\u0631")
+    
+    return "\n".join(lines)

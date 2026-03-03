@@ -107,6 +107,7 @@ try:
     from ha_history import get_entity_history, analyze_entity, format_history_report as format_history
     from brain_learning import learn_patterns as bl_learn, get_patterns as bl_get_patterns, suggest_automations as bl_suggest, format_patterns_report as bl_format_patterns, get_learning_stats as bl_stats
     from brain_learning import format_maturity_report as bl_maturity
+    from brain_learning import detect_anomalies as bl_anomalies, format_anomaly_report as bl_anomaly_report
     LEARNING_OK = True
     DOCTOR_OK = True
 except Exception:
@@ -2835,6 +2836,15 @@ async def patterns_suggestions_endpoint():
         return {"error": "brain_learning not loaded"}
     return {"suggestions": await bl_suggest()}
 
+@app.get("/anomalies")
+async def get_anomalies_ep(request: Request):
+    _check_api_key(request)
+    if not LEARNING_OK:
+        return {"error": "brain_learning not loaded"}
+    anomalies = await bl_anomalies()
+    report = await bl_anomaly_report()
+    return {"count": len(anomalies), "anomalies": anomalies, "report": report}
+
 @app.post("/patterns/learn")
 async def patterns_learn_endpoint(days: int = 10):
     """Trigger manual learning run. POST /patterns/learn?days=10"""
@@ -4191,6 +4201,14 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"patterns error: {e}"
 
+
+    if cmd == "/anomaly":
+        if not LEARNING_OK:
+            return "brain_learning not loaded"
+        try:
+            return await bl_anomaly_report()
+        except Exception as e:
+            return f"anomaly error: {e}"
 
     if cmd == "/diag":
         try:
@@ -5873,6 +5891,13 @@ async def brain_nightly_learning():
                            f"  \U0001f4ca {result['entities_processed']} entity -> {result['patterns_found']} pattern\n"
                            f"  \u23f1 {result['duration_seconds']}s")
                     await tg_send(ADMIN_TELEGRAM_ID, msg)
+                # Run anomaly check after learning
+                try:
+                    anomaly_report = await bl_anomaly_report()
+                    if anomaly_report and "شذوذ" in anomaly_report:
+                        await tg_send(ADMIN_TELEGRAM_ID, anomaly_report)
+                except Exception as ae:
+                    logger.error(f"Anomaly check error: {ae}")
         except Exception as e:
             logger.error(f"Pattern learning error: {e}")
             await asyncio.sleep(3600)
