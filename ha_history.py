@@ -295,14 +295,7 @@ async def analyze_entity(entity_id: str, hours: int = 24,
 async def format_history_report(entity_id: str, hours: int = 24,
                                  start_time: str = None, end_time: str = None,
                                  detail_level: str = "normal") -> str:
-    """
-    Generate a Telegram-ready Arabic report.
-    
-    detail_level:
-        "brief" — summary only
-        "normal" — summary + key events
-        "full" — everything including all transitions
-    """
+    """Generate a Telegram-ready Arabic report — smart per domain."""
     data = await analyze_entity(entity_id, hours, start_time, end_time)
     
     if "error" in data:
@@ -313,58 +306,135 @@ async def format_history_report(entity_id: str, hours: int = 24,
     name = data["friendly_name"]
     period = data["period"]
     
-    lines.append(f"\U0001f4cb تقرير: {name}")
-    lines.append(f"\u23f0 الفترة: {period['start']} → {period['end']}")
-    lines.append(f"\U0001f504 عدد التغييرات: {data['total_changes']}")
+    lines.append(f"\U0001f4cb \u062a\u0642\u0631\u064a\u0631: {name}")
+    lines.append(f"\u23f0 \u0627\u0644\u0641\u062a\u0631\u0629: {period['start']} \u2192 {period['end']}")
     lines.append("")
     
-    # State summary
-    lines.append("\U0001f4ca ملخص الحالات:")
-    for state, info in data["state_summary"].items():
-        bar = "\u2588" * max(1, int(info["pct"] / 5))
-        lines.append(f"  {info['label']}: {info['duration']} ({info['pct']}%) {bar}")
-    lines.append("")
+    # == Climate: temp changes + smart summary ==
+    if domain == "climate":
+        tc = data["temp_changes"]
+        if tc:
+            lines.append(f"\U0001f321 \u062a\u063a\u064a\u064a\u0631\u0627\u062a \u0627\u0644\u062d\u0631\u0627\u0631\u0629 ({len(tc)} \u062a\u063a\u064a\u064a\u0631):")
+            show = tc if detail_level == "full" else tc[:15]
+            for c in show:
+                curr = f" (\u0627\u0644\u063a\u0631\u0641\u0629: {c['temp_current']}\u00b0)" if c.get("temp_current") else ""
+                lines.append(f"  {c['time']} \u2192 {c['temp_set']}\u00b0{curr}")
+            if len(tc) > 15 and detail_level != "full":
+                lines.append(f"  ... \u0648 {len(tc)-15} \u062a\u063a\u064a\u064a\u0631 \u0622\u062e\u0631")
+            lines.append("")
+            
+            temps = [c["temp_set"] for c in tc if c.get("temp_set")]
+            if temps:
+                lines.append("\U0001f4ca \u0645\u0644\u062e\u0635:")
+                lines.append(f"  \u0623\u0642\u0644 \u062d\u0631\u0627\u0631\u0629 \u0645\u0637\u0644\u0648\u0628\u0629: {min(temps)}\u00b0")
+                lines.append(f"  \u0623\u0639\u0644\u0649 \u062d\u0631\u0627\u0631\u0629 \u0645\u0637\u0644\u0648\u0628\u0629: {max(temps)}\u00b0")
+                lines.append(f"  \u0622\u062e\u0631 \u0625\u0639\u062f\u0627\u062f: {temps[-1]}\u00b0")
+                curr_temps = [c["temp_current"] for c in tc if c.get("temp_current")]
+                if curr_temps:
+                    lines.append(f"  \u062d\u0631\u0627\u0631\u0629 \u0627\u0644\u063a\u0631\u0641\u0629 \u0627\u0644\u062d\u0627\u0644\u064a\u0629: {curr_temps[-1]}\u00b0")
+                lines.append("")
+            
+            if len(temps) > 5:
+                lines.append("\U0001f50d \u062a\u062d\u0644\u064a\u0644:")
+                from collections import Counter
+                hours_count = Counter()
+                for c in tc:
+                    h = c["time"].split(" ")[1][:2] if " " in c["time"] else "?"
+                    hours_count[h] += 1
+                busy = [(h, cnt) for h, cnt in hours_count.items() if cnt >= 3]
+                if busy:
+                    busy.sort(key=lambda x: -x[1])
+                    for h, cnt in busy[:3]:
+                        lines.append(f"  \u26a0\ufe0f \u0627\u0644\u0633\u0627\u0639\u0629 {h}:00 \u2014 {cnt} \u062a\u063a\u064a\u064a\u0631\u0627\u062a (\u062a\u0639\u062f\u064a\u0644 \u064a\u062f\u0648\u064a \u0623\u0648 \u062a\u0639\u0627\u0631\u0636 \u0623\u062a\u0645\u062a\u0629)")
+                lines.append("")
+        else:
+            lines.append("\u0644\u0627 \u062a\u0648\u062c\u062f \u062a\u063a\u064a\u064a\u0631\u0627\u062a \u0628\u0627\u0644\u062d\u0631\u0627\u0631\u0629 \u062e\u0644\u0627\u0644 \u0647\u0630\u064a \u0627\u0644\u0641\u062a\u0631\u0629")
+            lines.append("")
     
-    # Domain-specific
-    if domain in ("light", "switch", "fan") and data["on_off_events"]:
-        lines.append("\U0001f4a1 أوقات التشغيل:")
+    # == Lights/Switches/Fans ==
+    elif domain in ("light", "switch", "fan"):
         events = data["on_off_events"]
-        show = events if detail_level == "full" else events[:10]
-        for e in show:
-            lines.append(f"  \u25b6 {e['on']} → {e['off']} ({e['duration']})")
-        if len(events) > 10 and detail_level != "full":
-            lines.append(f"  ... و {len(events)-10} مرة أخرى")
-        lines.append("")
+        summary = data["state_summary"]
+        
+        if summary:
+            on_info = summary.get("on", {})
+            off_info = summary.get("off", {})
+            if on_info:
+                lines.append(f"\U0001f4a1 \u0634\u063a\u0627\u0644: {on_info['duration']} ({on_info['pct']}%)")
+            if off_info:
+                lines.append(f"\U0001f311 \u0645\u0637\u0641\u064a: {off_info['duration']} ({off_info['pct']}%)")
+            lines.append("")
+        
+        if events:
+            lines.append(f"\U0001f50c \u0623\u0648\u0642\u0627\u062a \u0627\u0644\u062a\u0634\u063a\u064a\u0644 ({len(events)} \u0645\u0631\u0629):")
+            show = events if detail_level == "full" else events[:15]
+            for e in show:
+                lines.append(f"  \u25b6 {e['on']} \u2192 {e['off']} ({e['duration']})")
+            if len(events) > 15 and detail_level != "full":
+                lines.append(f"  ... \u0648 {len(events)-15} \u0645\u0631\u0629 \u0623\u062e\u0631\u0649")
+            lines.append("")
+        else:
+            lines.append("\u0627\u0644\u062c\u0647\u0627\u0632 \u0645\u0627 \u0627\u0634\u062a\u063a\u0644 \u062e\u0644\u0627\u0644 \u0647\u0630\u064a \u0627\u0644\u0641\u062a\u0631\u0629")
+            lines.append("")
     
-    if domain == "climate" and data["temp_changes"]:
-        lines.append("\U0001f321 تغييرات الحرارة:")
-        changes = data["temp_changes"]
-        show = changes if detail_level == "full" else changes[:10]
-        for c in show:
-            curr = f" (فعلي: {c['temp_current']}°)" if c.get("temp_current") else ""
-            lines.append(f"  {c['time']} → {c['temp_set']}°{curr}")
-        if len(changes) > 10 and detail_level != "full":
-            lines.append(f"  ... و {len(changes)-10} تغيير آخر")
-        lines.append("")
-    
-    if detail_level in ("normal", "full"):
-        lines.append("\U0001f5d3 آخر الأحداث:")
+    # == Covers ==
+    elif domain == "cover":
+        summary = data["state_summary"]
+        if summary:
+            for state, info in summary.items():
+                lines.append(f"  {info['label']}: {info['duration']} ({info['pct']}%)")
+            lines.append("")
         trans = data["transitions"]
-        show = trans[-15:] if detail_level == "normal" else trans
-        for t in show:
-            extra = ""
-            if domain == "climate":
-                if t.get("temp_set"):
-                    extra = f" | {t['temp_set']}°"
-                if t.get("temp_current"):
-                    extra += f" (فعلي: {t['temp_current']}°)"
-            fr = f"{t.get('from_ar','')} → " if t.get("from_ar") else ""
-            lines.append(f"  {_to_kw_short(t['time'])} {fr}{t['state_ar']}{extra}")
-        lines.append("")
+        if trans:
+            lines.append(f"\U0001f5d3 \u0627\u0644\u062d\u0631\u0643\u0627\u062a ({len(trans)} \u062d\u0631\u0643\u0629):")
+            show = trans if detail_level == "full" else trans[:15]
+            for t in show:
+                fr = f"{t.get('from_ar','')} \u2192 " if t.get("from_ar") else ""
+                pos = f" ({t['position']}%)" if t.get("position") is not None else ""
+                lines.append(f"  {_to_kw_short(t['time'])} {fr}{t['state_ar']}{pos}")
+            lines.append("")
     
-    # Anomalies
+    # == Media players ==
+    elif domain == "media_player":
+        summary = data["state_summary"]
+        if summary:
+            for state, info in summary.items():
+                lines.append(f"  {info['label']}: {info['duration']} ({info['pct']}%)")
+            lines.append("")
+        trans = data["transitions"]
+        if trans:
+            lines.append("\U0001f3b5 \u0627\u0644\u0646\u0634\u0627\u0637:")
+            show = trans[-15:]
+            for t in show:
+                extra = ""
+                if t.get("media_title"):
+                    extra = f" | {t['media_title']}"
+                elif t.get("source"):
+                    extra = f" | {t['source']}"
+                lines.append(f"  {_to_kw_short(t['time'])} {t['state_ar']}{extra}")
+            lines.append("")
+    
+    # == Default ==
+    else:
+        summary = data["state_summary"]
+        if summary:
+            lines.append("\U0001f4ca \u0645\u0644\u062e\u0635 \u0627\u0644\u062d\u0627\u0644\u0627\u062a:")
+            for state, info in summary.items():
+                bar = "\u2588" * max(1, int(info["pct"] / 5))
+                lines.append(f"  {info['label']}: {info['duration']} ({info['pct']}%) {bar}")
+            lines.append("")
+        trans = data["transitions"]
+        if trans and detail_level in ("normal", "full"):
+            lines.append("\U0001f5d3 \u0622\u062e\u0631 \u0627\u0644\u0623\u062d\u062f\u0627\u062b:")
+            show = trans[-15:] if detail_level == "normal" else trans
+            for t in show:
+                fr = f"{t.get('from_ar','')} \u2192 " if t.get("from_ar") else ""
+                lines.append(f"  {_to_kw_short(t['time'])} {fr}{t['state_ar']}")
+            lines.append("")
+    
+    # == Anomalies ==
     if data["anomalies"]:
-        lines.append("\u26a0\ufe0f مشاكل مكتشفة:")
+        lines.append("\u26a0\ufe0f \u0645\u0634\u0627\u0643\u0644 \u0645\u0643\u062a\u0634\u0641\u0629:")
         for a in data["anomalies"]:
             lines.append(f"  \u2022 {a}")
         lines.append("")
