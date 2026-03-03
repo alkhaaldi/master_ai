@@ -10,7 +10,7 @@ import re
 def _normalize_ar(text):
     """Normalize Arabic text for better matching."""
     import re
-    t = _normalize_ar(text).lower()
+    t = text.strip().lower()
     # Remove tashkeel
     t = re.sub(r'[ؐ-ًؚ-ٰٟۖ-ۜ۟-ۤۧ-۪ۨ-ۭ]', '', t)
     # Normalize hamza variants
