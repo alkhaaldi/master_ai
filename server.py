@@ -3975,7 +3975,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             async with httpx.AsyncClient(timeout=10) as c:
                 resp = await c.get(f"{HA_URL}/api/states", headers={"Authorization": f"Bearer {HA_TOKEN}"})
                 states = resp.json()
-                on_lights = [(s["entity_id"], s["attributes"].get("friendly_name", s["entity_id"])) for s in states if s["entity_id"].startswith("light.") and s["state"] == "on"]
+                on_lights = [(s["entity_id"], s["attributes"].get("friendly_name", s["entity_id"])) for s in states if s["entity_id"].startswith("light.") and s["state"] == "on" and "backlight" not in s["entity_id"]]
             if on_lights:
                 _txt = f"\U0001f4a1 {len(on_lights)} \u0636\u0648\u0621 \u0634\u063a\u0627\u0644:"
                 for eid, name in on_lights[:15]:

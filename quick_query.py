@@ -191,7 +191,7 @@ async def _room_status(room_ar, room_keys):
     if not room_entities:
         return f"❓ ما لقيت أجهزة لـ{room_ar}"
 
-    lights = [s for s in room_entities if s["entity_id"].startswith("light.")]
+    lights = [s for s in room_entities if s["entity_id"].startswith("light.") and "backlight" not in s["entity_id"]]
     acs = [s for s in room_entities if s["entity_id"].startswith("climate.")]
     covers = [s for s in room_entities if s["entity_id"].startswith("cover.")]
 
