@@ -39,7 +39,9 @@
     "switch.man_room_entrence_air_purifier_uv_sterilization=UV منقي ممر الديوانية",
     "switch.men_room_switch_1=ستريب ممر الديوانية",
     "switch.men_room_switch_2=سبوت ممر الديوانية",
-    "switch.men_room_switch_3=ثرية الديوانية"
+    "switch.men_room_switch_3=ثرية الديوانية",
+    "switch.man_room_entrence_air_purifier_filter_cartridge_reset=ريسيت فلتر منقي الديوانية",
+    "switch.man_room_entrence_air_purifier_power=تشغيل منقي الديوانية"
   ],
   "المطبخ/Kitchen": [
     "climate.mkyf_lmtbkh=مكيف المطبخ",
@@ -112,7 +114,12 @@
     "switch.sl_lstqbl_switch_2=صالة الاستقبال ستريب",
     "switch.sl_lstqbl_switch_2_2=سبوت الاستقبال 2",
     "switch.sl_lstqbl_switch_2_4=مدخل صالة الاستقبال ستريب",
-    "switch.sl_lstqbl_switch_2_6=مدخل صالة الاستقبال سبوت 2"
+    "switch.sl_lstqbl_switch_2_6=مدخل صالة الاستقبال سبوت 2",
+    "switch.smart_plug_socket_1=سمارت بلق 1",
+    "switch.smart_plug_2_socket_1=سمارت بلق 2",
+    "switch.smart_plug_3_socket_1=سمارت بلق 3",
+    "switch.smart_plug_4_socket_1=سمارت بلق 4",
+    "switch.smart_plug_5_socket_1=سمارت بلق 5"
   ],
   "صالة المعيشة/Living": [
     "climate.thermostat_13=مكيف المعيشة",
@@ -197,7 +204,11 @@
     "switch.my_room_lights_switch_2=سبوت الماستر 2",
     "switch.my_room_lights_switch_3=سبوت الماستر 1",
     "switch.my_room_switch_1=سبوت الماستر 3",
-    "switch.my_room_switch_2=ستريب الماستر 2"
+    "switch.my_room_switch_2=ستريب الماستر 2",
+    "light.aisha_bathroom_switch_1_2=سبوت حمام عيشة 2",
+    "light.aisha_dressing_room_switch_3_2=ستريب ملابس عيشة 2",
+    "light.my_room_lights_switch_1_2=سبوت الماستر 2",
+    "light.my_bathroom_switch_3_2=مرآة حمام الماستر 2"
   ],
   "حمام الماستر": [
     "fan.my_bathroom_switch_1=شفاط حمام",
@@ -422,7 +433,9 @@
     "switch.office_spot_switch_2=سبوت المكتب 2",
     "switch.office_strip_switch_2=ستريب المكتب",
     "switch.room_1_shower_switch_1=نور المكتب 1",
-    "switch.room_1_shower_switch_2=نور المكتب 2"
+    "switch.room_1_shower_switch_2=نور المكتب 2",
+    "light.office_strip_switch_2_2=ستريب المكتب 2",
+    "light.office_strip_switch_2_3=ستريب المكتب 3"
   ],
   "صالتي/Salon": [
     "cover.my_sweet_left_shutter_curtain=شتر صالتي",
@@ -458,7 +471,8 @@
     "light.laundry_room_switch_1=شفاط الغسيل",
     "light.laundry_room_switch_2=سبوت الغسيل",
     "switch.laundry_room_switch_1=شفاط الغسيل",
-    "switch.laundry_room_switch_2=سبوت الغسيل"
+    "switch.laundry_room_switch_2=سبوت الغسيل",
+    "fan.laundry_room_switch_1=شفاط الغسيل"
   ],
   "غرفة الخادمة/Maid": [
     "light.maid_bathroom_backlight=خلفية حمام الخادمة",
@@ -553,7 +567,10 @@
     "switch.ground_floors_section_2_switch_3=سبوت قسم الأرضي 1",
     "switch.outdoor_lights_switch_1=إضاءة خارجية مدخل البيت",
     "switch.outdoor_lights_switch_2=إضاءة خارجية مدخل المؤجرين",
-    "switch.parking_light_switch_1=نور الباركينج"
+    "switch.parking_light_switch_1=نور الباركينج",
+    "light.outdoor_lights_switch_2_2=إضاءة خارجية 2",
+    "light.parking_light_switch_1_2=نور الباركينج 2",
+    "light.salon_light_switch_3_2=ستريب الصالة 2"
   ],
   "الخارجي/Outdoor": [
     "light.outdoor_lights_backlight=خلفية الخارجي",
@@ -587,5 +604,15 @@
     "scene.wd_ldywny=وضع الديوانية ☕",
     "scene.wd_lnwm=وضع النوم 🌙",
     "scene.wd_lsynm=وضع السينما 🎬"
+  ],
+  "غرفة 4/Room4": [
+    "light.room_4_vent_switch_2_2=شفاط غرفة 4"
+  ],
+  "ممر الدور الأول/1stFloor": [
+    "switch.1st_floor_spot_1=سبوت الدور الأول"
+  ],
+  "الأقفال/Locks": [
+    "switch.qfl_lbb_lryysy_auto_lock=قفل الباب الرئيسي أوتو",
+    "switch.qfl_lbb_lryysy_lock_sound=صوت قفل الباب الرئيسي"
   ]
 }

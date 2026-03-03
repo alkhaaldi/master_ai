@@ -545,32 +545,75 @@ def get_maturity_report():
     }
 
 
+# Cache for entity_map (reloaded every 5 min)
+_EMAP_CACHE = {"data": None, "ts": 0}
+_EN_AR_WORDS = {
+    "spot": "سبوت", "strip": "ستريب", "light": "نور",
+    "bathroom": "حمام", "room": "غرفة", "kitchen": "مطبخ",
+    "switch": "", "socket": "", "vent": "شفاط", "mirror": "مرآة",
+    "dresser": "ملابس", "dressing": "ملابس",
+    "office": "المكتب", "master": "الماستر",
+    "living": "المعيشة", "ground": "الأرضي",
+    "floor": "", "section": "", "outdoor": "خارجي",
+    "parking": "باركينج", "laundry": "غسيل",
+    "smart": "سمارت", "plug": "بلق",
+    "guest": "ضيوف", "mama": "ماما",
+    "salon": "صالة", "balcony": "بلكونة",
+    "aisha": "عيشة", "ausha": "عيشة",
+    "chandler": "ثريا", "purifier": "منقي",
+    "freshener": "معطر", "1st": "الأول",
+    "wash": "", "hand": "مغسلة",
+}
+
 def _get_friendly_name(entity_id):
-    """Get Arabic friendly name from entity_map.json."""
-    try:
-        import json
-        emap_path = os.path.join(BASE_DIR, "entity_map.json")
-        if not os.path.exists(emap_path):
-            return entity_id.split(".")[-1].replace("_", " ")
-        with open(emap_path) as ef:
-            emap = json.load(ef)
-        for room, entries in emap.items():
-            if not isinstance(entries, list):
-                continue
-            for entry in entries:
-                if "=" in entry:
-                    eid, ename = entry.split("=", 1)
-                    if eid == entity_id:
-                        # Clean duplicate words
-                        words = ename.split()
-                        cleaned = [words[0]] if words else []
-                        for _w in words[1:]:
-                            if _w != cleaned[-1]:
-                                cleaned.append(_w)
-                        return " ".join(cleaned)
-        return entity_id.split(".")[-1].replace("_", " ")
-    except Exception:
-        return entity_id.split(".")[-1].replace("_", " ")
+    """Get Arabic friendly name from entity_map.json with caching + auto-translate fallback."""
+    import time as _t
+    now = _t.time()
+    if _EMAP_CACHE["data"] is None or now - _EMAP_CACHE["ts"] > 300:
+        try:
+            import json
+            emap_path = os.path.join(BASE_DIR, "entity_map.json")
+            with open(emap_path) as ef:
+                _emap = json.load(ef)
+            # Build flat lookup
+            lookup = {}
+            for room, entries in _emap.items():
+                if not isinstance(entries, list):
+                    continue
+                for entry in entries:
+                    if "=" in entry:
+                        eid, ename = entry.split("=", 1)
+                        lookup[eid] = ename
+            _EMAP_CACHE["data"] = lookup
+            _EMAP_CACHE["ts"] = now
+        except Exception:
+            _EMAP_CACHE["data"] = {}
+            _EMAP_CACHE["ts"] = now
+
+    lookup = _EMAP_CACHE["data"]
+    if entity_id in lookup:
+        name = lookup[entity_id]
+        # Clean duplicate words
+        words = name.split()
+        cleaned = [words[0]] if words else []
+        for _w in words[1:]:
+            if _w != cleaned[-1]:
+                cleaned.append(_w)
+        return " ".join(cleaned)
+    
+    # Fallback: auto-translate English entity_id parts
+    raw = entity_id.split(".")[-1].replace("_", " ")
+    parts = raw.split()
+    translated = []
+    for p in parts:
+        ar = _EN_AR_WORDS.get(p.lower(), None)
+        if ar is None:
+            # Keep numbers and unknown words
+            translated.append(p)
+        elif ar:
+            translated.append(ar)
+    result = " ".join(translated).strip()
+    return result if result else raw
 
 
 def format_maturity_report():
