@@ -4916,6 +4916,11 @@ async def llm_call_stream(system_prompt: str, user_message: str, chat_id=None,
         # Final edit — remove typing indicator
         if msg_id and chat_id:
             await tg_edit_message(chat_id, msg_id, full_text)
+        # Save to session memory
+        try:
+            memory_add_short_term("assistant", full_text[:300])
+        except Exception:
+            pass
         
         _cb_llm.record_success()
         elapsed = time.time() - t0
