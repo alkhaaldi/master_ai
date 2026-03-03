@@ -25,7 +25,6 @@ def _gmail_service():
     """Get authenticated Gmail API service."""
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
-    from google_auth_oauthlib.flow import InstalledAppFlow
     from googleapiclient.discovery import build
 
     creds = None
@@ -35,13 +34,12 @@ def _gmail_service():
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
-        elif _GMAIL_CREDS_FILE.exists():
-            flow = InstalledAppFlow.from_client_secrets_file(str(_GMAIL_CREDS_FILE), _GMAIL_SCOPES)
-            creds = flow.run_local_server(port=0)
+            _GMAIL_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+            _GMAIL_TOKEN_FILE.write_text(creds.to_json())
         else:
+            # Token doesn't exist yet - need OAuth flow via /gmail/auth
+            logger.warning("Gmail token missing - visit /gmail/auth to authenticate")
             return None
-        _GMAIL_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _GMAIL_TOKEN_FILE.write_text(creds.to_json())
     
     return build("gmail", "v1", credentials=creds)
 

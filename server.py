@@ -2761,6 +2761,67 @@ async def debug_test_approval(request: Request):
     await _notify_approval(_aid, "Debug test approval", "low")
     return {"approval_id": _aid, "status": "created", "notification": "sent"}
 
+
+# ===== Gmail OAuth Endpoints =====
+@app.get("/gmail/auth")
+async def gmail_auth_start():
+    """Start Gmail OAuth flow — open this in browser."""
+    try:
+        from google_auth_oauthlib.flow import Flow
+        import json
+        SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+        creds_path = BASE_DIR / "gmail_credentials.json"
+        if not creds_path.exists():
+            return {"error": "gmail_credentials.json not found"}
+        
+        redirect_uri = "https://ai.salem-home.com/gmail/callback"
+        flow = Flow.from_client_secrets_file(str(creds_path), scopes=SCOPES, redirect_uri=redirect_uri)
+        auth_url, state = flow.authorization_url(prompt="consent", access_type="offline")
+        
+        # Save state
+        state_file = BASE_DIR / "data" / "gmail_oauth_state.json"
+        state_file.write_text(json.dumps({"state": state, "redirect_uri": redirect_uri}))
+        
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(auth_url)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/gmail/callback")
+async def gmail_auth_callback(code: str = "", state: str = "", error: str = ""):
+    """Gmail OAuth callback — Google redirects here after auth."""
+    if error:
+        return {"error": error}
+    if not code:
+        return {"error": "no auth code received"}
+    try:
+        from google_auth_oauthlib.flow import Flow
+        import json
+        SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+        creds_path = BASE_DIR / "gmail_credentials.json"
+        
+        state_file = BASE_DIR / "data" / "gmail_oauth_state.json"
+        saved = json.loads(state_file.read_text()) if state_file.exists() else {}
+        redirect_uri = saved.get("redirect_uri", "https://ai.salem-home.com/gmail/callback")
+        
+        flow = Flow.from_client_secrets_file(str(creds_path), scopes=SCOPES, redirect_uri=redirect_uri, state=state)
+        flow.fetch_token(code=code)
+        
+        creds = flow.credentials
+        token_file = BASE_DIR / "data" / "gmail_token.json"
+        token_file.write_text(creds.to_json())
+        
+        # Test it
+        from googleapiclient.discovery import build
+        service = build("gmail", "v1", credentials=creds)
+        profile = service.users().getProfile(userId="me").execute()
+        email = profile.get("emailAddress", "?")
+        
+        return {"status": "success", "email": email, "message": f"Gmail connected: {email}"}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/health")
 async def health():
     schema = _get_schema_status()

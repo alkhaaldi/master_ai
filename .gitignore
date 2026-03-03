@@ -67,3 +67,8 @@ upload_server.py
 v5_assembler.py
 v5c_*
 v5_chunk_*
+gmail_credentials.json
+data/gmail_token.json
+data/gmail_oauth_state.json
+outlook_config.json
+data/outlook_token.json
