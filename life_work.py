@@ -11,7 +11,7 @@ DB_PATH = "/home/pi/master_ai/data/audit.db"
 SHIFT_PATTERN = ["صباحي", "صباحي", "عصري", "عصري", "ليلي", "ليلي", "إجازة", "إجازة"]
 SHIFT_EMOJI = {"صباحي": "🌅", "عصري": "🌇", "ليلي": "🌙", "إجازة": "🏖"}
 SHIFT_TIMES = {"صباحي": "7:00 AM - 3:00 PM", "عصري": "3:00 PM - 11:00 PM", "ليلي": "11:00 PM - 7:00 AM", "إجازة": "يوم إجازة"}
-EPOCH = date(2024, 1, 1)  # corrected: 2024-01-01 aligns A-shift to actual schedule
+EPOCH = date(2024, 1, 4)  # verified against KNPC MAB 2026 rota PDF
 
 def _db():
     conn = sqlite3.connect(DB_PATH)
