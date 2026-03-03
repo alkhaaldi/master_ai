@@ -9,16 +9,14 @@ import re
 
 def _normalize_ar(text):
     """Normalize Arabic text for better matching."""
-    import re
     t = text.strip().lower()
-    # Remove tashkeel
-    t = re.sub(r'[ؐ-ًؚ-ٰٟۖ-ۜ۟-ۤۧ-۪ۨ-ۭ]', '', t)
-    # Normalize hamza variants
-    t = t.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ئ', 'ء').replace('ؤ', 'ء')
-    # Normalize taa marboota
-    t = t.replace('ة', 'ه')
-    # Normalize alef maksura
-    t = t.replace('ى', 'ي')
+    # Remove tashkeel only
+    _TASHKEEL = set("ًٌٍَُِّْٰٕٖٜٟٓٔٗ٘ٙٚٛٝٞ")
+    t = "".join(c for c in t if c not in _TASHKEEL)
+    for _o, _n in [(chr(0x623),chr(0x627)),(chr(0x625),chr(0x627)),(chr(0x622),chr(0x627)),(chr(0x626),chr(0x621)),(chr(0x624),chr(0x621))]:
+        t = t.replace(_o, _n)
+    t = t.replace(chr(0x629), chr(0x647))
+    t = t.replace(chr(0x649), chr(0x64a))
     return t
 
 from datetime import datetime, timedelta
@@ -44,8 +42,8 @@ def _get_shift(d=None):
 # Room name mapping for entity filtering
 ROOM_MAP = {
     "الديوانية": ["diwaniya", "diwan"],
-    "المعيشة": ["living", "living_room"],
-    "الصالة": ["living", "living_room"],
+    "المعيشه": ["living", "living_room"],
+    "الصاله": ["living", "living_room"],
     "المطبخ": ["kitchen"],
     "غرفة النوم": ["master", "bedroom"],
     "الماستر": ["master"],
@@ -88,12 +86,13 @@ async def quick_answer(text: str):
 
     # 5) Room status
     for room_ar, room_keys in ROOM_MAP.items():
-        if room_ar in t:
+        _nr = _normalize_ar(room_ar)
+        if _nr in t:
             return await _room_status(room_ar, room_keys)
 
 
     # 6) Locks status
-    if re.search(r"أقفال|قفل|أبواب|باب", t):
+    if re.search(r"اقفال|قفل|ابواب|باب", t):
         return await _locks_status()
 
     # 7) Media players
@@ -102,7 +101,7 @@ async def quick_answer(text: str):
 
 
     # 8) Weather
-    if re.search(r"طقس|جو|حرارة برا|درجة الحرارة|weather|هواء", t):
+    if re.search(r"طقس|جو|حراره برا|درجه الحراره|weather|هواء", t):
         return await _weather()
 
 
