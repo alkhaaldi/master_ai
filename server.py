@@ -4157,25 +4157,36 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"\u26a0\ufe0f summary: {e}"
 
-    if cmd == "/home":
-        buttons = [
-            {"text": "💡 الأضواء", "callback_data": "cmd:lights"},
-            {"text": "❄️ المكيفات", "callback_data": "cmd:temp"},
-            {"text": "🎬 المشاهد", "callback_data": "cmd:scenes"},
-            {"text": "📷 الكاميرات", "callback_data": "cmd:cam"},
-            {"text": "🧠 العقل", "callback_data": "cmd:brain"},
-            {"text": "📊 النظام", "callback_data": "cmd:diag"},
-            {"text": "\U0001f4cb \u0645\u0644\u062e\u0635", "callback_data": "cmd:summary"},
-            {"text": "\U0001f4c5 \u0627\u0644\u0634\u0641\u062a", "callback_data": "cmd:shift"},
-            {"text": "\U0001f4c6 \u0627\u0644\u0623\u0633\u0628\u0648\u0639", "callback_data": "cmd:week"},
-            {"text": "\U0001f4b0 \u0627\u0644\u0623\u0633\u0647\u0645", "callback_data": "cmd:stocks"},
-            {"text": "\U0001f510 \u0627\u0644\u0623\u0642\u0641\u0627\u0644", "callback_data": "cmd:locks"},
-            {"text": "\U0001f3b5 \u0627\u0644\u0633\u0645\u0627\u0639\u0627\u062a", "callback_data": "cmd:media"},
-            {"text": "\U0001f534 \u0637\u0641\u064a \u0643\u0644 \u0634\u064a", "callback_data": "sc:scene.tfwy_kl_shy"},
-            {"text": "\U0001f321 \u0627\u0644\u0637\u0642\u0633", "callback_data": "cmd:weather"},
-            {"text": "\U0001f3aa \u0627\u0644\u0633\u062a\u0627\u0626\u0631", "callback_data": "cmd:covers"},
-        ]
-        await tg_send_inline(chat_id, "🏠 *القائمة الرئيسية*", buttons, columns=2)
+    if cmd == "/home" or cmd == "/home2":
+        _page2 = cmd == "/home2"
+        if not _page2:
+            buttons = [
+                {"text": "\U0001f4a1 \u0627\u0644\u0623\u0636\u0648\u0627\u0621", "callback_data": "cmd:lights"},
+                {"text": "\u2744\ufe0f \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a", "callback_data": "cmd:temp"},
+                {"text": "\U0001f3aa \u0627\u0644\u0633\u062a\u0627\u0626\u0631", "callback_data": "cmd:covers"},
+                {"text": "\U0001f3ac \u0627\u0644\u0645\u0634\u0627\u0647\u062f", "callback_data": "cmd:scenes"},
+                {"text": "\U0001f510 \u0627\u0644\u0623\u0642\u0641\u0627\u0644", "callback_data": "cmd:locks"},
+                {"text": "\U0001f3b5 \u0627\u0644\u0633\u0645\u0627\u0639\u0627\u062a", "callback_data": "cmd:media"},
+                {"text": "\U0001f4f7 \u0627\u0644\u0643\u0627\u0645\u064a\u0631\u0627\u062a", "callback_data": "cmd:cam"},
+                {"text": "\U0001f321 \u0627\u0644\u0637\u0642\u0633", "callback_data": "cmd:weather"},
+                {"text": "\U0001f534 \u0637\u0641\u064a \u0643\u0644 \u0634\u064a", "callback_data": "sc:scene.tfwy_kl_shy"},
+                {"text": "\u27a1\ufe0f \u0627\u0644\u0645\u0632\u064a\u062f", "callback_data": "cmd:home2"},
+            ]
+            await tg_send_inline(chat_id, "\U0001f3e0 *\u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629*", buttons, columns=2)
+        else:
+            buttons = [
+                {"text": "\U0001f4c5 \u0627\u0644\u0634\u0641\u062a", "callback_data": "cmd:shift"},
+                {"text": "\U0001f4c6 \u0627\u0644\u0623\u0633\u0628\u0648\u0639", "callback_data": "cmd:week"},
+                {"text": "\U0001f4b0 \u0627\u0644\u0623\u0633\u0647\u0645", "callback_data": "cmd:stocks"},
+                {"text": "\U0001f4cb \u0645\u0644\u062e\u0635", "callback_data": "cmd:summary"},
+                {"text": "\U0001f4ca \u0627\u0644\u0646\u0638\u0627\u0645", "callback_data": "cmd:diag"},
+                {"text": "\U0001f9e0 \u0627\u0644\u0639\u0642\u0644", "callback_data": "cmd:brain"},
+                {"text": "\U0001f4dd \u0627\u0644\u0645\u0647\u0627\u0645", "callback_data": "cmd:tasks"},
+                {"text": "\u2753 \u0645\u0633\u0627\u0639\u062f\u0629", "callback_data": "cmd:help"},
+                {"text": "\u2b05\ufe0f \u0631\u062c\u0648\u0639", "callback_data": "cmd:home"},
+            ]
+            await tg_send_inline(chat_id, "\U0001f4e6 *\u0627\u0644\u0645\u0632\u064a\u062f*", buttons, columns=2)
+        return "__inline_sent__"
         return "__inline_sent__"
 
     # --- Level 2: Home commands ---
