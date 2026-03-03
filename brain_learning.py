@@ -1041,3 +1041,179 @@ async def filter_existing_automations(suggestions):
         return filtered
     except Exception:
         return suggestions
+
+
+# ===== Phase 5: Smart Scene Discovery =====
+
+_SCENE_LABELS = {
+    (6, 8): ("\U0001f305 \u0648\u0636\u0639 \u0627\u0644\u0635\u0628\u0627\u062d", "morning"),
+    (16, 18): ("\U0001f3e0 \u0631\u062c\u0648\u0639 \u0627\u0644\u0628\u064a\u062a", "back_home"),
+    (18, 20): ("\U0001f306 \u0648\u0636\u0639 \u0627\u0644\u0645\u0633\u0627\u0621", "evening"),
+    (20, 22): ("\U0001f319 \u0648\u0636\u0639 \u0627\u0644\u0644\u064a\u0644", "night"),
+    (22, 24): ("\U0001f634 \u0648\u0636\u0639 \u0627\u0644\u0646\u0648\u0645", "sleep"),
+}
+
+def _get_scene_label(hour):
+    """Get Arabic scene name based on hour."""
+    for (h_start, h_end), (label, key) in _SCENE_LABELS.items():
+        if h_start <= hour < h_end:
+            return label, key
+    return f"\u0648\u0636\u0639 {hour}:00", f"hour_{hour}"
+
+
+def discover_scenes(min_devices=3, min_confidence=0.7):
+    """Discover potential scenes from correlated device patterns."""
+    if not os.path.exists(DB_PATH):
+        return []
+    
+    import re as _re
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Get ON patterns
+    rows = c.execute("""
+        SELECT entity_id, hour, confidence, sample_count
+        FROM device_patterns
+        WHERE pattern_type='on' AND confidence >= ?
+        ORDER BY hour, confidence DESC
+    """, (min_confidence,)).fetchall()
+    
+    # Load names
+    import json as _json
+    emap_path = os.path.join(BASE_DIR, "entity_map.json")
+    name_for = {}
+    room_for = {}
+    try:
+        with open(emap_path) as ef:
+            emap = _json.load(ef)
+        for room, entries in emap.items():
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if "=" in entry:
+                    eid, ename = entry.split("=", 1)
+                    room_for[eid] = room.split("/")[0].strip()
+                    name_for[eid] = ename
+    except Exception:
+        pass
+    
+    # Group by hour, dedup
+    from collections import defaultdict
+    by_hour = defaultdict(list)
+    seen = set()
+    for eid, hour, conf, samples in rows:
+        base = _re.sub(r'(_switch)?(_\d+)+$', '', eid.split(".")[-1])
+        key = (base, hour)
+        if key in seen:
+            continue
+        seen.add(key)
+        if any(sk in eid for sk in ("backlight", "_curtain", "trigger_alarm", "siren", "smart_plug", "indicator_led", "record_audio", "record_to_sd", "flip", "notifications", "microphone_noise", "linecrossing", "people_detection", "vehicle_detection", "pet_detection", "bark_detection", "meow_detection", "glass_detection", "motion_detection", "update.", "sensor.", "binary_sensor.")):
+            continue
+        # Skip externally automated
+        if any(sub in eid for sub in ANOMALY_EXCLUDE_SUBS):
+            continue
+        name = name_for.get(eid, _get_friendly_name(eid))
+        room = room_for.get(eid, "?")
+        by_hour[hour].append({
+            "entity_id": eid,
+            "name": name,
+            "room": room,
+            "confidence": conf,
+        })
+    conn.close()
+    
+    # Build scene suggestions
+    scenes = []
+    for hour in sorted(by_hour.keys()):
+        if hour < 6 or hour > 23:
+            continue
+        devices = by_hour[hour]
+        if len(devices) < min_devices:
+            continue
+        rooms = set(d["room"] for d in devices)
+        if len(rooms) < 3:
+            continue
+        
+        rooms = set(d["room"] for d in devices)
+        avg_conf = sum(d["confidence"] for d in devices) / len(devices)
+        label, key = _get_scene_label(hour)
+        
+        # Check if it's a single-room scene (e.g., guest room)
+        if len(rooms) == 1 and rooms != {"?"}:
+            room_name = list(rooms)[0]
+            label = f"\U0001f3e0 \u0648\u0636\u0639 {room_name}"
+            key = f"room_{room_name}"
+        
+        scenes.append({
+            "hour": hour,
+            "label": label,
+            "key": key,
+            "device_count": len(devices),
+            "room_count": len(rooms),
+            "avg_confidence": round(avg_conf, 2),
+            "devices": sorted(devices, key=lambda d: -d["confidence"])[:10],
+            "all_entity_ids": [d["entity_id"] for d in devices],
+        })
+    
+    # Sort by device count desc
+    scenes.sort(key=lambda s: -s["device_count"])
+    return scenes
+
+
+async def format_scenes_report():
+    """Format discovered scenes for Telegram."""
+    scenes = discover_scenes()
+    if not scenes:
+        return "\u274c \u0645\u0627 \u0644\u0642\u064a\u062a \u0623\u0646\u0645\u0627\u0637 \u0643\u0627\u0641\u064a\u0629 \u0644\u0627\u0642\u062a\u0631\u0627\u062d scenes"
+    
+    lines = [f"\U0001f3ac \u0645\u0634\u0627\u0647\u062f \u0645\u0642\u062a\u0631\u062d\u0629 ({len(scenes)}):", ""]
+    
+    for s in scenes[:6]:
+        conf_pct = int(s["avg_confidence"] * 100)
+        lines.append(f"{s['label']} @{s['hour']:02d}:00")
+        lines.append(f"  {s['device_count']} \u062c\u0647\u0627\u0632 \u0645\u0646 {s['room_count']} \u063a\u0631\u0641\u0629 ({conf_pct}% \u062b\u0628\u0627\u062a)")
+        for d in s["devices"][:3]:
+            lines.append(f"    \u2022 {d['name']}")
+        if s["device_count"] > 3:
+            lines.append(f"    ... +{s['device_count']-3} \u0622\u062e\u0631")
+        lines.append("")
+    
+    return "\n".join(lines)
+
+
+async def create_ha_scene(scene_data, custom_name=None):
+    """Create a HA scene from discovered pattern."""
+    label = custom_name or scene_data["label"]
+    # Clean label for scene ID
+    import re as _re_sc
+    scene_id = f"brain_{scene_data['key']}_{scene_data['hour']}"
+    scene_id = _re_sc.sub(r'[^a-z0-9_]', '_', scene_id.lower())
+    
+    # Build entity states
+    entities = {}
+    for eid in scene_data["all_entity_ids"]:
+        domain = eid.split(".")[0]
+        if domain in ("light", "switch", "fan"):
+            entities[eid] = {"state": "on"}
+        elif domain == "climate":
+            entities[eid] = {"state": "heat_cool"}
+    
+    scene_config = {
+        "id": scene_id,
+        "name": label,
+        "entities": entities,
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(
+                f"{HA_URL}/api/config/scene/config/{scene_id}",
+                headers=_headers(),
+                json=scene_config
+            )
+            if r.status_code in (200, 201):
+                return {"ok": True, "id": scene_id, "name": label, "entities": len(entities)}
+            else:
+                return {"ok": False, "error": f"HTTP {r.status_code}: {r.text[:100]}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
