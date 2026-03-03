@@ -86,6 +86,13 @@ try:
 except Exception as _qqe:
     pass
 
+TG_REPORT_OK = False
+try:
+    from tg_report import generate_daily_report
+    TG_REPORT_OK = True
+except Exception:
+    pass
+
 try:
     from discovery import get_home_summary, sync_entities, get_discovery_stats
     DISCOVERY_OK = True
@@ -4490,6 +4497,15 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 return f"error: {e}"
         return "life_health not loaded"
 
+    if cmd == "/report":
+        if TG_REPORT_OK:
+            try:
+                _rep = await generate_daily_report(_router_stats, _response_times, {})
+                return _rep
+            except Exception as e:
+                return f"Error: {e}"
+        return "report module not loaded"
+
     if cmd == "/ping":
         _up = int(time.time() - START_TIME)
         _h, _m = divmod(_up // 60, 60)
@@ -4941,20 +4957,16 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
                 _router_stats['total'] += 1
                 if TG_SESSION_OK:
                     tg_session_upsert(str(chat_id), last_intent="action", last_entities=_ir_entities)
-                if False:  # suggestions removed — Opus handles natively
-                    _sact = "on" if "شغّلت" in _ir_text else "off" if "طفّيت" in _ir_text else "set_temp" if "ضبطت" in _ir_text else "scene" if "مشهد" in _ir_text else "query" if "الحالة" in _ir_text else None
-                    _sbtns = get_suggestions(_sact) if _sact else []
-                    if _sbtns:
-                        # _sbtns is already rows format [[btn1,btn2],[btn3]]
-                        _kb = json.dumps({"inline_keyboard": _sbtns})
-                        _payload = {"chat_id": chat_id, "text": _ir_text, "reply_markup": _kb, "parse_mode": "Markdown"}
-                        try:
-                            await _tg_client.post(f"{TG_BASE}/sendMessage", json=_payload)
-                        except Exception as _e:
-                            logger.error(f"suggest send error: {_e}")
-                            await tg_send(chat_id, _ir_text, parse_mode="Markdown")
-                    else:
-                        await tg_send(chat_id, _ir_text, parse_mode="Markdown")
+                _sf_btns = []
+                if "شغّلت" in _ir_text or "طفّيت" in _ir_text:
+                    _sf_btns = [{"text": "🔴 طفي كل شي", "callback_data": "sc:scene.tfwy_kl_shy"}, {"text": "💡 الأضواء", "callback_data": "cmd:lights"}]
+                elif "ضبطت" in _ir_text or "حرار" in _ir_text:
+                    _sf_btns = [{"text": "❄️ المكيفات", "callback_data": "cmd:temp"}]
+                elif "ستار" in _ir_text:
+                    _sf_btns = [{"text": "🎪 الستائر", "callback_data": "cmd:covers"}]
+                if _sf_btns:
+                    await tg_send_inline(chat_id, _ir_text, _sf_btns, columns=2)
+                    return
                 else:
                     await tg_send(chat_id, _ir_text, parse_mode="Markdown")
                 return
