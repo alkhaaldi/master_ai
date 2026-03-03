@@ -358,7 +358,7 @@ def get_home_summary() -> str:
     for room, devs in sorted(rooms.items()):
         counts = []
         for d, ents in devs.items():
-            label = {"light":"ضوء","switch":"سويتش","climate":"مكيف","cover":"ستارة","fan":"مروحة","media_player":"ميديا","scene":"مشهد"}.get(d, d)
+            label = {"light":"ضوء","switch":"سويتش","climate":"مكيف","cover":"ستارة","fan":"شفاط/منقي","media_player":"ميديا","scene":"مشهد"}.get(d, d)
             counts.append(f"{len(ents)} {label}")
         lines.append(f"  {room}: {', '.join(counts)}")
     return "\n".join(lines)

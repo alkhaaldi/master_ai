@@ -36,7 +36,7 @@ def _fan_type(entity_id, name=""):
         return "معطر"
     if "vent" in eid or "vent" in n or "exhaust" in eid:
         return "شفاط"
-    return "مروحة"
+    return "جهاز تهوية"
 
 
 async def get_unavailable_entities():

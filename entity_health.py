@@ -14,7 +14,7 @@ _ENG_WORDS = {
     "chandler": "ثريا", "chandelier": "ثريا", "spot": "سبوت", "strip": "ستريب",
     "backlight": "إضاءة خلفية", "mirror": "مرآة", "vent": "شفاط", "exhaust": "شفاط",
     "shutter": "شتر", "curtain": "ستارة", "storage": "مخزن", "switch": "",
-    "small light": "نور صغير", "fan": "مروحة", "purifier": "منقي هواء",
+    "small light": "نور صغير", "fan": "", "purifier": "منقي هواء",
     "light": "", "ac": "مكيف", "tv": "تلفزيون",
     "living room": "المعيشة", "kitchen": "المطبخ", "office": "المكتب",
     "master": "الماستر", "mama room": "غرفة ماما", "mama": "ماما",
