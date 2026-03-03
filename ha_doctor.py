@@ -45,8 +45,12 @@ async def get_unavailable_entities():
                 if any(skip in eid for skip in SKIP_ENTITIES): continue
                 if any(sub in eid for sub in SKIP_SUBSTRINGS): continue
                 if "backlight" in eid: continue
-                name = s.get("attributes", {}).get("friendly_name", eid)
-                bad.append({"entity_id": eid, "name": name, "state": st, "domain": domain})
+                attrs = s.get("attributes", {})
+                # Climate with temperature reading = working (Midea shows 'unknown' state)
+                if domain == "climate" and attrs.get("current_temperature") is not None:
+                    continue
+                name = attrs.get("friendly_name", eid)
+                bad.append({"entity_id": eid, "name": name, "state": st, "domain": domain, "since": s.get("last_changed","")[:10]})
         return bad
     except Exception as e:
         logger.error("get_unavailable: " + str(e))
@@ -82,10 +86,12 @@ async def detect_anomalies():
             dar = DOMAIN_AR.get(domain, domain)
             names = [e["name"] for e in ents[:5]]
             more = f" +{len(ents)-5}" if len(ents) > 5 else ""
+            since = ents[0].get("since", "")
+            since_txt = f" (\u0645\u0646 {since})" if since else ""
             issues.append({
                 "type": "unavailable",
                 "severity": "warning" if len(ents) < 10 else "critical",
-                "message": f"\u26a0\ufe0f {len(ents)} {dar} offline: {', '.join(names)}{more}",
+                "message": f"\u26a0\ufe0f {len(ents)} {dar} offline{since_txt}: {', '.join(names)}{more}",
                 "entities": [e["entity_id"] for e in ents],
                 "domain": domain,
             })
