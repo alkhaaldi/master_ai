@@ -109,6 +109,8 @@ try:
     from brain_learning import format_maturity_report as bl_maturity
     from brain_learning import detect_anomalies as bl_anomalies, format_anomaly_report as bl_anomaly_report
     from brain_learning import create_ha_automation as bl_create_auto, get_top_suggestions as bl_top_sugs
+    from brain_learning import build_daily_summary_report as bl_summary
+    from brain_learning import filter_existing_automations as bl_filter_autos
     LEARNING_OK = True
     DOCTOR_OK = True
 except Exception:
@@ -4203,11 +4205,21 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return f"patterns error: {e}"
 
 
+    if cmd == "/summary":
+        if not LEARNING_OK:
+            return "brain_learning not loaded"
+        try:
+            return await bl_summary()
+        except Exception as e:
+            return f"summary error: {e}"
+
     if cmd == "/suggest":
         if not LEARNING_OK:
             return "brain_learning not loaded"
         try:
-            sugs = bl_top_sugs(limit=5)
+            sugs = bl_top_sugs(limit=8)
+            sugs = await bl_filter_autos(sugs)
+            sugs = sugs[:5]
             if not sugs:
                 return "لا توجد اقتراحات قوية بعد"
             msg = "💡 اقتراحات أتمتة ذكية: اختر وحدة عشان أسويها تلقائي:"
@@ -5965,6 +5977,19 @@ async def brain_weekly_insight():
                 _wl.append("")
                 _wl.append("💡 تبي أسوي أي وحدة منهم automation؟")
             await tg_send(_chat, chr(10).join(_wl))
+            # Add brain learning maturity to weekly
+            if LEARNING_OK:
+                try:
+                    _mat = bl_maturity()
+                    _top = bl_top_sugs(3)
+                    _wl_extra = chr(10) + chr(10) + chr(0x1f393) + ' حالة التعلم:' + chr(10) + _mat
+                    if _top:
+                        _wl_extra += chr(10) + chr(10) + chr(0x1f4a1) + ' أفضل اقتراحات:'
+                        for _s in _top:
+                            _wl_extra += chr(10) + '  ' + chr(0x2022) + ' ' + _s['label']
+                    await tg_send(_chat, _wl_extra)
+                except Exception:
+                    pass
             # Also send health report
             if DOCTOR_OK:
                 try:

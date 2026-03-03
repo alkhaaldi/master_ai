@@ -945,3 +945,99 @@ def get_top_suggestions(limit=5):
         })
     
     return results
+
+
+async def build_daily_summary_report():
+    """Build a comprehensive daily summary: lights + climate + anomalies + brain."""
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone(timedelta(hours=3)))
+    lines = [f"\U0001f4cb \u0645\u0644\u062e\u0635 \u0627\u0644\u064a\u0648\u0645 ({now.strftime('%H:%M')}):", ""]
+    
+    try:
+        # 1. Active lights count
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"{HA_URL}/api/states", headers=_headers())
+            states = r.json()
+        
+        lights_on = [s for s in states if s["entity_id"].startswith("light.") and s["state"] == "on"
+                     and "backlight" not in s["entity_id"] and "_curtain" not in s["entity_id"]]
+        climate_on = [s for s in states if s["entity_id"].startswith("climate.") and s["state"] not in ("off","unavailable","unknown")]
+        covers_open = [s for s in states if s["entity_id"].startswith("cover.") and "_inverted" in s["entity_id"] and s["state"] == "open"]
+        
+        lines.append(f"\U0001f4a1 \u0623\u0636\u0648\u0627\u0621: {len(lights_on)} \u0634\u063a\u0627\u0644")
+        
+        # Climate summary
+        if climate_on:
+            temps = []
+            for c in climate_on:
+                name = _get_friendly_name(c["entity_id"])
+                temp = c.get("attributes", {}).get("temperature", "?")
+                temps.append(f"{name} {temp}\u00b0")
+            lines.append(f"\u2744\ufe0f \u0645\u0643\u064a\u0641\u0627\u062a: {len(climate_on)} \u0634\u063a\u0627\u0644 ({', '.join(temps[:4])})")
+        else:
+            lines.append("\u2744\ufe0f \u0645\u0643\u064a\u0641\u0627\u062a: \u0643\u0644\u0647\u0627 \u0637\u0627\u0641\u064a\u0629")
+        
+        lines.append(f"\U0001f3aa \u0633\u062a\u0627\u0626\u0631: {len(covers_open)} \u0645\u0641\u062a\u0648\u062d\u0629")
+        lines.append("")
+        
+        # 2. Anomalies
+        anomalies = await detect_anomalies()
+        if anomalies:
+            lines.append(f"\U0001f50d \u0634\u0630\u0648\u0630: {len(anomalies)}")
+            for a in anomalies[:3]:
+                sev = {"high": "\U0001f534", "medium": "\U0001f7e1", "low": "\U0001f7e2"}.get(a["severity"], "")
+                lines.append(f"  {sev} {a['description_ar'][:60]}")
+            if len(anomalies) > 3:
+                lines.append(f"  ... +{len(anomalies)-3} \u0622\u062e\u0631")
+        else:
+            lines.append("\u2705 \u0644\u0627 \u0634\u0630\u0648\u0630")
+        
+        lines.append("")
+        
+        # 3. Brain maturity
+        mat = get_maturity_report()
+        lines.append(f"\U0001f9e0 \u0627\u0644\u0628\u0631\u064a\u0646: {mat['emoji']} {mat['label']} (\u062b\u0642\u0629 {mat['trust_pct']}%)")
+        
+        # 4. Today's on_count from daily_summary
+        today_str = now.strftime("%Y-%m-%d")
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        row = c.execute("SELECT SUM(on_count), COUNT(DISTINCT entity_id) FROM daily_summary WHERE date=?", (today_str,)).fetchone()
+        conn.close()
+        if row and row[0]:
+            lines.append(f"\U0001f4ca \u0627\u0644\u064a\u0648\u0645: {row[0]} \u062a\u063a\u064a\u064a\u0631 \u0645\u0646 {row[1]} \u062c\u0647\u0627\u0632")
+        
+    except Exception as e:
+        lines.append(f"\u26a0\ufe0f \u062e\u0637\u0623: {str(e)[:80]}")
+    
+    return "\n".join(lines)
+
+
+async def filter_existing_automations(suggestions):
+    """Remove suggestions where a HA automation already exists for the entity."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"{HA_URL}/api/states", headers=_headers())
+            states = r.json()
+        
+        # Get all automation entity IDs and their configs
+        auto_entities = set()
+        for s in states:
+            if s["entity_id"].startswith("automation."):
+                # Check if any of our suggestion entities appear in the automation
+                alias = s.get("attributes", {}).get("friendly_name", "").lower()
+                auto_entities.add(alias)
+        
+        filtered = []
+        for sug in suggestions:
+            eid_base = sug["entity_id"].split(".")[-1].replace("_", " ").lower()
+            # Skip if there's already a brain automation for this entity
+            auto_id = f"brain_auto_{sug['entity_id'].split('.')[-1]}_{sug['action']}_{sug['hour']}"
+            already_exists = any(auto_id.lower() in a for a in auto_entities) or \
+                           any(f"brain: {sug['name'].lower()}" in a for a in auto_entities)
+            if not already_exists:
+                filtered.append(sug)
+        
+        return filtered
+    except Exception:
+        return suggestions

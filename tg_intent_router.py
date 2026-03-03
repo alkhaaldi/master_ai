@@ -256,7 +256,16 @@ async def route_intent(text: str) -> dict | None:
         return await _handle_scene(text, emap)
 
     # --- 2. State query ---
-    # Anomaly queries: "شذوذ اليوم", "شي غريب؟"
+    # Summary queries: "ملخص اليوم", "شلون البيت؟"
+    if any(sw in text for sw in SUMMARY_WORDS):
+        try:
+            from brain_learning import build_daily_summary_report
+            report = await build_daily_summary_report()
+            return {"text": report, "action": "summary", "source": "brain"}
+        except Exception:
+            pass
+
+        # Anomaly queries: "شذوذ اليوم", "شي غريب؟"
     if any(aw in text for aw in ANOMALY_WORDS):
         try:
             from brain_learning import format_anomaly_report
@@ -816,6 +825,8 @@ PATTERN_WORDS = {"أنماط", "نمط", "عادة", "عادات", "patterns", "
 
 ANOMALY_WORDS = {"شذوذ", "الشذوذ", "غريب", "غريبة", "غير طبيعي", "مختلف", "شاذ", "anomaly", "anomalies", "غلط", "خطأ اليوم", "شي غلط"}
 BRAIN_WORDS = {"ذكاء", "الذكاء", "brain", "مخ", "دماغ", "ثقة", "الثقة", "maturity", "نضج", "مستوى التعلم", "حالة التعلم"}
+
+SUMMARY_WORDS = {"ملخص", "الملخص", "summary", "شلون البيت", "حالة البيت", "وضع البيت"}
 _TIME_PATTERNS = {
     "ساعة": 1, "ساعتين": 2, "٣ ساعات": 3, "3 ساعات": 3,
     "٦ ساعات": 6, "6 ساعات": 6, "١٢ ساعة": 12, "12 ساعة": 12,
