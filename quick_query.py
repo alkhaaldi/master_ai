@@ -321,7 +321,7 @@ async def _active_devices_count():
         d = s["entity_id"].split(".")[0]
         by_domain.setdefault(d, []).append(s)
     ICONS = {"light":"💡","switch":"🔌","fan":"🌬","climate":"❄️","cover":"🎪","media_player":"🎵"}
-    NAMES = {"light":"أضواء","switch":"مفاتيح","fan":"مراوح","climate":"مكيفات","cover":"ستائر","media_player":"سماعات"}
+    NAMES = {"light":"أضواء","switch":"مفاتيح","fan":"شفاطات/منقيات","climate":"مكيفات","cover":"ستائر","media_player":"سماعات"}
     lines = [f"📱 {len(active)} جهاز شغال:"]
     for d in ["light","climate","cover","media_player","switch","fan"]:
         if d in by_domain:

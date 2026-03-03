@@ -85,7 +85,10 @@ async def detect_anomalies():
         for u in unav:
             by_domain[u["domain"]].append(u)
         for domain, ents in by_domain.items():
-            dar = DOMAIN_AR.get(domain, domain)
+            if domain == "fan":
+                dar = _fan_type(ents[0]["entity_id"], ents[0]["name"])
+            else:
+                dar = DOMAIN_AR.get(domain, domain)
             names = [e["name"] for e in ents[:5]]
             more = f" +{len(ents)-5}" if len(ents) > 5 else ""
             since = ents[0].get("since", "")

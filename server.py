@@ -5754,7 +5754,7 @@ async def nightly_summary_scheduler():
                         _bd = ["", "🧠 *ملخص البرين:*"]
                         _bd.append(f"  📊 {_bs['total']} تغيير")
                         if _bs.get("by_domain"):
-                            _dom_ar = {"light":"أضواء","switch":"مفاتيح","climate":"مكيفات","cover":"ستائر","fan":"مراوح","media_player":"سماعات"}
+                            _dom_ar = {"light":"أضواء","switch":"مفاتيح","climate":"مكيفات","cover":"ستائر","fan":"شفاطات/منقيات","media_player":"سماعات"}
                             _bd.append("  " + " | ".join(f"{_dom_ar.get(d,d)}:{c}" for d,c in _bs["by_domain"].items()))
                         if _bs.get("top"):
                             _bd.append("  🏆 أكثر: " + ", ".join(f"{e.split('.')[-1].replace('_',' ')}({c})" for e,c in _bs["top"][:3]))
