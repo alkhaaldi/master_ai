@@ -108,6 +108,7 @@ try:
     from brain_learning import learn_patterns as bl_learn, get_patterns as bl_get_patterns, suggest_automations as bl_suggest, format_patterns_report as bl_format_patterns, get_learning_stats as bl_stats
     from brain_learning import format_maturity_report as bl_maturity
     from brain_learning import detect_anomalies as bl_anomalies, format_anomaly_report as bl_anomaly_report
+    from brain_learning import create_ha_automation as bl_create_auto, get_top_suggestions as bl_top_sugs
     LEARNING_OK = True
     DOCTOR_OK = True
 except Exception:
@@ -4202,6 +4203,21 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return f"patterns error: {e}"
 
 
+    if cmd == "/suggest":
+        if not LEARNING_OK:
+            return "brain_learning not loaded"
+        try:
+            sugs = bl_top_sugs(limit=5)
+            if not sugs:
+                return "لا توجد اقتراحات قوية بعد"
+            msg = "💡 اقتراحات أتمتة ذكية: اختر وحدة عشان أسويها تلقائي:"
+
+            btns = [{"text": s["label"], "callback_data": s["callback_data"]} for s in sugs]
+            await tg_send_inline(chat_id, msg, btns, columns=1)
+            return "__inline_sent__"
+        except Exception as e:
+            return f"suggest error: {e}"
+
     if cmd == "/anomaly":
         if not LEARNING_OK:
             return "brain_learning not loaded"
@@ -4937,6 +4953,25 @@ async def tg_handle_callback(callback_query: dict):
         else:
             answer = "Invalid"
 
+
+    elif data.startswith("auto:"):
+        # auto:entity_id:action:hour
+        parts = data.split(":")
+        if len(parts) >= 4:
+            eid = parts[1] + ":" + parts[2] if "." not in parts[1] else parts[1]
+            action = parts[-2]
+            hour = int(parts[-1])
+            # Fix entity_id if it got split by ':'
+            if "." not in eid:
+                eid = ":".join(parts[1:-2])
+            result = await bl_create_auto(eid, action, hour)
+            if result.get("ok"):
+                await tg_send(chat_id, f"\u2705 Automation created: {result['name']}\nCheck HA > Settings > Automations")
+
+
+
+            else:
+                await tg_send(chat_id, f"❌ خطأ: {result.get('error','?')}")
 
     elif data.startswith("room:"):
         # --- Phase B2: Show room devices with toggle buttons ---

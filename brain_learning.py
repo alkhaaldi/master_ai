@@ -764,3 +764,101 @@ async def format_anomaly_report():
         lines.append(f"\n... \u0648 {len(anomalies)-15} \u0634\u0630\u0648\u0630 \u0622\u062e\u0631")
     
     return "\n".join(lines)
+
+
+async def create_ha_automation(entity_id, action, hour, name=""):
+    """Create a HA time-based automation via REST API."""
+    if not name:
+        name = _get_friendly_name(entity_id)
+    
+    auto_id = f"brain_auto_{entity_id.split('.')[-1]}_{action}_{hour}"
+    domain = entity_id.split(".")[0]
+    
+    if action == "on":
+        service = "turn_on"
+    else:
+        service = "turn_off"
+    
+    # Map domain to HA service
+    if domain == "light":
+        svc_domain = "light"
+    elif domain == "switch":
+        svc_domain = "switch"
+    elif domain == "fan":
+        svc_domain = "fan"
+    elif domain == "climate":
+        svc_domain = "climate"
+    else:
+        svc_domain = "homeassistant"
+    
+    automation_config = {
+        "id": auto_id,
+        "alias": f"Brain: {name} {action} @{hour}:00",
+        "description": f"Auto-created by Brain Learning - {entity_id} {action} at {hour}:00",
+        "trigger": [{
+            "platform": "time",
+            "at": f"{hour:02d}:00:00"
+        }],
+        "condition": [],
+        "action": [{
+            "service": f"{svc_domain}.{service}",
+            "target": {"entity_id": entity_id}
+        }],
+        "mode": "single"
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(
+                f"{HA_URL}/api/config/automation/config/{auto_id}",
+                headers=_headers(),
+                json=automation_config
+            )
+            if r.status_code in (200, 201):
+                return {"ok": True, "id": auto_id, "name": automation_config["alias"]}
+            else:
+                return {"ok": False, "error": f"HTTP {r.status_code}: {r.text[:100]}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def get_top_suggestions(limit=5):
+    """Get top automation suggestions for interactive display."""
+    if not os.path.exists(DB_PATH):
+        return []
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    rows = c.execute("""
+        SELECT entity_id, pattern_type, hour, confidence, sample_count
+        FROM device_patterns
+        WHERE pattern_type IN ('on','off') AND confidence >= 0.8
+        ORDER BY confidence DESC, sample_count DESC
+    """).fetchall()
+    conn.close()
+    
+    # Dedup by entity base name
+    seen = set()
+    results = []
+    for eid, ptype, hour, conf, samples in rows:
+        base = eid.split(".")[-1]
+        key = (base, ptype, hour)
+        if key in seen:
+            continue
+        seen.add(key)
+        name = _get_friendly_name(eid)
+        action_ar = "\u064a\u0634\u062a\u063a\u0644" if ptype == "on" else "\u064a\u0646\u0637\u0641\u064a"
+        results.append({
+            "entity_id": eid,
+            "action": ptype,
+            "hour": hour,
+            "confidence": conf,
+            "samples": samples,
+            "name": name,
+            "label": f"{name}: {action_ar} {hour}:00 ({int(conf*100)}%)",
+            "callback_data": f"auto:{eid}:{ptype}:{hour}"
+        })
+        if len(results) >= limit:
+            break
+    
+    return results
