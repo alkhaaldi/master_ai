@@ -802,6 +802,42 @@ _TIME_PATTERNS = {
     "أسبوع": 168, "اسبوع": 168,
 }
 
+# Common word aliases for fuzzy matching
+_WORD_NORMALIZE = {
+    "خدامة": "خادمة", "خدامه": "خادمة", "الخدامة": "الخادمة", "الخدامه": "الخادمة",
+    "ديوانيه": "ديوانية", "الديوانيه": "الديوانية",
+    "معيشه": "معيشة", "المعيشه": "المعيشة",
+    "غرفتي": "الماستر", "غرفتى": "الماستر", "اوضتي": "الماستر",
+    "ماما": "ماما", "أمي": "ماما", "امي": "ماما",
+    "عيشة": "عيشة", "عائشة": "عيشة", "عايشه": "عيشة",
+    "مطبخ": "مطبخ", "المطبخ": "المطبخ",
+    "استقبال": "استقبال", "الاستقبال": "الاستقبال",
+    "مكيف": "مكيف", "المكيف": "مكيف", "تكييف": "مكيف",
+    "ستاره": "ستارة", "شتر": "ستارة", "الشتر": "ستارة",
+    "ابي": "", "أبي": "", "ابا": "", "أبا": "", "اريد": "", "أريد": "",
+}
+
+# Device type synonyms — map colloquial to entity_map names
+_DEVICE_SYNONYMS = {
+    "سبوت": ["سبوت", "spot", "نور"],
+    "ستريب": ["ستريب", "strip"],
+    "شفاط": ["شفاط", "vent"],
+    "مكيف": ["مكيف", "ac", "climate"],
+    "ستارة": ["ستارة", "شتر", "cover", "shutter"],
+    "منقي": ["منقي", "purifier"],
+}
+
+def _normalize_text(text):
+    """Normalize common Arabic spelling variations."""
+    words = text.split()
+    result = []
+    for w in words:
+        normalized = _WORD_NORMALIZE.get(w, w)
+        if normalized:  # skip empty (removed words like ابي)
+            result.append(normalized)
+    return " ".join(result)
+
+
 def _parse_history_hours(text):
     """Extract hours from text like 'آخر 6 ساعات' or 'أمس' or 'اليوم'."""
     import re
@@ -828,58 +864,166 @@ def _parse_history_hours(text):
 
 
 async def _handle_history(text, words, emap):
-    """Handle history/log requests.
-    Examples: 'لوق مكيف الماستر', 'سجل نور الباركينج آخر 6 ساعات'"""
+    """Handle history/log requests with smart matching.
+    Examples: 'لوق مكيف الماستر', 'سجل نور الباركينج آخر 6 ساعات'
+              'لوق سبوت 1 و 2 غرفة الخدامة آخر 24 ساعة'"""
     try:
         from ha_history import format_history_report
     except ImportError:
         return None
 
-    # Remove history trigger words to get device query
+    # Remove history trigger words
     clean = text
     for hw in HISTORY_WORDS:
         clean = clean.replace(hw, "")
-    # Remove time words
-    for tw in list(_TIME_PATTERNS.keys()) + ["آخر", "خلال", "من", "أمس", "البارحة", "امس", "اليوم"]:
+    # Remove filler words
+    for fw in ["ابي", "أبي", "ابا", "أبا", "اريد", "أريد", "اشوف", "أشوف", "مال"]:
+        clean = clean.replace(fw, "")
+
+    # Parse hours before cleaning time words
+    hours = _parse_history_hours(text)
+
+    # Remove time expressions: "آخر X ساعة/ساعات/يوم/أيام"
+    import re as _re
+    clean = _re.sub(r"(آخر|اخر)\s*\d+\s*(ساع[ةات]*|يوم|أيام)", "", clean)
+    clean = _re.sub(r"\d+\s*(ساع[ةات]*|يوم|أيام)", "", clean)
+    for tw in list(_TIME_PATTERNS.keys()) + ["آخر", "اخر", "خلال", "من", "أمس", "البارحة", "امس", "اليوم", "ساعة", "ساعات"]:
         clean = clean.replace(tw, "")
-    import re
-    clean = re.sub(r'\d+\s*(ساع|يوم|أيام)', '', clean)
     clean = " ".join(clean.split()).strip()
 
     if not clean:
         return None
 
-    # Parse hours
-    hours = _parse_history_hours(text)
+    # Normalize text (خدامة→خادمة etc)
+    clean = _normalize_text(clean)
 
-    # Find entity — reuse _find_entities logic
-    # Try all domains
-    all_matches = []
-    clean_words = clean.split()
-    name_frag = " ".join(clean_words)
-
-    for room_name, entries in emap.items():
-        if not isinstance(entries, list):
+    # Split into room hints and device hints
+    room_frags = []
+    device_frags = []
+    numbers = []
+    stop_words = {"و", "في", "ال", "مع", "كل"}
+    
+    # Extract entity numbers (1, 2, 3) but not large numbers (24=hours)
+    for w in clean.split():
+        if _re.match(r"^\d+$", w) and int(w) <= 10:
+            numbers.append(w)
             continue
-        for entry in entries:
-            if "=" not in entry:
-                continue
-            eid, ename = entry.split("=", 1)
-            # Match by name fragment
-            if name_frag and any(w in ename for w in clean_words if len(w) > 1):
-                score = sum(1 for w in clean_words if w in ename and len(w) > 1)
-                all_matches.append((eid, ename, room_name, score))
+        if _re.match(r"^\d+$", w):
+            continue  # skip large numbers (leftover hours/etc)
+        if w in stop_words:
+            continue
+        # Check if word is a ROOM name (must be 3+ chars to avoid false matches)
+        is_room = False
+        # Skip generic words that match too many rooms
+        generic_room_words = {"غرفة", "غرف", "حمام", "ملابس", "صالة"}
+        if len(w) >= 3 and w not in generic_room_words:
+            for room_name in emap.keys():
+                room_lower = room_name.lower()
+                if w in room_lower and len(w) >= 3:
+                    room_frags.append(w)
+                    is_room = True
+                    break
+        if not is_room:
+            device_frags.append(w)
 
-    if not all_matches:
+    name_frag = " ".join(device_frags)
+
+    # Try _find_entities with room + name
+    matches = _find_entities(emap, None, name_frag, room_frags if room_frags else None)
+
+    # If no matches, try synonyms WITH room filter first (سبوت → نور)
+    if not matches:
+        for dw in device_frags:
+            for syn_key, syn_list in _DEVICE_SYNONYMS.items():
+                if dw in syn_list or dw == syn_key:
+                    for syn in syn_list:
+                        if syn == dw:
+                            continue
+                        matches = _find_entities(emap, None, syn, room_frags if room_frags else None)
+                        if matches:
+                            break
+                    if matches:
+                        break
+            if matches:
+                break
+
+    # Then try without room filter
+    if not matches and room_frags:
+        matches = _find_entities(emap, None, name_frag, None)
+
+    # Try each device word individually
+    if not matches:
+        for dw in device_frags:
+            matches = _find_entities(emap, None, dw, room_frags if room_frags else None)
+            if matches:
+                break
+
+    # Last resort: synonyms without room
+    if not matches:
+        for dw in device_frags:
+            for syn_key, syn_list in _DEVICE_SYNONYMS.items():
+                if dw in syn_list or dw == syn_key:
+                    for syn in syn_list:
+                        if syn == dw:
+                            continue
+                        matches = _find_entities(emap, None, syn, None)
+                        if matches:
+                            break
+                    if matches:
+                        break
+            if matches:
+                break
+
+    if not matches:
         return None
 
-    # Best match
-    all_matches.sort(key=lambda x: -x[3])
-    eid, ename, room, _ = all_matches[0]
+    # Filter by numbers if specified (e.g., "سبوت 1 و 2")
+    if numbers:
+        filtered = []
+        for eid, ename, room in matches:
+            for num in numbers:
+                if num in ename or f"_{num}" in eid or f" {num}" in ename:
+                    filtered.append((eid, ename, room))
+        if filtered:
+            matches = filtered
 
-    # Get report
-    report = await format_history_report(eid, hours=hours)
-    return {"text": report, "entities": [eid], "action": "history", "source": "history"}
+    # Remove switch duplicates (prefer light over switch)
+    seen_base = {}
+    deduped = []
+    for eid, ename, room in matches:
+        base = eid.split(".")[-1]
+        domain = eid.split(".")[0]
+        if base in seen_base:
+            if domain == "light":
+                # Replace switch with light
+                deduped = [(e, n, r) for e, n, r in deduped if e.split(".")[-1] != base]
+                deduped.append((eid, ename, room))
+                seen_base[base] = domain
+        else:
+            seen_base[base] = domain
+            deduped.append((eid, ename, room))
+    matches = deduped
+
+    # Generate report(s)
+    if len(matches) == 1:
+        eid, ename, room = matches[0]
+        report = await format_history_report(eid, hours=hours)
+        return {"text": report, "entities": [eid], "action": "history", "source": "history"}
+    elif len(matches) <= 5:
+        # Multiple entities — send combined report
+        reports = []
+        eids = []
+        for eid, ename, room in matches:
+            report = await format_history_report(eid, hours=hours)
+            reports.append(report)
+            eids.append(eid)
+        combined = ("\n\n" + "=" * 30 + "\n\n").join(reports)
+        return {"text": combined, "entities": eids, "action": "history", "source": "history"}
+    else:
+        # Too many matches — use best match
+        eid, ename, room = matches[0]
+        report = await format_history_report(eid, hours=hours)
+        return {"text": report, "entities": [eid], "action": "history", "source": "history"}
 
 
 async def _handle_patterns(text, words, emap):
