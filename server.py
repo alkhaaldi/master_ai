@@ -4490,6 +4490,19 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 return f"error: {e}"
         return "life_health not loaded"
 
+    if cmd == "/ping":
+        _up = int(time.time() - START_TIME)
+        _h, _m = divmod(_up // 60, 60)
+        _avg = round(sum(_response_times)/len(_response_times), 1) if _response_times else 0
+        _ha_ok = "\u2705"
+        try:
+            async with httpx.AsyncClient(timeout=3) as _hc:
+                _hr = await _hc.get(f"{HA_URL}/api/", headers={"Authorization": f"Bearer {HA_TOKEN}"})
+                if _hr.status_code != 200: _ha_ok = "\u274c"
+        except: _ha_ok = "\u274c"
+        _tot = _router_stats.get("total", 0)
+        return "🏓 Pong!" + chr(10) + f"⏱ Up: {_h}h {_m}m" + chr(10) + f"🏠 HA: {_ha_ok}" + chr(10) + f"⚡ Avg: {_avg}s" + chr(10) + f"📨 Msgs: {_tot}"
+
     if cmd == "/help":
         _help_text = chr(10).join([
             "\U0001f3e0 *Master AI v5.4*", "",
