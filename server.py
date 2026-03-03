@@ -110,6 +110,12 @@ try:
     from brain_learning import detect_anomalies as bl_anomalies, format_anomaly_report as bl_anomaly_report
     from brain_learning import create_ha_automation as bl_create_auto, get_top_suggestions as bl_top_sugs
     from brain_learning import build_daily_summary_report as bl_summary
+    from tg_email import format_email_report as email_report, get_email_for_morning as email_morning
+    EMAIL_OK = True
+except Exception as _e:
+    logger.warning(f"tg_email not loaded: {_e}")
+    EMAIL_OK = False
+try:
     from brain_learning import discover_scenes as bl_discover_scenes, format_scenes_report as bl_scenes_report, create_ha_scene as bl_create_scene
     from brain_learning import filter_existing_automations as bl_filter_autos
     LEARNING_OK = True
@@ -4205,6 +4211,14 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"patterns error: {e}"
 
+
+    if cmd == "/email":
+        if not EMAIL_OK:
+            return "tg_email not loaded"
+        try:
+            return await email_report()
+        except Exception as e:
+            return f"email error: {e}"
 
     if cmd == "/scenes":
         if not LEARNING_OK:

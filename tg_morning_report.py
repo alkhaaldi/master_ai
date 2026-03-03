@@ -221,6 +221,15 @@ async def build_morning_report() -> str:
     if brain:
         report += chr(10)*2 + "🧠 الذكاء:" + chr(10) + brain
 
+    # Email summary
+    try:
+        from tg_email import get_email_for_morning
+        email_sum = await get_email_for_morning()
+        if email_sum:
+            report += chr(10)*2 + chr(0x1f4e7) + " الإيميل:" + chr(10) + email_sum
+    except Exception:
+        pass
+
     if stocks:
         report += f"\n\n📈 الأسهم:\n{stocks}"
 
