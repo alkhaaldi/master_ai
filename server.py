@@ -5414,13 +5414,12 @@ async def entity_health_check_loop():
                 dead_list = report.get("dead_entities", [])[:10]
                 txt = chr(10).join(f"  ❌ {d['name']} ({d['entity_id']})" for d in dead_list)
                 alerts.append(f"⚠️ أجهزة ميتة ({dead}):" + chr(10) + txt)
-            if missing > 0:
-                _all_missing = report.get("missing_entities", [])
-                _new_missing = [m for m in _all_missing if m["entity_id"] not in _notified_entities]
+            _all_missing = report.get("missing_entities", [])
+            _new_missing = [m for m in _all_missing if m["entity_id"] not in _notified_entities]
+            if _new_missing:
                 miss_list = _new_missing[:10]
-                missing = len(_new_missing)
                 txt = chr(10).join(f"  🆕 {m['name']} ({m['entity_id']})" for m in miss_list)
-                alerts.append(f"🆕 أجهزة جديدة ({missing}):" + chr(10) + txt)
+                alerts.append(f"🆕 أجهزة جديدة ({len(_new_missing)}):" + chr(10) + txt)
             
             if alerts:
                 _msg = "🔍 فحص صحة الأجهزة:" + chr(10) + chr(10).join(alerts)
