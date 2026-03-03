@@ -2775,8 +2775,9 @@ async def gmail_auth_start():
             return {"error": "gmail_credentials.json not found"}
         
         redirect_uri = "https://ai.salem-home.com/gmail/callback"
-        flow = Flow.from_client_secrets_file(str(creds_path), scopes=SCOPES, redirect_uri=redirect_uri)
-        auth_url, state = flow.authorization_url(prompt="consent", access_type="offline")
+        flow = Flow.from_client_secrets_file(creds_path, scopes=SCOPES, redirect_uri=redirect_uri)
+        # Disable PKCE (code_verifier) — not needed for web server flow with client_secret
+        auth_url, state = flow.authorization_url(prompt="consent", access_type="offline", code_challenge_method=None)
         
         # Save state
         state_file = os.path.join(BASE_DIR, "data", "gmail_oauth_state.json")
@@ -2806,7 +2807,7 @@ async def gmail_auth_callback(code: str = "", state: str = "", error: str = ""):
         redirect_uri = saved.get("redirect_uri", "https://ai.salem-home.com/gmail/callback")
         
         flow = Flow.from_client_secrets_file(str(creds_path), scopes=SCOPES, redirect_uri=redirect_uri, state=state)
-        flow.fetch_token(code=code)
+        flow.fetch_token(code=code, code_verifier=None)
         
         creds = flow.credentials
         token_file = os.path.join(BASE_DIR, "data", "gmail_token.json")
