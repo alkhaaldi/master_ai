@@ -89,6 +89,15 @@ async def quick_answer(text: str):
     if re.search(r"طقس|جو|حرارة برا|درجة الحرارة|weather|هواء", t):
         return await _weather()
 
+
+    # 9) Covers/curtains
+    if re.search(r"ستائر|ستارة|شتر|كم ستار|covers|curtains", t):
+        return await _covers_status()
+
+    # 10) Total active devices
+    if re.search(r"كم جهاز|أجهزة شغال|كل شي شغال|active devices", t):
+        return await _active_devices_count()
+
     return None
 
 
@@ -263,3 +272,43 @@ async def _weather():
             ])
     except Exception as e:
         return f"⚠️ {e}"
+
+
+async def _covers_status():
+    states = await _ha_states()
+    if not states: return None
+    covers = [s for s in states if s["entity_id"].startswith("cover.") and s["state"] not in ("unavailable", "unknown")]
+    if not covers: return "🎪 ما فيه ستائر"
+    opened = [s for s in covers if s["state"] == "open"]
+    closed = [s for s in covers if s["state"] == "closed"]
+    lines = [f"🎪 الستائر: {len(opened)} مفتوح / {len(closed)} مغلق"]
+    if opened:
+        lines.append("")
+        lines.append("🟢 المفتوحة:")
+        for s in opened:
+            name = s.get("attributes", {}).get("friendly_name", s["entity_id"])
+            pos = s.get("attributes", {}).get("current_position", "")
+            pos_txt = f" ({pos}%)" if pos != "" else ""
+            lines.append(f"  • {name}{pos_txt}")
+    return chr(10).join(lines)
+
+
+async def _active_devices_count():
+    states = await _ha_states()
+    if not states: return None
+    _on = {"on", "playing", "open", "heat", "cool", "auto", "heat_cool", "fan_only"}
+    active = [s for s in states 
+              if s["state"] in _on 
+              and s["entity_id"].split(".")[0] in ("light","switch","fan","climate","cover","media_player")
+              and "backlight" not in s["entity_id"]]
+    by_domain = {}
+    for s in active:
+        d = s["entity_id"].split(".")[0]
+        by_domain.setdefault(d, []).append(s)
+    ICONS = {"light":"💡","switch":"🔌","fan":"🌬","climate":"❄️","cover":"🎪","media_player":"🎵"}
+    NAMES = {"light":"أضواء","switch":"مفاتيح","fan":"مراوح","climate":"مكيفات","cover":"ستائر","media_player":"سماعات"}
+    lines = [f"📱 {len(active)} جهاز شغال:"]
+    for d in ["light","climate","cover","media_player","switch","fan"]:
+        if d in by_domain:
+            lines.append(f"  {ICONS[d]} {NAMES[d]}: {len(by_domain[d])}")
+    return chr(10).join(lines)

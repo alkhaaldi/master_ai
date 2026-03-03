@@ -3974,6 +3974,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 _btns = [
                     {"text": "\U0001f534 \u0637\u0641\u064a \u0643\u0644 \u0634\u064a", "callback_data": "sc:scene.tfwy_kl_shy"},
             {"text": "\U0001f321 \u0627\u0644\u0637\u0642\u0633", "callback_data": "cmd:weather"},
+            {"text": "\U0001f3aa \u0627\u0644\u0633\u062a\u0627\u0626\u0631", "callback_data": "cmd:covers"},
                     {"text": "\U0001f3e0 \u0631\u062c\u0648\u0639", "callback_data": "cmd:home"},
                 ]
                 await tg_send_inline(chat_id, _txt, _btns, columns=2)
@@ -3981,6 +3982,22 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return "\U0001f4a1 \u0643\u0644 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0645\u0637\u0641\u064a\u0629"
         except Exception as e:
             return f"\u26a0\ufe0f {e}"
+
+    if cmd == "/covers":
+        if QUICK_QUERY_OK:
+            try:
+                from quick_query import _covers_status
+                r = await _covers_status()
+                _btns = [
+                    {"text": "\U0001f7e2 \u0627\u0641\u062a\u062d \u0627\u0644\u0643\u0644", "callback_data": "sc:scene.fth_kl_lstyr"},
+                    {"text": "\U0001f534 \u0633\u0643\u0631 \u0627\u0644\u0643\u0644", "callback_data": "sc:scene.skwr_kl_lstyr"},
+                    {"text": "\U0001f3e0 \u0631\u062c\u0648\u0639", "callback_data": "cmd:home"},
+                ]
+                await tg_send_inline(chat_id, r or "\u26a0\ufe0f", _btns, columns=2)
+                return "__inline_sent__"
+            except Exception as e:
+                return f"\u26a0\ufe0f {e}"
+        return "\u26a0\ufe0f quick_query not loaded"
 
     if cmd == "/weather":
         if QUICK_QUERY_OK:
@@ -4156,6 +4173,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             {"text": "\U0001f3b5 \u0627\u0644\u0633\u0645\u0627\u0639\u0627\u062a", "callback_data": "cmd:media"},
             {"text": "\U0001f534 \u0637\u0641\u064a \u0643\u0644 \u0634\u064a", "callback_data": "sc:scene.tfwy_kl_shy"},
             {"text": "\U0001f321 \u0627\u0644\u0637\u0642\u0633", "callback_data": "cmd:weather"},
+            {"text": "\U0001f3aa \u0627\u0644\u0633\u062a\u0627\u0626\u0631", "callback_data": "cmd:covers"},
         ]
         await tg_send_inline(chat_id, "🏠 *القائمة الرئيسية*", buttons, columns=2)
         return "__inline_sent__"
@@ -4241,6 +4259,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             {"text": "🎬 سينما", "callback_data": "sc:scene.wd_lsynm"},
             {"text": "🛑 طفّي كل شي", "callback_data": "sc:scene.tfwy_kl_shy"},
             {"text": "\U0001f321 \u0627\u0644\u0637\u0642\u0633", "callback_data": "cmd:weather"},
+            {"text": "\U0001f3aa \u0627\u0644\u0633\u062a\u0627\u0626\u0631", "callback_data": "cmd:covers"},
             {"text": "➡️ المزيد", "callback_data": "cmd:scenes2"},
         ]
         await tg_send_inline(chat_id, "🎬 *المشاهد* (1/2)", sc, columns=2)
