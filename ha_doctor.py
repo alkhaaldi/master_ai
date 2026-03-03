@@ -27,6 +27,18 @@ DOMAIN_AR = {
 }
 
 
+def _fan_type(entity_id, name=""):
+    eid = entity_id.lower()
+    n = name.lower()
+    if "purifier" in eid or "purifier" in n or "middle_side" in eid:
+        return "منقي هواء"
+    if "freshener" in eid or "freshener" in n:
+        return "معطر"
+    if "vent" in eid or "vent" in n or "exhaust" in eid:
+        return "شفاط"
+    return "مروحة"
+
+
 async def get_unavailable_entities():
     """Get all unavailable/unknown entities."""
     try:
