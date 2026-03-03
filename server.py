@@ -2529,6 +2529,7 @@ async def lifespan(app):
         asyncio.create_task(shift_alert_loop())
         asyncio.create_task(entity_health_check_loop())
         if BRAIN_OK: asyncio.create_task(brain_snapshot_loop())
+        if BRAIN_OK: asyncio.create_task(brain_weekly_insight())
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
     if TG_ALERTS_OK:
@@ -5724,8 +5725,58 @@ async def nightly_summary_scheduler():
                     _router_stats[k] = 0
             _router_stats["started_at"] = datetime.now().isoformat()
             logger.info("Daily stats reset")
+            # --- Brain Nightly Digest ---
+            if BRAIN_OK:
+                try:
+                    _bs = get_daily_summary()
+                    if _bs.get("total", 0) > 0:
+                        _bd = ["", "🧠 *ملخص البرين:*"]
+                        _bd.append(f"  📊 {_bs['total']} تغيير")
+                        if _bs.get("by_domain"):
+                            _dom_ar = {"light":"أضواء","switch":"مفاتيح","climate":"مكيفات","cover":"ستائر","fan":"مراوح","media_player":"سماعات"}
+                            _bd.append("  " + " | ".join(f"{_dom_ar.get(d,d)}:{c}" for d,c in _bs["by_domain"].items()))
+                        if _bs.get("top"):
+                            _bd.append("  🏆 أكثر: " + ", ".join(f"{e.split('.')[-1].replace('_',' ')}({c})" for e,c in _bs["top"][:3]))
+                        if _bs.get("by_hour"):
+                            _peak = max(_bs["by_hour"].items(), key=lambda x: x[1])
+                            _bd.append(f"  ⏰ ذروة: {_peak[0]}:00 ({_peak[1]} تغيير)")
+                        await tg_send(_chat, chr(10).join(_bd))
+                        logger.info(f"Brain digest sent: {_bs['total']} changes")
+                except Exception as e:
+                    logger.error(f"Brain digest: {e}")
         except Exception as e:
             logger.error(f"Nightly summary error: {e}")
+
+async def brain_weekly_insight():
+    """Send weekly insight every Friday at 9 AM."""
+    logger.info("Brain weekly insight scheduler started")
+    while True:
+        now = datetime.now()
+        days_until_friday = (4 - now.weekday()) % 7
+        if days_until_friday == 0 and now.hour >= 9:
+            days_until_friday = 7
+        target = (now + timedelta(days=days_until_friday)).replace(hour=9, minute=0, second=0, microsecond=0)
+        wait_secs = (target - now).total_seconds()
+        logger.info(f"Next brain weekly in {wait_secs/3600:.1f}h")
+        await asyncio.sleep(wait_secs)
+        try:
+            if not BRAIN_OK:
+                continue
+            _chat = ADMIN_TELEGRAM_ID or "669769765"
+            pats = detect_patterns(14, 3)
+            _bs = get_brain_stats()
+            _wl = ["🧠 *تقرير البرين الأسبوعي:*", ""]
+            _wl.append(f"📊 {_bs['total']} تغيير خلال {_bs['days']} يوم")
+            _wl.append(f"🔍 {_bs['patterns']} نمط مكتشف")
+            _wl.append("")
+            _wl.append(format_insights_ar(pats))
+            if pats:
+                _wl.append("")
+                _wl.append("💡 تبي أسوي أي وحدة منهم automation؟")
+            await tg_send(_chat, chr(10).join(_wl))
+            logger.info(f"Brain weekly: {len(pats)} patterns")
+        except Exception as e:
+            logger.error(f"Brain weekly: {e}")
 
 async def morning_report_scheduler():
     # Send morning report daily at 5:30 AM Kuwait time
