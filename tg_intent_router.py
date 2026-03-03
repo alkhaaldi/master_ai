@@ -259,7 +259,13 @@ async def route_intent(text: str) -> dict | None:
     if any(qw in text for qw in QUERY_WORDS):
         return await _handle_query(text, words, emap)
 
-    # --- 3. Direct device control ---
+    # --- 2.5 History / Log requests ---
+    if any(hw in text for hw in HISTORY_WORDS):
+        hist_result = await _handle_history(text, words, emap)
+        if hist_result:
+            return hist_result
+
+        # --- 3. Direct device control ---
     if first in ACTION_VERBS:
         return await _handle_action(text, words, emap)
 
@@ -777,3 +783,92 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
                 "source": "classify_multi"}
     
     return None  # Too many or unsupported action for multi
+
+
+# ── History / Log handler ────────────────────────────────
+HISTORY_WORDS = {"لوق", "لوج", "سجل", "تاريخ", "history", "log", "لوگ"}
+_TIME_PATTERNS = {
+    "ساعة": 1, "ساعتين": 2, "٣ ساعات": 3, "3 ساعات": 3,
+    "٦ ساعات": 6, "6 ساعات": 6, "١٢ ساعة": 12, "12 ساعة": 12,
+    "يوم": 24, "يومين": 48, "٣ أيام": 72, "3 أيام": 72,
+    "أسبوع": 168, "اسبوع": 168,
+}
+
+def _parse_history_hours(text):
+    """Extract hours from text like 'آخر 6 ساعات' or 'أمس' or 'اليوم'."""
+    import re
+    # "آخر X ساعة/ساعات"
+    m = re.search(r'(\d+)\s*ساع', text)
+    if m:
+        return int(m.group(1))
+    # "آخر X يوم/أيام"
+    m = re.search(r'(\d+)\s*(يوم|أيام)', text)
+    if m:
+        return int(m.group(1)) * 24
+    # Named patterns
+    for pat, hrs in _TIME_PATTERNS.items():
+        if pat in text:
+            return hrs
+    # أمس / البارحة
+    if "أمس" in text or "البارحة" in text or "امس" in text:
+        return 48
+    # اليوم
+    if "اليوم" in text:
+        return 24
+    # Default
+    return 24
+
+
+async def _handle_history(text, words, emap):
+    """Handle history/log requests.
+    Examples: 'لوق مكيف الماستر', 'سجل نور الباركينج آخر 6 ساعات'"""
+    try:
+        from ha_history import format_history_report
+    except ImportError:
+        return None
+
+    # Remove history trigger words to get device query
+    clean = text
+    for hw in HISTORY_WORDS:
+        clean = clean.replace(hw, "")
+    # Remove time words
+    for tw in list(_TIME_PATTERNS.keys()) + ["آخر", "خلال", "من", "أمس", "البارحة", "امس", "اليوم"]:
+        clean = clean.replace(tw, "")
+    import re
+    clean = re.sub(r'\d+\s*(ساع|يوم|أيام)', '', clean)
+    clean = " ".join(clean.split()).strip()
+
+    if not clean:
+        return None
+
+    # Parse hours
+    hours = _parse_history_hours(text)
+
+    # Find entity — reuse _find_entities logic
+    # Try all domains
+    all_matches = []
+    clean_words = clean.split()
+    name_frag = " ".join(clean_words)
+
+    for room_name, entries in emap.items():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if "=" not in entry:
+                continue
+            eid, ename = entry.split("=", 1)
+            # Match by name fragment
+            if name_frag and any(w in ename for w in clean_words if len(w) > 1):
+                score = sum(1 for w in clean_words if w in ename and len(w) > 1)
+                all_matches.append((eid, ename, room_name, score))
+
+    if not all_matches:
+        return None
+
+    # Best match
+    all_matches.sort(key=lambda x: -x[3])
+    eid, ename, room, _ = all_matches[0]
+
+    # Get report
+    report = await format_history_report(eid, hours=hours)
+    return {"text": report, "entities": [eid], "action": "history", "source": "history"}
