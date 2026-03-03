@@ -899,8 +899,8 @@ async def _handle_patterns(text, words, emap):
             lines.append(f"📌 {s['entity_id'].split('.')[-1].replace('_',' ')}:")
             lines.append(f"  {s['suggestion_ar']}")
         if len(sugs) > 10:
-            lines.append(f\n... و {len(sugs)-10} اقتراح آخر")
-        return {"text": \n".join(lines), "entities": [], "action": "patterns"}
+            lines.append(f"\n... و {len(sugs)-10} اقتراح آخر")
+        return {"text": "\n".join(lines), "entities": [], "action": "patterns"}
     
     # Remove trigger words
     clean = text
@@ -917,8 +917,7 @@ async def _handle_patterns(text, words, emap):
         report = await format_patterns_report()
         # Truncate if too long
         if len(report) > 3500:
-            report = report[:3500] + "
-... (اكتب اسم جهاز محدد لتفاصيل أكثر)"
+            report = report[:3500] + "... (truncated)"
         return {"text": report, "entities": [], "action": "patterns"}
     
     # Find entity
