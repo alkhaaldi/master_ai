@@ -4164,6 +4164,47 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"\u26a0\ufe0f brain: {e}"
 
+
+    if cmd == "/learn":
+        if not LEARNING_OK:
+            return "brain_learning not loaded"
+        try:
+            await tg_send(chat_id, "\U0001f9e0 Learning...")
+            result = await bl_learn(days=10)
+            stats = bl_stats()
+            ep = result.get("entities_processed", 0)
+            pf = result.get("patterns_found", 0)
+            ds = result.get("duration_seconds", 0)
+            ew = stats.get("entities_with_patterns", 0)
+            rn = stats.get("runs", 0)
+            msg = f"\U0001f9e0 Pattern Learning:\n  {ep} entity\n  {pf} patterns\n  {ds}s\n  {ew} with patterns\n  {rn} runs"
+            return msg
+        except Exception as e:
+            return f"learn error: {e}"
+
+    if cmd == "/patterns":
+        if not LEARNING_OK:
+            return "brain_learning not loaded"
+        try:
+            stats = bl_stats()
+            tp = stats.get("total_patterns", 0)
+            if not tp:
+                return "No patterns yet - use /learn"
+            ew = stats.get("entities_with_patterns", 0)
+            lr = stats.get("last_run")
+            ld = lr["date"][:16] if lr else "?"
+            suggestions = await bl_suggest()
+            strong = [s for s in suggestions if s.get("confidence", 0) >= 0.8][:10]
+            lines = [f"\U0001f9e0 {tp} patterns from {ew} entities", f"Last: {ld}", ""]
+            for s in strong:
+                eid = s["entity_id"].split(".")[1][:25]
+                sa = s.get("suggestion_ar", "")[:60]
+                lines.append(f"  {eid}: {sa}")
+            return "\n".join(lines)
+        except Exception as e:
+            return f"patterns error: {e}"
+
+
     if cmd == "/diag":
         try:
             diag = get_system_diag()
