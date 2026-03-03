@@ -101,9 +101,12 @@ except Exception:
     pass
 
 DOCTOR_OK = False
+LEARNING_OK = False
 try:
     from ha_doctor import detect_anomalies, format_health_report, suggest_fixes, get_unavailable_entities, check_ac_performance
     from ha_history import get_entity_history, analyze_entity, format_history_report as format_history
+    from brain_learning import learn_patterns as bl_learn, get_patterns as bl_get_patterns, suggest_automations as bl_suggest, format_patterns_report as bl_format_patterns, get_learning_stats as bl_stats
+    LEARNING_OK = True
     DOCTOR_OK = True
 except Exception:
     pass
@@ -2538,6 +2541,7 @@ async def lifespan(app):
         asyncio.create_task(entity_health_check_loop())
         if BRAIN_OK: asyncio.create_task(brain_snapshot_loop())
         if BRAIN_OK: asyncio.create_task(brain_weekly_insight())
+        if LEARNING_OK: asyncio.create_task(brain_nightly_learning())
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
     if TG_ALERTS_OK:
@@ -2808,6 +2812,35 @@ class AskResponse(BaseModel):
     request_id: str = None
     trace: dict = None
 
+
+
+
+# ── Pattern Learning Endpoints ─────────
+@app.get("/patterns")
+async def patterns_endpoint(entity_id: str = None):
+    """Get learned patterns. GET /patterns?entity_id=light.parking_light_switch_1"""
+    if not LEARNING_OK:
+        return {"error": "brain_learning not loaded"}
+    if entity_id:
+        patterns = bl_get_patterns(entity_id)
+        report = await bl_format_patterns(entity_id)
+        return {"entity_id": entity_id, "patterns": patterns, "report": report}
+    return {"stats": bl_stats(), "patterns": bl_get_patterns()}
+
+@app.get("/patterns/suggestions")
+async def patterns_suggestions_endpoint():
+    """Get automation suggestions from learned patterns."""
+    if not LEARNING_OK:
+        return {"error": "brain_learning not loaded"}
+    return {"suggestions": await bl_suggest()}
+
+@app.post("/patterns/learn")
+async def patterns_learn_endpoint(days: int = 10):
+    """Trigger manual learning run. POST /patterns/learn?days=10"""
+    if not LEARNING_OK:
+        return {"error": "brain_learning not loaded"}
+    result = await bl_learn(days=days)
+    return result
 
 @app.post("/ask", response_model=AskResponse)
 async def ask(body: AskRequest):
@@ -5791,6 +5824,31 @@ async def nightly_summary_scheduler():
                     logger.error(f"Brain digest: {e}")
         except Exception as e:
             logger.error(f"Nightly summary error: {e}")
+
+async def brain_nightly_learning():
+    """Run pattern learning every night at 11:30 PM."""
+    await asyncio.sleep(60)
+    while True:
+        try:
+            now = datetime.now()
+            target = now.replace(hour=23, minute=30, second=0, microsecond=0)
+            if now >= target:
+                target += timedelta(days=1)
+            wait = (target - now).total_seconds()
+            logger.info(f"Pattern learning scheduled in {wait/3600:.1f}h")
+            await asyncio.sleep(wait)
+            if LEARNING_OK:
+                result = await bl_learn(days=10)
+                logger.info(f"Pattern learning done: {result}")
+                if result.get("patterns_found", 0) > 0 and ADMIN_TELEGRAM_ID:
+                    msg = (f"\U0001f9e0 Pattern Learning:\n"
+                           f"  \U0001f4ca {result['entities_processed']} entity -> {result['patterns_found']} pattern\n"
+                           f"  \u23f1 {result['duration_seconds']}s")
+                    await tg_send(ADMIN_TELEGRAM_ID, msg)
+        except Exception as e:
+            logger.error(f"Pattern learning error: {e}")
+            await asyncio.sleep(3600)
+
 
 async def brain_weekly_insight():
     """Send weekly insight every Friday at 9 AM."""

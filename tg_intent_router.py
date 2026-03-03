@@ -259,6 +259,12 @@ async def route_intent(text: str) -> dict | None:
     if any(qw in text for qw in QUERY_WORDS):
         return await _handle_query(text, words, emap)
 
+    # --- 2.4 Pattern / habit queries ---
+    if any(pw in text for pw in PATTERN_WORDS):
+        pat_result = await _handle_patterns(text, words, emap)
+        if pat_result:
+            return pat_result
+
     # --- 2.5 History / Log requests ---
     if any(hw in text for hw in HISTORY_WORDS):
         hist_result = await _handle_history(text, words, emap)
@@ -787,6 +793,8 @@ def quick_classify(text: str, session_ctx: dict = None) -> dict | None:
 
 # ── History / Log handler ────────────────────────────────
 HISTORY_WORDS = {"لوق", "لوج", "سجل", "تاريخ", "history", "log", "لوگ"}
+
+PATTERN_WORDS = {"أنماط", "نمط", "عادة", "عادات", "patterns", "pattern", "تعلم", "عاداته"}
 _TIME_PATTERNS = {
     "ساعة": 1, "ساعتين": 2, "٣ ساعات": 3, "3 ساعات": 3,
     "٦ ساعات": 6, "6 ساعات": 6, "١٢ ساعة": 12, "12 ساعة": 12,
@@ -872,3 +880,66 @@ async def _handle_history(text, words, emap):
     # Get report
     report = await format_history_report(eid, hours=hours)
     return {"text": report, "entities": [eid], "action": "history", "source": "history"}
+
+
+async def _handle_patterns(text, words, emap):
+    """Handle pattern queries: 'أنماط مكيف الماستر', 'عادات نور الباركينج'"""
+    try:
+        from brain_learning import format_patterns_report, suggest_automations
+    except ImportError:
+        return None
+    
+    # Check if asking for suggestions
+    if any(w in text for w in ["اقتراحات", "اقتراح", "suggestions"]):
+        sugs = await suggest_automations()
+        if not sugs:
+            return {"text": "لا توجد اقتراحات حالياً", "entities": [], "action": "patterns"}
+        lines = ["🧠 اقتراحات أتمتة ذكية:", ""]
+        for s in sugs[:10]:
+            lines.append(f"📌 {s['entity_id'].split('.')[-1].replace('_',' ')}:")
+            lines.append(f"  {s['suggestion_ar']}")
+        if len(sugs) > 10:
+            lines.append(f\n... و {len(sugs)-10} اقتراح آخر")
+        return {"text": \n".join(lines), "entities": [], "action": "patterns"}
+    
+    # Remove trigger words
+    clean = text
+    for pw in PATTERN_WORDS:
+        clean = clean.replace(pw, "")
+    clean = " ".join(clean.split()).strip()
+    
+    if not clean:
+        # No entity specified — show general summary
+        from brain_learning import get_learning_stats
+        stats = get_learning_stats()
+        if stats["runs"] == 0:
+            return {"text": "لم يتم تشغيل التعلم بعد", "entities": [], "action": "patterns"}
+        report = await format_patterns_report()
+        # Truncate if too long
+        if len(report) > 3500:
+            report = report[:3500] + "
+... (اكتب اسم جهاز محدد لتفاصيل أكثر)"
+        return {"text": report, "entities": [], "action": "patterns"}
+    
+    # Find entity
+    all_matches = []
+    clean_words = clean.split()
+    for room_name, entries in emap.items():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if "=" not in entry:
+                continue
+            eid, ename = entry.split("=", 1)
+            if any(w in ename for w in clean_words if len(w) > 1):
+                score = sum(1 for w in clean_words if w in ename and len(w) > 1)
+                all_matches.append((eid, ename, room_name, score))
+    
+    if not all_matches:
+        return None
+    
+    all_matches.sort(key=lambda x: -x[3])
+    eid = all_matches[0][0]
+    
+    report = await format_patterns_report(eid)
+    return {"text": report, "entities": [eid], "action": "patterns"}
