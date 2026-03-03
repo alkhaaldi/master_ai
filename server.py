@@ -4302,6 +4302,45 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         await tg_send_inline(chat_id, "🎬 *المشاهد* (2/2)", sc2, columns=2)
         return "__inline_sent__"
 
+    if cmd == "/alloff":
+        # Confirmation before killing everything
+        _cb = [
+            {"text": "✅ نعم طفي الكل", "callback_data": "sc:scene.tfwy_kl_shy"},
+            {"text": "❌ إلغاء", "callback_data": "cmd:home"},
+        ]
+        await tg_send_inline(chat_id, "⚠️ متأكد تبي تطفي كل شي بالبيت؟", _cb, columns=2)
+        return "__inline_sent__"
+
+    if cmd == "/find":
+        if not args:
+            return "usage: /find <name>" + chr(10) + "مثال: /find ديوانية"
+        q = " ".join(args).lower()
+        try:
+            async with httpx.AsyncClient(timeout=10) as _fc:
+                _r = await _fc.get(f"{HA_URL}/api/states", headers={"Authorization": f"Bearer {HA_TOKEN}"})
+                _states = _r.json() if _r.status_code == 200 else []
+            matches = []
+            for s in _states:
+                eid = s["entity_id"].lower()
+                fname = s.get("attributes", {}).get("friendly_name", "").lower()
+                if q in eid or q in fname:
+                    matches.append(s)
+            if not matches:
+                return "❓ ما لقيت: " + q
+            _icons = {"on": "✅", "off": "⚫", "open": "🟢", "closed": "🔴", "heat": "🔥", "cool": "❄️", "playing": "▶️", "unavailable": "⚠️"}
+            _lines = ["🔍 " + q + " (" + str(len(matches)) + "):"]
+            for s in matches[:15]:
+                fn = s.get("attributes", {}).get("friendly_name", s["entity_id"])
+                st = s["state"]
+                ic = _icons.get(st, "➖")
+                tmp = " (" + str(s["attributes"].get("temperature", "")) + "°)" if "temperature" in s.get("attributes", {}) else ""
+                _lines.append("  " + ic + " " + fn + ": " + st + tmp)
+            if len(matches) > 15:
+                _lines.append("  ... +" + str(len(matches)-15))
+            return chr(10).join(_lines)
+        except Exception as e:
+            return "Error: " + str(e)
+
     if cmd == "/cam":
         cb = [
             {"text": "📷 كام 1", "callback_data": "cam:1"},
