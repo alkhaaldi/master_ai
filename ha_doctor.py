@@ -50,6 +50,8 @@ async def get_unavailable_entities():
                 if domain == "climate" and attrs.get("current_temperature") is not None:
                     continue
                 name = attrs.get("friendly_name", eid)
+                # Skip orphan/ghost entities
+                if eid.endswith(".none") or name == "None": continue
                 bad.append({"entity_id": eid, "name": name, "state": st, "domain": domain, "since": s.get("last_changed","")[:10]})
         return bad
     except Exception as e:
