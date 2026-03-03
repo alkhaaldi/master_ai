@@ -4212,15 +4212,16 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         try:
             scenes = bl_discover_scenes()
             if not scenes:
-                return "❌ ما لقيت أنماط كافية لاقتراح scenes"
+                return "\u274c \u0645\u0627 \u0644\u0642\u064a\u062a \u0623\u0646\u0645\u0627\u0637 \u0643\u0627\u0641\u064a\u0629"
             report = await bl_scenes_report()
-            kb = []
+            await tg_send(chat_id, report)
+            btns = []
             for s in scenes[:5]:
-                btn_text = f"{s['label']} ({s['device_count']} جهاز)"
-                cb_data = f"scene:{s['key']}:{s['hour']}"
-                kb.append([{"text": btn_text, "callback_data": cb_data}])
-            _footer = chr(10) + "اختر وحدة عشان أسويها scene ب HA:"
-            return {"text": report + _footer, "reply_markup": {"inline_keyboard": kb}}
+                btn_text = s['label'] + ' (' + str(s['device_count']) + ' \u062c\u0647\u0627\u0632)'
+                cb_data = 'scene:' + s['key'] + ':' + str(s['hour'])
+                btns.append({"text": btn_text, "callback_data": cb_data})
+            await tg_send_inline(chat_id, "\u0627\u062e\u062a\u0631 \u0648\u062d\u062f\u0629 \u0639\u0634\u0627\u0646 \u0623\u0646\u0634\u0626\u0647\u0627:", btns, columns=1)
+            return "__inline_sent__"
         except Exception as e:
             return f"scenes error: {e}"
 
