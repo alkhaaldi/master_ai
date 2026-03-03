@@ -4793,6 +4793,83 @@ async def tg_handle_callback(callback_query: dict):
         pass
 
 
+
+async def tg_send_typing(chat_id):
+    """Send typing indicator."""
+    try:
+        if _tg_client:
+            await _tg_client.post(f"{TG_BASE}/sendChatAction", json={"chat_id": chat_id, "action": "typing"})
+    except Exception:
+        pass
+
+
+async def tg_edit_message(chat_id, message_id, text: str):
+    """Edit an existing TG message."""
+    try:
+        if _tg_client:
+            await _tg_client.post(f"{TG_BASE}/editMessageText", json={
+                "chat_id": chat_id, "message_id": message_id, "text": text
+            })
+            return True
+    except Exception:
+        return False
+
+
+async def llm_call_stream(system_prompt: str, user_message: str, chat_id=None,
+                          max_tokens: int = 1500, temperature: float = 0.3) -> str:
+    """Streaming LLM call — sends partial response to TG every ~100 chars."""
+    if not anthropic_client:
+        return await llm_call(system_prompt, user_message, max_tokens, temperature)
+    
+    t0 = time.time()
+    if not _cb_llm.is_available():
+        return "⚠️ خدمة AI مو متوفرة حالياً"
+    
+    try:
+        full_text = ""
+        msg_id = None
+        last_edit = 0
+        
+        async with anthropic_client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=max_tokens,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+            temperature=temperature,
+        ) as stream:
+            async for text_chunk in stream.text_stream:
+                full_text += text_chunk
+                now = time.time()
+                # Send/edit every 0.8s if we have chat_id
+                if chat_id and (now - last_edit) > 0.8 and len(full_text) > 20:
+                    if msg_id is None:
+                        # Send first message
+                        try:
+                            resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json={
+                                "chat_id": chat_id, "text": full_text + " ✍️"
+                            })
+                            rd = resp.json()
+                            if rd.get("ok"):
+                                msg_id = rd["result"]["message_id"]
+                        except Exception:
+                            pass
+                    else:
+                        await tg_edit_message(chat_id, msg_id, full_text + " ✍️")
+                    last_edit = now
+        
+        # Final edit — remove typing indicator
+        if msg_id and chat_id:
+            await tg_edit_message(chat_id, msg_id, full_text)
+        
+        _cb_llm.record_success()
+        elapsed = time.time() - t0
+        logger.info(f"LLM stream: {elapsed:.1f}s, {len(full_text)} chars")
+        return full_text if not msg_id else "__stream_sent__"
+    except Exception as e:
+        _cb_llm.record_failure()
+        logger.error(f"LLM stream error: {e}")
+        return await llm_call(system_prompt, user_message, max_tokens, temperature)
+
 def _correction_name(eid):
     """Get friendly name from entity_map."""
     try:
@@ -5096,7 +5173,7 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
                 # Fetch live HA states for status questions
                 _live_ctx = await _fetch_live_ha_context(text)
                 _enriched_text = text + _live_ctx if _live_ctx else text
-                _chat_resp = await llm_call(_chat_sys, _enriched_text, max_tokens=1500)
+                _chat_resp = await llm_call_stream(_chat_sys, _enriched_text, chat_id=chat_id, max_tokens=1500)
                 # Strip any <action>...</action> XML that LLM might emit
                 _chat_resp = re.sub(r'<action>.*?</action>', '', _chat_resp, flags=re.DOTALL).strip()
                 # Store in LLM cache
@@ -5104,6 +5181,9 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
                     _oldest = min(_llm_cache, key=lambda k: _llm_cache[k]["ts"])
                     del _llm_cache[_oldest]
                 _llm_cache[_cache_key] = {"resp": _chat_resp, "ts": time.time()}
+                if _chat_resp == "__stream_sent__":
+                    return
+                # Store in LLM cache (only non-streamed)
                 memory_add_short_term("assistant", _chat_resp)
                 await audit_log(task=text, actions=None, results=None, status="chat_routed", duration=0, request_id=trace.request_id, task_id=task_id)
                 await tg_send_with_feedback(chat_id, _chat_resp, request_id=trace.request_id)
