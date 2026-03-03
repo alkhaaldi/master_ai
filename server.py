@@ -4190,6 +4190,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 {"text": "\U0001f4c6 \u0627\u0644\u0623\u0633\u0628\u0648\u0639", "callback_data": "cmd:week"},
                 {"text": "\U0001f4b0 \u0627\u0644\u0623\u0633\u0647\u0645", "callback_data": "cmd:stocks"},
                 {"text": "\U0001f4cb \u0645\u0644\u062e\u0635", "callback_data": "cmd:summary"},
+                {"text": "📊 تقرير", "callback_data": "cmd:report"},
                 {"text": "\U0001f4ca \u0627\u0644\u0646\u0638\u0627\u0645", "callback_data": "cmd:diag"},
                 {"text": "\U0001f9e0 \u0627\u0644\u0639\u0642\u0644", "callback_data": "cmd:brain"},
                 {"text": "\U0001f4dd \u0627\u0644\u0645\u0647\u0627\u0645", "callback_data": "cmd:tasks"},
