@@ -149,6 +149,49 @@ async def _get_stocks_summary():
     return None
 
 
+
+async def _get_brain_summary():
+    """Brain learning summary for morning report: yesterday anomalies + today suggestion + maturity."""
+    try:
+        import sys
+        sys.path.insert(0, str(_Path(__file__).parent))
+        from brain_learning import get_maturity_report, get_top_suggestions, detect_anomalies
+        
+        lines = []
+        
+        # Maturity status
+        mat = get_maturity_report()
+        if mat["level"] > 0:
+            lines.append(f"{mat['emoji']} البرين: {mat['label']} (ثقة {mat['trust_pct']}%)")
+        
+        # Yesterday's anomalies
+        anomalies = await detect_anomalies()
+        if anomalies:
+            high = [a for a in anomalies if a["severity"] == "high"]
+            med = [a for a in anomalies if a["severity"] == "medium"]
+            if high:
+                lines.append(f"🔴 شذوذ عالية: {len(high)}")
+                for a in high[:2]:
+                    lines.append(f"  • {a['description_ar'][:55]}")
+            if med:
+                lines.append(f"🟡 شذوذ متوسطة: {len(med)}")
+        else:
+            lines.append("✅ لا شذوذ")
+        
+        # Today's suggestion
+        sugs = get_top_suggestions(2)
+        if sugs:
+            lines.append("")
+            lines.append("💡 اقتراح اليوم:")
+            for s in sugs:
+                lines.append(f"  • {s['label'][:55]}")
+        
+        return chr(10).join(lines) if lines else ""
+
+    except Exception as e:
+        logger.warning(f"Brain summary error: {e}")
+        return ""
+
 async def build_morning_report() -> str:
     now = datetime.now()
     date_str = now.strftime("%Y-%m-%d")
@@ -172,6 +215,11 @@ async def build_morning_report() -> str:
     stocks = await _get_stocks_summary()
 
     report = f"{greeting}\n📅 {day_name} {date_str}\n\n🌤️ الطقس: {weather}\n\n👷 الوردية:\n{shift_week}\n\n🏠 حالة البيت:\n{ha_summary}"
+
+    # Brain learning section
+    brain = await _get_brain_summary()
+    if brain:
+        report += chr(10)*2 + "🧠 الذكاء:" + chr(10) + brain
 
     if stocks:
         report += f"\n\n📈 الأسهم:\n{stocks}"
