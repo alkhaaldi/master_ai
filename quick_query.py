@@ -161,6 +161,23 @@ def _shift_answer(t):
     except Exception as _hijri_err:
         import logging; logging.getLogger('master_ai').warning(f'Hijri lookup error: {_hijri_err}')
     
+    # Smart Hijri date parser: '28 رمضان شنو دوامي' or 'أول شوال'
+    _hijri_months = {'محرم':1,'صفر':2,'ربيع الاول':3,'ربيع الثاني':4,'جمادى الاولى':5,'جمادى الثانية':6,'رجب':7,'شعبان':8,'رمضان':9,'شوال':10,'ذو القعدة':11,'ذو الحجة':12,'ذو الحجه':12}
+    import re as _re0
+    for _hm_name, _hm_num in _hijri_months.items():
+        if _hm_name in t:
+            _day_match = _re0.search(r'(\d{1,2})', t)
+            if _day_match:
+                try:
+                    from hijridate import Hijri as _H2
+                    _now_h2 = _Gregorian(today.year, today.month, today.day).to_hijri()
+                    _hday = int(_day_match.group(1))
+                    _hyr = _now_h2.year if _now_h2.month <= _hm_num else _now_h2.year + 1
+                    _htgt = _H2(_hyr, _hm_num, _hday).to_gregorian()
+                    return _fmt(_htgt, f'{_hday} {_hm_name}: ')
+                except: pass
+            break
+    
     import re as _re
     if _re.search(r"صباح|صبح", t) and _re.search(r"جاي|قادم|متى|اول", t):
         d = _next("صباحي")
