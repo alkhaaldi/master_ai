@@ -1,0 +1,402 @@
+{
+  "_version": "1.0.0",
+  "_description": "Master AI System Knowledge — الوعي الكامل بالنظام",
+  "_updated": "2026-03-08",
+  "identity": {
+    "name": "Master AI",
+    "version": "v5.4.0",
+    "code_version": "v5.4.6",
+    "server_lines": 6205,
+    "total_py_files": 42,
+    "port": 9000,
+    "tunnel": "ai.salem-home.com",
+    "host": "Raspberry Pi 5",
+    "host_ip": "192.168.109.123",
+    "framework": "FastAPI + uvicorn",
+    "llm_primary": "claude-sonnet-4-20250514",
+    "llm_fallback": "gpt-4o-mini",
+    "db": "SQLite WAL (audit.db, 28 tables)"
+  },
+  "architecture": {
+    "main_file": "server.py (6205 lines)",
+    "modules": {
+      "brain": [
+        "brain_core.py",
+        "brain.py",
+        "brain_personality.py",
+        "brain_learning.py",
+        "brain_analytics.py",
+        "brain_observability.py",
+        "brain_multiuser.py",
+        "brain_proactive.py"
+      ],
+      "telegram": [
+        "tg_home.py",
+        "tg_intent_router.py",
+        "tg_session.py",
+        "tg_session_resolver.py",
+        "tg_morning_report.py",
+        "tg_report.py",
+        "tg_alerts.py",
+        "tg_reminders.py",
+        "tg_news.py",
+        "tg_ops.py",
+        "tg_stocks.py",
+        "tg_email.py",
+        "tg_logbook.py",
+        "tg_tasks.py",
+        "tg_suggestions.py"
+      ],
+      "life": [
+        "life_router.py",
+        "life_stocks.py",
+        "life_expenses.py",
+        "life_health.py",
+        "life_work.py"
+      ],
+      "ha": [
+        "ha_doctor.py",
+        "ha_history.py",
+        "home_brain.py",
+        "entity_health.py",
+        "entity_map_generator.py"
+      ],
+      "data": [
+        "memory_db.py",
+        "tasks_db.py",
+        "quick_query.py",
+        "smart_router.py",
+        "discovery.py",
+        "stock_alerts.py",
+        "habit_tracker.py"
+      ],
+      "infra": [
+        "dropzone_watcher.py"
+      ]
+    },
+    "plugins": [
+      "ha_get_state",
+      "ha_call_service",
+      "ssh_run",
+      "respond_text",
+      "http_request",
+      "memory_store",
+      "win_diagnostics",
+      "win_powershell",
+      "win_winget_install"
+    ],
+    "message_flow": [
+      "1. /commands (39 أمر تلقرام)",
+      "2. Intent Router (جهاز+غرفة)",
+      "3. Session Followup",
+      "4. Life Router",
+      "5. SmartRouter",
+      "6. Iterative Engine (LLM + 9 plugins)"
+    ]
+  },
+  "home_assistant": {
+    "access": {
+      "local": "http://192.168.109.123:8123",
+      "nabu_casa": "https://6r0sv5js4w1yopf2w5qpy1txrt2cfv0t.ui.nabu.casa",
+      "docker_warning": "docker kill homeassistant قبل تعديل lovelace"
+    },
+    "entity_map": {
+      "file": "entity_map.json",
+      "rooms": 28
+    },
+    "dashboard": {
+      "tabs": [
+        "معيشة",
+        "مطبخ",
+        "استقبال",
+        "ديوانية",
+        "أدوار",
+        "ماستر",
+        "ستائر",
+        "مشاهد"
+      ],
+      "type": "HKI Dashboard",
+      "kiosk_mode": "HACS Kiosk Mode v10"
+    },
+    "automations": {
+      "total": 36,
+      "categories": {
+        "صلاة_وأذان": {
+          "count": 6,
+          "state": "all_on",
+          "items": [
+            "إعلان صلاة الفجر",
+            "الظهر",
+            "العصر",
+            "المغرب",
+            "العشاء",
+            "Turn off TV during Azan"
+          ]
+        },
+        "مكيفات": {
+          "count": 6,
+          "items": [
+            {
+              "n": "حارس حرارة - حد 23",
+              "s": "on"
+            },
+            {
+              "n": "حارس الحرارة عالية",
+              "s": "on"
+            },
+            {
+              "n": "AC sleep mode",
+              "s": "on"
+            },
+            {
+              "n": "تحكم حرارة كل المكيفات",
+              "s": "on"
+            },
+            {
+              "n": "تحكم وضع كل المكيفات",
+              "s": "off"
+            },
+            {
+              "n": "my room Ac force 20",
+              "s": "off"
+            }
+          ]
+        },
+        "سماعات_وقرآن": {
+          "count": 4,
+          "items": [
+            "قرآن 11PM",
+            "تخفيض أرضي 7:30AM",
+            "Alexa 50%",
+            "تكرار تلقائي"
+          ],
+          "state": "all_on"
+        },
+        "إضاءة_وستائر": {
+          "count": 3,
+          "items": [
+            "Backlight Always On",
+            "Close Shutters Sunset",
+            "وضع النوم"
+          ],
+          "state": "all_on"
+        },
+        "كاميرات_حركة": {
+          "count": 4,
+          "desc": "Tapo C120 person detection → أنوار",
+          "items": [
+            {
+              "n": "دور أول→سبوت3",
+              "s": "on"
+            },
+            {
+              "n": "استقبال→small light",
+              "s": "on"
+            },
+            {
+              "n": "طعام→spot",
+              "s": "on"
+            },
+            {
+              "n": "مطبخ→سبوت1+ستريب",
+              "s": "off"
+            }
+          ]
+        },
+        "طفل": {
+          "count": 2,
+          "items": [
+            "تنبيه بكاء عبود",
+            "Sleep Mode Baby"
+          ],
+          "state": "all_on"
+        },
+        "master_ai": {
+          "count": 3,
+          "items": [
+            "HA Started",
+            "Door Unlocked",
+            "Baby Crying"
+          ],
+          "state": "all_on"
+        },
+        "خادمة": {
+          "count": 2,
+          "items": [
+            "طفي أضواء 8:10AM",
+            "طفي حمام 30دق"
+          ],
+          "state": "all_off"
+        },
+        "تقارير": {
+          "count": 1,
+          "items": [
+            "تقرير يومي 9PM"
+          ],
+          "state": "on"
+        }
+      }
+    },
+    "scenes": [
+      "طفّي كل شي",
+      "نوم🌙",
+      "صباح☀️",
+      "مغادرة🚪",
+      "ضيوف🎉",
+      "ديوانية☕",
+      "سينما🎬",
+      "حمامات off🚿",
+      "شفاطات off🌀",
+      "ملابس off👗",
+      "سبوت فقط💡",
+      "ستريب فقط🌙",
+      "تنقية🌬️",
+      "أول off🛏️",
+      "أرضي off🏠",
+      "سكر ستائر🪟",
+      "فتح ستائر☀️",
+      "ستريب صالات",
+      "سبوت صالات"
+    ],
+    "devices": {
+      "speakers": {
+        "count": 4,
+        "type": "Bluesound",
+        "names": [
+          "Office1",
+          "Office2",
+          "Room3",
+          "Ground"
+        ],
+        "integration": "Music Assistant only"
+      },
+      "locks": {
+        "count": 7,
+        "type": "Tuya",
+        "ttlock_pending": true
+      },
+      "cameras": {
+        "tapo_c120": {
+          "count": 4,
+          "ips": [
+            "108.36",
+            "108.37",
+            "108.38",
+            "108.39"
+          ],
+          "person_detection": true
+        },
+        "dahua_nvr": {
+          "ip": "108.44",
+          "count": 6,
+          "poe": true,
+          "channels": {
+            "0": "Kitchen",
+            "3": "ممر المؤجرين",
+            "4": "خلف المنزل",
+            "5": "ممر المطبخ",
+            "6": "مدخل المؤجرين",
+            "7": "الساحة"
+          },
+          "integration": "Dahua HACS + go2rtc"
+        }
+      },
+      "tvs": {
+        "sony_bravia": "108.40",
+        "samsung_bu8000": "WoL"
+      },
+      "printer": {
+        "model": "Canon MF657Cdw",
+        "ip": "110.200",
+        "wol": "button.shhy_ltb_h"
+      }
+    },
+    "covers_rule": "inverted: open=مسكرة, closed=مفتوحة",
+    "fan_terms": {
+      "شفاط": "exhaust",
+      "منقي": "purifier",
+      "معطر": "freshener",
+      "ممنوع": "مروحة"
+    }
+  },
+  "network": {
+    "subnet": "/22",
+    "router": {
+      "model": "BE800",
+      "ip": "108.1"
+    },
+    "poe_switch": "ES226GC-P",
+    "aps": {
+      "count": 9,
+      "types": [
+        "RAP2200",
+        "RAP2260"
+      ]
+    },
+    "key_ips": {
+      "108.1": "Router",
+      "108.30-35": "Dahua PoE",
+      "108.36-39": "Tapo C120",
+      "108.40": "Sony TV",
+      "108.42": "RE200 repeater",
+      "108.44": "NVR",
+      "109.123": "RPi5",
+      "110.200": "Printer"
+    }
+  },
+  "known_issues": {
+    "backlight_off": {
+      "problem": "Tuya backlight تنطفي",
+      "fix": "Backlight Always On automation"
+    },
+    "mixed_content": {
+      "problem": "كاميرات http بHA https",
+      "fix": "picture-entity بدل iframe"
+    },
+    "bluesound_echo": {
+      "problem": "صوت مكرر",
+      "fix": "Music Assistant only"
+    },
+    "entity_hallucination": {
+      "problem": "LLM يخترع IDs",
+      "fix": "entity_map.json validation"
+    },
+    "tg_4096": {
+      "problem": "رسائل>4096",
+      "fix": "_split_message()"
+    }
+  },
+  "owner": {
+    "name": "بو خليفة (سالم)",
+    "job": "Unit Controller Shift A, Unit 114 Hydrocracker, KNPC MAB",
+    "shift": "AABBCCDD epoch 2024-01-04",
+    "family": [
+      "Oana",
+      "عبود",
+      "أم سالم"
+    ],
+    "language": "كويتي عربي"
+  },
+  "deployment": {
+    "method": "Git push→ssh→update.sh",
+    "banned": [
+      "copy/paste",
+      "SFTP",
+      "chunk",
+      "base64",
+      "/deploy"
+    ],
+    "services": [
+      "master-ai",
+      "master-ai-dropzone",
+      "master-ai-recovery",
+      "cloudflared-named"
+    ],
+    "crons": [
+      "0,12→stats",
+      "3:10→backup",
+      "3:30→gdrive",
+      "4:00→entity_map"
+    ]
+  }
+}

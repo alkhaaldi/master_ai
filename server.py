@@ -3974,6 +3974,28 @@ async def system_context():
     return JSONResponse(content=safe_json)
 
 
+
+# ━━━ SYSTEM KNOWLEDGE (Phase 1: Self-Awareness) ━━━
+@app.get("/system/knowledge", tags=["system"])
+async def system_knowledge_endpoint():
+    """Return full system self-knowledge JSON."""
+    sk_path = os.path.join(BASE_DIR, "system_knowledge.json")
+    if not os.path.exists(sk_path):
+        return {"error": "system_knowledge.json not found"}
+    import json as _json
+    with open(sk_path) as f:
+        return _json.load(f)
+
+@app.get("/system/knowledge/summary", tags=["system"])
+async def system_knowledge_summary():
+    """Return compact awareness string (what LLM sees in prompt)."""
+    try:
+        from brain_core import get_system_awareness
+        return {"awareness": get_system_awareness()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # WEB PANEL - moved to modules/panel.py
 

@@ -24,6 +24,50 @@ ENTITY_MAP_FILE = BASE_DIR / "entity_map.json"
 AUDIT_DB = BASE_DIR / "data" / "audit.db"
 
 _knowledge = {}
+
+# ━━━ System Self-Knowledge (Phase 1) ━━━
+_SK_FILE = BASE_DIR / "system_knowledge.json"
+_system_knowledge = {}
+
+def _load_system_knowledge():
+    global _system_knowledge
+    if _SK_FILE.exists():
+        _system_knowledge = _load_json(_SK_FILE)
+
+def get_system_awareness() -> str:
+    """Build compact system awareness for the LLM prompt."""
+    sk = _system_knowledge
+    if not sk:
+        return ""
+    
+    ident = sk.get("identity", {})
+    arch = sk.get("architecture", {})
+    ha = sk.get("home_assistant", {})
+    net = sk.get("network", {})
+    issues = sk.get("known_issues", {})
+    autos = ha.get("automations", {})
+    devs = ha.get("devices", {})
+    
+    modules = arch.get("modules", {})
+    mod_count = sum(len(v) for v in modules.values())
+    
+    # Automation summary
+    cats = autos.get("categories", {})
+    auto_lines = []
+    for cat_key, cat_data in cats.items():
+        items = cat_data.get("items", [])
+        count = cat_data.get("count", len(items))
+        auto_lines.append(f"  {cat_key}({count})")
+    
+    lines = [
+        f"🤖 {ident.get('name','')} {ident.get('version','')} | {ident.get('server_lines',0)} lines | {ident.get('total_py_files',0)} files | {mod_count} modules | {len(arch.get('plugins',[]))} plugins",
+        f"🏠 HA: {autos.get('total',0)} automations | {len(ha.get('scenes',[]))} scenes | {ha.get('entity_map',{}).get('rooms',0)} rooms",
+        f"  Categories: {', '.join(auto_lines)}",
+        f"📷 Cameras: {devs.get('cameras',{}).get('tapo_c120',{}).get('count',0)} Tapo + {devs.get('cameras',{}).get('dahua_nvr',{}).get('count',0)} Dahua",
+        f"🌐 Network: {net.get('subnet','')} | {net.get('aps',{}).get('count',0)} APs",
+        f"⚠️ {len(issues)} known issues with documented fixes",
+    ]
+    return "\n".join(lines)
 _entity_map = {}
 _entity_index = {}
 _alias_cache = []
@@ -92,6 +136,7 @@ def reload():
     _entity_map = _load_json(ENTITY_MAP_FILE)
     _entity_index = _build_entity_index(_entity_map)
     _alias_cache = _compile_aliases(_knowledge)
+    _load_system_knowledge()
     total_entities = sum(len(v) for v in _entity_index.values())
     try:
         _ensure_memory_table()
@@ -374,10 +419,13 @@ def build_system_prompt():
     home = _knowledge.get("home", {})
     room_index = build_room_index()
     owner_ctx = get_owner_context()
+    sys_awareness = get_system_awareness()
 
     owner = home.get("owner", "بو خليفة")
 
-    prompt = f"""{owner_ctx}
+    prompt = f"""{sys_awareness}
+
+{owner_ctx}
 
 أنت المساعد الشخصي لـ{owner} — Unit Controller, Shift A, KNPC MAB. عربي كويتي.
 دورك مو بس بيت ذكي — أنت تنفّذ كل شي: منزل/تداول/مواعيد/تخطيط/مشتريات/ايميلات.
