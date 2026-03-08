@@ -120,13 +120,14 @@ def _shift_answer(t):
     """Smart shift answer with future lookup + Hijri."""
     today = datetime.now().date()
     
+    from hijridate import Gregorian as _Gregorian
     def _fmt(d, label=""):
         s, emoji, times = _get_shift(d)
         dn = _DAYS_AR.get(d.weekday(), "")
         line = f"{emoji} {label}{dn} {d.strftime('%Y-%m-%d')}: {s}"
         line += f"\n⏰ {times}"
         try:
-            h = Gregorian(d.year, d.month, d.day).to_hijri()
+            h = _Gregorian(d.year, d.month, d.day).to_hijri()
             mn = _H_MO.get(h.month, str(h.month))
             line += f"\n📅 {h.day} {mn} {h.year} هـ"
         except:
@@ -144,7 +145,7 @@ def _shift_answer(t):
     # Hijri date shift lookup (Eid + last Ramadan)
     try:
         from hijridate import Hijri as _Hijri
-        _now_h = Gregorian(today.year, today.month, today.day).to_hijri()
+        _now_h = _Gregorian(today.year, today.month, today.day).to_hijri()
         if ('اخر' in t or 'آخر' in t) and 'رمضان' in t:
             _yr = _now_h.year if _now_h.month <= 9 else _now_h.year + 1
             try: _tgt = _Hijri(_yr, 9, 30).to_gregorian()
@@ -183,7 +184,7 @@ def _shift_answer(t):
             dn = _DAYS_AR.get(d.weekday(), "")
             mk = " ◀" if i == 0 else ""
             try:
-                hh = Gregorian(d.year, d.month, d.day).to_hijri()
+                hh = _Gregorian(d.year, d.month, d.day).to_hijri()
                 mn = _H_MO.get(hh.month, str(hh.month))
                 hd = f" ({hh.day} {mn})"
             except:
