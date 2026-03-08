@@ -2493,9 +2493,9 @@ async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace 
     # Response Synthesis Fallback: if no response but successful results, summarize via LLM
     if not final_response and all_results and any(r.get("success") for r in all_results if isinstance(r, dict)):
         try:
-            summary_data = json.dumps(all_results[:3], ensure_ascii=False, default=str)[:2000]
-            synth_prompt = "لخّص النتائج التالية بجملة أو جملتين بالعربي الكويتي:" + chr(10) + "طلب: " + goal[:200] + chr(10) + "نتائج: " + summary_data
-            synth_resp = await llm_call([{"role": "user", "content": synth_prompt}], max_tokens=200, temperature=0.3)
+            summary_data = json.dumps(all_results[:10], ensure_ascii=False, default=str)[:5000]
+            synth_prompt = "حلل النتائج التالية وقدم تقرير مفصل بالعربي الكويتي. اذكر كل التفاصيل والأرقام والاقتراحات. لا تختصر:" + chr(10) + "طلب: " + goal[:200] + chr(10) + "نتائج: " + summary_data
+            synth_resp = await llm_call([{"role": "user", "content": synth_prompt}], max_tokens=1500, temperature=0.3)
             if synth_resp and not synth_resp.startswith("{"):
                 final_response = synth_resp.strip()
                 logger.info(f"RESPONSE_SYNTH: {final_response[:60]}")
