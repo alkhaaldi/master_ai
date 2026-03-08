@@ -37,7 +37,8 @@ def _get_shift(d=None):
     if d is None: d = datetime.now().date()
     idx = (d - _EPOCH).days % 8
     s = _SHIFT_PATTERN[idx]
-    return s, _SHIFT_EMOJI[s], _SHIFT_TIMES[s]
+    pos = 1 if idx % 2 == 0 else 2
+    return s, _SHIFT_EMOJI[s], _SHIFT_TIMES[s], pos
 
 # Room name mapping for entity filtering
 ROOM_MAP = {
@@ -122,9 +123,11 @@ def _shift_answer(t):
     
     from hijridate import Gregorian as _Gregorian
     def _fmt(d, label=""):
-        s, emoji, times = _get_shift(d)
+        s, emoji, times, _pos = _get_shift(d)
         dn = _DAYS_AR.get(d.weekday(), "")
-        line = f"{emoji} {label}{dn} {d.strftime('%Y-%m-%d')}: {s}"
+        _pn = 'أول' if _pos == 1 else 'ثاني'
+        _sn = {'صباحي':'صباحي','عصري':'عصري','ليلي':'ليلي','إجازة':'أوف'}.get(s, s)
+        line = f"{emoji} {label}{dn} {d.strftime('%Y-%m-%d')}: {_pn} {_sn}"
         line += f"\n⏰ {times}"
         try:
             h = _Gregorian(d.year, d.month, d.day).to_hijri()
@@ -137,7 +140,7 @@ def _shift_answer(t):
     def _next(target):
         for i in range(1, 16):
             d = today + timedelta(days=i)
-            s, _, _ = _get_shift(d)
+            s, _, _, _ = _get_shift(d)
             if s == target:
                 return d
         return None
