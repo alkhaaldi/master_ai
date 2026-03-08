@@ -71,6 +71,25 @@ def _load_system_knowledge():
 
 
 
+
+def get_action_map() -> str:
+    sk = _system_knowledge
+    if not sk:
+        return ""
+    amap = sk.get("action_map", {})
+    if not amap:
+        return ""
+    lines = []
+    lines.append("")
+    lines.append("")
+    lines.append("NEVER SAY 'ما عندي وصول' — USE THESE TOOLS:")
+    for question, action in amap.items():
+        if question.startswith("_"):
+            continue
+        lines.append(f"  Q: {question}")
+        lines.append(f"    A: {action}")
+    return chr(10).join(lines)
+
 def get_agent_directive() -> str:
     sk = _system_knowledge
     if not sk:
@@ -551,6 +570,7 @@ def build_system_prompt():
     repair_guide = get_repair_guide()
     learn_guide = get_learning_guide()
     agent_dir = get_agent_directive()
+    action_map = get_action_map()
     # Expert knowledge domains available
     ek_domains = list(_expert_knowledge.keys()) if _expert_knowledge else []
     ek_note = ""
@@ -559,7 +579,7 @@ def build_system_prompt():
 
     owner = home.get("owner", "بو خليفة")
 
-    prompt = f"""{sys_awareness}{diag_guide}{repair_guide}{learn_guide}{agent_dir}{ek_note}
+    prompt = f"""{sys_awareness}{diag_guide}{repair_guide}{learn_guide}{agent_dir}{action_map}{ek_note}
 
 {owner_ctx}
 

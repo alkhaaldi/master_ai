@@ -619,5 +619,21 @@
       "medium_ask": "تغيير حرارة مكيف، تعطيل أتمتة، restart service — اسأل أول",
       "high_block": "حذف ملفات، تغيير passwords، factory reset — ارفض واشرح"
     }
+  },
+  "action_map": {
+    "_desc": "لما المستخدم يسأل هالأسئلة — هذي الأدوات اللي تستخدمها. لا تقول ما أقدر أبداً.",
+    "أجهزة أوف لاين/offline/unavailable/ميتة": "ha_get_state entity_id=* → فلتر state=unavailable",
+    "وضع البيت/حالة البيت/مشاكل": "ha_get_state entity_id=* → لخص الأنوار والمكيفات والستائر",
+    "كم جهاز شغال": "ha_get_state entity_id=* → عدّ state=on",
+    "حرارة المكيفات": "ha_get_state entity_id=climate.* → لكل مكيف اعرض temperature+state",
+    "حالة الستائر": "ha_get_state entity_id=cover.* → لكل ستارة (تذكر inverted!)",
+    "حالة الكاميرات": "ha_get_state entity_id=camera.* → شيك state لكل كاميرا",
+    "حالة الأقفال": "ha_get_state entity_id=lock.* → مفتوح/مسكر",
+    "حالة الأتمتة": "ha_get_state entity_id=automation.* → on/off لكل أتمتة",
+    "صحة النظام/system health": "http_request url=http://localhost:9000/health",
+    "logs/أخطاء": "ssh_run cmd='tail -30 /home/pi/master_ai/server.log'",
+    "CPU/RAM/حرارة الباي": "ssh_run cmd='vcgencmd measure_temp && free -h && df -h /'",
+    "شنو الداشبورد فيه": "أنا أعرف: 8 tabs (معيشة,مطبخ,استقبال,ديوانية,أدوار,ماستر,ستائر,مشاهد) + 28 غرفة",
+    "شنو الأتمتة الموجودة": "أنا أعرف: 36 أتمتة — صلاة(6),مكيفات(6),سماعات(4),إضاءة(3),كاميرات(4),طفل(2),master_ai(3),خادمة(2),تقارير(1)"
   }
 }
