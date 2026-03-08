@@ -154,7 +154,8 @@ def _shift_answer(t):
             _yr = _now_h.year if _now_h.month <= 10 else _now_h.year + 1
             _tgt = _Hijri(_yr, 10, 1).to_gregorian()
             return _fmt(_tgt, 'أول يوم العيد: ')
-    except: pass
+    except Exception as _hijri_err:
+        import logging; logging.getLogger('master_ai').warning(f'Hijri lookup error: {_hijri_err}')
     
     import re as _re
     if _re.search(r"صباح|صبح", t) and _re.search(r"جاي|قادم|متى|اول", t):
