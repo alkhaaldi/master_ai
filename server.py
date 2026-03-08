@@ -3996,6 +3996,19 @@ async def system_knowledge_summary():
         return {"error": str(e)}
 
 
+
+@app.get("/brain/expertise", tags=["brain"])
+async def brain_expertise(domain: str = "", topic: str = ""):
+    """Lookup expert knowledge by domain and topic."""
+    try:
+        from brain_core import lookup_expertise, _expert_knowledge
+        if not domain:
+            return {"domains": list(_expert_knowledge.keys())}
+        result = lookup_expertise(domain, topic)
+        return {"domain": domain, "topic": topic, "knowledge": result}
+    except Exception as e:
+        return {"error": str(e)}
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # WEB PANEL - moved to modules/panel.py
 

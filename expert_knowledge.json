@@ -1,0 +1,66 @@
+{
+  "home_assistant_expert": {
+    "architecture": "HA Core بDocker على RPi5. configuration.yaml+automations.yaml+scripts.yaml+scenes.yaml. كل entity=state+attributes. event bus لكل تغيير. services=domain.service(entity_id,data)",
+    "automation_tips": [
+      "mode:restart أفضل من two-automation",
+      "conditions يوفر resources",
+      "Jinja2 templates: {{states('sensor.x')|float}}",
+      "debounce: for: في trigger أو delay في action",
+      "continue_on_error:true"
+    ],
+    "dashboard_tips": [
+      "HKI يعتمد areas—device area مو entity area",
+      "mushroom cards أخف",
+      "card-mod zoom:1.4 لكبار السن",
+      "docker kill HA قبل YAML edit"
+    ],
+    "integrations": {
+      "tuya": "WiFi.Switch مكرر مع Light—استخدم Light.Backlight منفصل",
+      "music_assistant": "port 8095.Native disabled لecho",
+      "dahua": "HACS.NVR واحد→channels بأرقام",
+      "tapo": "ONVIF+HACS.Person detection→binary_sensor",
+      "go2rtc": "9 streams.WebRTC أفضل من MJPEG",
+      "zigbee2mqtt": "أفضل من ZHA لSonoff dongle"
+    },
+    "troubleshoot": {
+      "unavailable": "1.ping IP 2.power cycle 3.check integration log 4.reload integration 5.remove+re-add",
+      "automation_fail": "1.check enabled 2.check trigger entity 3.check conditions 4.Logbook filter 5.manual trigger",
+      "slow_dash": "1.reduce cameras 2.picture-entity not iframe 3.reduce history graphs 4.mushroom cards"
+    }
+  },
+  "networking": {
+    "wifi": "2.4GHz:ch1,6,11 only. 5GHz:80MHz ch149+. IoT separate SSID. RSSI>-70dBm",
+    "debug": "ping,traceroute,arp -a,nmap -sP subnet,iwconfig",
+    "subnet": "/22=108.0-111.255. 108=devices 109=servers 110=extras 111=NVR"
+  },
+  "linux": {
+    "systemd": "status/restart/logs(journalctl -u X -n50)/enable. docker: ps/logs/restart/kill(for HA YAML)/exec",
+    "monitor": "top,free -h,df -h,vcgencmd measure_temp,ps aux --sort=-%mem",
+    "cleanup": "find / -name '*.log' -size +100M, du -sh /path/* | sort -h, logrotate"
+  },
+  "trading": {
+    "trend": "EMA 9/21 cross. HH+HL=up LH+LL=down. BOS=key signal",
+    "volume": "Vol>2x avg=institutional. Price↑Vol↑=healthy. Price↑Vol↓=weak. CMF>0=accumulation",
+    "indicators": "RSI:70/30+MTF. MACD:signal cross+divergence. VWAP:institutional level. BB:squeeze=explosion",
+    "smart_money": "Order Blocks=institutional zones. FVG=gaps fill. Liquidity=above highs below lows",
+    "kse": "Sun-Thu 9:00-12:40KT. T+2 settlement. Religious filter:no conventional banks",
+    "pine": "v5. Simple>complex(3 conditions max). Always trailing stop. Daily first then smaller TF"
+  },
+  "security": {
+    "network": "IoT separate VLAN. Change defaults. Firmware updates. Disable UPnP. Cloudflare Tunnel>port forward",
+    "server": "API Key auth. SSH keys>password. fail2ban. UFW. Backups 3-2-1"
+  },
+  "productivity": {
+    "tasks": "deadline+priority+owner. 2min rule. Batch similar. Weekly review Friday",
+    "shifts": {
+      "morning": "sleep 10PM wake 5:30",
+      "afternoon": "morning free=projects+trading",
+      "night": "sleep 8AM-3PM light food",
+      "off": "day1 recover day2 productive"
+    }
+  },
+  "style": {
+    "language": "كويتي عربي: هلا شلونك إي لا زين أوكي",
+    "rules": "مختصر. لا تكرر اسمك. سطر-سطرين. ما أدري>اختراع. إيموجي باعتدال. EN بسطر منفصل. شفاط/منقي/معطر لا مروحة"
+  }
+}

@@ -29,6 +29,39 @@ _knowledge = {}
 _SK_FILE = BASE_DIR / "system_knowledge.json"
 _system_knowledge = {}
 
+# ━━━ Expert Knowledge Base ━━━
+_EK_FILE = BASE_DIR / "expert_knowledge.json"
+_expert_knowledge = {}
+
+def _load_expert_knowledge():
+    global _expert_knowledge
+    if _EK_FILE.exists():
+        _expert_knowledge = _load_json(_EK_FILE)
+
+def lookup_expertise(domain: str, topic: str = "") -> str:
+    ek = _expert_knowledge
+    if not ek:
+        return ""
+    data = ek.get(domain, {})
+    if not data:
+        # Try partial match
+        for k, v in ek.items():
+            if domain.lower() in k.lower():
+                data = v
+                break
+    if not data:
+        return ""
+    if topic:
+        if isinstance(data, dict):
+            result = data.get(topic, "")
+            if result:
+                return json.dumps(result, ensure_ascii=False) if not isinstance(result, str) else result
+            # Search nested
+            for k, v in data.items():
+                if isinstance(v, dict) and topic in v:
+                    return json.dumps(v[topic], ensure_ascii=False) if not isinstance(v[topic], str) else v[topic]
+    return json.dumps(data, ensure_ascii=False)[:2000] if not isinstance(data, str) else data[:2000]
+
 def _load_system_knowledge():
     global _system_knowledge
     if _SK_FILE.exists():
@@ -230,6 +263,7 @@ def reload():
     _entity_index = _build_entity_index(_entity_map)
     _alias_cache = _compile_aliases(_knowledge)
     _load_system_knowledge()
+    _load_expert_knowledge()
     total_entities = sum(len(v) for v in _entity_index.values())
     try:
         _ensure_memory_table()
@@ -517,10 +551,15 @@ def build_system_prompt():
     repair_guide = get_repair_guide()
     learn_guide = get_learning_guide()
     agent_dir = get_agent_directive()
+    # Expert knowledge domains available
+    ek_domains = list(_expert_knowledge.keys()) if _expert_knowledge else []
+    ek_note = ""
+    if ek_domains:
+        ek_note = chr(10) + chr(10) + "EXPERT KNOWLEDGE: " + ", ".join(ek_domains) + " — lookup_expertise(domain, topic) available via http_request to /brain/expertise?domain=X&topic=Y" 
 
     owner = home.get("owner", "بو خليفة")
 
-    prompt = f"""{sys_awareness}{diag_guide}{repair_guide}{learn_guide}{agent_dir}
+    prompt = f"""{sys_awareness}{diag_guide}{repair_guide}{learn_guide}{agent_dir}{ek_note}
 
 {owner_ctx}
 
