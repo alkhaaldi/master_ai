@@ -2337,7 +2337,7 @@ async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
         if previous_results:
             user_msg += "\n\nPrevious step results:\n"
             for i, pr in enumerate(previous_results[-5:]):
-                user_msg += f"Step {i}: {json.dumps(pr)[:300]}\n"
+                user_msg += f"Step {i}: {json.dumps(pr)[:1500]}\n"
 
         # Add retry correction
         if retry and context and context.get("validation_error"):
@@ -2365,17 +2365,17 @@ async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
         if raw and len(raw) > 2 and raw[0] not in '{[' and not raw.startswith('```'):
             return {
                 "mode": "single_step",
-                "next_step": {"type": "respond_text", "args": {"text": raw[:500]}},
+                "next_step": {"type": "respond_text", "args": {"text": raw[:4000]}},
                 "task_state": "complete",
-                "response": raw[:500]
+                "response": raw[:4000]
             }
         # If LLM returned plain text, use it directly
         if raw and len(raw) > 2 and raw[0] not in '{[' and not raw.startswith('```'):
             return {
                 "mode": "single_step",
-                "next_step": {"type": "respond_text", "args": {"text": raw[:500]}},
+                "next_step": {"type": "respond_text", "args": {"text": raw[:4000]}},
                 "task_state": "complete",
-                "response": raw[:500]
+                "response": raw[:4000]
             }
         return {
             "mode": "single_step",
