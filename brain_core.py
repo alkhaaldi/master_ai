@@ -37,6 +37,42 @@ def _load_system_knowledge():
 
 
 
+
+def get_agent_directive() -> str:
+    sk = _system_knowledge
+    if not sk:
+        return ""
+    caps = sk.get("agent_capabilities", {})
+    if not caps:
+        return ""
+    
+    domains = caps.get("domains", {})
+    behaviors = caps.get("autonomous_behaviors", [])
+    decision = caps.get("decision_framework", {})
+    
+    lines = []
+    lines.append("")
+    lines.append("AGENT MODE: " + caps.get("role", ""))
+    
+    # Domains summary
+    for name, info in domains.items():
+        can_do = info.get("can_do", [])
+        tools = info.get("tools", [])
+        lines.append(f"  {name}: {', '.join(tools)} — {len(can_do)} capabilities")
+    
+    # Key behaviors
+    lines.append("")
+    lines.append("AUTONOMOUS:")
+    for b in behaviors[:4]:
+        lines.append(f"  - {b}")
+    
+    # Decision framework
+    if decision:
+        lines.append("")
+        lines.append("RISK: low=auto, medium=ask, high=block")
+    
+    return chr(10).join(lines)
+
 def get_learning_guide() -> str:
     sk = _system_knowledge
     if not sk:
@@ -480,10 +516,11 @@ def build_system_prompt():
     diag_guide = get_diagnostic_guide()
     repair_guide = get_repair_guide()
     learn_guide = get_learning_guide()
+    agent_dir = get_agent_directive()
 
     owner = home.get("owner", "بو خليفة")
 
-    prompt = f"""{sys_awareness}{diag_guide}{repair_guide}{learn_guide}
+    prompt = f"""{sys_awareness}{diag_guide}{repair_guide}{learn_guide}{agent_dir}
 
 {owner_ctx}
 
