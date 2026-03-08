@@ -398,5 +398,42 @@
       "3:30→gdrive",
       "4:00→entity_map"
     ]
+  },
+  "diagnostics": {
+    "self_endpoints": {
+      "GET /health": "system status (uptime, plugins, schema, autonomy, memory)",
+      "GET /brain/stats": "brain module health, memories count, aliases count",
+      "GET /brain/diag": "brain diagnostics (version, learning, multiuser, modules)",
+      "GET /system/context": "full system context (version, schema, db, runtime, plugins)",
+      "GET /system/knowledge": "system self-knowledge JSON",
+      "GET /system/knowledge/summary": "compact awareness string",
+      "GET /ha/states/{entity_id}": "get HA entity state (e.g. /ha/states/climate.mkyf_ldywny)",
+      "GET /entity-map/health": "validate entity_map vs HA (find stale/missing entities)",
+      "GET /history/{entity_id}": "entity state history"
+    },
+    "ha_doctor_functions": {
+      "detect_anomalies()": "scans HA for: unavailable entities, abnormal temps, stuck devices, offline cameras",
+      "format_health_report()": "generates Arabic health report with emoji for TG",
+      "suggest_fixes(issues)": "suggests fixes based on known_issues in system_knowledge",
+      "get_unavailable_entities()": "list all unavailable/unknown state entities",
+      "check_ac_performance(hours, threshold)": "checks if ACs are cooling properly"
+    },
+    "tg_commands": {
+      "/health": "HA health report + fix suggestions",
+      "/diag": "system diagnostics (CPU, RAM, temp, disk, errors, modules)",
+      "/log": "last 15 lines of server.log",
+      "/crash": "crash fingerprint analysis",
+      "/status": "uptime + HA connection status",
+      "/brain": "brain module status + memories"
+    },
+    "how_llm_diagnoses": [
+      "1. Use http_request with url=http://localhost:9000/health to check system health",
+      "2. Use http_request with url=http://localhost:9000/brain/diag to check brain status",
+      "3. Use http_request with url=http://localhost:9000/entity-map/health to find stale entities",
+      "4. Use ha_get_state with entity_id=* pattern to scan device groups",
+      "5. Use ssh_run with cmd='tail -30 /home/pi/master_ai/server.log' to read recent logs",
+      "6. Use ssh_run with cmd='systemctl status master-ai' to check service health",
+      "7. Cross-reference issues with known_issues in system_knowledge for solutions"
+    ]
   }
 }

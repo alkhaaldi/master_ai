@@ -34,6 +34,28 @@ def _load_system_knowledge():
     if _SK_FILE.exists():
         _system_knowledge = _load_json(_SK_FILE)
 
+
+def get_diagnostic_guide() -> str:
+    """Build diagnostic capabilities section for the LLM prompt."""
+    sk = _system_knowledge
+    if not sk:
+        return ""
+    diag = sk.get("diagnostics", {})
+    if not diag:
+        return ""
+    eps = diag.get("self_endpoints", {})
+    ep_lines = []
+    for ep, desc in list(eps.items())[:5]:
+        ep_lines.append(f"  {ep}")
+    ep_str = chr(10).join(ep_lines)
+    return (
+        chr(10) + chr(10) +
+        "SELF-DIAGNOSTIC: http_request to localhost:9000" + chr(10) +
+        ep_str + chr(10) +
+        "  + ssh_run: tail logs, systemctl, ping" + chr(10) +
+        "  Strategy: health check > find issue > known_issues lookup > fix"
+    )
+
 def get_system_awareness() -> str:
     """Build compact system awareness for the LLM prompt."""
     sk = _system_knowledge
@@ -420,10 +442,11 @@ def build_system_prompt():
     room_index = build_room_index()
     owner_ctx = get_owner_context()
     sys_awareness = get_system_awareness()
+    diag_guide = get_diagnostic_guide()
 
     owner = home.get("owner", "بو خليفة")
 
-    prompt = f"""{sys_awareness}
+    prompt = f"""{sys_awareness}{diag_guide}
 
 {owner_ctx}
 
