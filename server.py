@@ -918,7 +918,7 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
     if anthropic_client:
         try:
             resp = await anthropic_client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model="claude-opus-4-20250514",
                 max_tokens=max_tokens,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_message}],
@@ -5252,7 +5252,7 @@ async def llm_call_stream(system_prompt: str, user_message: str, chat_id=None,
         last_edit = 0
         
         async with anthropic_client.messages.stream(
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-20250514",
             max_tokens=max_tokens,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
