@@ -300,8 +300,11 @@ async def _fetch_live_ha_context(user_msg: str) -> str:
     # Keywords that indicate user wants real-time status
     status_kw = ["حال", "وضع", "حالة", "شغال", "مطفي", "درجة", "حرارة", "ستائر", "ستاير",
                  "اضاءة", "أضواء", "مكيف", "بيت", "غرفة", "مكتب", "ديوانية", "معيشة",
-                 "مطبخ", "استقبال", "ماستر", "نوم", "status", "office", "room"]
-    if not any(k in user_msg for k in status_kw):
+                 "مطبخ", "استقبال", "ماستر", "نوم", "status", "office", "room", "أوف لاين", "اوف لاين", "offline", "unavailable", "ميت", "ميتة", "منقطع", "مشاكل", "مشكلة"]
+    # Detect offline/unavailable specific queries  
+    _offline_kw = ["أوف لاين", "اوف لاين", "offline", "unavailable", "ميت", "ميتة", "منقطع"]
+    _asking_offline = any(k in user_msg for k in _offline_kw)
+    if not any(k in user_msg for k in status_kw) and not _asking_offline:
         return ""
     try:
         async with httpx.AsyncClient() as client:
@@ -311,6 +314,23 @@ async def _fetch_live_ha_context(user_msg: str) -> str:
             if r.status_code != 200:
                 return ""
             all_states = r.json()
+        # If asking about offline devices, return those specifically
+        if _asking_offline:
+            _unavail = []
+            _skip = ["update.", "button.", "number.", "select.", "sensor.", "binary_sensor."]
+            _skip_kw = ["backlight", "alexa", "iphone", "geocoded"]
+            for s in all_states:
+                eid = s.get("entity_id", "")
+                if s.get("state") == "unavailable":
+                    if any(eid.startswith(p) for p in _skip):
+                        continue
+                    if any(kw in eid.lower() for kw in _skip_kw):
+                        continue
+                    fname = s.get("attributes", {}).get("friendly_name", eid)
+                    _unavail.append(f"  - {fname} ({eid})")
+            if _unavail:
+                return chr(10) + chr(10) + f"⚠️ الأجهزة الـ unavailable ({len(_unavail)}):" + chr(10) + chr(10).join(_unavail[:30])
+            return chr(10) + chr(10) + "✅ ما فيه أجهزة unavailable!"
         # Filter to useful domains
         dominated = ("light", "climate", "cover", "fan", "media_player", "switch")
         relevant = [s for s in all_states if s.get("entity_id","").split(".")[0] in dominated
