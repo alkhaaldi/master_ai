@@ -35,6 +35,41 @@ def _load_system_knowledge():
         _system_knowledge = _load_json(_SK_FILE)
 
 
+
+
+def get_learning_guide() -> str:
+    sk = _system_knowledge
+    if not sk:
+        return ""
+    learn = sk.get("self_learning", {})
+    if not learn:
+        return ""
+    return (
+        chr(10) + chr(10) +
+        "SELF-LEARNING: Save fixes and patterns via memory_store" + chr(10) +
+        "  save: {action:'save', category:'fix_applied|user_preference|error_pattern', key:'...', value:'...'}" + chr(10) +
+        "  recall: {action:'recall', query:'...'}" + chr(10) +
+        "  Loop: encounter > diagnose > fix > save what worked > recall next time"
+    )
+
+def get_repair_guide() -> str:
+    sk = _system_knowledge
+    if not sk:
+        return ""
+    repair = sk.get("self_repair", {})
+    if not repair:
+        return ""
+    patterns = repair.get("repair_patterns", {})
+    safety = repair.get("safety_rules", [])
+    lines = []
+    lines.append("")
+    lines.append("SELF-REPAIR: I can fix issues via ha_call_service + ssh_run")
+    for name, pattern in list(patterns.items())[:4]:
+        lines.append(f"  {name}: detect={pattern.get('detect','')[:50]}")
+    if safety:
+        lines.append(f"  Safety: {len(safety)} rules (confirm before medium/high risk)")
+    return chr(10).join(lines)
+
 def get_diagnostic_guide() -> str:
     """Build diagnostic capabilities section for the LLM prompt."""
     sk = _system_knowledge
@@ -443,10 +478,12 @@ def build_system_prompt():
     owner_ctx = get_owner_context()
     sys_awareness = get_system_awareness()
     diag_guide = get_diagnostic_guide()
+    repair_guide = get_repair_guide()
+    learn_guide = get_learning_guide()
 
     owner = home.get("owner", "بو خليفة")
 
-    prompt = f"""{sys_awareness}{diag_guide}
+    prompt = f"""{sys_awareness}{diag_guide}{repair_guide}{learn_guide}
 
 {owner_ctx}
 

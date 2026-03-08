@@ -435,5 +435,82 @@
       "6. Use ssh_run with cmd='systemctl status master-ai' to check service health",
       "7. Cross-reference issues with known_issues in system_knowledge for solutions"
     ]
+  },
+  "self_repair": {
+    "ha_call_service_capabilities": {
+      "automation.turn_on": "Enable a disabled automation",
+      "automation.turn_off": "Disable an automation",
+      "automation.trigger": "Manually trigger an automation",
+      "scene.turn_on": "Activate a scene",
+      "homeassistant.reload_automations": "Reload all automations from YAML",
+      "homeassistant.reload_config_entry": "Reload an integration config",
+      "light.turn_on/off": "Control lights",
+      "climate.set_temperature": "Set AC temperature",
+      "cover.open_cover/close_cover": "Control covers (inverted!)",
+      "input_boolean.turn_on/off": "Toggle input_boolean helpers"
+    },
+    "repair_patterns": {
+      "backlight_off": {
+        "detect": "ha_get_state entity_id=light.*backlight* — check for state=off",
+        "fix": "ha_call_service domain=light service=turn_on entity_id={each_off_backlight}",
+        "prevent": "verify automation.hfz_l_d_lzrr_backlight_always_on is on"
+      },
+      "ac_too_cold": {
+        "detect": "ha_get_state entity_id=climate.* — check temperature < 18",
+        "fix": "ha_call_service domain=climate service=set_temperature entity_id={ac} temperature=21"
+      },
+      "automation_disabled": {
+        "detect": "ha_get_state entity_id=automation.* — check state=off",
+        "fix": "ha_call_service domain=automation service=turn_on entity_id={auto_id}"
+      },
+      "camera_offline": {
+        "detect": "ha_get_state entity_id=camera.* — check state=unavailable",
+        "fix": "ssh_run cmd='ping -c 3 {camera_ip}' then suggest power cycle or NVR restart"
+      },
+      "device_unavailable": {
+        "detect": "http_request url=http://localhost:9000/entity-map/health",
+        "fix": "check WiFi signal, power cycle device, or remove stale entity"
+      }
+    },
+    "safety_rules": [
+      "Never modify automations without user confirmation for medium/high risk",
+      "Never set AC below 18 or above 30",
+      "Always check current state before making changes",
+      "Log all repairs to memory_store for learning",
+      "If unsure, suggest fix to user instead of auto-applying"
+    ]
+  },
+  "self_learning": {
+    "memory_store_plugin": {
+      "save": "memory_store with args {action:'save', category:'...', key:'...', value:'...'}",
+      "recall": "memory_store with args {action:'recall', query:'...'}",
+      "categories": [
+        "fix_applied",
+        "user_preference",
+        "device_behavior",
+        "error_pattern",
+        "optimization"
+      ]
+    },
+    "what_to_learn": [
+      "When user corrects a response, save the correction as a pattern",
+      "When a fix resolves an issue, save the fix with the problem description",
+      "When user shows preference (e.g. 'always set AC to 21 at night'), save as rule",
+      "When a device behaves unexpectedly, log the anomaly",
+      "When an automation fails, log the failure pattern"
+    ],
+    "learning_loop": [
+      "1. Encounter problem or user feedback",
+      "2. Diagnose using self-diagnostic endpoints",
+      "3. Apply fix (or suggest to user)",
+      "4. Save what worked to memory_store (category=fix_applied)",
+      "5. Next time similar issue occurs, recall the fix first",
+      "6. Report unresolved issues to user"
+    ],
+    "existing_learning_system": {
+      "brain_learning.py": "Pattern matching + confidence scoring + decay",
+      "auto_learn": "brain_core.auto_learn() — saves interaction patterns",
+      "memory_db.py": "SQLite-based memory with categories"
+    }
   }
 }
