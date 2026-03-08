@@ -5583,46 +5583,9 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
             except Exception as _qqe:
                 logger.warning(f"quick_query error: {_qqe}")
         
-        if _msg_class == "chat" and BRAIN_AVAILABLE:
-            try:
-                _home_ctx = get_home_summary() if DISCOVERY_OK else ""
-                # Use brain's rich prompt for chat (knowledge + rooms + rules)
-                try:
-                    _brain_prompt = build_system_prompt()
-                except Exception:
-                    _brain_prompt = ""
-                # LLM Cache check
-                import hashlib as _hl
-                _cache_key = _hl.md5(text.strip().lower().encode()).hexdigest()
-                _cached = _llm_cache.get(_cache_key)
-                if _cached and (time.time() - _cached["ts"]) < _LLM_CACHE_TTL:
-                    _router_stats["cache_hit"] = _router_stats.get("cache_hit", 0) + 1
-                    logger.info(f"LLM cache hit: {text[:30]}")
-                    await tg_send(chat_id, _cached["resp"])
-                    return
-                _chat_sys = build_chat_system_prompt(_brain_prompt, _home_ctx, user_msg=text)
-                # Fetch live HA states for status questions
-                _live_ctx = await _fetch_live_ha_context(text)
-                _enriched_text = text + _live_ctx if _live_ctx else text
-                _chat_resp = await llm_call_stream(_chat_sys, _enriched_text, chat_id=chat_id, max_tokens=1500)
-                # Strip any <action>...</action> XML that LLM might emit
-                _chat_resp = re.sub(r'<action>.*?</action>', '', _chat_resp, flags=re.DOTALL).strip()
-                # Store in LLM cache
-                if len(_llm_cache) >= _LLM_CACHE_MAX:
-                    _oldest = min(_llm_cache, key=lambda k: _llm_cache[k]["ts"])
-                    del _llm_cache[_oldest]
-                _llm_cache[_cache_key] = {"resp": _chat_resp, "ts": time.time()}
-                if _chat_resp == "__stream_sent__":
-                    return
-                # Store in LLM cache (only non-streamed)
-                memory_add_short_term("assistant", _chat_resp)
-                await audit_log(task=text, actions=None, results=None, status="chat_routed", duration=0, request_id=trace.request_id, task_id=task_id)
-                await tg_send_with_feedback(chat_id, _chat_resp, request_id=trace.request_id)
-                if TG_SESSION_OK:
-                    tg_session_append_context(str(chat_id), "assistant", _chat_resp[:200])
-                return
-            except Exception as _ce:
-                logger.warning(f"SmartRouter chat fallback: {_ce}")
+        # REMOVED: chat path — ALL messages now go to iterative_engine (has tools)
+        # This gives the LLM access to ha_get_state, ssh_run, etc for EVERY question
+        pass
 
     _router_stats["iterative"] = _router_stats.get("iterative", 0) + 1
     _router_stats["action_routed"] = _router_stats.get("action_routed", 0) + 1
