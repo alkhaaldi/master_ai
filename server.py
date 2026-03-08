@@ -5297,6 +5297,16 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
         await tg_send(chat_id, quick)
         return
 
+    # Quick Query FIRST - before intent router
+    if QUICK_QUERY_OK:
+        try:
+            _qq_early = await quick_answer(text)
+            if _qq_early:
+                await tg_send(chat_id, _qq_early)
+                return
+        except:
+            pass
+
     # Speed Engine removed — all requests go to Opus LLM
     # --- Intent Router (Phase A3) — check FIRST for explicit device+room commands ---
     if TG_INTENT_OK:

@@ -81,7 +81,7 @@ async def quick_answer(text: str):
         return await _lights_count()
 
     # 4) Shift queries
-    if re.search(r"شفتي|دوامي|شنو شفت|شنو دوام", t):
+    if re.search(r"شفتي|دوامي|شنو شفت|شنو دوام|صباحي الجاي|صبح الجاي|عصري الجاي|ليلي الجاي|متى دوامي|اول صباحي|اول عصري|اول ليلي|جدول الاسبوع|متى اجازتي|الصبح الجاي|الصبح القادم|دوامي الصبح|كم رمضان", t):
         return _shift_answer(t)
 
     # 5) Room status
@@ -117,21 +117,79 @@ async def quick_answer(text: str):
 
 
 def _shift_answer(t):
-    """Answer shift-related questions."""
+    """Smart shift answer with future lookup + Hijri."""
     today = datetime.now().date()
     
-    # "باكر" or "غدا"
+    def _fmt(d, label=""):
+        s, emoji, times = _get_shift(d)
+        dn = _DAYS_AR.get(d.weekday(), "")
+        line = f"{emoji} {label}{dn} {d.strftime('%Y-%m-%d')}: {s}"
+        line += f"\n⏰ {times}"
+        try:
+            h = Gregorian(d.year, d.month, d.day).to_hijri()
+            mn = _H_MO.get(h.month, str(h.month))
+            line += f"\n📅 {h.day} {mn} {h.year} هـ"
+        except:
+            pass
+        return line
+    
+    def _next(target):
+        for i in range(1, 16):
+            d = today + timedelta(days=i)
+            s, _, _ = _get_shift(d)
+            if s == target:
+                return d
+        return None
+    
+    # Hijri date shift lookup (Eid + last Ramadan)
+    try:
+        from hijridate import Hijri as _Hijri
+        _now_h = Gregorian(today.year, today.month, today.day).to_hijri()
+        if ('اخر' in t or 'آخر' in t) and 'رمضان' in t:
+            _yr = _now_h.year if _now_h.month <= 9 else _now_h.year + 1
+            try: _tgt = _Hijri(_yr, 9, 30).to_gregorian()
+            except: _tgt = _Hijri(_yr, 9, 29).to_gregorian()
+            return _fmt(_tgt, 'آخر يوم رمضان: ')
+        if ('اول' in t or 'أول' in t) and 'عيد' in t:
+            _yr = _now_h.year if _now_h.month <= 10 else _now_h.year + 1
+            _tgt = _Hijri(_yr, 10, 1).to_gregorian()
+            return _fmt(_tgt, 'أول يوم العيد: ')
+    except: pass
+    
+    import re as _re
+    if _re.search(r"صباح|صبح", t) and _re.search(r"جاي|قادم|متى|اول", t):
+        d = _next("صباحي")
+        if d: return _fmt(d, "أول صباحي جاي: ")
+    if _re.search(r"عصر", t) and _re.search(r"جاي|قادم|متى|اول", t):
+        d = _next("عصري")
+        if d: return _fmt(d, "أول عصري جاي: ")
+    if _re.search(r"ليل", t) and _re.search(r"جاي|قادم|متى|اول", t):
+        d = _next("ليلي")
+        if d: return _fmt(d, "أول ليلي جاي: ")
+    if _re.search(r"اجاز|اوف", t):
+        d = _next("إجازة")
+        if d: return _fmt(d, "أول إجازة: ")
+    if "رمضان" in t:
+        return _fmt(today, "اليوم ")
     if "باكر" in t or "غدا" in t or "باخر" in t:
         d = today + timedelta(days=1)
-        s, emoji, times = _get_shift(d)
-        day_name = _DAYS_AR.get(d.weekday(), "")
-        return f"{emoji} باكر {day_name}: {s}\n⏰ {times}"
-
-    # "اليوم" or default
-    s, emoji, times = _get_shift(today)
-    day_name = _DAYS_AR.get(today.weekday(), "")
-    return f"{emoji} اليوم {day_name}: {s}\n⏰ {times}"
-
+        return _fmt(d, "باكر ")
+    if "اسبوع" in t or "جدول" in t:
+        ls = ["📅 جدول الأسبوع:\n"]
+        for i in range(7):
+            d = today + timedelta(days=i)
+            s, emoji, _ = _get_shift(d)
+            dn = _DAYS_AR.get(d.weekday(), "")
+            mk = " ◀" if i == 0 else ""
+            try:
+                hh = Gregorian(d.year, d.month, d.day).to_hijri()
+                mn = _H_MO.get(hh.month, str(hh.month))
+                hd = f" ({hh.day} {mn})"
+            except:
+                hd = ""
+            ls.append(f"{emoji} {dn} {d.day}/{d.month}{hd}: {s}{mk}")
+        return "\n".join(ls)
+    return _fmt(today, "اليوم ")
 
 async def _home_status():
     states = await _ha_states()
