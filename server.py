@@ -4968,7 +4968,7 @@ async def tg_handle_callback(callback_query: dict):
                         else:
                             await tg_send(chat_id, "❓ ما فيه سياق")
                     else:
-                        await tg_send(chat_id, "❓ ما فيه سياق — جرب /find")
+                        pass  # Let LLM handle
             elif stype == "temp":
                 if TG_SESSION_OK:
                     session = tg_session_get(str(chat_id))
@@ -5388,8 +5388,7 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
                         "reply_markup": kb
                     })
                 else:
-                    await tg_send(chat_id, "❓ وش تقصد؟ جرب /find")
-                return
+                    pass  # Let LLM handle unknown questions
 
             elif ftype == "repeat":
                 # Re-run last action on same entities
@@ -5400,7 +5399,7 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
                     result = await resolve_followup_action(followup_repeat, HA_URL, HA_TOKEN)
                     await tg_send(chat_id, result, parse_mode="Markdown")
                 else:
-                    await tg_send(chat_id, "❓ ما فيه سياق سابق — جرب /find")
+                    pass  # Let LLM handle - no context
                 return
 
     # Save to context window for LLM
