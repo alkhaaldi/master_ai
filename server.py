@@ -80,6 +80,12 @@ except Exception:
     SMART_ROUTER_OK = False
 
 QUICK_QUERY_OK = False
+
+try:
+    from chat_v7 import handle_chat_v7
+    CHAT_V7_OK = True
+except Exception:
+    CHAT_V7_OK = False
 try:
     from quick_query import quick_answer
     QUICK_QUERY_OK = True
@@ -5592,13 +5598,25 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
     t0 = time.time()
     result = {}
     try:
-        result = await asyncio.wait_for(iterative_engine(
-            goal=text,
-            context={"source": "telegram", "chat_id": str(chat_id), "user_name": user_name, "user_profile": user_profile},
-            trace=trace,
-            task_id=task_id,
-        ), timeout=120)
-        response = result.get("response", "\u2705 Done")
+        if CHAT_V7_OK and anthropic_client:
+            from brain_core import build_system_prompt as _bsp7
+            _sys7 = _bsp7()
+            _executors = {
+                "ha_get_state": _exec_ha_get_state,
+                "ha_call_service": lambda d,s,sd: _exec_ha_call_service(d, s, sd),
+                "ssh_run": _exec_ssh_run,
+            }
+            response = await asyncio.wait_for(
+                handle_chat_v7(text, _sys7, anthropic_client, _executors),
+                timeout=120
+            )
+        else:
+            result = await asyncio.wait_for(iterative_engine(
+                goal=text,
+                context={"source": "telegram", "chat_id": str(chat_id)},
+                trace=trace, task_id=task_id,
+            ), timeout=120)
+            response = result.get("response", "Done")
     except asyncio.TimeoutError:
         logger.warning(f"TG engine timeout: {text[:50]}")
         TaskManager.fail_task(task_id, "timeout")
