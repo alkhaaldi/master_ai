@@ -72,3 +72,9 @@ data/gmail_token.json
 data/gmail_oauth_state.json
 outlook_config.json
 data/outlook_token.json
+__pycache__/
+*.pyc
+nohup.out
+nohup.out
+_forensics/
+.claude/

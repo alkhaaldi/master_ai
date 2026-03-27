@@ -1,0 +1,546 @@
+[
+  {
+    "q": "مرحبا",
+    "category": "general",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "non_empty"
+  },
+  {
+    "q": "شلونك",
+    "category": "general",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "non_empty"
+  },
+  {
+    "q": "شكرا",
+    "category": "general",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "non_empty",
+    "expects_brief": true
+  },
+  {
+    "q": "شنو تقدر تسوي",
+    "category": "general",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "contains_any:أنوار|مكيف|ستاير|دوام|حالة|أساعدك|أقدر",
+    "expects_detailed": true
+  },
+  {
+    "q": "مع السلامة",
+    "category": "general",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "non_empty",
+    "expects_brief": true
+  },
+  {
+    "q": "شنو حالة أنوار المعيشة",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:شغال|طافي|مطفية|مطفي|on|off|مفتوح|مسكر"
+  },
+  {
+    "q": "كم حرارة مكيف الماستر",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:درجة|°|حرارة|١٦|١٧|١٨|١٩|٢٠|٢١|٢٢|٢٣|٢٤|16|17|18|19|20|21|22|23|24"
+  },
+  {
+    "q": "شنو حالة الأرضي",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "non_empty"
+  },
+  {
+    "q": "شنو الأنوار الشغالة بالبيت",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:نور|أنوار|شغال|مفتوح|light"
+  },
+  {
+    "q": "شنو حرارة كل المكيفات",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:درجة|°|حرارة|معيشة|مطبخ|ماستر"
+  },
+  {
+    "q": "هل باب البيت مقفل",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:مقفل|مفتوح|locked|unlocked|قفل"
+  },
+  {
+    "q": "شنو حالة ستاير المعيشة",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:مفتوح|مسكر|open|closed|ستارة|ستاير"
+  },
+  {
+    "q": "شنو حالة غرفة أمي",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "non_empty"
+  },
+  {
+    "q": "شنو حالة المطبخ",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "non_empty"
+  },
+  {
+    "q": "كم جهاز شغال بالبيت الحين",
+    "category": "ha_query",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:جهاز|أجهزة|شغال|مفتوح|1|2|3|4|5|6|7|8|9|0"
+  },
+  {
+    "q": "شنو دوامي اليوم",
+    "category": "shift",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:صباحي|عصري|ليلي|إجازة|شفت|off|morning|night|afternoon"
+  },
+  {
+    "q": "شنو دوامي باجر",
+    "category": "shift",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:صباحي|عصري|ليلي|إجازة|شفت"
+  },
+  {
+    "q": "شنو دوامي يوم الخميس",
+    "category": "shift",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:صباحي|عصري|ليلي|إجازة|شفت"
+  },
+  {
+    "q": "متى أجازتي الجاية",
+    "category": "shift",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:إجازة|off|يوم|تاريخ"
+  },
+  {
+    "q": "شنو دوامي الأسبوع الجاي",
+    "category": "shift",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:صباحي|عصري|ليلي|إجازة|شفت"
+  },
+  {
+    "q": "كم يوم إجازة عندي هالأسبوع",
+    "category": "shift",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:إجازة|off|يوم|0|1|2|3|4"
+  },
+  {
+    "q": "مين اللي معاي بالدوام اليوم",
+    "category": "shift",
+    "expects_tool": true,
+    "expects_memory": true,
+    "check": "contains_any:شفت|A|سالم|وحدك|لحالك"
+  },
+  {
+    "q": "مين يداوم شفت B اليوم",
+    "category": "shift",
+    "expects_tool": true,
+    "expects_memory": true,
+    "check": "contains_any:خالد|يوسف|العنزي|الجلاهمة"
+  },
+  {
+    "q": "شنو اسم زوجتي",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:Oana|أوانا"
+  },
+  {
+    "q": "شنو اسم ولدي",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:عبود|عبدالله"
+  },
+  {
+    "q": "شنو اسم أمي",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:ناهد"
+  },
+  {
+    "q": "وين أشتغل",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:KNPC|114|هايدروكراكر|Hydrocracker|كي ان بي سي"
+  },
+  {
+    "q": "شنو شفتي",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:A|شفت"
+  },
+  {
+    "q": "شنو إيميلي بالشغل",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:SKK022|knpc"
+  },
+  {
+    "q": "كم سماعة عندي بالبيت",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:4|أربع|بلو|Bluesound"
+  },
+  {
+    "q": "شنو نوع الراوتر عندي",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:BE800|Ruijie|روجي"
+  },
+  {
+    "q": "شنو اسم الطابعة",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:Canon|MF657|كانون"
+  },
+  {
+    "q": "كم كاميرا عندي",
+    "category": "memory",
+    "expects_tool": false,
+    "expects_memory": true,
+    "check": "contains_any:6|10|9|Dahua|Tapo|داهوا|تابو"
+  },
+  {
+    "q": "شنو الجو الحين",
+    "category": "weather",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:درجة|°|حرارة|رطوبة|رياح|حار|بارد"
+  },
+  {
+    "q": "هل بيمطر اليوم",
+    "category": "weather",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:مطر|لا|نعم|إي|صحو|غيوم|rain"
+  },
+  {
+    "q": "شنو آخر شي صار بالبيت",
+    "category": "complex",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "non_empty"
+  },
+  {
+    "q": "الجو حار اليوم؟ وشنو دوامي؟",
+    "category": "complex",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:درجة|حرارة|دوام|شفت"
+  },
+  {
+    "q": "عطني ملخص عن البيت والدوام",
+    "category": "complex",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:بيت|دوام|شفت|أنوار|مكيف|حالة"
+  },
+  {
+    "q": "شنو أسوي لو أبي أطفي كل شي",
+    "category": "complex",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "contains_any:سين|scene|طفي|مغادرة|مشهد"
+  },
+  {
+    "q": "تحليل حالة البيت — أي شي غريب؟",
+    "category": "complex",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "non_empty",
+    "expects_detailed": true
+  },
+  {
+    "q": "شنو حالة السيرفر",
+    "category": "system",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:CPU|RAM|disk|ذاكرة|معالج|حرارة|درجة|تشغيل|uptime"
+  },
+  {
+    "q": "كم مساحة فاضية عالباي",
+    "category": "system",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:GB|MB|%|مساحة|فاضي|available"
+  },
+  {
+    "q": "شنو آخر كوميت",
+    "category": "system",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:commit|git|v7|تحديث"
+  },
+  {
+    "q": "كم ذاكرة منظمة عندك",
+    "category": "system",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "contains_any:ذاكرة|memory|حقيقة|حدث|تصحيح|fact|event"
+  },
+  {
+    "q": "شنو حرارة المعالج",
+    "category": "system",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:°|درجة|حرارة|CPU|temp"
+  },
+  {
+    "q": "شنو الأنوار الشغالة بالأرضي بس",
+    "category": "edge_case",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "non_empty"
+  },
+  {
+    "q": "شغل نور",
+    "category": "edge_case",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "contains_any:أي|وين|غرفة|تقصد|شنو",
+    "_note": "Should ask which light — incomplete command"
+  },
+  {
+    "q": "أبي أعرف إذا عبدالله صاحي",
+    "category": "edge_case",
+    "expects_tool": false,
+    "expects_memory": false,
+    "check": "non_empty",
+    "_note": "Cannot know if baby is awake — should explain limitation"
+  },
+  {
+    "q": "حرارة المكيف",
+    "category": "edge_case",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:أي|مكيف|درجة|حرارة",
+    "_note": "Ambiguous — which AC?"
+  },
+  {
+    "q": "طفي الباركينج",
+    "category": "edge_case",
+    "expects_tool": true,
+    "expects_memory": false,
+    "check": "contains_any:باركينج|parking|طفي|تم|ok",
+    "_note": "Should use correct entity: light.parking_light_switch_1"
+  },
+  {
+    "q": "/cost",
+    "category": "system",
+    "check": "cost|usd|شهر|يوم|ميزانية|budget",
+    "note": "Phase 2: cost tracking via quick_query"
+  },
+  {
+    "q": "/habits",
+    "category": "system",
+    "check": "عاد|نمط|روتين|habit|pattern",
+    "note": "Phase 2: habit learning via quick_query"
+  },
+  {
+    "q": "/anomaly",
+    "category": "system",
+    "check": "طبيعي|تنبيه|anomal",
+    "note": "Phase 2: anomaly detection via quick_query"
+  },
+  {
+    "q": "حرارة المعالج",
+    "category": "system",
+    "check": "CPU|RAM|Temp|Disk",
+    "note": "Phase 2: system info via quick_query"
+  },
+  {
+    "q": "دوامي باجر",
+    "category": "shift",
+    "check": "صباح|عصر|ليل|إجاز|اوف",
+    "note": "Phase 2: expanded shift query"
+  },
+  {
+    "q": "ابحث بالذاكرة عن زوجتي",
+    "category": "memory",
+    "check": "أوانا|Oana|زوج",
+    "note": "Phase 2: Sonnet handles memory search"
+  },
+  {
+    "q": "اكتب لي قصة قصيرة من جملتين عن الكويت",
+    "category": "general",
+    "check": "كويت",
+    "note": "Phase 2: creative task on Sonnet"
+  },
+  {
+    "q": "شنو مهامي",
+    "category": "tasks",
+    "expects_tool": false,
+    "keywords": [
+      "مهام",
+      "task"
+    ]
+  },
+  {
+    "q": "اضف مهمة مراجعة التقرير",
+    "category": "tasks",
+    "expects_tool": false,
+    "keywords": [
+      "اضف",
+      "مهمه",
+      "task"
+    ]
+  },
+  {
+    "q": "خلصت مراجعة التقرير",
+    "category": "tasks",
+    "expects_tool": false,
+    "keywords": [
+      "تمت",
+      "انجاز",
+      "done"
+    ]
+  },
+  {
+    "q": "شنو مهامي اليوم",
+    "category": "tasks",
+    "expects_tool": false,
+    "keywords": [
+      "مهام",
+      "اليوم"
+    ]
+  },
+  {
+    "q": "المهام المتأخرة",
+    "category": "tasks",
+    "expects_tool": false,
+    "keywords": [
+      "متأخره",
+      "overdue"
+    ]
+  },
+  {
+    "q": "شنو عندي اليوم",
+    "category": "calendar",
+    "expects_tool": false,
+    "keywords": [
+      "وردية",
+      "صباحي",
+      "shift"
+    ]
+  },
+  {
+    "q": "شنو عندي باجر",
+    "category": "calendar",
+    "expects_tool": false,
+    "keywords": [
+      "باجر",
+      "غداً",
+      "calendar"
+    ]
+  },
+  {
+    "q": "شنو عندي هالاسبوع",
+    "category": "calendar",
+    "expects_tool": false,
+    "keywords": [
+      "اسبوع",
+      "week"
+    ]
+  },
+  {
+    "q": "مهامي من الايميل",
+    "category": "inbox",
+    "expects_tool": false,
+    "keywords": [
+      "ايميل",
+      "inbox",
+      "مهام"
+    ]
+  },
+  {
+    "q": "وقتي الحر امتى",
+    "category": "shift",
+    "expects_tool": false,
+    "keywords": [
+      "وردية",
+      "shift",
+      "times"
+    ]
+  },
+  {
+    "q": "/me",
+    "category": "system",
+    "expects_tool": false,
+    "keywords": [
+      "وردية",
+      "مهام",
+      "inbox"
+    ]
+  },
+  {
+    "q": "/life",
+    "category": "system",
+    "expects_tool": false,
+    "keywords": [
+      "وردية",
+      "مهام"
+    ]
+  },
+  {
+    "q": "فاضي امتى",
+    "category": "shift",
+    "expects_tool": false,
+    "keywords": [
+      "وردية",
+      "shift"
+    ]
+  },
+  {
+    "q": "ذكرني بشراء حليب",
+    "category": "tasks",
+    "expects_tool": false,
+    "keywords": [
+      "اضف",
+      "مهمه",
+      "حليب"
+    ]
+  },
+  {
+    "q": "كم مهمة عندي",
+    "category": "tasks",
+    "expects_tool": false,
+    "keywords": [
+      "مهام",
+      "task",
+      "active"
+    ]
+  }
+]

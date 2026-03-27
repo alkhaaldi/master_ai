@@ -1,0 +1,198 @@
+  - path: sub-journal
+    title: السجل
+    icon: mdi:book-open-page-variant
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── JOURNAL PULSE ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 16px;
+                  padding: 10px 18px 8px;
+                  margin: 6px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.16);
+                  background: rgba(127,127,127,0.04);
+                  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h2 { font-size: 28px; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px 0; }
+                ha-markdown p { font-size: 13px; font-weight: 500; opacity: 0.85; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              ## السجل
+              {% set j = 'sensor.master_ai_journal' %}
+              {% set ps = state_attr(j,'portfolio_summary') or {} %}
+              {% set s30 = state_attr(j,'stats_30d') or {} %}
+              📂 مفتوحة: <span class="ltr">{{ ps.get('open_count',0) }}</span> · P&L: <span class="ltr" style="color:{% if ps.get('total_net_pnl_kwd',0) >= 0 %}#16A34A{% else %}#DC2626{% endif %}">{% if ps.get('total_net_pnl_kwd',0) >= 0 %}+{% endif %}{{ ps.get('total_net_pnl_kwd',0) }}</span> د.ك · Win: <span class="ltr">{{ (s30.get('win_rate',0) * 100) | round(0) }}%</span> · صفقات 30 يوم: <span class="ltr">{{ s30.get('total_trades',0) }}</span>
+
+          # ── OPEN POSITIONS (detailed KWD P&L) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% set j = 'sensor.master_ai_journal' %}
+                  {% set trades = state_attr(j,'open_positions') or [] %}
+                  {% if trades | length == 0 %}
+                  display: none;
+                  {% else %}
+                  border-radius: 14px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(39,174,96,0.14);
+                  border-right: 4px solid rgba(39,174,96,0.40);
+                  background: rgba(39,174,96,0.04);
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                  {% endif %}
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+                ha-markdown p { font-size: 13px; font-weight: 500; line-height: 1.7; margin: 4px 0; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+                .label { font-size: 12px; font-weight: 600; opacity: 0.72; }
+            content: |
+              {% set j = 'sensor.master_ai_journal' %}
+              {% set trades = state_attr(j,'open_positions') or [] %}
+              {% if trades | length > 0 %}
+              ### صفقات مفتوحة (<span class="ltr">{{ trades | length }}</span>)
+
+              {% for t in trades %}**<span class="ltr">{{ t.symbol }}</span>** {{ t.name_ar | default('') }} · {{ t.direction | default('long') }}
+              <span class="label">الدخول:</span> <span class="ltr">{{ t.entry_price }}</span> فلس × <span class="ltr">{{ t.quantity }}</span>{% if t.pnl is defined and t.pnl %} = <span class="ltr">{{ t.pnl.entry_total_kwd }}</span> د.ك
+              <span class="label">الحالي:</span> <span class="ltr">{{ t.current_price }}</span> فلس = <span class="ltr">{{ t.pnl.current_total_kwd }}</span> د.ك
+              <span class="label">الربح:</span> <span class="ltr" style="color:{% if t.pnl.net_pnl_kwd >= 0 %}#16A34A{% else %}#DC2626{% endif %}">{% if t.pnl.net_pnl_kwd >= 0 %}+{% endif %}{{ t.pnl.net_pnl_kwd }}</span> د.ك (<span class="ltr">{% if t.pnl.net_pnl_pct >= 0 %}+{% endif %}{{ t.pnl.net_pnl_pct }}%</span>) · عمولة: <span class="ltr">{{ t.pnl.total_fees_kwd }}</span> د.ك{% endif %}
+              {{ t.strategy | default('manual') }} · {{ t.entry_date | default('—') }}
+              {% endfor %}
+              {% endif %}
+
+          # ── CLOSED TRADES ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.14);
+                  background: rgba(127,127,127,0.04);
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+                ha-markdown table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+                ha-markdown th { font-size: 12px; font-weight: 700; opacity: 0.8; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,0.18); }
+                ha-markdown td { font-size: 13px; font-weight: 500; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,0.10); }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              {% set j = 'sensor.master_ai_journal' %}
+              {% set closed = state_attr(j,'closed_trades') or [] %}
+              {% if closed | length > 0 %}
+              ### الصفقات المغلقة (<span class="ltr">{{ closed | length }}</span>)
+
+              | الرمز | الدخول | الخروج | P&L د.ك | % | السبب | التاريخ |
+              |:------|------:|------:|--------:|--:|:------|:------:|
+              {% for t in closed[:10] %}| <span class="ltr">{{ t.symbol }}</span> | <span class="ltr">{{ t.entry_price }}</span> | <span class="ltr">{{ t.exit_price }}</span> | <span class="ltr" style="color:{% if (t.pnl.net_pnl_kwd if t.pnl is defined and t.pnl else 0) >= 0 %}#16A34A{% else %}#DC2626{% endif %}">{% if t.pnl is defined and t.pnl %}{% if t.pnl.net_pnl_kwd >= 0 %}+{% endif %}{{ t.pnl.net_pnl_kwd }}{% else %}—{% endif %}</span> | <span class="ltr">{% if t.pnl is defined and t.pnl %}{{ t.pnl.net_pnl_pct }}{% else %}{{ t.pnl_pct | default(0) | round(1) }}{% endif %}</span> | {{ t.exit_reason | default('—') | truncate(12) }} | <span class="ltr">{{ t.exit_date | default('—') }}</span> |
+              {% endfor %}
+              {% else %}
+              ### الصفقات المغلقة
+              لا صفقات مغلقة
+              {% endif %}
+
+          # ── MONTHLY STATS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.14);
+                  background: rgba(127,127,127,0.04);
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+                ha-markdown table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+                ha-markdown th { font-size: 12px; font-weight: 700; opacity: 0.8; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,0.18); }
+                ha-markdown td { font-size: 13px; font-weight: 500; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,0.10); }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              {% set j = 'sensor.master_ai_journal' %}
+              {% set monthly = state_attr(j,'monthly_stats') or [] %}
+              {% if monthly | length > 0 %}
+              ### إحصائيات شهرية
+
+              | الشهر | صفقات | فوز | خسارة | P&L د.ك | Win% |
+              |:------|------:|----:|------:|--------:|-----:|
+              {% for m in monthly %}| <span class="ltr">{{ m.month }}</span> | <span class="ltr">{{ m.total }}</span> | <span class="ltr">{{ m.wins }}</span> | <span class="ltr">{{ m.losses }}</span> | <span class="ltr" style="color:{% if m.total_pnl_kwd >= 0 %}#16A34A{% else %}#DC2626{% endif %}">{% if m.total_pnl_kwd >= 0 %}+{% endif %}{{ m.total_pnl_kwd }}</span> | <span class="ltr">{{ m.win_rate | round(0) }}%</span> |
+              {% endfor %}
+              {% else %}
+              ### إحصائيات شهرية
+              لا بيانات
+              {% endif %}
+
+          # ── BEST/WORST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% set j = 'sensor.master_ai_journal' %}
+                  {% if not state_attr(j,'best_trade') and not state_attr(j,'worst_trade') %}
+                  display: none;
+                  {% else %}
+                  border-radius: 14px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.14);
+                  background: rgba(127,127,127,0.04);
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                  {% endif %}
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+                ha-markdown p { font-size: 13px; font-weight: 500; line-height: 1.6; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              {% set j = 'sensor.master_ai_journal' %}
+              {% set best = state_attr(j,'best_trade') %}
+              {% set worst = state_attr(j,'worst_trade') %}
+              {% if best or worst %}
+              ### أبرز الصفقات (30 يوم)
+
+              {% if best %}🟢 أفضل: **<span class="ltr">{{ best.symbol }}</span>** <span class="ltr" style="color:#16A34A">+{{ best.pnl_pct | round(1) }}%</span>{% endif %}
+
+              {% if worst %}🔴 أسوأ: **<span class="ltr">{{ worst.symbol }}</span>** <span class="ltr" style="color:#DC2626">{{ worst.pnl_pct | round(1) }}%</span>{% endif %}
+              {% endif %}
+
+          # ── JOURNAL NAV ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 6px 16px;
+                  margin: 6px 8px 12px;
+                  border: 1px solid rgba(128,128,128,0.10);
+                  background: rgba(127,127,127,0.02);
+                }
+                ha-markdown { font-size: 14px; direction: rtl; text-align: right; }
+            content: >
+              [التداول](/master-ai-dashboard/sub-radar) · [الإشارات](/master-ai-dashboard/sub-signals) · [الرئيسية](/master-ai-dashboard/0)

@@ -1,0 +1,252 @@
+  # ═══════════════════════════════════════
+  # SUBVIEW: SYSTEM & ASSISTANT (merged)
+  # ═══════════════════════════════════════
+  - path: sub-system-health
+    title: النظام
+    icon: mdi:server
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background:
+                        radial-gradient(circle at top left, rgba(120,255,140,0.16), transparent 24%),
+                        radial-gradient(circle at top right, rgba(60,200,120,0.08), transparent 22%),
+                        linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                      border: 1px solid rgba(120,255,140,0.14);
+                      border-radius: 26px 26px 0 0;
+                      padding: 16px 20px 8px;
+                      margin: 6px 8px 0;
+                      box-shadow: 0 14px 32px rgba(0,0,0,0.30);
+                    }
+                    h2 { font-size: 22px !important; margin: 0 0 2px !important; }
+                    ha-markdown { font-size: 13px; opacity: 0.8; direction: rtl; }
+                content: |
+                  ## النظام والمساعد
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set e = 'sensor.master_ai_extended' %}
+                  v{{ state_attr(d,'version') | default('—') }} · Uptime {{ state_attr(e,'uptime_hours') | float(0) | round(1) }}h · {{ state_attr(e,'git_branch') | default('?') }} · {{ state_attr(e,'git_commit_count') | default('?') }} commits
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(120,255,140,0.06), rgba(60,200,120,0.03));
+                      border: 1px solid rgba(120,255,140,0.10);
+                      border-radius: 0 0 26px 26px;
+                      padding: 8px 20px;
+                      margin: 0 8px 0;
+                    }
+                    ha-markdown { font-size: 14px; line-height: 1.7; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set dm = state_attr(d,'degraded_mode') | default('normal') %}
+                  {% if dm != 'normal' %}⚠️ الوضع: {{ dm }}{% else %}✅ النظام يعمل بشكل طبيعي{% endif %}
+                  · آخر backup: {{ state_attr(d,'last_backup') | default('غير معروف') }}
+
+          # ── 2. RESOURCE CARDS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 13px; }
+                content: |
+                  {% set v = state_attr('sensor.master_ai_extended','cpu') | float(0) %}
+                  {% if v > 80 %}🔴{% elif v > 50 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  CPU
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 13px; }
+                content: |
+                  {% set v = state_attr('sensor.master_ai_extended','memory_pct') | float(0) %}
+                  {% if v > 85 %}🔴{% elif v > 65 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  RAM {{ state_attr('sensor.master_ai_extended','memory_used_mb') | int(0) }}MB
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 13px; }
+                content: |
+                  {% set v = state_attr('sensor.master_ai_extended','disk_pct') | float(0) %}
+                  {% if v > 85 %}🔴{% elif v > 65 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  Disk {{ state_attr('sensor.master_ai_extended','disk_used_gb') | float(0) }}GB
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 13px; }
+                content: |
+                  {% set v = state_attr('sensor.master_ai_extended','temperature') | float(0) %}
+                  {% if v > 75 %}🔴{% elif v > 60 %}🟡{% else %}🟢{% endif %} **{{ v }}°C**
+
+                  حرارة المعالج
+
+          # ── 3. AI STATS (merged from assistant page) ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,100,200,0.05);
+                      border: 1px solid rgba(255,100,200,0.10);
+                      border-radius: 18px;
+                      padding: 10px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 13px; direction: rtl; }
+                content: |
+                  🧠 **{{ state_attr('sensor.master_ai_extended','memory_total') | int(0) }}**
+
+                  ذاكرة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(180,120,255,0.05);
+                      border: 1px solid rgba(180,120,255,0.10);
+                      border-radius: 18px;
+                      padding: 10px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 13px; direction: rtl; }
+                content: |
+                  💬 **{{ state_attr('sensor.master_ai_extended','total_requests') | int(0) }}**
+
+                  طلبات
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(60,200,60,0.05);
+                      border: 1px solid rgba(60,200,60,0.10);
+                      border-radius: 18px;
+                      padding: 10px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 13px; direction: rtl; }
+                content: |
+                  💰 **${{ state_attr('sensor.master_ai_extended','cost_today_usd') | float(0) | round(3) }}**
+
+                  تكلفة اليوم
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 13px; direction: rtl; }
+                content: |
+                  {% set an = state_attr('sensor.master_ai_extended','anomalies_today') | int(0) %}
+                  {% if an > 0 %}⚠️{% else %}✅{% endif %} **{{ an }}**
+
+                  شذوذ
+
+          # ── 4. MEMORY + COST (compact) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.015);
+                  border: 1px solid rgba(255,255,255,0.05);
+                  border-radius: 18px;
+                  padding: 10px 16px;
+                  margin-top: 8px;
+                }
+                ha-markdown { font-size: 12px; direction: rtl; line-height: 1.8; }
+            content: >
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set mem = state_attr(e,'memory_by_type') %}
+              {% if mem %}🧠 أحداث: {{ mem.event | default(0) }} · حقائق: {{ mem.fact | default(0) }} · تصحيحات: {{ mem.correction | default(0) }} · تفضيلات: {{ mem.preference | default(0) }}{% endif %}
+              · 💰 الإجمالي: ${{ state_attr(e,'cost_total_usd') | float(0) | round(2) }}
+
+          # ── 5. GIT LOG (compact) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.01);
+                  border: 1px solid rgba(255,255,255,0.04);
+                  border-radius: 16px;
+                  padding: 8px 16px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 11px; line-height: 1.7; }
+            content: |
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set logs = state_attr(e,'git_log') %}
+              {% if logs and logs | length > 0 %}
+              {% for l in logs[:5] %}`{{ l[:60] }}`
+              {% endfor %}
+              {% else %}
+              No git log
+              {% endif %}
+
+          # ── COMMAND FEEDBACK ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 16px;
+                  padding: 6px 14px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 12px; opacity: 0.85; direction: rtl; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set cmd = state_attr(d,'last_cmd_command') | default('') %}
+              {% if cmd %}
+              {% set st = state_attr(d,'last_cmd_status') | default('?') %}
+              {% if st == 'done' %}✅{% elif st == 'error' %}❌{% elif st == 'timeout' %}⏳{% else %}🔄{% endif %}
+              **{{ cmd }}** @ {{ state_attr(d,'last_cmd_time') | default('') }}
+              · {{ state_attr(d,'last_cmd_result') | default('') | truncate(60) }}
+              {% endif %}
+
+          # ── ACTIONS + NAV ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: button
+                name: الرئيسية
+                icon: mdi:arrow-left
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/master-ai
+                show_state: false
+              - type: button
+                name: Backup
+                icon: mdi:database-arrow-up
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_backup
+                show_state: false
+              - type: button
+                name: Status
+                icon: mdi:refresh
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_status
+                show_state: false

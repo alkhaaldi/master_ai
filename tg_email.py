@@ -22,25 +22,29 @@ _PRIORITY_SENDERS = {"knpc", "kipic", "petrochemical", "maximo", "sap"}
 
 
 def _gmail_service():
-    """Get authenticated Gmail API service."""
+    """Get authenticated Gmail API service (uses unified google_auth_ext)."""
+    try:
+        from google_auth_ext import build_gmail_service
+        svc = build_gmail_service()
+        if svc:
+            return svc
+    except ImportError:
+        pass
+    # Fallback to legacy token
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
     from googleapiclient.discovery import build
-
     creds = None
     if _GMAIL_TOKEN_FILE.exists():
         creds = Credentials.from_authorized_user_file(str(_GMAIL_TOKEN_FILE), _GMAIL_SCOPES)
-    
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
             _GMAIL_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
             _GMAIL_TOKEN_FILE.write_text(creds.to_json())
         else:
-            # Token doesn't exist yet - need OAuth flow via /gmail/auth
-            logger.warning("Gmail token missing - visit /gmail/auth to authenticate")
+            logger.warning("Gmail token missing - visit /google/auth")
             return None
-    
     return build("gmail", "v1", credentials=creds)
 
 

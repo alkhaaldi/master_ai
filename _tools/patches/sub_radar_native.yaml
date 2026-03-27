@@ -1,0 +1,207 @@
+  # ═══════════════════════════════════════
+  # SUBVIEW: TRADING RADAR (Native)
+  # ═══════════════════════════════════════
+  - path: sub-radar
+    title: الرادار
+    icon: mdi:radar
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1) MARKET PULSE ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background:
+                    radial-gradient(circle at top left, rgba(0,180,255,0.14), transparent 22%),
+                    linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(0,180,255,0.12);
+                  border-radius: 28px;
+                  padding: 16px;
+                  margin: 8px 12px 0;
+                  box-shadow: 0 14px 32px rgba(0,0,0,0.30);
+                }
+                ha-markdown { font-size: 15px; }
+            title: Trading Radar
+            content: >
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% if state_attr(d,'market_open') %}🟢 السوق مفتوح{% else %}⚫ السوق مغلق{% endif %}
+              · الرادار {{ 'شغال ✅' if state_attr(r,'radar_enabled') else 'واقف ⏸' }}
+              · {{ state_attr(r,'radar_watch_count') | int(0) }} سهم
+              {% if state_attr(r,'radar_alerts_today') | int(0) > 0 %}· {{ state_attr(r,'radar_alerts_today') }} تنبيه 🔔{% endif %}
+
+          # ── 2) TOP AREA: Decision + Controls ──
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+
+              # 2A) DECISION BOARD
+              - type: vertical-stack
+                cards:
+                  - type: markdown
+                    card_mod:
+                      style: |
+                        ha-card {
+                          background: linear-gradient(135deg, rgba(255,170,0,0.08), rgba(255,200,60,0.03));
+                          border: 1px solid rgba(255,170,0,0.16);
+                          border-radius: 26px;
+                          padding: 14px;
+                          box-shadow: 0 6px 20px rgba(255,170,0,0.06);
+                        }
+                        ha-markdown { font-size: 14px; line-height: 1.9; direction: rtl; }
+                    title: "⭐ أفضل فرص اليوم"
+                    content: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% set sig = state_attr(r,'radar_recent_signals') or [] %}
+                      {% set sig_syms = sig | map(attribute='symbol') | list %}
+                      {% if ctx and ctx | length > 0 %}
+
+                      {% for s in ctx[:3] %}
+                      {% if s.trend == 'صاعد' %}🟢{% elif s.trend == 'هابط' %}🔴{% else %}⚪{% endif %}
+                      **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }} فلس
+                      {% if s.change_pct is not none %}{% if s.change_pct >= 0 %}▲ +{{ s.change_pct | round(1) }}%{% else %}▼ {{ s.change_pct | round(1) }}%{% endif %}{% endif %}
+
+                      ⭐ {{ s.score }}/{{ s.score_class }} · RSI {{ s.rsi | round(0) if s.rsi is not none else '—' }}
+                      {% if s.symbol in sig_syms %}· 📡 إشارة 30m{% endif %}
+                      {% if s.verdict %}· {{ s.verdict[:40] }}{% endif %}
+
+                      {% if not loop.last %}---{% endif %}
+
+                      {% endfor %}
+
+                      {% if state_attr(r,'daily_context_stale') %}⚠️ بيانات قديمة{% endif %}
+
+                      {% else %}
+                      📉 لا توجد بيانات يومية متاحة حالياً
+                      {% endif %}
+
+              # 2B) TRADING CONTROLS
+              - type: vertical-stack
+                cards:
+                  - type: markdown
+                    card_mod:
+                      style: |
+                        ha-card {
+                          background: linear-gradient(180deg, rgba(17,20,28,0.98), rgba(10,12,16,0.99));
+                          border: 1px solid rgba(255,255,255,0.08);
+                          border-radius: 22px;
+                          padding: 10px;
+                        }
+                        ha-markdown { font-size: 13px; text-align: center; }
+                    title: "أوامر التداول"
+                    content: "تنفيذ سريع بدون التلقرام"
+                  - type: grid
+                    columns: 2
+                    square: false
+                    cards:
+                      - type: button
+                        name: الرادار
+                        icon: mdi:radar
+                        tap_action:
+                          action: call-service
+                          service: script.turn_on
+                          target:
+                            entity_id: script.master_ai_radar_toggle
+                        show_state: false
+                      - type: button
+                        name: الأسهم
+                        icon: mdi:chart-bar
+                        tap_action:
+                          action: call-service
+                          service: script.turn_on
+                          target:
+                            entity_id: script.master_ai_stocks
+                        show_state: false
+                      - type: button
+                        name: حالة
+                        icon: mdi:information-outline
+                        tap_action:
+                          action: call-service
+                          service: script.turn_on
+                          target:
+                            entity_id: script.master_ai_radar_status
+                        show_state: false
+                      - type: button
+                        name: أقوى
+                        icon: mdi:trophy
+                        tap_action:
+                          action: call-service
+                          service: script.turn_on
+                          target:
+                            entity_id: script.master_ai_radar_top
+                        show_state: false
+
+          # ── 3) DAILY CONTEXT (4-10) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.015);
+                  border: 1px solid rgba(255,255,255,0.05);
+                  border-radius: 24px;
+                  padding: 12px 14px;
+                  margin: 14px 12px 0;
+                }
+                ha-markdown { font-size: 12.5px; line-height: 1.8; direction: rtl; }
+            title: "بقية السياق اليومي"
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% if ctx and ctx | length > 3 %}
+              {% for s in ctx[3:10] %}
+              {% if s.trend == 'صاعد' %}🟢{% elif s.trend == 'هابط' %}🔴{% else %}⚪{% endif %} **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }} فلس {% if s.change_pct is not none %}{% if s.change_pct >= 0 %}▲+{{ s.change_pct | round(1) }}%{% else %}▼{{ s.change_pct | round(1) }}%{% endif %}{% endif %} · {{ s.score }}/{{ s.score_class }} · RSI {{ s.rsi | round(0) if s.rsi is not none else '—' }}
+              {% endfor %}
+
+              <small>📅 آخر تحديث: {{ (ctx[0].updated_at | string)[:16] if ctx[0].updated_at else '—' }}</small>
+              {% elif ctx and ctx | length > 0 %}
+              <small>كل الأسهم في أفضل فرص اليوم أعلاه</small>
+              {% else %}
+              لا يوجد سياق يومي متاح
+              {% endif %}
+
+          # ── 4) 30m SIGNALS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(0,180,255,0.03);
+                  border: 1px solid rgba(0,180,255,0.06);
+                  border-radius: 20px;
+                  padding: 8px 14px;
+                  margin: 14px 12px 0;
+                }
+                ha-markdown { font-size: 12px; line-height: 1.8; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set signals = state_attr(r,'radar_recent_signals') %}
+              {% if signals and signals | length > 0 %}
+              **📡 إشارات 30m**
+              {% for s in signals %}
+              {% if s.type_ar | default('') == 'صاعد' %}🟢{% else %}🔴{% endif %} **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }}ف · {{ s.time[-5:] if s.time | length > 5 else s.time }} · {{ s.score }}/{{ s.score_class }}
+              {% endfor %}
+              {% else %}
+              📡 لا إشارات 30m حالياً — يتحدث أثناء السوق
+              {% endif %}
+
+          # ── 5) WATCHLIST FOOTER ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: transparent;
+                  padding: 2px 14px;
+                  margin: 6px 12px 18px;
+                }
+                ha-markdown { font-size: 11px; opacity: 0.5; }
+            content: >
+              {% set wl = state_attr('sensor.master_ai_radar','radar_watchlist') %}
+              {% if wl and wl | length > 0 %}
+              المراقبة: {% for s in wl[:12] %}{{ s.name_ar | default(s.symbol) }}{% if not loop.last %} • {% endif %}{% endfor %}
+              {% endif %}
+

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Master AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Kufi+Arabic:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#070D17;--navy-800:#0C1422;--navy-700:#111B2E;--navy-600:#172338;
+  --gold:#C6974B;--gold-dim:#9A7A3E;--gold-bg:rgba(198,151,75,.07);--gold-br:rgba(198,151,75,.25);
+  --green:#34D399;--green-bg:rgba(52,211,153,.07);--green-br:rgba(52,211,153,.3);
+  --red:#F87171;--red-bg:rgba(248,113,113,.07);--red-br:rgba(248,113,113,.3);
+  --amber:#FBBF24;--amber-bg:rgba(251,191,36,.07);--amber-br:rgba(251,191,36,.3);
+  --cyan:#22D3EE;--cyan-bg:rgba(34,211,238,.07);--cyan-br:rgba(34,211,238,.3);
+  --text:#E8EAED;--text-2:#9CA3AF;--text-3:#6B7280;--text-4:#4B5563;
+  --card:rgba(12,20,34,.85);--card-border:rgba(198,151,75,.1);
+  --fd:'Tajawal','Noto Kufi Arabic',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy-900);color:var(--text);font-family:var(--fd);min-height:100vh;overflow-x:hidden}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:var(--navy-800);border-bottom:1px solid var(--card-border);position:sticky;top:0;z-index:50}
+.topbar-brand{font-size:.85rem;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px}
+.topbar-brand .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.topbar-meta{display:flex;align-items:center;gap:12px;font-family:var(--fm);font-size:.65rem;color:var(--text-3)}
+.topbar-clock{color:var(--gold-dim);font-weight:600}
+main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
+.page-title{text-align:center;font-size:1.3rem;font-weight:800;color:var(--text);padding:20px 0 6px}
+.page-title span{color:var(--gold)}
+.page-sub{text-align:center;font-family:var(--fm);font-size:.6rem;color:var(--text-3);margin-bottom:16px}
+.section{margin-bottom:14px}
+.section-hdr{font-size:.72rem;font-weight:700;color:var(--gold-dim);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.pulse-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pulse-chip{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px;text-align:center}
+.pulse-chip .pc-icon{font-size:1.5rem;margin-bottom:4px}
+.pulse-chip .pc-val{font-size:1.2rem;font-weight:800;color:var(--text)}
+.pulse-chip .pc-label{font-size:.6rem;color:var(--text-3);font-weight:600;margin-top:2px}
+.room-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.room-card{background:var(--navy-700);border-radius:8px;padding:10px 12px;border-right:3px solid var(--card-border)}
+.room-card.has-lights{border-right-color:var(--amber)}
+.room-card.has-ac{border-right-color:var(--cyan)}
+.room-card .rm-name{font-size:.72rem;font-weight:700;color:var(--text);margin-bottom:4px}
+.room-card .rm-row{display:flex;gap:10px;font-family:var(--fm);font-size:.58rem;color:var(--text-2);flex-wrap:wrap}
+.empty{color:var(--text-4);font-size:.72rem;text-align:center;padding:16px}
+.nav-bar{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;padding:12px 0}
+.nav-link{font-size:.62rem;padding:5px 10px;border-radius:6px;color:var(--text-3);background:var(--navy-700);border:1px solid var(--card-border);cursor:pointer;transition:.2s;text-decoration:none}
+.nav-link:hover,.nav-link.active{color:var(--gold);border-color:var(--gold-br);background:var(--gold-bg)}
+.footer{text-align:center;font-family:var(--fm);font-size:.5rem;color:var(--text-4);padding:12px;border-top:1px solid var(--card-border);margin-top:20px}
+@media(max-width:500px){main{padding:12px 14px 90px}.room-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-brand"><span class="dot" id="dot"></span>Master AI</div>
+  <div class="topbar-meta"><span class="topbar-clock" id="clock">--:--</span></div>
+</div>
+<main>
+<div class="page-title">&#x1F3E0; <span>&#x0627;&#x0644;&#x0628;&#x064A;&#x062A;</span></div>
+<div class="page-sub" id="page-sub">--</div>
+<div class="section">
+  <div class="pulse-grid">
+    <div class="pulse-chip"><div class="pc-icon">&#x1F4A1;</div><div class="pc-val" id="p-lights">--</div><div class="pc-label">&#x0625;&#x0636;&#x0627;&#x0621;&#x0629; &#x0645;&#x0634;&#x063A;&#x0651;&#x0644;&#x0629;</div></div>
+    <div class="pulse-chip"><div class="pc-icon">&#x2744;&#xFE0F;</div><div class="pc-val" id="p-ac">--</div><div class="pc-label">&#x062A;&#x0643;&#x064A;&#x064A;&#x0641; &#x0645;&#x0634;&#x063A;&#x0651;&#x0644;</div></div>
+    <div class="pulse-chip"><div class="pc-icon">&#x1FA9F;</div><div class="pc-val" id="p-covers">--</div><div class="pc-label">&#x0633;&#x062A;&#x0627;&#x0626;&#x0631; &#x0645;&#x0641;&#x062A;&#x0648;&#x062D;&#x0629;</div></div>
+  </div>
+</div>
+<div class="section">
+  <div class="section-hdr">&#x1F7E2; &#x0627;&#x0644;&#x063A;&#x0631;&#x0641; &#x0627;&#x0644;&#x0646;&#x0634;&#x0637;&#x0629;</div>
+  <div class="room-grid" id="active-rooms"><div class="empty">&#x0644;&#x0627; &#x063A;&#x0631;&#x0641; &#x0646;&#x0634;&#x0637;&#x0629;</div></div>
+</div>
+<div class="section">
+  <div class="section-hdr">&#x1F3D8;&#xFE0F; &#x0643;&#x0644; &#x0627;&#x0644;&#x063A;&#x0631;&#x0641;</div>
+  <div class="room-grid" id="all-rooms"><div class="empty">&#x062C;&#x0627;&#x0631;&#x064A; &#x0627;&#x0644;&#x062A;&#x062D;&#x0645;&#x064A;&#x0644;...</div></div>
+</div>
+<div class="nav-bar">
+  <a class="nav-link" onclick="navTo('/trading/home')">&#x1F3E0; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;</a>
+  <a class="nav-link" onclick="navTo('/trading/radar')">&#x1F4C8; &#x0627;&#x0644;&#x062A;&#x062F;&#x0627;&#x0648;&#x0644;</a>
+  <a class="nav-link" onclick="navTo('/trading/signals')">&#x1F4E1; &#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0627;&#x062A;</a>
+  <a class="nav-link" onclick="navTo('/trading/calendar')">&#x1F4C5; &#x0627;&#x0644;&#x0645;&#x0648;&#x0627;&#x0639;&#x064A;&#x062F;</a>
+  <a class="nav-link active">&#x1F3E0; &#x0627;&#x0644;&#x0628;&#x064A;&#x062A;</a>
+  <a class="nav-link" onclick="navTo('/trading/assistant')">&#x1F916; &#x0627;&#x0644;&#x0645;&#x0633;&#x0627;&#x0639;&#x062F;</a>
+  <a class="nav-link" onclick="navTo('/trading/system')">&#x2699;&#xFE0F; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</a>
+  <a class="nav-link" onclick="navTo('/trading/email')">&#x1F4E7; &#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F;</a>
+  <a class="nav-link" onclick="navTo('/trading/news')">&#x1F4F0; &#x0627;&#x0644;&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</a>
+</div>
+</main>
+<div class="footer" id="footer">&#x0622;&#x062E;&#x0631; &#x062A;&#x062D;&#x062F;&#x064A;&#x062B;: --</div>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function navTo(p){window.location.href=p}
+window.navTo=navTo;
+function tickClock(){const now=new Date();const kwt=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kuwait'}));$('clock').textContent=kwt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+setInterval(tickClock,1000);tickClock();
+function renderRoom(r){
+  const hasL=r.lights_on>0;const hasAC=r.ac_state==='on'||r.ac_state==='cool'||r.ac_state==='heat';
+  const cls=hasL?'has-lights':hasAC?'has-ac':'';
+  let row='<span>\u{1F4A1} '+r.lights_on+'/'+r.lights_total+'</span>';
+  if(r.ac_temp!=null)row+='<span>\u{1F321}\uFE0F '+r.ac_temp+'\u00b0</span>';
+  if(r.ac_state&&r.ac_state!=='off')row+='<span>\u2744\uFE0F '+r.ac_state+' \u2192 '+(r.ac_target||'--')+'\u00b0</span>';
+  if(r.covers_total>0)row+='<span>\u{1FA9F} '+(r.covers_total-r.covers_closed)+'/'+r.covers_total+'</span>';
+  return '<div class="room-card '+cls+'"><div class="rm-name">'+esc(r.room)+'</div><div class="rm-row">'+row+'</div></div>';
+}
+async function load(){
+  let dash=null;
+  try{dash=await fetch('/dashboard').then(r=>r.ok?r.json():null).catch(()=>null)}catch(e){}
+  $('dot').style.background=dash&&dash.api_online!==false?'var(--green)':'var(--red)';
+  if(dash){
+    $('p-lights').textContent=dash.home_lights_on>=0?dash.home_lights_on:'--';
+    $('p-ac').textContent=dash.home_ac_on>=0?dash.home_ac_on:'--';
+    $('p-covers').textContent=dash.home_covers_open>=0?dash.home_covers_open:'--';
+    $('page-sub').textContent=(dash.active_devices_count||0)+' \u062C\u0647\u0627\u0632 \u0646\u0634\u0637';
+    const rooms=dash.rooms_summary||[];
+    const active=rooms.filter(r=>r.lights_on>0||(r.ac_state&&r.ac_state!=='off'));
+    $('active-rooms').innerHTML=active.length?active.map(r=>renderRoom(r)).join(''):'<div class="empty">\u0644\u0627 \u063A\u0631\u0641 \u0646\u0634\u0637\u0629 \u0627\u0644\u062D\u064A\u0646</div>';
+    $('all-rooms').innerHTML=rooms.length?rooms.map(r=>renderRoom(r)).join(''):'<div class="empty">\u0644\u0627 \u0628\u064A\u0627\u0646\u0627\u062A</div>';
+  }
+  const now=new Date();const kwt=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kuwait'}));
+  $('footer').textContent='\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: '+kwt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+load();setInterval(load,60000);
+})();
+</script>
+</body>
+</html>

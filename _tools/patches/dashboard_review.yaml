@@ -1,0 +1,1581 @@
+title: Master AI
+views:
+  - path: master-ai
+    title: Master AI
+    icon: mdi:brain
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. HERO (compact) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(0,170,255,0.10), rgba(0,170,255,0.04));
+                  border: 1px solid rgba(0,170,255,0.12);
+                  border-radius: 18px 18px 0 0;
+                  padding: 10px 16px 6px;
+                  margin: 6px 8px 0;
+                }
+                h2 { font-size: 18px !important; margin: 0 !important; }
+                ha-markdown { font-size: 14px; opacity: 0.8; }
+            content: |
+              ## Master AI
+              {% set d = 'sensor.master_ai_dashboard' %}
+              v{{ state_attr(d,'version') | default('—') }} · Uptime {{ ((state_attr(d,'uptime') | float(0)) / 3600) | round(1) }}h · {% if state_attr(d,'degraded_mode') and state_attr(d,'degraded_mode') != 'normal' %}⚠️ {{ state_attr(d,'degraded_mode') }}{% else %}✅ مستقر{% endif %}
+
+          # ── 2. DECISION CARD ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set asf = state_attr(d,'assistant_surface') %}
+                  {% set urg = '' %}
+                  {% if asf and asf.top_action %}{% set urg = asf.top_action.urgency | default('info') %}{% endif %}
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  {% if urg == 'critical' %}
+                  border-right: 4px solid #e74c3c;
+                  {% elif urg == 'high' %}
+                  border-right: 4px solid #e67e22;
+                  {% elif urg == 'medium' %}
+                  border-right: 4px solid #f1c40f;
+                  {% else %}
+                  border-right: 4px solid #27ae60;
+                  {% endif %}
+                  border-radius: 16px;
+                  padding: 12px 16px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.7; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set asf = state_attr(d,'assistant_surface') %}
+              {% if asf and asf.top_action and asf.top_action.headline %}
+              {% set ta = asf.top_action %}
+              {% set urg = ta.urgency | default('info') %}
+              {% if urg == 'critical' %}🚨{% elif urg == 'high' %}🔴{% elif urg == 'medium' %}🟡{% else %}🟢{% endif %}
+              **{{ ta.headline }}**
+
+              {{ ta.why_now | default('') }}
+              {% if ta.consequence %}
+
+              ⚠️ {{ ta.consequence }}
+              {% endif %}
+              {% if ta.recommendation %}
+
+              💡 {{ ta.recommendation }}
+              {% endif %}
+              {% if ta.primary_action %}
+
+              ⬅️ **{{ ta.primary_action.label | default('') }}**{% if ta.secondary_action %} · {{ ta.secondary_action.label | default('') }}{% endif %}
+              {% endif %}
+              {% if ta.confidence and ta.confidence != 'high' %}
+
+              📊 ثقة: {{ ta.confidence }}
+              {% endif %}
+              {% elif asf and asf.meta and asf.meta.quiet_mode %}
+              ✅ **كل شيء تحت السيطرة** — لا توجد عناصر عاجلة
+              {% else %}
+              🤖 {{ state_attr(d,'ai_insight') | default('جاري التحميل...') }}
+              {% endif %}
+          # ── 2b. NEXT ACTIONS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set asf = state_attr(d,'assistant_surface') %}
+                  {% if not asf or not asf.next_actions or asf.next_actions | length == 0 %}
+                  display: none;
+                  {% else %}
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 16px;
+                  padding: 8px 14px;
+                  margin: 4px 8px 0;
+                  {% endif %}
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.7; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set asf = state_attr(d,'assistant_surface') %}
+              {% if asf and asf.next_actions and asf.next_actions | length > 0 %}
+              {% for item in asf.next_actions[:3] %}
+              {% set urg = item.urgency | default('info') %}
+              {% if urg == 'high' %}🔴{% elif urg == 'medium' %}🟡{% else %}🔵{% endif %}
+              {{ item.headline }}{% if item.why_now %} · {{ item.why_now }}{% endif %}
+
+              {% endfor %}
+              {% endif %}
+          # ── 3. SHIFT + STATUS (shift first & highlighted) ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(0,170,255,0.06);
+                      border: 1px solid rgba(0,170,255,0.14);
+                      border-radius: 18px;
+                      padding: 10px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  🔄 **{{ state_attr(d,'shift_today') | default('—') }}**
+
+                  غداً: {{ state_attr(d,'shift_tomorrow') | default('—') }}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: >
+                  💡{{ state_attr('sensor.master_ai_dashboard','home_lights_on') | int(0) }}
+                  ❄️{{ state_attr('sensor.master_ai_dashboard','home_ac_on') | int(0) }}
+                  🪟{{ state_attr('sensor.master_ai_dashboard','home_covers_open') | int(0) }}
+
+                  نبض البيت
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% if state_attr(d,'market_open') %}🟢 **مفتوح**{% else %}⚫ **مغلق**{% endif %}
+
+                  الرادار {{ '✅' if state_attr(d,'radar_enabled') else '⏸' }}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set ev = state_attr(d,'next_event') | default('') %}
+                  📅 **{{ ev[:16] if ev else 'لا مواعيد' }}**
+
+                  {{ state_attr(d,'events_today') | int(0) }} اليوم
+
+          # ── 3b. QUICK ACTIONS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: button
+                name: التداول
+                icon: mdi:chart-line
+                icon_height: 20px
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-radar
+                show_state: false
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 14px;
+                      padding: 0;
+                      height: 52px;
+                      --mdc-icon-size: 18px;
+                    }
+                    ha-card .button-content {
+                      padding: 4px 0;
+                    }
+                    ha-card .name {
+                      font-size: 11px !important;
+                      margin-top: 0 !important;
+                    }
+              - type: button
+                name: البريد
+                icon: mdi:email-outline
+                icon_height: 20px
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-email
+                show_state: false
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 14px;
+                      padding: 0;
+                      height: 52px;
+                      --mdc-icon-size: 18px;
+                    }
+                    ha-card .button-content {
+                      padding: 4px 0;
+                    }
+                    ha-card .name {
+                      font-size: 11px !important;
+                      margin-top: 0 !important;
+                    }
+              - type: button
+                name: مهمة
+                icon: mdi:plus-circle-outline
+                icon_height: 20px
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-calendar-tasks
+                show_state: false
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 14px;
+                      padding: 0;
+                      height: 52px;
+                      --mdc-icon-size: 18px;
+                    }
+                    ha-card .button-content {
+                      padding: 4px 0;
+                    }
+                    ha-card .name {
+                      font-size: 11px !important;
+                      margin-top: 0 !important;
+                    }
+              - type: button
+                name: الرادار
+                icon: mdi:radar
+                icon_height: 20px
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_radar_toggle
+                show_state: false
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 14px;
+                      padding: 0;
+                      height: 52px;
+                      --mdc-icon-size: 18px;
+                    }
+                    ha-card .button-content {
+                      padding: 4px 0;
+                    }
+                    ha-card .name {
+                      font-size: 11px !important;
+                      margin-top: 0 !important;
+                    }
+
+
+          # ── 4. TOP STOCK TEASER (single best) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(255,170,0,0.06), rgba(255,200,60,0.03));
+                  border: 1px solid rgba(255,170,0,0.12);
+                  border-radius: 18px;
+                  padding: 10px 16px;
+                  margin-top: 8px;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.7; }
+            content: >
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% if ctx and ctx | length > 0 %}
+              {% set s = ctx[0] %}
+              ⭐ **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }}ف {% if s.change_pct is not none %}{% if s.change_pct >= 0 %}🟢 +{{ s.change_pct | round(1) }}%{% else %}🔴 {{ s.change_pct | round(1) }}%{% endif %}{% endif %} · {{ s.score }}/{{ s.score_class }}
+              {% if s.action_ar %} · 💡 {{ s.action_ar }}{% endif %}{% if s.ema_cross == 'bullish' %} · 📈 EMA{% elif s.ema_cross == 'bearish' %} · 📉 EMA{% endif %}
+              {% if ctx | length > 1 %} · +{{ ctx | length - 1 }} أسهم{% endif %}
+              {% else %}
+              📊 لا بيانات — السوق مغلق
+              {% endif %}
+
+          # ── 6. COMMAND FEEDBACK ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 16px;
+                  padding: 6px 14px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.85; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set cmd = state_attr(d,'last_cmd_command') | default('') %}
+              {% if cmd %}
+              {% set st = state_attr(d,'last_cmd_status') | default('?') %}
+              {% if st == 'done' %}✅{% elif st == 'error' %}❌{% elif st == 'timeout' %}⏳{% else %}🔄{% endif %}
+              **{{ cmd }}** @ {{ state_attr(d,'last_cmd_time') | default('') }}
+              · {{ state_attr(d,'last_cmd_result') | default('') | truncate(80) }}
+              {% else %}
+              💬 اضغط أي زر — النتيجة ستظهر هنا
+              {% endif %}
+
+          # ── 7. NAVIGATION (7 in one row) ──
+          - type: grid
+            columns: 6
+            square: false
+            cards:
+              - type: button
+                name: التداول
+                icon: mdi:chart-areaspline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-radar
+                show_state: false
+              - type: button
+                name: المواعيد
+                icon: mdi:calendar-check
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-calendar-tasks
+                show_state: false
+              - type: button
+                name: البيت
+                icon: mdi:home-thermometer-outline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-home
+                show_state: false
+              - type: button
+                name: النظام
+                icon: mdi:server
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-system-health
+                show_state: false
+              - type: button
+                name: البريد
+                icon: mdi:email-outline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-email
+                show_state: false
+              - type: button
+                name: الأخبار
+                icon: mdi:newspaper-variant-outline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-news
+                show_state: false
+
+  - path: sub-radar
+    title: الرادار
+    icon: mdi:radar
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── L1: MARKET PULSE BAR ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(0,170,255,0.10), rgba(0,170,255,0.04));
+                  border: 1px solid rgba(0,170,255,0.12);
+                  border-radius: 18px;
+                  padding: 10px 16px 6px;
+                  margin: 6px 8px 0;
+                }
+                h2 { font-size: 18px !important; margin: 0 !important; }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: |
+              ## منصة التداول
+              {% set r = 'sensor.master_ai_radar' %}{% set d = 'sensor.master_ai_dashboard' %}
+              {% if state_attr(d,'market_open') %}🟢 مفتوح{% else %}⚫ مغلق{% endif %} · الرادار {{ '✅' if state_attr(r,'radar_enabled') else '⏸' }} · {{ state_attr(r,'radar_watch_count') | int(0) }} سهم{% if state_attr(r,'radar_alerts_today') | int(0) > 0 %} · 🔔 {{ state_attr(r,'radar_alerts_today') }}{% endif %}{% set ts = state_attr(d,'top_signal') | default('') %}{% if ts %} · {{ ts }}{% endif %}
+
+
+          # ── STALE DATA WARNING ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% set r = 'sensor.master_ai_radar' %}
+                  {% set ctx = state_attr(r,'radar_daily_context') %}
+                  {% if ctx and ctx | length > 0 and ctx[0].data_age_hours | float(0) > 1 %}
+                  background: rgba(231,76,60,0.08);
+                  border: 2px solid rgba(231,76,60,0.25);
+                  {% else %}
+                  display: none;
+                  {% endif %}
+                  border-radius: 14px;
+                  padding: 8px 14px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; }
+            content: >
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% if ctx and ctx | length > 0 %}
+              {% set age = ctx[0].data_age_hours | float(0) %}
+              {% if age > 1 %}
+              ⚠️ **تحذير:** البيانات قديمة ({{ age | round(1) }} ساعة) — قد لا تعكس الأسعار الحالية
+              {% endif %}
+              {% endif %}
+
+          # ── L2: DECISION CARD (أقوى فرصة) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background:
+                    linear-gradient(135deg, rgba(255,170,0,0.10), rgba(255,200,60,0.04));
+                  border: 2px solid rgba(255,170,0,0.20);
+                  border-radius: 18px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                  box-shadow: 0 4px 16px rgba(255,170,0,0.06);
+                }
+                ha-markdown { font-size: 14px; line-height: 1.9; direction: rtl; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% set sig = state_attr(r,'radar_recent_signals') or [] %}
+              {% set sig_syms = sig | map(attribute='symbol') | list %}
+              {% if ctx and ctx | length > 0 %}
+              {% set s = ctx[0] %}
+              {% if s.score_class == 'A' %}⭐{% elif s.score_class == 'B' %}🔵{% else %}⚪{% endif %} **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }} فلس
+
+              {% if s.change_pct is not none %}{% if s.change_pct >= 0 %}🟢 **▲ +{{ s.change_pct | round(1) }}%**{% else %}🔴 **▼ {{ s.change_pct | round(1) }}%**{% endif %}{% endif %} · تقييم **{{ s.score }}/{{ s.score_class }}** · RSI {{ s.rsi | round(0) if s.rsi is not none else '—' }}
+
+              📊 فريم: {{ s.source_timeframe | default('—') }} · Volume: {% if s.vol_ratio is not none %}×{{ s.vol_ratio | round(1) }}{% else %}—{% endif %}{% if s.symbol in sig_syms %} · 📡 **إشارة 30m**{% endif %}
+
+              {% if s.ema_cross == 'bullish' %}📈 EMA: تقاطع صاعد{% elif s.ema_cross == 'bearish' %}📉 EMA: تقاطع هابط{% else %}➡️ EMA: محايد{% endif %}{% if s.ema_gap_pct is not none %} ({{ s.ema_gap_pct | round(1) }}%){% endif %}
+
+              {% if s.trend == 'صاعد' %}📈 صاعد{% elif s.trend == 'هابط' %}📉 هابط{% else %}➡️ محايد{% endif %}{% if s.verdict %} — {{ s.verdict[:40] }}{% endif %}
+
+              💡 **{{ s.action_ar | default('—') }}**{% if s.support is not none %} · دعم: {{ s.support }}{% endif %}{% if s.resistance is not none %} · مقاومة: {{ s.resistance }}{% endif %}
+              {% else %}
+              📊 لا بيانات يومية — السوق مغلق أو لم يُحدّث
+              {% endif %}
+
+          # ── L3: TOP OPPORTUNITIES (table) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,170,0,0.10);
+                  border-radius: 18px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                }
+                ha-markdown { font-size: 14px; line-height: 1.8; direction: rtl; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% if ctx and ctx | length > 1 %}
+              **📊 نظرة فنية** ({{ ctx | length - 1 }} سهم)
+
+              | السهم | السعر | %Δ | Vol | RSI | EMA | Score | الاتجاه | Action |
+              |:------|------:|---:|----:|:---:|:---:|:-----:|:-------:|:------:|
+              {% for s in ctx[1:] %}| {{ s.name_ar | default(s.symbol) }} | {{ s.price }} | {% if s.change_pct is not none %}{{ s.change_pct | round(1) }}{% else %}—{% endif %} | {% if s.vol_ratio is not none %}×{{ s.vol_ratio | round(1) }}{% else %}—{% endif %} | {{ s.rsi | round(0) | int if s.rsi is not none else '—' }} | {% if s.ema_cross == 'bullish' %}📈{% elif s.ema_cross == 'bearish' %}📉{% else %}➡️{% endif %} | {{ s.score }}/{{ s.score_class }} | {% if s.trend == 'صاعد' %}📈{% elif s.trend == 'هابط' %}📉{% else %}➡️{% endif %} | {{ s.action_ar | default('—') }} |
+              {% endfor %}
+              {% else %}
+              📊 لا بيانات
+              {% endif %}
+
+          # ── L5: 30m SIGNAL FLASH (table) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(0,170,255,0.04);
+                  border: 1px solid rgba(0,170,255,0.10);
+                  border-radius: 16px;
+                  padding: 10px 16px;
+                  margin: 10px 8px 0;
+                }
+                ha-markdown { font-size: 14px; line-height: 1.9; direction: rtl; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set signals = state_attr(r,'radar_recent_signals') %}
+              {% if signals and signals | length > 0 %}
+              **📡 إشارات 30m** ({{ signals | length }})
+
+              | السهم | السعر | الوقت | النوع | Score | القوة |
+              |:------|------:|:-----:|:-----:|:-----:|:-----:|
+              {% for s in signals[:5] %}| {{ s.name_ar | default(s.symbol) }} | {{ s.price }}ف | {{ s.time[-5:] if s.time | length > 5 else s.time }} | {% if s.type_ar | default('') == 'صاعد' %}🟢{% else %}🔴{% endif %} | {{ s.score }}/{{ s.score_class }} | {{ s.strength | default('—') }} |
+              {% endfor %}
+              {% endif %}
+
+
+
+          # ── WATCHLIST GRID (table) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.04);
+                  border-radius: 16px;
+                  padding: 10px 16px;
+                  margin: 8px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: |
+              {% set wl = state_attr('sensor.master_ai_radar','radar_watchlist') %}
+              {% if wl and wl | length > 0 %}
+              **🔍 المراقبة** ({{ wl | length }} سهم)
+
+              | السهم | السعر | %Δ | الفريم | السبب |
+              |:------|------:|---:|:------:|:------|
+              {% for s in wl[:12] %}| {{ s.name_ar | default(s.symbol) }} | {{ s.price | default('—') }} | {% if s.change_pct is not none %}{{ s.change_pct | round(1) }}%{% else %}—{% endif %} | {{ s.timeframe | default('—') }} | {{ s.watch_reason | default('مراقبة') }} |
+              {% endfor %}
+              {% endif %}
+
+          # ── JOURNAL: OPEN POSITIONS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(39,174,96,0.04);
+                  border: 1px solid rgba(39,174,96,0.10);
+                  border-right: 3px solid rgba(39,174,96,0.30);
+                  border-radius: 0;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set trades = state_attr(r,'journal_open') %}
+              {% set stats = state_attr(r,'journal_stats') %}
+              {% if trades and trades | length > 0 %}
+              **📂 صفقات مفتوحة** ({{ trades | length }})
+
+              | السهم | الدخول | الكمية | السبب | الاستراتيجية |
+              |:------|------:|------:|:------|:------------|
+              {% for t in trades %}| {{ t.name_ar | default(t.symbol) }} | {{ t.entry_price }} | {{ t.quantity }} | {{ t.entry_reason[:20] | default('—') }} | {{ t.strategy | default('—') }} |
+              {% endfor %}
+
+              {% if stats %}
+              📊 آخر 30 يوم: {{ stats.total_trades | default(0) }} صفقة · {{ (stats.win_rate | default(0) * 100) | round(0) }}% فوز · {{ stats.total_pnl_fils | default(0) | round(0) }} فلس P&L
+              {% endif %}
+              {% else %}
+              📂 لا صفقات مفتوحة — استخدم /trade لفتح صفقة
+              {% endif %}
+
+          # ── L7: DIAGNOSTICS FOOTER ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.01);
+                  border: 1px solid rgba(255,255,255,0.03);
+                  border-radius: 14px;
+                  padding: 6px 16px;
+                  margin: 6px 8px 12px;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.6; direction: rtl; }
+            content: >
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% set reason = state_attr(r,'daily_context_reason') | default('') %}
+              {% set stale = state_attr(r,'daily_context_stale') %}
+              {% if ctx and ctx | length > 0 %}
+              {% set age = ctx[0].data_age_hours | float(0) %}
+              📅 آخر تحديث: {{ (ctx[0].updated_at | string)[:16] }}
+              · {% if age < 2 %}🟢 طازج{% elif age < 6 %}🟡 {{ age | round(1) }}h{% else %}🔴 قديم {{ age | round(1) }}h{% endif %}
+              {% endif %}
+              {% if stale %}· ⚠️ بيانات قديمة{% endif %}
+              {% if reason and reason != 'ok' %}· {{ reason }}{% endif %}
+
+
+          # ── COMMAND FEEDBACK ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 16px;
+                  padding: 6px 14px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set cmd = state_attr(d,'last_cmd_command') | default('') %}
+              {% if cmd %}
+              {% set st = state_attr(d,'last_cmd_status') | default('?') %}
+              {% if st == 'done' %}\u2705{% elif st == 'error' %}\u274c{% elif st == 'timeout' %}\u23f3{% else %}\U0001f504{% endif %}
+              **{{ cmd }}** @ {{ state_attr(d,'last_cmd_time') | default('') }}
+              \u00b7 {{ state_attr(d,'last_cmd_result') | default('') | truncate(60) }}
+              {% endif %}
+
+
+  # ═══════════════════════════════════════
+  - path: sub-calendar-tasks
+    title: التقويم والمهام
+    icon: mdi:calendar-check
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(180,120,255,0.10), rgba(180,120,255,0.04));
+                  border: 1px solid rgba(180,120,255,0.12);
+                  border-radius: 18px;
+                  padding: 10px 16px 6px;
+                  margin: 6px 8px 0;
+                }
+                h2 { font-size: 18px !important; margin: 0 !important; }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: |
+              ## التقويم والمهام
+              {% set d = 'sensor.master_ai_dashboard' %}
+              📅 {{ state_attr(d,'events_today') | int(0) }} مواعيد · 📋 {{ state_attr(d,'tasks_open') | int(0) }} مهمة · 🔄 {{ state_attr(d,'shift_today') | default('–') }}{% set ne = state_attr(d,'next_event') | default('') %}{% if ne %} · ⏰ {{ ne[:25] }}{% endif %}
+
+          # ── 2. QUICK STATS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(180,120,255,0.06);
+                      border: 1px solid rgba(180,120,255,0.12);
+                      border-radius: 16px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  📅 **{{ state_attr('sensor.master_ai_dashboard','events_today') | int(0) }}**
+
+                  مواعيد
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,180,60,0.06);
+                      border: 1px solid rgba(255,180,60,0.12);
+                      border-radius: 16px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  📋 **{{ state_attr('sensor.master_ai_dashboard','tasks_open') | int(0) }}**
+
+                  مفتوحة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(231,76,60,0.06);
+                      border: 1px solid rgba(231,76,60,0.12);
+                      border-radius: 16px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🔴 **{{ state_attr('sensor.master_ai_dashboard','tasks_high') | int(0) }}**
+
+                  عاجلة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(39,174,96,0.06);
+                      border: 1px solid rgba(39,174,96,0.12);
+                      border-radius: 16px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  ✅ **{{ state_attr('sensor.master_ai_extended','tasks_done_today') | int(0) }}**
+
+                  منجزة
+
+          # ── 3. EVENTS LIST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(24,20,34,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(180,120,255,0.12);
+                  border-radius: 18px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: |
+              ### المواعيد القادمة
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set evts = state_attr(e,'events_list') %}
+              {% if evts and evts | length > 0 %}
+              {% for ev in evts %}
+              **{{ ev.summary }}**
+              📅 {{ ev.start_ts[:16] if ev.start_ts else '—' }}{% if ev.location %} · 📍 {{ ev.location }}{% endif %}
+
+              ---
+
+              {% endfor %}
+              {% else %}
+              ✅ لا مواعيد قريبة — وقتك متاح
+              {% endif %}
+
+          # ── 4. TASKS LIST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(28,24,16,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(255,180,60,0.12);
+                  border-radius: 18px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: |
+              ### المهام المفتوحة
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set tasks = state_attr(e,'tasks_list') %}
+              {% if tasks and tasks | length > 0 %}
+              | المهمة | الأولوية | التصنيف | الموعد |
+              |:---|:---:|:---:|:---:|
+              {% for t in tasks %}
+              | {{ t.title[:30] }} | {% if t.priority == 0 %}🔴{% elif t.priority == 1 %}🟠{% elif t.priority == 2 %}🟡{% else %}⚪{% endif %} | {{ t.category | default('—') }} | {{ t.due_date[:10] if t.due_date else '—' }} |
+              {% endfor %}
+              {% else %}
+              ✅ جدولك واضح — لا مهام مفتوحة
+              {% endif %}
+
+          # ── 5. SHIFT SCHEDULE ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 18px;
+                  padding: 12px 16px;
+                  margin-top: 10px;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; line-height: 1.8; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set e = 'sensor.master_ai_extended' %}
+              🔄 **اليوم:** {{ state_attr(d,'shift_today') | default('—') }} — **غداً:** {{ state_attr(d,'shift_tomorrow') | default('—') }}
+
+              {% set week = state_attr(e,'shift_week') %}
+              {% if week and week | length > 0 %}
+              {% for day in week %}
+              {% if day.date == now().strftime('%Y-%m-%d') %}**{{ day.emoji }} {{ day.day }} ({{ day.date[-5:] }}) — {{ day.shift }}** ◀️{% else %}{{ day.emoji }} {{ day.day }} ({{ day.date[-5:] }}) — {{ day.shift }}{% endif %}
+              {% endfor %}
+              {% endif %}
+
+
+          # ── COMMAND FEEDBACK ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 16px;
+                  padding: 6px 14px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set cmd = state_attr(d,'last_cmd_command') | default('') %}
+              {% if cmd %}
+              {% set st = state_attr(d,'last_cmd_status') | default('?') %}
+              {% if st == 'done' %}\u2705{% elif st == 'error' %}\u274c{% elif st == 'timeout' %}\u23f3{% else %}\U0001f504{% endif %}
+              **{{ cmd }}** @ {{ state_attr(d,'last_cmd_time') | default('') }}
+              \u00b7 {{ state_attr(d,'last_cmd_result') | default('') | truncate(60) }}
+              {% endif %}
+
+
+  # ===================================
+  - path: sub-home
+    title: البيت
+    icon: mdi:home-thermometer-outline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(255,160,60,0.10), rgba(255,160,60,0.04));
+                  border: 1px solid rgba(255,160,60,0.12);
+                  border-radius: 18px;
+                  padding: 10px 16px 6px;
+                  margin: 6px 8px 0;
+                }
+                h2 { font-size: 18px !important; margin: 0 !important; }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: |
+              ## نبض البيت
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set lo = state_attr(d,'home_lights_on') | int(0) %}{% set ac = state_attr(d,'home_ac_on') | int(0) %}{% set co = state_attr(d,'home_covers_open') | int(0) %}
+              {{ lo }} نور · {{ ac }} مكيف · {{ co }} ستارة{% set avg = states('sensor.ac_house_avg_temperature') | float(0) %}{% if avg > 0 %} · 🌡️ {{ avg | round(1) }}°C{% if avg > 24 %} حار{% elif avg < 20 %} بارد{% endif %}{% endif %}
+
+          # ── 2. TEMPERATURE CARDS ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(255,170,0,0.08), rgba(255,170,0,0.04));
+                      border: 1px solid rgba(255,170,0,0.14);
+                      border-radius: 16px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🌡️ **{{ states('sensor.ac_house_avg_temperature') | float(0) | round(1) }}°C**
+
+                  متوسط البيت
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(231,76,60,0.08), rgba(231,76,60,0.04));
+                      border: 1px solid rgba(231,76,60,0.14);
+                      border-radius: 16px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🔥 **{{ states('sensor.ac_hottest_room') }}**
+
+                  أحر غرفة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(0,170,255,0.08), rgba(0,170,255,0.04));
+                      border: 1px solid rgba(0,170,255,0.14);
+                      border-radius: 16px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  ❄️ **{{ states('sensor.ac_coldest_room') }}**
+
+                  أبرد غرفة
+
+          # ── 3. LIVE STATUS COUNTERS ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,200,60,0.06);
+                      border: 1px solid rgba(255,200,60,0.12);
+                      border-radius: 16px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  💡 **{{ state_attr('sensor.master_ai_dashboard','home_lights_on') | int(0) }}**
+
+                  أنوار شغالة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(0,170,255,0.06);
+                      border: 1px solid rgba(0,170,255,0.12);
+                      border-radius: 16px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  ❄️ **{{ state_attr('sensor.master_ai_dashboard','home_ac_on') | int(0) }}**
+
+                  مكيفات شغالة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,160,60,0.06);
+                      border: 1px solid rgba(255,160,60,0.12);
+                      border-radius: 16px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🪟 **{{ state_attr('sensor.master_ai_dashboard','home_covers_open') | int(0) }}**
+
+                  ستائر مفتوحة
+
+
+
+          # ── 4B. ROOMS GRID ──
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,160,60,0.04);
+                      border: 1px solid rgba(255,160,60,0.10);
+                      border-radius: 16px;
+                      padding: 10px 12px;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; line-height: 2.0; }
+                content: |
+                  **🔥 غرف فعالة**
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set rooms = state_attr(d, 'rooms_summary') %}
+                  {% if rooms %}
+                  {% set ns = namespace(found=false) %}
+                  {% for r in rooms %}
+                  {% set lo = r.lights_on | int(0) %}
+                  {% set ac = r.ac_state | default('off') %}
+                  {% set tp = r.ac_temp %}
+                  {% if lo > 0 or ac != 'off' %}
+                  {% set ns.found = true %}
+                  {{ r.room }}{% if lo > 0 %} 💡{{ lo }}{% endif %}{% if ac != 'off' %} ❄️{% endif %}{% if tp %} {{ tp | round(0) | int }}°{% endif %}
+                  {% endif %}
+                  {% endfor %}
+                  {% if not ns.found %}
+                  ✅ كل الغرف هادية
+                  {% endif %}
+                  {% else %}📊 لا بيانات متاحة{% endif %}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(0,170,255,0.04);
+                      border: 1px solid rgba(0,170,255,0.10);
+                      border-radius: 16px;
+                      padding: 10px 12px;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; line-height: 2.0; }
+                content: |
+                  **🌡️ حرارة وستائر**
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set rooms = state_attr(d, 'rooms_summary') %}
+                  {% if rooms %}
+                  {% set ns = namespace(found=false) %}
+                  {% for r in rooms %}
+                  {% set tp = r.ac_temp %}
+                  {% set ct = r.covers_total | int(0) %}
+                  {% set cc = r.covers_closed | int(0) %}
+                  {% if tp or ct > 0 %}
+                  {% set ns.found = true %}
+                  {{ r.room }}{% if tp %} {{ tp | round(0) | int }}°{% endif %}{% if ct > 0 %} 🪩{{ cc }}/{{ ct }}{% endif %}
+                  {% endif %}
+                  {% endfor %}
+                  {% if not ns.found %}
+                  🌡️ لا حرارة أو ستائر مسجلة
+                  {% endif %}
+                  {% else %}📊 لا بيانات متاحة{% endif %}
+          # ── 5. ALERTS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 18px;
+                  padding: 10px 16px;
+                  margin-top: 8px;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; line-height: 1.8; }
+            content: >
+              {% set avg = states('sensor.ac_house_avg_temperature') | float(0) %}
+              {% set co = state_attr('sensor.master_ai_dashboard','home_covers_open') | int(0) %}
+              {% set now_h = now().hour %}
+              {% set alerts = [] %}
+              {% if avg > 25 %}{% set alerts = alerts + ['🔥 الحرارة عالية: ' ~ avg | round(1) ~ '°C'] %}{% endif %}
+              {% if co > 0 and (now_h >= 23 or now_h < 5) %}{% set alerts = alerts + ['🪟 ' ~ co | string ~ ' ستارة مفتوحة بالليل'] %}{% endif %}
+              {% if alerts | length > 0 %}
+              ⚠️ **تنبيهات**
+
+              {% for a in alerts %}{{ a }}
+              {% endfor %}
+              {% else %}
+              ✅ لا توجد تنبيهات — البيت مستقر
+              {% endif %}
+
+  # ===================================
+  # SUBVIEW: ASSISTANT
+  # ===================================
+  # SUBVIEW: ASSISTANT
+  # ═══════════════════════════════════════
+  - path: sub-system-health
+    title: النظام
+    icon: mdi:server
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(39,174,96,0.10), rgba(39,174,96,0.04));
+                  border: 1px solid rgba(39,174,96,0.12);
+                  border-radius: 18px;
+                  padding: 10px 16px 6px;
+                  margin: 6px 8px 0;
+                }
+                h2 { font-size: 18px !important; margin: 0 !important; }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: |
+              ## النظام والمساعد
+              {% set d = 'sensor.master_ai_dashboard' %}{% set e = 'sensor.master_ai_extended' %}
+              v{{ state_attr(d,'version') | default('–') }} · {{ state_attr(e,'uptime_hours') | float(0) | round(1) }}h · {{ state_attr(e,'git_branch') | default('?') }}/{{ state_attr(e,'git_commit_count') | default('?') }}{% set dm = state_attr(d,'degraded_mode') | default('normal') %}{% if dm != 'normal' %} · ⚠️ {{ dm }}{% else %} · ✅{% endif %}
+
+          # ── 2. RESOURCE CARDS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 14px; }
+                content: |
+                  {% set v = state_attr('sensor.master_ai_extended','cpu') | float(0) %}
+                  {% if v > 80 %}🔴{% elif v > 50 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  CPU
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 14px; }
+                content: |
+                  {% set v = state_attr('sensor.master_ai_extended','memory_pct') | float(0) %}
+                  {% if v > 85 %}🔴{% elif v > 65 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  RAM {{ state_attr('sensor.master_ai_extended','memory_used_mb') | int(0) }}MB
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 14px; }
+                content: |
+                  {% set v = state_attr('sensor.master_ai_extended','disk_pct') | float(0) %}
+                  {% if v > 85 %}🔴{% elif v > 65 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  Disk {{ state_attr('sensor.master_ai_extended','disk_used_gb') | float(0) }}GB
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 14px; }
+                content: |
+                  {% set v = state_attr('sensor.master_ai_extended','temperature') | float(0) %}
+                  {% if v > 75 %}🔴{% elif v > 60 %}🟡{% else %}🟢{% endif %} **{{ v }}°C**
+
+                  حرارة المعالج
+
+          # ── 3. AI STATS (merged from assistant page) ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(180,120,255,0.05);
+                      border: 1px solid rgba(180,120,255,0.10);
+                      border-radius: 18px;
+                      padding: 10px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🧠 **{{ state_attr('sensor.master_ai_extended','memory_total') | int(0) }}**
+
+                  ذاكرة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(180,120,255,0.05);
+                      border: 1px solid rgba(180,120,255,0.10);
+                      border-radius: 18px;
+                      padding: 10px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  💬 **{{ state_attr('sensor.master_ai_extended','total_requests') | int(0) }}**
+
+                  طلبات
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(39,174,96,0.05);
+                      border: 1px solid rgba(39,174,96,0.10);
+                      border-radius: 18px;
+                      padding: 10px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  💰 **${{ state_attr('sensor.master_ai_extended','cost_today_usd') | float(0) | round(3) }}**
+
+                  تكلفة اليوم
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  {% set an = state_attr('sensor.master_ai_extended','anomalies_today') | int(0) %}
+                  {% if an > 0 %}⚠️{% else %}✅{% endif %} **{{ an }}**
+
+                  شذوذ
+
+          # ── 4. MEMORY + COST (compact) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.05);
+                  border-radius: 18px;
+                  padding: 10px 16px;
+                  margin-top: 8px;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: >
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set mem = state_attr(e,'memory_by_type') %}
+              {% if mem %}🧠 أحداث: {{ mem.event | default(0) }} · حقائق: {{ mem.fact | default(0) }} · تصحيحات: {{ mem.correction | default(0) }} · تفضيلات: {{ mem.preference | default(0) }}{% endif %}
+              · 💰 الإجمالي: ${{ state_attr(e,'cost_total_usd') | float(0) | round(2) }}
+
+
+          # ── COMMAND FEEDBACK ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 16px;
+                  padding: 6px 14px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set cmd = state_attr(d,'last_cmd_command') | default('') %}
+              {% if cmd %}
+              {% set st = state_attr(d,'last_cmd_status') | default('?') %}
+              {% if st == 'done' %}✅{% elif st == 'error' %}❌{% elif st == 'timeout' %}⏳{% else %}🔄{% endif %}
+              **{{ cmd }}** @ {{ state_attr(d,'last_cmd_time') | default('') }}
+              · {{ state_attr(d,'last_cmd_result') | default('') | truncate(60) }}
+              {% endif %}
+
+
+  # ═══ EMAIL PAGE ═══
+  - path: sub-email
+    title: البريد
+    icon: mdi:email-outline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(0,170,255,0.10), rgba(0,170,255,0.04));
+                  border: 1px solid rgba(0,170,255,0.12);
+                  border-radius: 18px;
+                  padding: 10px 16px 6px;
+                  margin: 6px 8px 0;
+                }
+                h2 { font-size: 18px !important; margin: 0 !important; }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: |
+              ## البريد
+              {% set e = 'sensor.master_ai_extended' %}
+              📨 {{ state_attr(e,'email_total') | default(0) }} رسالة · {{ state_attr(e,'email_unread') | default(0) }} غير مقروءة{% set cr = state_attr(e,'email_critical') | int(0) %}{% set hi = state_attr(e,'email_high') | int(0) %}{% if cr > 0 %} · 🔴 {{ cr }} عاجلة{% elif hi > 0 %} · 🟠 {{ hi }} مهمة{% else %} · ✅{% endif %}
+
+          # ── 2. STATS CARDS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(0,170,255,0.06);
+                      border: 1px solid rgba(0,170,255,0.12);
+                      border-radius: 16px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  📨 **{{ state_attr('sensor.master_ai_extended','email_total') | default(0) }}**
+
+                  إجمالي
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,170,0,0.06);
+                      border: 1px solid rgba(255,170,0,0.12);
+                      border-radius: 16px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  📬 **{{ state_attr('sensor.master_ai_extended','email_unread') | default(0) }}**
+
+                  غير مقروء
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(231,76,60,0.06);
+                      border: 1px solid rgba(231,76,60,0.12);
+                      border-radius: 16px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🔴 **{{ state_attr('sensor.master_ai_extended','email_critical') | default(0) }}**
+
+                  عاجل
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,170,0,0.06);
+                      border: 1px solid rgba(255,170,0,0.12);
+                      border-radius: 16px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🟠 **{{ state_attr('sensor.master_ai_extended','email_high') | default(0) }}**
+
+                  مهم
+
+          # ── 3. MESSAGES LIST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(17,24,34,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(0,170,255,0.10);
+                  border-radius: 18px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: |
+              ### الرسائل — آخر 24 ساعة
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set msgs = state_attr(e,'email_messages') %}
+              {% if msgs and msgs | length > 0 %}
+              {% for m in msgs %}
+              {%- set pri = m.priority | default(1) -%}
+              {%- if pri == 4 -%}{%- set clr = '#e74c3c' -%}{%- set bg = 'rgba(231,76,60,0.08)' -%}
+              {%- elif pri == 3 -%}{%- set clr = '#f39c12' -%}{%- set bg = 'rgba(243,156,18,0.06)' -%}
+              {%- elif pri == 2 -%}{%- set clr = '#ffd600' -%}{%- set bg = 'transparent' -%}
+              {%- else -%}{%- set clr = '#27ae60' -%}{%- set bg = 'transparent' -%}
+              {%- endif -%}
+              <div style="border-right: 3px solid {{ clr }}; background: {{ bg }}; border-radius: 8px; padding: 6px 10px 6px 0; margin-bottom: 4px;">
+
+              {{ m.priority_label }} **{{ m['from'] }}** · {{ m.source_label }}
+
+              {% if pri >= 3 %}**{{ m.subject }}**{% else %}{{ m.subject }}{% endif %}{% if m.time %} ⏰ {{ m.time }}{% endif %}
+
+              </div>
+
+              {% endfor %}
+              {% else %}
+              ✅ صندوقك فاضي — لا رسائل جديدة
+              {% endif %}
+
+
+          # ── COMMAND FEEDBACK ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 16px;
+                  padding: 6px 14px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set cmd = state_attr(d,'last_cmd_command') | default('') %}
+              {% if cmd %}
+              {% set st = state_attr(d,'last_cmd_status') | default('?') %}
+              {% if st == 'done' %}\u2705{% elif st == 'error' %}\u274c{% elif st == 'timeout' %}\u23f3{% else %}\U0001f504{% endif %}
+              **{{ cmd }}** @ {{ state_attr(d,'last_cmd_time') | default('') }}
+              \u00b7 {{ state_attr(d,'last_cmd_result') | default('') | truncate(60) }}
+              {% endif %}
+
+
+  # ═══ NEWS PAGE (compact) ═══
+  - path: sub-news
+    title: الأخبار
+    icon: mdi:newspaper-variant-outline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── HERO (smart counter) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(255,200,60,0.10), rgba(255,200,60,0.04));
+                  border: 1px solid rgba(255,200,60,0.12);
+                  border-radius: 18px;
+                  padding: 10px 16px 6px;
+                  margin: 6px 8px 0;
+                }
+                h2 { font-size: 18px !important; margin: 0 !important; }
+                ha-markdown { font-size: 14px; opacity: 0.85; direction: rtl; }
+            content: |
+              ## الأخبار
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d %}
+              {% set urgent_count = d.urgent.split('\n') | reject('eq','') | list | length if d.urgent else 0 %}
+              {% set econ_count = d.economic.split('\n') | reject('eq','') | list | length if d.economic else 0 %}
+              {% set local_count = d.local.split('\n') | reject('eq','') | list | length if d.local else 0 %}
+              {% set tech_count = d.tech.split('\n') | reject('eq','') | list | length if d.tech else 0 %}
+              {% set ai_count = d.ai.split('\n') | reject('eq','') | list | length if d.ai is defined and d.ai else 0 %}
+              {% set gadget_count = d.gadgets.split('\n') | reject('eq','') | list | length if d.gadgets is defined and d.gadgets else 0 %}
+              {% if urgent_count > 0 %}🔴 {{ urgent_count }} عاجل{% endif %}{% if econ_count > 0 %} · 💰 {{ econ_count }} اقتصادي{% endif %}{% if local_count > 0 %} · 🇰🇼 {{ local_count }} محلي{% endif %}{% if tech_count > 0 %} · 💻 {{ tech_count }} تقني{% endif %}{% if ai_count > 0 %} · 🤖 {{ ai_count }} AI{% endif %}{% if gadget_count > 0 %} · 📱 {{ gadget_count }} أجهزة{% endif %} · 📰 {{ d.item_count | default(0) }} خبر · {{ d.date | default('') }}
+              {% set created = d.created_at | default('') %}
+              {% if created %}
+              {% set hours_ago = ((as_timestamp(now()) - as_timestamp(created)) / 3600) | round(1) %}
+              {% if hours_ago > 12 %}
+
+              🔴 **قديمة** — آخر تحديث قبل {{ hours_ago | round(0) | int }} ساعة
+              {% elif hours_ago > 6 %}
+
+              🟡 آخر تحيث قبل {{ hours_ago | round(0) | int }} ساعة
+              {% endif %}
+              {% endif %}
+              {% else %}
+              📰 لا أخبار — استخدم /news_now
+              {% endif %}
+
+          # ── URGENT / IMPORTANT NEWS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(231,76,60,0.04);
+                  border: 1px solid rgba(231,76,60,0.10);
+                  border-right: 3px solid rgba(231,76,60,0.30);
+                  border-radius: 16px;
+                  padding: 12px 16px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 2.0; }
+            content: |
+              **🔥 أخبار عاجلة**
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.urgent %}
+              {{ d.urgent }}
+              {% else %}
+              ✅ لا أخبار عاجلة
+              {% endif %}
+
+          # ── ECONOMY & MARKETS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,170,0,0.04);
+                  border: 1px solid rgba(255,170,0,0.10);
+                  border-right: 3px solid rgba(255,170,0,0.30);
+                  border-radius: 16px;
+                  padding: 12px 16px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 2.0; }
+            content: |
+              **💰 اقتصاد وأسواق**
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.economic %}
+              {{ d.economic }}
+              {% else %}
+              📊 لا أخبار اقتصادية
+              {% endif %}
+
+          # ── TECH & OTHER ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(0,170,255,0.04);
+                  border: 1px solid rgba(0,170,255,0.10);
+                  border-right: 3px solid rgba(0,170,255,0.30);
+                  border-radius: 16px;
+                  padding: 12px 16px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 2.0; }
+            content: |
+              **⚡ تقنية ومتفرقات**
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.tech %}
+              {{ d.tech }}
+              {% endif %}
+              {% if d and d.other %}
+              {{ d.other }}
+              {% endif %}
+              {% if not (d and (d.tech or d.other)) %}
+              ⚡ لا أخبار تقنية
+              {% endif %}
+
+          # ── 🤖 AI NEWS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(180,120,255,0.04);
+                  border: 1px solid rgba(180,120,255,0.10);
+                  border-right: 3px solid rgba(180,120,255,0.30);
+                  border-radius: 16px;
+                  padding: 12px 16px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 2.0; }
+            content: |
+              **🤖 ذكاء اصطناعي**
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.ai %}
+              {{ d.ai }}
+              {% else %}
+              🤖 لا أخبار AI
+              {% endif %}
+
+          # ── 📱 GADGETS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(0,200,150,0.04);
+                  border: 1px solid rgba(0,200,150,0.10);
+                  border-right: 3px solid rgba(0,200,150,0.30);
+                  border-radius: 16px;
+                  padding: 12px 16px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 2.0; }
+            content: |
+              **📱 أجهزة وتقنيات**
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.gadgets %}
+              {{ d.gadgets }}
+              {% else %}
+              📱 لا أخبار أجهزة
+              {% endif %}
+
+          # ── 🇰🇼 LOCAL NEWS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(0,128,0,0.04);
+                  border: 1px solid rgba(0,128,0,0.10);
+                  border-right: 3px solid rgba(0,128,0,0.30);
+                  border-radius: 16px;
+                  padding: 12px 16px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 2.0; }
+            content: |
+              **🇰🇼 أخبار محلية**
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.local %}
+              {{ d.local }}
+              {% else %}
+              🇰🇼 لا أخبار محلية
+              {% endif %}
+
+          # ── DIGEST INFO ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.05);
+                  border-radius: 14px;
+                  padding: 6px 14px;
+                  margin: 6px 8px 0;
+                }
+                ha-markdown { font-size: 14px; opacity: 0.6; direction: rtl; }
+            content: |
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d %}
+              📅 {{ d.date | default('') }} · {{ d.created_at | default('') | truncate(16, true, '') }} · {{ d.slot | default('') }}
+              {% else %}
+              📰 لا يوجد ملخص بعد — استخدم **/news_now** لتوليد واحد
+              {% endif %}
+

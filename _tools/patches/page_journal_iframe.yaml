@@ -1,0 +1,17 @@
+  - path: sub-journal
+    title: السجل
+    icon: mdi:book-open-page-variant
+    subview: true
+    type: panel
+    cards:
+      - type: iframe
+        url: /trading/journal
+        aspect_ratio: 100%
+        card_mod:
+          style: |
+            ha-card {
+              overflow: hidden;
+              border: none;
+              border-radius: 0;
+              background: #070D17;
+            }

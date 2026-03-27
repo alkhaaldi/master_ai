@@ -1,0 +1,67 @@
+﻿=== ALL DASHBOARD PAGES ===
+  master-ai: lines 3-309 (307 lines)
+  sub-radar: lines 310-615 (306 lines)
+  sub-signals: lines 616-761 (146 lines)
+  sub-calendar-tasks: lines 762-1001 (240 lines)
+  sub-home: lines 1002-1217 (216 lines)
+  sub-system-health: lines 1218-1441 (224 lines)
+  sub-email: lines 1442-1604 (163 lines)
+  sub-news: lines 1605-1897 (293 lines)
+  sub-assistant: lines 1898-2049 (152 lines)
+  sub-journal: lines 2050-2247 (198 lines)
+
+============================================================
+=== sub-radar (lines 310-615) ===
+============================================================
+  319:           # ظ¤ظ¤ PULSE BAR ظ¤ظ¤
+  320:           - type: markdown
+  345:           # ظ¤ظ¤ QUICK ACTIONS ظ¤ظ¤
+  346:           - type: grid
+  350:               - type: button
+  363:               - type: button
+  376:               - type: button
+  389:               - type: button
+  402:           # ظ¤ظ¤ PRO TRADING DASHBOARD (iframe) ظ¤ظ¤
+  403:           - type: iframe
+  416:           # ظ¤ظ¤ DECISION CARD (Action Zone) ظ¤ظ¤
+  417:           - type: markdown
+  478:           # ظ¤ظ¤ ALL OPPORTUNITIES (up to 10) ظ¤ظ¤
+  479:           - type: markdown
+  515:           # ظ¤ظ¤ OPEN POSITIONS (compact P&L) ظ¤ظ¤
+  516:           - type: markdown
+  555:           # ظ¤ظ¤ DIAGNOSTICS FOOTER ظ¤ظ¤
+  556:           - type: markdown
+  575:           # ظ¤ظ¤ TRADING NAV ظ¤ظ¤
+  576:           - type: markdown
+  590:           # ظ¤ظ¤ COMMAND FEEDBACK ظ¤ظ¤
+  591:           - type: markdown
+
+============================================================
+=== sub-signals (lines 616-761) ===
+============================================================
+  625:           # ظ¤ظ¤ SIGNAL PULSE ظ¤ظ¤
+  626:           - type: markdown
+  652:           # ظ¤ظ¤ FULL SIGNAL STATE TABLE (ALL stocks, ALL 16 indicators) ظ¤ظ¤
+  653:           - type: markdown
+  690:           # ظ¤ظ¤ 30m SIGNAL FLASH (from radar) ظ¤ظ¤
+  691:           - type: markdown
+  729:           # ظ¤ظ¤ BRIDGE DIAGNOSTICS ظ¤ظ¤
+  730:           - type: markdown
+  747:           # ظ¤ظ¤ SIGNALS NAV ظ¤ظ¤
+  748:           - type: markdown
+
+============================================================
+=== sub-journal (lines 2050-2247) ===
+============================================================
+  2059:           # ظ¤ظ¤ JOURNAL PULSE ظ¤ظ¤
+  2060:           - type: markdown
+  2085:           # ظ¤ظ¤ OPEN POSITIONS (detailed KWD P&L) ظ¤ظ¤
+  2086:           - type: markdown
+  2126:           # ظ¤ظ¤ CLOSED TRADES ظ¤ظ¤
+  2127:           - type: markdown
+  2162:           # ظ¤ظ¤ MONTHLY STATS ظ¤ظ¤
+  2163:           - type: markdown
+  2198:           # ظ¤ظ¤ BEST/WORST ظ¤ظ¤
+  2199:           - type: markdown
+  2234:           # ظ¤ظ¤ JOURNAL NAV ظ¤ظ¤
+  2235:           - type: markdown

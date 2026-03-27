@@ -1,0 +1,154 @@
+  # ═══ EMAIL PAGE ═══
+  - path: sub-email
+    title: البريد
+    icon: mdi:email-outline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background:
+                        radial-gradient(circle at top left, rgba(0,140,255,0.16), transparent 24%),
+                        radial-gradient(circle at top right, rgba(0,100,220,0.08), transparent 22%),
+                        linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                      border: 1px solid rgba(0,140,255,0.14);
+                      border-radius: 30px 30px 0 0;
+                      padding: 22px 22px 10px;
+                      margin: 8px 8px 0;
+                      box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+                    }
+                    h2 { font-size: 24px !important; margin: 0 0 4px !important; }
+                    ha-markdown { font-size: 14px; opacity: 0.8; direction: rtl; }
+                content: |
+                  ## البريد
+                  {% set e = 'sensor.master_ai_extended' %}
+                  📨 {{ state_attr(e,'email_total') | default(0) }} رسالة · {{ state_attr(e,'email_unread') | default(0) }} غير مقروءة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(0,140,255,0.06), rgba(0,100,220,0.03));
+                      border: 1px solid rgba(0,140,255,0.10);
+                      border-radius: 0 0 30px 30px;
+                      padding: 10px 22px;
+                      margin: 0 8px 0;
+                    }
+                    ha-markdown { font-size: 15px; line-height: 1.7; direction: rtl; }
+                content: >
+                  {% set e = 'sensor.master_ai_extended' %}
+                  {% set cr = state_attr(e,'email_critical') | int(0) %}
+                  {% set hi = state_attr(e,'email_high') | int(0) %}
+                  {% if cr > 0 %}🔴 {{ cr }} رسالة عاجلة{% elif hi > 0 %}🟠 {{ hi }} رسالة مهمة{% else %}✅ لا رسائل عاجلة{% endif %}
+                  {% set err = state_attr(e,'email_errors') | default('') %}
+                  {% if err %} · ⚠️ {{ err }}{% endif %}
+
+          # ── 2. STATS CARDS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(0,140,255,0.06);
+                      border: 1px solid rgba(0,140,255,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  📨 **{{ state_attr('sensor.master_ai_extended','email_total') | default(0) }}**
+
+                  إجمالي
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,180,0,0.06);
+                      border: 1px solid rgba(255,180,0,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  📬 **{{ state_attr('sensor.master_ai_extended','email_unread') | default(0) }}**
+
+                  غير مقروء
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,60,60,0.06);
+                      border: 1px solid rgba(255,60,60,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🔴 **{{ state_attr('sensor.master_ai_extended','email_critical') | default(0) }}**
+
+                  عاجل
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,140,0,0.06);
+                      border: 1px solid rgba(255,140,0,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🟠 **{{ state_attr('sensor.master_ai_extended','email_high') | default(0) }}**
+
+                  مهم
+
+          # ── 3. MESSAGES LIST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(17,24,34,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(0,140,255,0.10);
+                  border-radius: 22px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 13px; direction: rtl; line-height: 1.8; }
+            content: |
+              ### الرسائل — آخر 24 ساعة
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set msgs = state_attr(e,'email_messages') %}
+              {% if msgs and msgs | length > 0 %}
+              {% for m in msgs %}
+              {{ m.priority_label }} **{{ m['from'] }}** · {{ m.source_label }}
+              {{ m.subject }}{% if m.time %} ⏰ {{ m.time }}{% endif %}
+
+              ---
+
+              {% endfor %}
+              {% else %}
+              📬 لا توجد رسائل
+              {% endif %}
+
+          # ── NAV ──
+          - type: button
+            name: الرئيسية
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /master-ai-dashboard/master-ai
+            show_state: false

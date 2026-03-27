@@ -1,91 +1,128 @@
-"""
-tg_tasks.py - Task management commands for Telegram
-Commands: /tasks, /task add <title>, /task done <id>
-"""
-import logging
-from tasks_db import get_tasks, get_summary, add_task, update_task
+import logging, re
+from datetime import date, timedelta
+from task_engine import (
+    task_create, task_update, task_done, task_delete,
+    task_list, task_search, task_stats, task_get,
+    format_task_list, format_tasks_summary,
+    quick_tasks_active, quick_tasks_today, quick_tasks_overdue,
+    PRIORITY_LABEL, STATUS_LABEL, CATEGORY_LABEL, PRIORITY_MAP
+)
+logger = logging.getLogger(__name__)
 
-logger = logging.getLogger("tg_tasks")
+def _parse_priority(text):
+    t = text.lower()
+    if any(w in t for w in ['عالي','urgent','high','مهم','ضروري']): return 'high'
+    if any(w in t for w in ['منخفض','low','بعدين']): return 'low'
+    return 'med'
 
-PRIORITY_ICONS = {"high": "\U0001f534", "medium": "\U0001f7e1", "low": "\U0001f7e2"}
-STATUS_ICONS = {"pending": "\u23f3", "in_progress": "\U0001f527", "done": "\u2705", "blocked": "\u26d4"}
-CAT_ICONS = {"ha": "\U0001f3e0", "trading": "\U0001f4c8", "personal": "\U0001f464", "work": "\u2699\ufe0f", "project": "\U0001f680"}
+def _parse_category(text):
+    if any(w in text.lower() for w in ['عمل','work','knpc','شيفت','وردية']): return 'work'
+    return 'personal'
 
+def _parse_due_date(text):
+    today = date.today()
+    t = text.lower()
+    if any(w in t for w in ['اليوم','today']): return today.isoformat()
+    if any(w in t for w in ['باجر','بكرة','tomorrow']): return (today + timedelta(days=1)).isoformat()
+    if any(w in t for w in ['بعد باجر','بعد بكرة']): return (today + timedelta(days=2)).isoformat()
+    m = re.search(r'(\d{4}-\d{2}-\d{2})', text)
+    if m: return m.group(1)
+    return None
 
-async def cmd_tasks(args: str = "") -> str:
-    """Handle /tasks [category|summary]"""
-    args = args.strip().lower()
-    
-    if args == "summary" or not args:
-        summary = await get_summary()
-        if not summary:
-            return "\u2705 \u0645\u0627 \u0641\u064a\u0647 \u0645\u0647\u0627\u0645!"
-        
-        lines = ["\U0001f4cb \u0645\u0644\u062e\u0635 \u0627\u0644\u0645\u0647\u0627\u0645:\n"]
-        lines.append(f"\u0625\u062c\u0645\u0627\u0644\u064a: {summary.get('total', 0)} | \u0646\u0634\u0637: {summary.get('active', 0)}\n")
-        
-        by_cat = summary.get("by_category", {})
-        if by_cat:
-            lines.append("\U0001f4c2 \u062d\u0633\u0628 \u0627\u0644\u0641\u0626\u0629:")
-            for cat, count in by_cat.items():
-                icon = CAT_ICONS.get(cat, "\U0001f4cc")
-                lines.append(f"  {icon} {cat}: {count}")
-        
-        urgent = summary.get("urgent_tasks", [])
-        if urgent:
-            lines.append("\n\U0001f6a8 \u0639\u0627\u062c\u0644:")
-            for t in urgent:
-                pri = PRIORITY_ICONS.get(t.get("priority", "high"), "\U0001f534")
-                lines.append(f"  {pri} #{t['id']} {t['title']}")
-        
-        return "\n".join(lines)
-    
-    # Filter by category
-    category = args if args in ("ha", "trading", "personal", "work", "project") else None
-    tasks = await get_tasks(category=category, status="pending", limit=10)
-    
-    if not tasks:
-        return f"\u2705 \u0644\u0627 \u0645\u0647\u0627\u0645 \u0645\u0639\u0644\u0642\u0629{' \u0628\u0640 ' + args if args else ''}"
-    
-    lines = [f"\U0001f4cb \u0627\u0644\u0645\u0647\u0627\u0645 ({len(tasks)}):\n"]
-    for t in tasks:
-        pri = PRIORITY_ICONS.get(t.get("priority","medium"), "")
-        lines.append(f"{pri} #{t['id']} {t['title']}")
-    return "\n".join(lines)
+def _fmt_detail(t):
+    if not t: return 'ما لقيت المهمة'
+    pri    = PRIORITY_LABEL.get(t['priority'],'')
+    status = STATUS_LABEL.get(t['status'], t['status'])
+    cat    = CATEGORY_LABEL.get(t['category'], t['category'])
+    out    = ['*[' + str(t['id']) + '] ' + t['title'] + '*',
+              'الحالة: ' + status,
+              'التصنيف: ' + cat,
+              'الأولوية: ' + pri]
+    if t.get('due_date'): out.append('الاستحقاق: 📅 ' + t['due_date'])
+    if t.get('description'): out.append('ملاحظات: ' + t['description'])
+    out.append('الإنشاء: ' + t['created_at'][:16])
+    return chr(10).join(out)
 
+def handle_tasks_command(args=''):
+    args = args.strip()
+    if not args: return quick_tasks_active()
+    parts = args.split(None, 1)
+    cmd  = parts[0].lower()
+    rest = parts[1] if len(parts) > 1 else ''
+    if cmd in ('today','اليوم'): return quick_tasks_today()
+    if cmd in ('overdue','متأخرة'): return quick_tasks_overdue()
+    if cmd in ('work','عمل'): return format_task_list(task_list(category='work'), '🏭 مهام العمل')
+    if cmd in ('personal','شخصي'): return format_task_list(task_list(category='personal'), '👤 المهام الشخصية')
+    if cmd in ('done','منجزة'): return format_task_list(task_list(status='done'), '✅ المهام المنجزة')
+    if cmd in ('stats','إحصائيات','احصائيات'):
+        s = task_stats()
+        out = ['📊 *إحصائيات المهام*', '']
+        for st, cnt in s['by_status'].items(): out.append(STATUS_LABEL.get(st,st) + ': ' + str(cnt))
+        out += ['', '⚠️ متأخرة: ' + str(s['overdue']), '📌 اليوم: ' + str(s['due_today'])]
+        return chr(10).join(out)
+    if cmd in ('add','اضف','أضف','ضيف'):
+        if not rest: return '❌ اكتب عنوان المهمة'
+        priority = _parse_priority(rest)
+        category = _parse_category(rest)
+        due_date = _parse_due_date(rest)
+        title = re.sub(r'\b(اليوم|باجر|بكرة|tomorrow|today)\b', '', rest, flags=re.IGNORECASE).strip()
+        title = re.sub(r'\s+', ' ', title).strip() or rest
+        t = task_create(title=title, category=category, priority=priority, due_date=due_date)
+        due_str = (chr(10) + '📅 ' + t['due_date']) if t.get('due_date') else ''
+        return ('✅ *تمت إضافة المهمة #' + str(t['id']) + '*' +
+                chr(10) + chr(10) + t['title'] + chr(10) +
+                CATEGORY_LABEL.get(t['category'],'') + ' | ' + PRIORITY_LABEL.get(t['priority'],'') + due_str)
+    if cmd in ('finish','خلصت','انجزت'):
+        try:
+            t = task_done(int(rest))
+            return ('✅ تمت إنجاز #' + rest + ': ' + t['title']) if t else 'ما لقيت مهمة ' + rest
+        except (ValueError, TypeError): return '❌ اكتب رقم المهمة'
+    if cmd in ('cancel','الغ','ألغ'):
+        try:
+            t = task_update(int(rest), status='cancelled')
+            return ('❌ تم إلغاء #' + rest + ': ' + t['title']) if t else 'ما لقيت مهمة ' + rest
+        except (ValueError, TypeError): return '❌ اكتب رقم المهمة'
+    if cmd in ('delete','احذف','حذف'):
+        try:
+            tid = int(rest)
+            t = task_get(tid)
+            if t and task_delete(tid): return '🗑 تم حذف #' + str(tid) + ': ' + t['title']
+            return 'ما لقيت مهمة ' + rest
+        except (ValueError, TypeError): return '❌ اكتب رقم المهمة'
+    if cmd in ('view','شوف','تفاصيل'):
+        try: return _fmt_detail(task_get(int(rest)))
+        except (ValueError, TypeError): return '❌ اكتب رقم المهمة'
+    if cmd in ('search','بحث','دور'):
+        if not rest: return '❌ اكتب كلمة للبحث'
+        return format_task_list(task_search(rest), '🔍 ' + rest)
+    if cmd in ('help','مساعدة'):
+        h = ['📋 *أوامر المهام*','',
+             '/tasks — كل المهام النشطة',
+             '/tasks today — مهام اليوم',
+             '/tasks overdue — المتأخرة',
+             '/tasks work — مهام العمل',
+             '/tasks done — المنجزة',
+             '/tasks stats — إحصائيات',
+             '/tasks add <عنوان>',
+             '/tasks finish <رقم>',
+             '/tasks cancel <رقم>',
+             '/tasks delete <رقم>',
+             '/tasks view <رقم>',
+             '/tasks search <كلمة>']
+        return chr(10).join(h)
+    t = task_create(title=args, priority=_parse_priority(args),
+                    category=_parse_category(args), due_date=_parse_due_date(args))
+    return '✅ أضفت مهمة #' + str(t['id']) + ': ' + t['title']
 
-async def cmd_task_add(text: str) -> str:
-    """Handle /task add <category> <title>"""
-    parts = text.strip().split(maxsplit=1)
-    if len(parts) < 1:
-        return "\u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645: /task add \u0627\u0644\u0639\u0646\u0648\u0627\u0646"
-    
-    title = parts[0] if len(parts) == 1 else parts[1]
-    cat = "personal"
-    
-    # Auto-detect category from title
-    title_lower = title.lower()
-    if any(kw in title_lower for kw in ["ha ", "home", "\u0628\u064a\u062a", "\u0645\u0643\u064a\u0641", "\u0636\u0648", "\u0633\u062a\u0627\u0631"]):
-        cat = "ha"
-    elif any(kw in title_lower for kw in ["\u0633\u0647\u0645", "\u062a\u062f\u0627\u0648\u0644", "stock", "trade", "cleaning", "senergy"]):
-        cat = "trading"
-    elif any(kw in title_lower for kw in ["\u0634\u063a\u0644", "\u062f\u0648\u0627\u0645", "unit", "shift", "work"]):
-        cat = "work"
-    
-    task = await add_task(cat, title)
-    if task:
-        return f"\u2705 \u0645\u0647\u0645\u0629 #{task['id']}: {title} ({cat})"
-    return "\u26a0 \u0641\u0634\u0644 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0647\u0645\u0629"
+def llm_tool_task_list(status=None, category=None, due_today=False, due_overdue=False, limit=20):
+    tasks = task_list(status=status, category=category, due_today=due_today, due_overdue=due_overdue, limit=limit)
+    return {'tasks': tasks, 'count': len(tasks), 'stats': task_stats()}
 
+def llm_tool_task_create(title, category='personal', priority='med', due_date=None, description=None):
+    t = task_create(title=title, category=category, priority=priority, due_date=due_date, description=description, source='llm')
+    return {'success': True, 'task': t, 'message': 'تمت إضافة #' + str(t['id'])}
 
-async def cmd_task_done(task_id: str) -> str:
-    """Handle /task done <id>"""
-    try:
-        tid = int(task_id.strip())
-    except (ValueError, AttributeError):
-        return "\u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645: /task done <\u0631\u0642\u0645>"
-    
-    result = await update_task(tid, status="done")
-    if result:
-        return f"\u2705 \u0645\u0647\u0645\u0629 #{tid} \u062e\u0644\u0635\u062a!"
-    return f"\u26a0 \u0645\u0627 \u0644\u0642\u064a\u062a \u0645\u0647\u0645\u0629 #{tid}"
+def llm_tool_task_update(task_id, status=None, priority=None, due_date=None, title=None):
+    t = task_update(int(task_id), status=status, priority=priority, due_date=due_date, title=title)
+    if not t: return {'success': False, 'message': 'ما لقيت مهمة #' + str(task_id)}
+    return {'success': True, 'task': t}

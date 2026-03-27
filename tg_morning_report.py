@@ -216,7 +216,18 @@ async def build_morning_report() -> str:
 
     report = f"{greeting}\n📅 {day_name} {date_str}\n\n🌤️ الطقس: {weather}\n\n👷 الوردية:\n{shift_week}\n\n🏠 حالة البيت:\n{ha_summary}"
 
-    # Brain learning section
+    # v8: Calendar section
+    try:
+        from calendar_engine import get_today_events
+        from calendar_reporting import render_morning_calendar_section
+        cal_events = get_today_events()
+        cal_text = render_morning_calendar_section(cal_events)
+        if cal_text:
+            report += chr(10)*2 + cal_text
+    except Exception as e:
+        logger.debug(f"Calendar morning: {e}")
+
+        # Brain learning section
     brain = await _get_brain_summary()
     if brain:
         report += chr(10)*2 + "🧠 الذكاء:" + chr(10) + brain
@@ -227,6 +238,84 @@ async def build_morning_report() -> str:
         email_sum = await get_email_for_morning()
         if email_sum:
             report += chr(10)*2 + chr(0x1f4e7) + " الإيميل:" + chr(10) + email_sum
+    except Exception:
+        pass
+
+    # v8 Phase 2: Tasks summary
+    try:
+        from task_engine import format_tasks_summary
+        tasks_sum = format_tasks_summary()
+        if tasks_sum:
+            report += chr(10)*2 + tasks_sum
+    except Exception as e:
+        logger.debug(f"Tasks morning: {e}")
+
+    # v8 Phase 2: Inbox digest
+    try:
+        from inbox_engine import inbox_digest
+        inbox_sum = await inbox_digest(hours=24)
+        if inbox_sum:
+            report += chr(10)*2 + inbox_sum
+    except Exception as e:
+        logger.debug(f"Inbox morning: {e}")
+
+
+    # v8 Phase 3: Occasions in morning report
+    try:
+        from relationships_engine import get_morning_occasions_text
+        occ_text = get_morning_occasions_text()
+        if occ_text:
+            report += chr(10)*2 + occ_text
+    except Exception:
+        pass
+
+    # v8 Phase 4: Expenses in morning report
+    try:
+        from expenses_engine import get_morning_expense_text
+        exp_text = get_morning_expense_text()
+        if exp_text:
+            report += chr(10)*2 + exp_text
+    except Exception:
+        pass
+
+    # v8 Phase 4: News in morning report
+    try:
+        from news_engine import get_morning_news_text
+        news_text = get_morning_news_text()
+        if news_text:
+            report += chr(10)*2 + news_text
+    except Exception:
+        pass
+
+    # v8 Phase 3: Email task suggestions
+    try:
+        from inbox_engine import format_email_task_suggestions
+        suggestions = await format_email_task_suggestions()
+        if suggestions:
+            report += chr(10)*2 + suggestions
+    except Exception as e:
+        logger.debug(f"Suggest tasks morning: {e}")
+
+    # Phase 5+6: Health + Trading + TV
+    try:
+        from health_engine import get_morning_health_text
+        _htxt = get_morning_health_text()
+        if _htxt:
+            report += chr(10)*2 + _htxt
+    except Exception:
+        pass
+    try:
+        from trading_engine import get_morning_trading_text
+        _ttxt = get_morning_trading_text()
+        if _ttxt:
+            report += chr(10)*2 + _ttxt
+    except Exception:
+        pass
+    try:
+        from tradingview_bridge import get_morning_tv_text
+        _tvtxt = get_morning_tv_text()
+        if _tvtxt:
+            report += chr(10)*2 + _tvtxt
     except Exception:
         pass
 

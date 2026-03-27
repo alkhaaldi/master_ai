@@ -125,7 +125,7 @@ try:
     from world_state import start_world_state, get_snapshot_text, get_snapshot_data, get_status as ws_get_status
     WORLD_STATE_OK = True
 except Exception:
-    logging.getLogger("master_ai").warning("world_state not available")
+    logger.warning("world_state not available")
 
 
 DOCTOR_OK = False
@@ -141,7 +141,7 @@ try:
     from tg_email import format_email_report as email_report, get_email_for_morning as email_morning
     EMAIL_OK = True
 except Exception as _e:
-    logging.getLogger("master_ai").warning("tg_email not loaded: %s", _e)
+    logger.warning(f"tg_email not loaded: {_e}")
     EMAIL_OK = False
 try:
     from brain_learning import discover_scenes as bl_discover_scenes, format_scenes_report as bl_scenes_report, create_ha_scene as bl_create_scene
@@ -171,7 +171,7 @@ try:
     fl_init()
     FEEDBACK_OK = True
 except Exception:
-    logging.getLogger("master_ai").warning("feedback_learner not available")
+    logger.warning("feedback_learner not available")
 
 PLAN_OK = False
 try:
@@ -179,7 +179,7 @@ try:
     plan_init()
     PLAN_OK = True
 except Exception as _pe:
-    logging.getLogger("master_ai").warning("plan_engine not available: %s", _pe)
+    logger.warning(f"plan_engine not available: {_pe}")
 
 DEGRADED_OK = False
 try:
@@ -187,7 +187,7 @@ try:
     deg_init()
     DEGRADED_OK = True
 except Exception as _de:
-    logging.getLogger("master_ai").warning("degraded_mode not available: %s", _de)
+    logger.warning(f"degraded_mode not available: {_de}")
 
 DBBACKUP_OK = False
 try:
@@ -195,7 +195,7 @@ try:
     backup_init()
     DBBACKUP_OK = True
 except Exception as _be:
-    logging.getLogger("master_ai").warning("db_backup not available: %s", _be)
+    logger.warning(f"db_backup not available: {_be}")
 
 try:
     from tg_morning_report import build_morning_report, send_morning_report

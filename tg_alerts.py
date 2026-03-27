@@ -10,6 +10,13 @@ from datetime import datetime
 
 logger = logging.getLogger("tg_alerts")
 
+# Phase 2: Anomaly Engine
+try:
+    from anomaly_engine import run_anomaly_checks
+    _ANOMALY_OK = True
+except ImportError:
+    _ANOMALY_OK = False
+
 HA_URL = os.environ.get("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.environ.get("HA_TOKEN", "")
 
@@ -81,7 +88,7 @@ async def check_alerts(send_fn) -> list[str]:
             st = s.get("state", "")
             if st == "unavailable" and any(eid.startswith(d) for d in OFFLINE_DOMAINS) and not any(kw in eid for kw in EXCLUDE_KEYWORDS):
                 _prev_offline.add(eid)
-            if eid.startswith("cover.") and st == "open":
+            if eid.startswith("cover.") and st == "open" and "_inverted" not in eid:
                 _prev_open_covers.add(eid)
         logger.info(f"Warmup: {len(_prev_offline)} offline, {len(_prev_open_covers)} open covers baselined")
         return []
@@ -134,7 +141,7 @@ async def check_alerts(send_fn) -> list[str]:
         current_open = set()
         for s in states:
             eid = s.get("entity_id", "")
-            if eid.startswith("cover.") and s.get("state") == "open":
+            if eid.startswith("cover.") and s.get("state") == "open" and "_inverted" not in eid:
                 current_open.add(eid)
         
         new_open = current_open - _prev_open_covers
@@ -192,6 +199,9 @@ async def check_alerts(send_fn) -> list[str]:
         except Exception as e:
             logger.error(f"Alert send error: {e}")
     
+    # anomaly_engine DISABLED in tg_alerts (prevents duplicate alerts with proactive_suggestions)
+    # Use /anomaly command or check nightly digest for anomaly reports
+
     return alerts
 
 
@@ -208,4 +218,17 @@ async def alert_loop(send_fn):
                 logger.info(f"Sent {len(alerts)} alerts")
         except Exception as e:
             logger.error(f"Alert loop error: {e}")
+        # System Guardian checks
+        try:
+            from system_guardian import check_all as guardian_check
+            g_alerts = guardian_check()
+            for g in g_alerts:
+                await send_fn(g["message"])
+                alerts.append(g["message"])
+        except Exception as e:
+            logger.debug(f"Guardian: {e}")
+
+        # proactive_engine.send_proactive DISABLED — handled by proactive_suggestions loop
+        # Prevents duplicate AC/lights alerts with proactive_suggestions.py
+
         await asyncio.sleep(CHECK_INTERVAL)

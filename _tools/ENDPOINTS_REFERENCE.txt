@@ -1,0 +1,44 @@
+﻿/dashboard/signals: ['market_open', 'bridge_online', 'bridge_cached_count', 'timestamp', 'decision_card', 'opportunities', 'open_positions', 'signal_counts', 'all_signals']
+  market_open: False
+  bridge_online: True
+  bridge_cached_count: 11
+  timestamp: 2026-03-26T20:01:59
+  decision_card: dict keys=['symbol', 'name_ar', 'price', 'change_pct', 'verdict', 'verdict_key', 'trade_state', 'confluence_score', 'ema_state', 'rsi_14']
+  opportunities: list[10]
+    fields: ['symbol', 'name_ar', 'price', 'change_pct', 'verdict', 'verdict_key', 'trade_state', 'confluence_score', 'ema_state', 'rsi_14', 'macd_state', 'macd_momentum', 'adx', 'vol_ratio', 'support', 'resistance', 'atr_14', 'bb_squeeze', 'stoch_k', 'rsi_divergence', 'ema_cross', 'confluence_detail', 'source', 'stale']
+  open_positions: list[1]
+    fields: ['symbol', 'name_ar', 'entry', 'current', 'pnl_pct', 'pnl_kwd', 'state', 'quantity', 'entry_date']
+  signal_counts: dict keys=['discovery', 'setup', 'ready', 'entered', 'manage']
+
+/dashboard/radar: ['radar_enabled', 'radar_watch_count', 'radar_watchlist', 'radar_recent_signals', 'radar_alerts_today', 'radar_daily_context', 'daily_context_stale', 'daily_context_reason', 'journal_open', 'journal_stats']
+  radar_enabled: False
+  radar_watch_count: 128
+  radar_watchlist: list[12]
+    fields: ['symbol', 'name_ar', 'price', 'change_pct', 'timeframe', 'watch_reason']
+  radar_recent_signals: list[10]
+    fields: ['symbol', 'name_ar', 'type', 'signal_type', 'type_ar', 'price', 'time', 'timeframe', 'ema_fast', 'ema_slow', 'ema_gap', 'strength', 'rsi', 'vwap', 'volume', 'score', 'score_class', 'verdict', 'support', 'resistance', 'vol_ratio', 'enriched_available']
+  radar_alerts_today: 0
+  radar_daily_context: list[10]
+    fields: ['symbol', 'name_ar', 'price', 'trend', 'rsi', 'support', 'resistance', 'score', 'score_class', 'verdict', 'volume', 'avg_volume', 'vol_ratio', 'change_pct', 'updated_at', 'data_age_hours', 'is_stale', 'source_timeframe', 'action', 'action_ar', 'ema9', 'ema21', 'ema_cross', 'ema_gap_pct', 'macd', 'macd_signal', 'macd_histogram', 'macd_cross', 'macd_above_zero', 'daily_ema_cross', 'volume_spike', 'confluence']
+  daily_context_stale: False
+  daily_context_reason: ok
+
+/dashboard/portfolio: ['open_positions', 'closed_trades', 'stats_30d', 'stats_7d', 'signal_vs_trade']
+  open_positions: list[1]
+    fields: ['id', 'symbol', 'name_ar', 'direction', 'status', 'entry_price', 'entry_date', 'entry_reason', 'entry_signal_id', 'quantity', 'exit_price', 'exit_date', 'exit_reason', 'pnl_fils', 'pnl_pct', 'strategy', 'timeframe', 'notes', 'created_at', 'updated_at', 'current_price', 'support', 'resistance', 'pnl']
+  closed_trades: list[0]
+  stats_30d: dict keys=['days', 'total_trades', 'open_trades', 'closed_trades', 'wins', 'losses', 'win_rate', 'avg_profit_pct', 'avg_loss_pct', 'total_pnl_fils']
+  stats_7d: dict keys=['days', 'total_trades', 'open_trades', 'closed_trades', 'wins', 'losses', 'win_rate', 'avg_profit_pct', 'avg_loss_pct', 'total_pnl_fils']
+  signal_vs_trade: dict keys=['signals_7d', 'confirmed_7d', 'skip_rate']
+
+/dashboard/journal: ['open_positions', 'closed_trades', 'stats_30d', 'stats_7d', 'portfolio_summary', 'monthly_stats', 'best_trade', 'worst_trade']
+  open_positions: list[1]
+    fields: ['id', 'symbol', 'name_ar', 'direction', 'status', 'entry_price', 'entry_date', 'entry_reason', 'entry_signal_id', 'quantity', 'exit_price', 'exit_date', 'exit_reason', 'pnl_fils', 'pnl_pct', 'strategy', 'timeframe', 'notes', 'created_at', 'updated_at', 'current_price', 'support', 'resistance', 'pnl']
+  closed_trades: list[0]
+  stats_30d: dict keys=['days', 'total_trades', 'open_trades', 'closed_trades', 'wins', 'losses', 'win_rate', 'avg_profit_pct', 'avg_loss_pct', 'total_pnl_fils']
+  stats_7d: dict keys=['days', 'total_trades', 'open_trades', 'closed_trades', 'wins', 'losses', 'win_rate', 'avg_profit_pct', 'avg_loss_pct', 'total_pnl_fils']
+  portfolio_summary: dict keys=['open_count', 'total_net_pnl_kwd', 'total_gross_pnl_kwd', 'total_fees_kwd']
+  monthly_stats: list[0]
+  best_trade: None
+  worst_trade: None
+

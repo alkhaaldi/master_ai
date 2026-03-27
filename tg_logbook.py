@@ -125,7 +125,7 @@ Use emoji headers. Max 2000 chars. Telegram-friendly (no markdown)."""
                     "anthropic-version": "2023-06-01",
                 },
                 json={
-                    "model": "claude-sonnet-4-20250514",
+                    "model": "claude-sonnet-4-6",
                     "max_tokens": 2500,
                     "messages": [{"role": "user", "content": [
                         {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": pdf_b64}},

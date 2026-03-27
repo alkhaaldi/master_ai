@@ -1,0 +1,43 @@
+# ═══════════════════════════════════════════════════
+# v9.0 NEW SENSORS — Add to configuration.yaml
+# ═══════════════════════════════════════════════════
+# Add these under the existing REST sensor section
+
+# Journal sensor (new)
+- resource: http://localhost:9000/dashboard/journal
+  scan_interval: 120
+  headers:
+    X-API-Key: !secret master_ai_key
+  sensor:
+    - name: "Master AI Journal"
+      unique_id: master_ai_journal
+      value_template: "{{ value_json.portfolio_summary.open_count | default(0) }}"
+      json_attributes:
+        - open_positions
+        - closed_trades
+        - stats_30d
+        - stats_7d
+        - portfolio_summary
+        - monthly_stats
+        - best_trade
+        - worst_trade
+
+# Alerts sensor (new)
+- resource: http://localhost:9000/dashboard/alerts
+  scan_interval: 300
+  headers:
+    X-API-Key: !secret master_ai_key
+  sensor:
+    - name: "Master AI Alerts"
+      unique_id: master_ai_alerts
+      value_template: >-
+        {% set vs = value_json.volume_spikes | default([]) | length %}
+        {% set sr = value_json.sr_proximity | default([]) | length %}
+        {% set ca = value_json.confluence_alerts | default([]) | length %}
+        {% set re = value_json.rsi_extremes | default([]) | length %}
+        {{ vs + sr + ca + re }}
+      json_attributes:
+        - volume_spikes
+        - sr_proximity
+        - confluence_alerts
+        - rsi_extremes

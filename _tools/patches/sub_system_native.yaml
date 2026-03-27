@@ -1,0 +1,220 @@
+  # ═══════════════════════════════════════
+  # SUBVIEW: SYSTEM HEALTH
+  # ═══════════════════════════════════════
+  - path: sub-system-health
+    title: صحة النظام
+    icon: mdi:server
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background:
+                        radial-gradient(circle at top left, rgba(120,255,140,0.16), transparent 24%),
+                        radial-gradient(circle at top right, rgba(60,200,120,0.08), transparent 22%),
+                        linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                      border: 1px solid rgba(120,255,140,0.14);
+                      border-radius: 30px 30px 0 0;
+                      padding: 22px 22px 10px;
+                      margin: 8px 8px 0;
+                      box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+                    }
+                    h2 { font-size: 24px !important; margin: 0 0 4px !important; }
+                    ha-markdown { font-size: 14px; opacity: 0.8; direction: rtl; }
+                content: |
+                  ## صحة النظام
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set e = 'sensor.master_ai_extended' %}
+                  v{{ state_attr(d,'version') | default('—') }} · Uptime {{ state_attr(e,'uptime_hours') | float(0) | round(1) }}h · {{ state_attr(e,'git_branch') | default('?') }} · {{ state_attr(e,'git_commit_count') | default('?') }} commits
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(120,255,140,0.06), rgba(60,200,120,0.03));
+                      border: 1px solid rgba(120,255,140,0.10);
+                      border-radius: 0 0 30px 30px;
+                      padding: 10px 22px;
+                      margin: 0 8px 0;
+                    }
+                    ha-markdown { font-size: 15px; line-height: 1.7; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set dm = state_attr(d,'degraded_mode') | default('normal') %}
+                  {% if dm != 'normal' %}⚠️ الوضع: {{ dm }}{% else %}✅ النظام يعمل بشكل طبيعي{% endif %}
+                  · آخر backup: {{ state_attr(d,'last_backup') | default('غير معروف') }}
+
+          # ── 2. RESOURCE CARDS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: >
+                        {% set v = state_attr('sensor.master_ai_extended','cpu') | float(0) %}
+                        {% if v > 80 %}rgba(255,60,60,0.08){% elif v > 50 %}rgba(255,180,0,0.08){% else %}rgba(60,200,60,0.06){% endif %}
+                      border: >
+                        {% set v = state_attr('sensor.master_ai_extended','cpu') | float(0) %}
+                        1px solid {% if v > 80 %}rgba(255,60,60,0.14){% elif v > 50 %}rgba(255,180,0,0.14){% else %}rgba(60,200,60,0.12){% endif %}
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; }
+                content: |
+                  {% set e = 'sensor.master_ai_extended' %}
+                  {% set v = state_attr(e,'cpu') | float(0) %}
+                  {% if v > 80 %}🔴{% elif v > 50 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  CPU
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: >
+                        {% set v = state_attr('sensor.master_ai_extended','memory_pct') | float(0) %}
+                        {% if v > 85 %}rgba(255,60,60,0.08){% elif v > 65 %}rgba(255,180,0,0.08){% else %}rgba(60,200,60,0.06){% endif %}
+                      border: >
+                        {% set v = state_attr('sensor.master_ai_extended','memory_pct') | float(0) %}
+                        1px solid {% if v > 85 %}rgba(255,60,60,0.14){% elif v > 65 %}rgba(255,180,0,0.14){% else %}rgba(60,200,60,0.12){% endif %}
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; }
+                content: |
+                  {% set e = 'sensor.master_ai_extended' %}
+                  {% set v = state_attr(e,'memory_pct') | float(0) %}
+                  {% if v > 85 %}🔴{% elif v > 65 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  RAM {{ state_attr(e,'memory_used_mb') | int(0) }}MB
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: >
+                        {% set v = state_attr('sensor.master_ai_extended','disk_pct') | float(0) %}
+                        {% if v > 85 %}rgba(255,60,60,0.08){% elif v > 65 %}rgba(255,180,0,0.08){% else %}rgba(60,200,60,0.06){% endif %}
+                      border: >
+                        {% set v = state_attr('sensor.master_ai_extended','disk_pct') | float(0) %}
+                        1px solid {% if v > 85 %}rgba(255,60,60,0.14){% elif v > 65 %}rgba(255,180,0,0.14){% else %}rgba(60,200,60,0.12){% endif %}
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; }
+                content: |
+                  {% set e = 'sensor.master_ai_extended' %}
+                  {% set v = state_attr(e,'disk_pct') | float(0) %}
+                  {% if v > 85 %}🔴{% elif v > 65 %}🟡{% else %}🟢{% endif %} **{{ v }}%**
+
+                  Disk {{ state_attr(e,'disk_used_gb') | float(0) }}GB
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: >
+                        {% set v = state_attr('sensor.master_ai_extended','temperature') | float(0) %}
+                        {% if v > 75 %}rgba(255,60,60,0.08){% elif v > 60 %}rgba(255,180,0,0.08){% else %}rgba(60,200,60,0.06){% endif %}
+                      border: >
+                        {% set v = state_attr('sensor.master_ai_extended','temperature') | float(0) %}
+                        1px solid {% if v > 75 %}rgba(255,60,60,0.14){% elif v > 60 %}rgba(255,180,0,0.14){% else %}rgba(60,200,60,0.12){% endif %}
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; }
+                content: |
+                  {% set e = 'sensor.master_ai_extended' %}
+                  {% set v = state_attr(e,'temperature') | float(0) %}
+                  {% if v > 75 %}🔴{% elif v > 60 %}🟡{% else %}🟢{% endif %} **{{ v }}°C**
+
+                  حرارة المعالج
+
+          # ── 3. GIT LOG ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(17,24,34,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(120,255,140,0.10);
+                  border-radius: 22px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 12px; line-height: 1.8; }
+            content: |
+              ### Git Log
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set logs = state_attr(e,'git_log') %}
+              {% if logs and logs | length > 0 %}
+              {% for l in logs %}
+              `{{ l[:72] }}`
+
+              {% endfor %}
+              {% else %}
+              No git log available
+              {% endif %}
+
+          # ── 4. TOOL USAGE ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 18px;
+                  padding: 12px 16px;
+                  margin-top: 10px;
+                }
+                ha-markdown { font-size: 13px; opacity: 0.85; direction: rtl; line-height: 1.8; }
+            content: >
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set tu = state_attr(e,'tool_usage') %}
+              {% if tu and tu | length > 0 %}
+              🔧 **استخدام الأدوات:**
+              {% for t in tu %}{{ t.tool }}: {{ t.count }}{% if not loop.last %} · {% endif %}{% endfor %}
+              {% else %}
+              لا توجد بيانات أدوات
+              {% endif %}
+
+          # ── NAV + ACTIONS ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: button
+                name: الرئيسية
+                icon: mdi:arrow-left
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/master-ai
+                show_state: false
+              - type: button
+                name: Backup
+                icon: mdi:database-arrow-up
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_backup
+                show_state: false
+              - type: button
+                name: Status
+                icon: mdi:refresh
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_status
+                show_state: false

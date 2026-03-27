@@ -1,0 +1,104 @@
+# Adhan Script v4 — SIMPLIFIED approach
+# Key insight: Use scene.create to snapshot ALL speaker states,
+# then scene.turn_on to restore EVERYTHING perfectly.
+# Also use media_pause instead of media_stop to prevent restart.
+
+adhan_play_and_resume:
+  alias: "تشغيل الأذان وإرجاع القرآن"
+  description: "يوقف القرآن، يشغل الأذان على كل السماعات، وبعدين يرجع القرآن"
+  icon: mdi:mosque
+  mode: single
+  sequence:
+    # === Step 1: Snapshot ALL speaker states using scene ===
+    # This saves EVERYTHING: volume, repeat, shuffle, what's playing, position
+    - action: scene.create
+      data:
+        scene_id: before_adhan
+        snapshot_entities:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+
+    # === Step 2: Pause all speakers (not stop — pause prevents restart) ===
+    - action: media_player.media_pause
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+
+    - delay:
+        seconds: 2
+
+    # === Step 3: Turn OFF repeat to prevent adhan looping ===
+    - action: media_player.repeat_set
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+      data:
+        repeat: "off"
+
+    - delay:
+        seconds: 1
+
+    # === Step 4: Set volume to 13% ===
+    - action: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+      data:
+        volume_level: 0.13
+
+    # === Step 5: Play adhan ===
+    - action: media_player.play_media
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+      data:
+        media_content_id: "media-source://media_source/local/adhan_makkah.mp3"
+        media_content_type: "music"
+
+    # === Step 6: Wait 240 seconds (8 sec before end) ===
+    - delay:
+        seconds: 240
+
+    # === Step 7: PAUSE adhan (not stop — pause is instant, no restart) ===
+    - action: media_player.media_pause
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+
+    - delay:
+        seconds: 3
+
+    # === Step 8: Stop completely (cleanup after pause) ===
+    - action: media_player.media_stop
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+
+    - delay:
+        seconds: 2
+
+    # === Step 9: Restore EVERYTHING from scene snapshot ===
+    # This restores: volume, repeat mode, what was playing, etc.
+    - action: scene.turn_on
+      target:
+        entity_id: scene.before_adhan

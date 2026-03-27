@@ -1,0 +1,27 @@
+I need to integrate TradingView Bridge API (running on Windows PC at 192.168.111.156:8059) with Master AI on RPi (192.168.109.123:9000).
+
+Bridge provides:
+- GET /analysis?symbol=X&exchange=KSE (returns quote+RSI+MACD+EMA+S/R, ~75KB per symbol)
+- GET /multi-analysis?symbols=X,Y,Z (batch)
+- GET /quote (live quote)
+- GET /ohlcv (historical bars)
+
+Master AI has stock_radar.py that does EMA radar on 128 stocks using tv_data.py TradingView websocket directly from RPi.
+
+I want:
+1) A bridge_client.py module on RPi that fetches from Bridge API over LAN
+2) A new /dashboard/bridge endpoint for live technical analysis data
+3) Integration with existing radar so dashboard shows Bridge data alongside radar data
+
+Architecture questions:
+1. Should bridge_client replace tv_data websocket or complement it? The websocket does real-time 30m radar scanning of 128 stocks. Bridge does deep analysis (RSI/MACD/EMA/S/R) per symbol.
+2. Should I cache Bridge responses on RPi? Bridge already has SQLite cache (30s quote, 120s bars).
+3. What sensor strategy - new HA sensor or extend existing radar sensor?
+4. How to handle Bridge being offline (Windows PC off)?
+5. What data should flow: all 128 stocks or only watchlist/top stocks?
+6. Response is ~75KB per symbol - too heavy for 128 stocks. Best approach?
+
+Current sensors: master_ai_dashboard (60s), extended (120s), radar (120s), portfolio (120s), analysis (300s).
+HA 16KB sensor limit applies.
+
+Give me a concrete architecture recommendation with file names, endpoint specs, and data flow.

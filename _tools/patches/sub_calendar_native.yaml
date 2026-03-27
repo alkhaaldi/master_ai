@@ -1,0 +1,211 @@
+  # ═══════════════════════════════════════
+  # SUBVIEW: CALENDAR & TASKS
+  # ═══════════════════════════════════════
+  - path: sub-calendar-tasks
+    title: التقويم والمهام
+    icon: mdi:calendar-check
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background:
+                        radial-gradient(circle at top left, rgba(180,120,255,0.16), transparent 24%),
+                        radial-gradient(circle at top right, rgba(120,80,255,0.08), transparent 22%),
+                        linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                      border: 1px solid rgba(180,120,255,0.14);
+                      border-radius: 30px 30px 0 0;
+                      padding: 22px 22px 10px;
+                      margin: 8px 8px 0;
+                      box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+                    }
+                    h2 { font-size: 24px !important; margin: 0 0 4px !important; }
+                    ha-markdown { font-size: 14px; opacity: 0.8; direction: rtl; }
+                content: |
+                  ## التقويم والمهام
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set ev = state_attr(d,'events_today') | int(0) %}
+                  {% set tk = state_attr(d,'tasks_open') | int(0) %}
+                  {% set sh = state_attr(d,'shift_today') | default('—') %}
+                  📅 {{ ev }} مواعيد اليوم · 📋 {{ tk }} مهمة مفتوحة · 🔄 {{ sh }}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(180,120,255,0.06), rgba(120,80,255,0.03));
+                      border: 1px solid rgba(180,120,255,0.10);
+                      border-radius: 0 0 30px 30px;
+                      padding: 10px 22px;
+                      margin: 0 8px 0;
+                    }
+                    ha-markdown { font-size: 15px; line-height: 1.7; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set ne = state_attr(d,'next_event') | default('') %}
+                  {% set nt = state_attr(d,'next_event_time') | default('') %}
+                  {% if ne %}
+                  ⏰ القادم: **{{ ne[:30] }}** {% if nt %}— {{ nt }}{% endif %}
+                  {% else %}
+                  ✅ لا مواعيد قريبة
+                  {% endif %}
+
+          # ── 2. QUICK STATS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(180,120,255,0.06);
+                      border: 1px solid rgba(180,120,255,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  📅 **{{ state_attr('sensor.master_ai_dashboard','events_today') | int(0) }}**
+
+                  مواعيد
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,180,60,0.06);
+                      border: 1px solid rgba(255,180,60,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  📋 **{{ state_attr('sensor.master_ai_dashboard','tasks_open') | int(0) }}**
+
+                  مفتوحة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,60,60,0.06);
+                      border: 1px solid rgba(255,60,60,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🔴 **{{ state_attr('sensor.master_ai_dashboard','tasks_high') | int(0) }}**
+
+                  عاجلة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(60,200,60,0.06);
+                      border: 1px solid rgba(60,200,60,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  ✅ **{{ state_attr('sensor.master_ai_extended','tasks_done_today') | int(0) }}**
+
+                  منجزة
+
+          # ── 3. EVENTS LIST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(24,20,34,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(180,120,255,0.12);
+                  border-radius: 22px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 13px; direction: rtl; line-height: 1.8; }
+            content: |
+              ### المواعيد القادمة
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set evts = state_attr(e,'events_list') %}
+              {% if evts and evts | length > 0 %}
+              {% for ev in evts %}
+              **{{ ev.summary }}**
+              📅 {{ ev.start_ts[:16] if ev.start_ts else '—' }}{% if ev.location %} · 📍 {{ ev.location }}{% endif %}
+
+              ---
+
+              {% endfor %}
+              {% else %}
+              لا توجد مواعيد قادمة
+              {% endif %}
+
+          # ── 4. TASKS LIST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(28,24,16,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(255,180,60,0.12);
+                  border-radius: 22px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 13px; direction: rtl; line-height: 1.8; }
+            content: |
+              ### المهام المفتوحة
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set tasks = state_attr(e,'tasks_list') %}
+              {% if tasks and tasks | length > 0 %}
+              | المهمة | الأولوية | التصنيف | الموعد |
+              |:---|:---:|:---:|:---:|
+              {% for t in tasks %}
+              | {{ t.title[:30] }} | {% if t.priority == 0 %}🔴{% elif t.priority == 1 %}🟠{% elif t.priority == 2 %}🟡{% else %}⚪{% endif %} | {{ t.category | default('—') }} | {{ t.due_date[:10] if t.due_date else '—' }} |
+              {% endfor %}
+              {% else %}
+              لا توجد مهام مفتوحة 🎉
+              {% endif %}
+
+          # ── 5. SHIFT SCHEDULE ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 18px;
+                  padding: 12px 16px;
+                  margin-top: 10px;
+                }
+                ha-markdown { font-size: 13px; opacity: 0.85; direction: rtl; line-height: 1.8; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set e = 'sensor.master_ai_extended' %}
+              🔄 **اليوم:** {{ state_attr(d,'shift_today') | default('—') }} — **غداً:** {{ state_attr(d,'shift_tomorrow') | default('—') }}
+
+              {% set week = state_attr(e,'shift_week') %}
+              {% if week and week | length > 0 %}
+              {% for day in week %}
+              {{ day.emoji }} {{ day.day }} ({{ day.date[-5:] }}) — {{ day.shift }}
+              {% endfor %}
+              {% endif %}
+
+          # ── NAV ──
+          - type: button
+            name: الرئيسية
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /master-ai-dashboard/master-ai
+            show_state: false

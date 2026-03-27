@@ -204,40 +204,32 @@ class BridgeClient:
         return {"symbol": symbol, "exchange": exchange, "source": "none", "stale": True, "error": "bridge_unreachable"}
 
     async def get_multi_analysis_30m(self, symbols: list[str], exchange: str = DEFAULT_EXCHANGE) -> dict:
-        """Get 30m analysis for multiple symbols via concurrent individual calls."""
+        """Get 30m analysis for multiple symbols via sequential individual calls."""
         results = {}
         errors = []
 
-        # Serve from cache first (60s TTL)
-        to_fetch = []
         for sym in symbols:
+            # Check cache first (60s TTL)
             cached = self._cache_get(f"analysis_30m:{exchange}:{sym}", 60)
             if cached:
                 results[sym] = {**cached, "source": "cache", "stale": False}
-            else:
-                to_fetch.append(sym)
+                continue
 
-        # Fetch uncached symbols concurrently in batches of 5
-        BATCH_SIZE = 5
-        for i in range(0, len(to_fetch), BATCH_SIZE):
-            batch = to_fetch[i:i + BATCH_SIZE]
-            tasks = [
-                self._request("/analysis", {"symbol": sym, "exchange": exchange, "interval": "30", "bars": 60})
-                for sym in batch
-            ]
-            responses = await asyncio.gather(*tasks, return_exceptions=True)
-            for sym, data in zip(batch, responses):
-                if isinstance(data, Exception) or data is None:
-                    stale = self._cache_get_stale(f"analysis_30m:{exchange}:{sym}")
-                    if stale:
-                        results[sym] = {**stale, "source": "cache", "stale": True}
-                    else:
-                        errors.append(sym)
+            data = await self._request("/analysis", {
+                "symbol": sym, "exchange": exchange,
+                "interval": "30", "bars": 60,
+            })
+            if data:
+                normalized = self._normalize_analysis(data)
+                normalized["timeframe"] = "30m"
+                self._cache_set(f"analysis_30m:{exchange}:{sym}", normalized)
+                results[sym] = {**normalized, "source": "live", "stale": False}
+            else:
+                stale = self._cache_get_stale(f"analysis_30m:{exchange}:{sym}")
+                if stale:
+                    results[sym] = {**stale, "source": "cache", "stale": True}
                 else:
-                    normalized = self._normalize_analysis(data)
-                    normalized["timeframe"] = "30m"
-                    self._cache_set(f"analysis_30m:{exchange}:{sym}", normalized)
-                    results[sym] = {**normalized, "source": "live", "stale": False}
+                    errors.append(sym)
 
         return {
             "bridge_online": self._online,

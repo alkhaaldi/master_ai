@@ -1,0 +1,224 @@
+  # ===================================
+  # SUBVIEW: HOME CONTROL
+  # ===================================
+  - path: sub-home
+    title: البيت
+    icon: mdi:home-thermometer-outline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background:
+                        radial-gradient(circle at top left, rgba(255,160,60,0.16), transparent 24%),
+                        radial-gradient(circle at top right, rgba(255,100,40,0.08), transparent 22%),
+                        linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                      border: 1px solid rgba(255,160,60,0.14);
+                      border-radius: 30px 30px 0 0;
+                      padding: 22px 22px 10px;
+                      margin: 8px 8px 0;
+                      box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+                    }
+                    h2 { font-size: 24px !important; margin: 0 0 4px !important; }
+                    ha-markdown { font-size: 14px; opacity: 0.8; direction: rtl; }
+                content: |
+                  ## نبض البيت
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set lo = state_attr(d,'home_lights_on') | int(0) %}
+                  {% set ac = state_attr(d,'home_ac_on') | int(0) %}
+                  {% set co = state_attr(d,'home_covers_open') | int(0) %}
+                  {% if lo == 0 and ac == 0 and co == 0 %}
+                  البيت هادي — كل شي مطفي
+                  {% elif lo > 10 or ac > 4 %}
+                  البيت شغّال — {{ lo }} نور · {{ ac }} مكيف · {{ co }} ستارة
+                  {% else %}
+                  {{ lo }} نور · {{ ac }} مكيف · {{ co }} ستارة مفتوحة
+                  {% endif %}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(255,160,60,0.06), rgba(255,100,40,0.03));
+                      border: 1px solid rgba(255,160,60,0.10);
+                      border-radius: 0 0 30px 30px;
+                      padding: 10px 22px;
+                      margin: 0 8px 0;
+                    }
+                    ha-markdown { font-size: 15px; line-height: 1.7; direction: rtl; }
+                content: >
+                  {% set avg = states('sensor.ac_house_avg_temperature') | float(0) %}
+                  {% if avg > 0 %}
+                  🌡️ متوسط الحرارة **{{ avg | round(1) }}°C**
+                  {% if avg > 24 %} — ⚠️ حار{% elif avg < 20 %} — ❄️ بارد{% else %} — ✅ مريح{% endif %}
+                  {% else %}
+                  🌡️ لا توجد بيانات حرارة
+                  {% endif %}
+
+          # ── 2. TEMPERATURE CARDS ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(255,180,0,0.08), rgba(255,160,0,0.04));
+                      border: 1px solid rgba(255,180,0,0.14);
+                      border-radius: 20px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🌡️ **{{ states('sensor.ac_house_avg_temperature') | float(0) | round(1) }}°C**
+
+                  متوسط البيت
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(255,60,60,0.08), rgba(255,40,40,0.04));
+                      border: 1px solid rgba(255,60,60,0.14);
+                      border-radius: 20px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🔥 **{{ states('sensor.ac_hottest_room') }}**
+
+                  أحر غرفة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(60,120,255,0.08), rgba(40,100,255,0.04));
+                      border: 1px solid rgba(60,120,255,0.14);
+                      border-radius: 20px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  ❄️ **{{ states('sensor.ac_coldest_room') }}**
+
+                  أبرد غرفة
+
+          # ── 3. LIVE STATUS COUNTERS ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,220,60,0.06);
+                      border: 1px solid rgba(255,220,60,0.12);
+                      border-radius: 20px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  💡 **{{ state_attr('sensor.master_ai_dashboard','home_lights_on') | int(0) }}**
+
+                  أنوار شغالة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(0,200,255,0.06);
+                      border: 1px solid rgba(0,200,255,0.12);
+                      border-radius: 20px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  ❄️ **{{ state_attr('sensor.master_ai_dashboard','home_ac_on') | int(0) }}**
+
+                  مكيفات شغالة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,160,60,0.06);
+                      border: 1px solid rgba(255,160,60,0.12);
+                      border-radius: 20px;
+                      padding: 14px 10px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🪟 **{{ state_attr('sensor.master_ai_dashboard','home_covers_open') | int(0) }}**
+
+                  ستائر مفتوحة
+
+          # ── 4. QUICK ACTIONS ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: button
+                name: إطفاء الكل
+                icon: mdi:power
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_alloff
+                  confirmation:
+                    text: إطفاء كل الأنوار والمكيفات؟
+                show_state: false
+              - type: button
+                name: الرئيسية
+                icon: mdi:arrow-left
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/master-ai
+                show_state: false
+              - type: button
+                name: المشاهد
+                icon: mdi:palette-outline
+                tap_action:
+                  action: more-info
+                  entity: scene.home
+                show_state: false
+
+          # ── 5. ALERTS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 18px;
+                  padding: 10px 16px;
+                  margin-top: 8px;
+                }
+                ha-markdown { font-size: 13px; opacity: 0.85; direction: rtl; line-height: 1.8; }
+            content: >
+              {% set avg = states('sensor.ac_house_avg_temperature') | float(0) %}
+              {% set co = state_attr('sensor.master_ai_dashboard','home_covers_open') | int(0) %}
+              {% set now_h = now().hour %}
+              {% set alerts = [] %}
+              {% if avg > 25 %}{% set alerts = alerts + ['🔥 الحرارة عالية: ' ~ avg | round(1) ~ '°C'] %}{% endif %}
+              {% if co > 0 and (now_h >= 23 or now_h < 5) %}{% set alerts = alerts + ['🪟 ' ~ co | string ~ ' ستارة مفتوحة بالليل'] %}{% endif %}
+              {% if alerts | length > 0 %}
+              ⚠️ **تنبيهات**
+
+              {% for a in alerts %}{{ a }}
+              {% endfor %}
+              {% else %}
+              ✅ لا توجد تنبيهات — البيت مستقر
+              {% endif %}

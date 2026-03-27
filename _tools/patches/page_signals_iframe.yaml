@@ -1,0 +1,17 @@
+  - path: sub-signals
+    title: الإشارات
+    icon: mdi:signal-variant
+    subview: true
+    type: panel
+    cards:
+      - type: iframe
+        url: /trading/signals
+        aspect_ratio: 100%
+        card_mod:
+          style: |
+            ha-card {
+              overflow: hidden;
+              border: none;
+              border-radius: 0;
+              background: #070D17;
+            }

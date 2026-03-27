@@ -1,0 +1,171 @@
+  # ===================================
+  # SUBVIEW: ASSISTANT
+  # ===================================
+  - path: sub-assistant
+    title: المساعد
+    icon: mdi:robot-outline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background:
+                        radial-gradient(circle at top left, rgba(255,100,200,0.16), transparent 24%),
+                        radial-gradient(circle at top right, rgba(200,60,255,0.08), transparent 22%),
+                        linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                      border: 1px solid rgba(255,100,200,0.14);
+                      border-radius: 30px 30px 0 0;
+                      padding: 22px 22px 10px;
+                      margin: 8px 8px 0;
+                      box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+                    }
+                    h2 { font-size: 24px !important; margin: 0 0 4px !important; }
+                    ha-markdown { font-size: 14px; opacity: 0.8; direction: rtl; }
+                content: |
+                  ## المساعد الشخصي
+                  {% set e = 'sensor.master_ai_extended' %}
+                  🧠 {{ state_attr(e,'memory_total') | int(0) }} ذاكرة · 💬 {{ state_attr(e,'total_requests') | int(0) }} طلب · 💰 ${{ state_attr(e,'cost_today_usd') | float(0) | round(3) }} اليوم
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(255,100,200,0.06), rgba(200,60,255,0.03));
+                      border: 1px solid rgba(255,100,200,0.10);
+                      border-radius: 0 0 30px 30px;
+                      padding: 10px 22px;
+                      margin: 0 8px 0;
+                    }
+                    ha-markdown { font-size: 15px; line-height: 1.7; direction: rtl; }
+                content: >
+                  {% set e = 'sensor.master_ai_extended' %}
+                  {% set an = state_attr(e,'anomalies_today') | int(0) %}
+                  {% if an > 0 %}⚠️ {{ an }} حالة شاذة اليوم{% else %}✅ لا شذوذ — النظام مستقر{% endif %}
+
+          # ── 2. STATS CARDS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(255,100,200,0.06);
+                      border: 1px solid rgba(255,100,200,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  🧠 **{{ state_attr('sensor.master_ai_extended','memory_total') | int(0) }}**
+
+                  ذاكرة
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(180,120,255,0.06);
+                      border: 1px solid rgba(180,120,255,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  💬 **{{ state_attr('sensor.master_ai_extended','total_requests') | int(0) }}**
+
+                  طلبات
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(60,200,60,0.06);
+                      border: 1px solid rgba(60,200,60,0.12);
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  💰 **${{ state_attr('sensor.master_ai_extended','cost_today_usd') | float(0) | round(3) }}**
+
+                  تكلفة اليوم
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: >
+                        {% set an = state_attr('sensor.master_ai_extended','anomalies_today') | int(0) %}
+                        {% if an > 0 %}rgba(255,60,60,0.06){% else %}rgba(60,200,60,0.06){% endif %}
+                      border: >
+                        {% set an = state_attr('sensor.master_ai_extended','anomalies_today') | int(0) %}
+                        1px solid {% if an > 0 %}rgba(255,60,60,0.12){% else %}rgba(60,200,60,0.12){% endif %}
+                      border-radius: 20px;
+                      padding: 12px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: |
+                  {% set an = state_attr('sensor.master_ai_extended','anomalies_today') | int(0) %}
+                  {% if an > 0 %}⚠️{% else %}✅{% endif %} **{{ an }}**
+
+                  شذوذ
+
+          # ── 3. MEMORY BREAKDOWN ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(20,18,28,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(255,100,200,0.10);
+                  border-radius: 22px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: >
+              ### توزيع الذاكرة
+
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set mem = state_attr(e,'memory_by_type') %}
+              {% if mem %}
+              📋 **أحداث:** {{ mem.event | default(0) }} · **حقائق:** {{ mem.fact | default(0) }} · **تصحيحات:** {{ mem.correction | default(0) }} · **تفضيلات:** {{ mem.preference | default(0) }}
+              {% else %}
+              لا توجد بيانات ذاكرة
+              {% endif %}
+
+          # ── 4. COST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(18,24,18,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(120,255,140,0.10);
+                  border-radius: 22px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: >
+              ### التكلفة
+
+              {% set e = 'sensor.master_ai_extended' %}
+              💰 **اليوم:** ${{ state_attr(e,'cost_today_usd') | float(0) | round(3) }} · **الإجمالي:** ${{ state_attr(e,'cost_total_usd') | float(0) | round(2) }}
+
+          # ── NAV ──
+          - type: button
+            name: الرئيسية
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /master-ai-dashboard/master-ai
+            show_state: false

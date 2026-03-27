@@ -1,0 +1,238 @@
+  # ═══════════════════════════════════════
+  # SUBVIEW: TRADING RADAR (Native)
+  # ═══════════════════════════════════════
+  - path: sub-radar
+    title: الرادار
+    icon: mdi:radar
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── L1: MARKET PULSE BAR ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background:
+                    radial-gradient(circle at top left, rgba(0,180,255,0.14), transparent 22%),
+                    linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(0,180,255,0.12);
+                  border-radius: 28px 28px 0 0;
+                  padding: 18px 20px 10px;
+                  margin: 8px 8px 0;
+                  box-shadow: 0 14px 32px rgba(0,0,0,0.30);
+                }
+                h2 { font-size: 22px !important; margin: 0 0 4px !important; }
+                ha-markdown { font-size: 14px; direction: rtl; }
+            content: |
+              ## منصة التداول
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% if state_attr(d,'market_open') %}🟢 السوق مفتوح{% else %}⚫ السوق مغلق{% endif %} · الرادار {{ '✅ شغال' if state_attr(r,'radar_enabled') else '⏸ واقف' }} · {{ state_attr(r,'radar_watch_count') | int(0) }} سهم{% if state_attr(r,'radar_alerts_today') | int(0) > 0 %} · 🔔 {{ state_attr(r,'radar_alerts_today') }} تنبيه{% endif %}
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(0,180,255,0.06), rgba(0,140,220,0.03));
+                  border: 1px solid rgba(0,180,255,0.08);
+                  border-radius: 0 0 28px 28px;
+                  padding: 8px 20px;
+                  margin: 0 8px 0;
+                }
+                ha-markdown { font-size: 13px; direction: rtl; opacity: 0.85; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set ts = state_attr(d,'top_signal') | default('') %}
+              {% set alerts = state_attr(d,'radar_alerts_today') | int(0) %}
+              {% if ts %}📡 آخر إشارة: **{{ ts }}**{% endif %}
+              {% if alerts > 0 %} · {{ alerts }} تنبيه اليوم{% endif %}
+
+          # ── L2: DECISION CARD (أقوى فرصة) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background:
+                    linear-gradient(135deg, rgba(255,170,0,0.10), rgba(255,200,60,0.04));
+                  border: 2px solid rgba(255,170,0,0.20);
+                  border-radius: 24px;
+                  padding: 18px;
+                  margin: 14px 8px 0;
+                  box-shadow: 0 8px 24px rgba(255,170,0,0.08);
+                }
+                ha-markdown { font-size: 15px; line-height: 1.9; direction: rtl; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% set sig = state_attr(r,'radar_recent_signals') or [] %}
+              {% set sig_syms = sig | map(attribute='symbol') | list %}
+              {% if ctx and ctx | length > 0 %}
+              {% set s = ctx[0] %}
+              {% if s.score_class == 'A' %}⭐{% elif s.score_class == 'B' %}🔵{% else %}⚪{% endif %} **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }} فلس
+
+              {% if s.change_pct is not none %}{% if s.change_pct >= 0 %}🟢 **▲ +{{ s.change_pct | round(1) }}%**{% else %}🔴 **▼ {{ s.change_pct | round(1) }}%**{% endif %}{% endif %} · تقييم **{{ s.score }}/{{ s.score_class }}** · RSI {{ s.rsi | round(0) if s.rsi is not none else '—' }}{% if s.symbol in sig_syms %} · 📡 **إشارة 30m**{% endif %}
+
+              {% if s.trend == 'صاعد' %}📈 صاعد{% elif s.trend == 'هابط' %}📉 هابط{% else %}➡️ محايد{% endif %}{% if s.verdict %} — {{ s.verdict[:35] }}{% endif %}
+              {% else %}
+              📉 لا توجد بيانات يومية متاحة
+              {% endif %}
+
+          # ── L3: TOP OPPORTUNITIES (2-5) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.015);
+                  border: 1px solid rgba(255,170,0,0.10);
+                  border-radius: 22px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                }
+                ha-markdown { font-size: 13px; line-height: 2.0; direction: rtl; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% set sig = state_attr(r,'radar_recent_signals') or [] %}
+              {% set sig_syms = sig | map(attribute='symbol') | list %}
+              {% if ctx and ctx | length > 1 %}
+              **فرص إضافية**
+              {% for s in ctx[1:5] %}
+              {% if s.trend == 'صاعد' %}🟢{% elif s.trend == 'هابط' %}🔴{% else %}⚪{% endif %} **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }}ف {% if s.change_pct is not none %}{% if s.change_pct >= 0 %}**+{{ s.change_pct | round(1) }}%**{% else %}{{ s.change_pct | round(1) }}%{% endif %}{% endif %} · {{ s.score }}/{{ s.score_class }}{% if s.symbol in sig_syms %} 📡{% endif %}
+              {% endfor %}
+              {% endif %}
+
+          # ── L5: 30m SIGNAL FLASH (آخر 3 فقط) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(0,180,255,0.04);
+                  border: 1px solid rgba(0,180,255,0.10);
+                  border-radius: 20px;
+                  padding: 10px 16px;
+                  margin: 10px 8px 0;
+                }
+                ha-markdown { font-size: 12.5px; line-height: 1.9; direction: rtl; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set signals = state_attr(r,'radar_recent_signals') %}
+              {% if signals and signals | length > 0 %}
+              **📡 آخر الإشارات**
+              {% for s in signals[:3] %}
+              {% if s.type_ar | default('') == 'صاعد' %}🟢{% else %}🔴{% endif %} **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }}ف · {{ s.time[-5:] if s.time | length > 5 else s.time }} · {{ s.score }}/{{ s.score_class }}{% if s.strength %} · {{ s.strength }}{% endif %}{% if s.vol_ratio is defined and s.vol_ratio > 1.5 %} · 🔥 حجم عالي{% endif %}
+              {% endfor %}
+              {% if signals | length > 3 %}<small>+{{ signals | length - 3 }} إشارات إضافية</small>{% endif %}
+              {% endif %}
+
+          # ── L6: QUICK ACTIONS (3 أزرار) ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: button
+                name: الرادار
+                icon: mdi:radar
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_radar_toggle
+                show_state: false
+              - type: button
+                name: حالة
+                icon: mdi:information-outline
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_radar_status
+                show_state: false
+              - type: button
+                name: أقوى
+                icon: mdi:trophy
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_radar_top
+                show_state: false
+
+          # ── L4: DAILY CONTEXT BOARD (6-10) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.01);
+                  border: 1px solid rgba(255,255,255,0.04);
+                  border-radius: 20px;
+                  padding: 12px 16px;
+                  margin: 10px 8px 0;
+                }
+                ha-markdown { font-size: 12px; line-height: 1.9; direction: rtl; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% if ctx and ctx | length > 5 %}
+              **بقية السياق اليومي**
+              {% for s in ctx[5:10] %}
+              {% if s.trend == 'صاعد' %}🟢{% elif s.trend == 'هابط' %}🔴{% else %}⚪{% endif %} {{ s.name_ar | default(s.symbol) }} — {{ s.price }}ف {% if s.change_pct is not none %}{% if s.change_pct >= 0 %}+{{ s.change_pct | round(1) }}%{% else %}{{ s.change_pct | round(1) }}%{% endif %}{% endif %} · {{ s.score }}/{{ s.score_class }}
+              {% endfor %}
+              {% elif ctx and ctx | length > 0 %}
+              <small>كل الأسهم معروضة أعلاه</small>
+              {% else %}
+              لا يوجد سياق يومي
+              {% endif %}
+
+          # ── WATCHLIST CHIPS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.04);
+                  border-radius: 16px;
+                  padding: 8px 16px;
+                  margin: 8px 8px 0;
+                }
+                ha-markdown { font-size: 12px; direction: rtl; }
+            content: >
+              {% set wl = state_attr('sensor.master_ai_radar','radar_watchlist') %}
+              {% if wl and wl | length > 0 %}
+              🔍 **المراقبة:** {% for s in wl[:12] %}{{ s.name_ar | default(s.symbol) }}{% if not loop.last %} · {% endif %}{% endfor %}
+              {% endif %}
+
+          # ── L7: DIAGNOSTICS FOOTER ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.01);
+                  border: 1px solid rgba(255,255,255,0.03);
+                  border-radius: 14px;
+                  padding: 6px 16px;
+                  margin: 6px 8px 12px;
+                }
+                ha-markdown { font-size: 11px; opacity: 0.6; direction: rtl; }
+            content: >
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% set reason = state_attr(r,'daily_context_reason') | default('') %}
+              {% set stale = state_attr(r,'daily_context_stale') %}
+              {% if ctx and ctx | length > 0 %}
+              {% set age = ctx[0].data_age_hours | float(0) %}
+              📅 آخر تحديث: {{ (ctx[0].updated_at | string)[:16] }}
+              · {% if age < 2 %}🟢 طازج{% elif age < 6 %}🟡 {{ age | round(1) }}h{% else %}🔴 قديم {{ age | round(1) }}h{% endif %}
+              {% endif %}
+              {% if stale %}· ⚠️ بيانات قديمة{% endif %}
+              {% if reason and reason != 'ok' %}· {{ reason }}{% endif %}
+
+          # ── NAV ──
+          - type: button
+            name: الرئيسية
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /master-ai-dashboard/master-ai
+            show_state: false

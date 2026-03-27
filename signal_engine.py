@@ -31,6 +31,14 @@ _cached_thresholds = None
 _thresholds_ts     = 0
 _THRESHOLDS_TTL    = 300  # refresh every 5 min
 
+# --- Bridge result cache (avoids re-fetching on every request) ---
+import threading as _threading
+_bridge_cache: dict = {}
+_bridge_cache_ts: dict = {}
+_bridge_fetch_lock = _threading.Lock()
+_BRIDGE_DAILY_TTL = 300  # 5 min cache for daily signals
+_BRIDGE_30M_TTL   = 120  # 2 min cache for 30m signals
+
 
 def _get_thresholds() -> dict:
     """Get brain-learned thresholds with 5-min cache."""
@@ -289,11 +297,17 @@ def _get_open_trades_safe() -> list:
 
 
 def _get_bridge_data_safe() -> dict:
-    """Get bridge multi-analysis for candidate symbols."""
+    """Get bridge multi-analysis for candidate symbols (5-min module-level cache)."""
+    global _bridge_cache, _bridge_cache_ts
+    now = _time.time()
+    if _bridge_cache.get("daily") and (now - _bridge_cache_ts.get("daily", 0)) < _BRIDGE_DAILY_TTL:
+        return _bridge_cache["daily"]
+    # If another thread is already fetching, return stale immediately
+    if not _bridge_fetch_lock.acquire(blocking=False):
+        return _bridge_cache.get("daily") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
     try:
-        from bridge_client import get_bridge_client
+        from bridge_client import BridgeClient, BRIDGE_BASE_URL
         import asyncio
-        client = get_bridge_client()
 
         # Gather candidates: portfolio + watchlist
         candidates = set()
@@ -311,30 +325,49 @@ def _get_bridge_data_safe() -> dict:
             pass
 
         if not candidates:
-            return {"bridge_online": client._online, "symbols_count": 0, "symbols": {}}
+            return {"bridge_online": False, "symbols_count": 0, "symbols": {}}
 
         symbols = list(candidates)
 
-        # Run async from sync context
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
+        def _run_in_thread():
+            async def _fetch():
+                client = BridgeClient(BRIDGE_BASE_URL)
+                try:
+                    return await client.get_multi_analysis(symbols)
+                finally:
+                    await client.close()
+            return asyncio.run(_fetch())
+
+        try:
+            asyncio.get_running_loop()
+            # Inside async context -- offload to thread so event loop stays free
             import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, client.get_multi_analysis(symbols))
-                return future.result(timeout=180)
-        else:
-            return asyncio.run(client.get_multi_analysis(symbols))
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                result = pool.submit(_run_in_thread).result(timeout=180)
+        except RuntimeError:
+            # No running loop -- call directly
+            result = _run_in_thread()
+        _bridge_cache["daily"] = result
+        _bridge_cache_ts["daily"] = _time.time()
+        return result
     except Exception as e:
         logger.warning("Bridge data fetch failed: %s", e)
-        return {"bridge_online": False, "symbols_count": 0, "symbols": {}}
+        return _bridge_cache.get("daily") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
+    finally:
+        _bridge_fetch_lock.release()
 
 
 def _get_bridge_data_30m_safe() -> dict:
-    """Get bridge 30m analysis for all watchlist symbols."""
+    """Get bridge 30m analysis for all watchlist symbols (2-min module-level cache)."""
+    global _bridge_cache, _bridge_cache_ts
+    now = _time.time()
+    if _bridge_cache.get("30m") and (now - _bridge_cache_ts.get("30m", 0)) < _BRIDGE_30M_TTL:
+        return _bridge_cache["30m"]
+    if not _bridge_fetch_lock.acquire(blocking=False):
+        return _bridge_cache.get("30m") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
     try:
-        from bridge_client import get_bridge_client
+        from bridge_client import BridgeClient, BRIDGE_BASE_URL
         import asyncio
-        client = get_bridge_client()
 
         candidates = set()
         for t in _get_open_trades_safe():
@@ -351,21 +384,34 @@ def _get_bridge_data_30m_safe() -> dict:
             pass
 
         if not candidates:
-            return {"bridge_online": client._online, "symbols_count": 0, "symbols": {}}
+            return {"bridge_online": False, "symbols_count": 0, "symbols": {}}
 
         symbols = list(candidates)
 
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
+        def _run_in_thread():
+            async def _fetch():
+                client = BridgeClient(BRIDGE_BASE_URL)
+                try:
+                    return await client.get_multi_analysis_30m(symbols)
+                finally:
+                    await client.close()
+            return asyncio.run(_fetch())
+
+        try:
+            asyncio.get_running_loop()
             import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, client.get_multi_analysis_30m(symbols))
-                return future.result(timeout=180)
-        else:
-            return asyncio.run(client.get_multi_analysis_30m(symbols))
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                result = pool.submit(_run_in_thread).result(timeout=180)
+        except RuntimeError:
+            result = _run_in_thread()
+        _bridge_cache["30m"] = result
+        _bridge_cache_ts["30m"] = _time.time()
+        return result
     except Exception as e:
         logger.warning("Bridge 30m data fetch failed: %s", e)
-        return {"bridge_online": False, "symbols_count": 0, "symbols": {}}
+        return _bridge_cache.get("30m") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
+    finally:
+        _bridge_fetch_lock.release()
 
 
 def build_signals_30m() -> dict:

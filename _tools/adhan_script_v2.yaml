@@ -1,0 +1,199 @@
+# Adhan Script v2 — Fix for repeat mode
+# Date: 2026-03-22
+# Problem: Speakers have repeat=one, adhan keeps looping
+# Solution: Save repeat state → turn off repeat → play adhan → wait exact duration → restore
+
+# REPLACE the existing adhan_play_and_resume script in scripts.yaml with this:
+
+adhan_play_and_resume:
+  alias: "تشغيل الأذان وإرجاع القرآن"
+  description: "يوقف القرآن، يشغل الأذان على كل السماعات، وبعدين يرجع القرآن"
+  icon: mdi:mosque
+  mode: single
+  sequence:
+    # === Step 1: Save current state of each speaker ===
+    - variables:
+        speaker_1: "media_player.office_1_2"
+        speaker_2: "media_player.office_2_2"
+        speaker_3: "media_player.room_3_2"
+        speaker_4: "media_player.ground_floor"
+        was_playing_1: "{{ is_state('media_player.office_1_2', 'playing') }}"
+        was_playing_2: "{{ is_state('media_player.office_2_2', 'playing') }}"
+        was_playing_3: "{{ is_state('media_player.room_3_2', 'playing') }}"
+        was_playing_4: "{{ is_state('media_player.ground_floor', 'playing') }}"
+        vol_1: "{{ state_attr('media_player.office_1_2', 'volume_level') | float(0.1) }}"
+        vol_2: "{{ state_attr('media_player.office_2_2', 'volume_level') | float(0.1) }}"
+        vol_3: "{{ state_attr('media_player.room_3_2', 'volume_level') | float(0.1) }}"
+        vol_4: "{{ state_attr('media_player.ground_floor', 'volume_level') | float(0.1) }}"
+        content_1: "{{ state_attr('media_player.office_1_2', 'media_content_id') | default('') }}"
+        content_2: "{{ state_attr('media_player.office_2_2', 'media_content_id') | default('') }}"
+        content_3: "{{ state_attr('media_player.room_3_2', 'media_content_id') | default('') }}"
+        content_4: "{{ state_attr('media_player.ground_floor', 'media_content_id') | default('') }}"
+        # Save repeat mode for each speaker
+        repeat_1: "{{ state_attr('media_player.office_1_2', 'repeat') | default('off') }}"
+        repeat_2: "{{ state_attr('media_player.office_2_2', 'repeat') | default('off') }}"
+        repeat_3: "{{ state_attr('media_player.room_3_2', 'repeat') | default('off') }}"
+        repeat_4: "{{ state_attr('media_player.ground_floor', 'repeat') | default('off') }}"
+
+    # === Step 2: Turn OFF repeat on all speakers ===
+    - action: media_player.repeat_set
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+      data:
+        repeat: "off"
+
+    - delay:
+        seconds: 1
+
+    # === Step 3: Stop all speakers ===
+    - action: media_player.media_stop
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+
+    - delay:
+        seconds: 1
+
+    # === Step 4: Set volume to 13 on all speakers ===
+    - action: media_player.volume_set
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+      data:
+        volume_level: 0.13
+
+    - delay:
+        seconds: 1
+
+    # === Step 5: Play adhan on all speakers ===
+    - action: media_player.play_media
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+      data:
+        media_content_id: "media-source://media_source/local/adhan_makkah.mp3"
+        media_content_type: "music"
+
+    # === Step 6: Wait EXACT duration of adhan (248 seconds + 5 sec buffer) ===
+    - delay:
+        seconds: 253
+
+    # === Step 7: Stop adhan ===
+    - action: media_player.media_stop
+      target:
+        entity_id:
+          - media_player.office_1_2
+          - media_player.office_2_2
+          - media_player.room_3_2
+          - media_player.ground_floor
+
+    - delay:
+        seconds: 2
+
+    # === Step 8: Restore repeat mode on each speaker ===
+    - action: media_player.repeat_set
+      target:
+        entity_id: media_player.office_1_2
+      data:
+        repeat: "{{ repeat_1 }}"
+    - action: media_player.repeat_set
+      target:
+        entity_id: media_player.office_2_2
+      data:
+        repeat: "{{ repeat_2 }}"
+    - action: media_player.repeat_set
+      target:
+        entity_id: media_player.room_3_2
+      data:
+        repeat: "{{ repeat_3 }}"
+    - action: media_player.repeat_set
+      target:
+        entity_id: media_player.ground_floor
+      data:
+        repeat: "{{ repeat_4 }}"
+
+    - delay:
+        seconds: 1
+
+    # === Step 9: Restore volumes ===
+    - action: media_player.volume_set
+      target:
+        entity_id: media_player.office_1_2
+      data:
+        volume_level: "{{ vol_1 }}"
+    - action: media_player.volume_set
+      target:
+        entity_id: media_player.office_2_2
+      data:
+        volume_level: "{{ vol_2 }}"
+    - action: media_player.volume_set
+      target:
+        entity_id: media_player.room_3_2
+      data:
+        volume_level: "{{ vol_3 }}"
+    - action: media_player.volume_set
+      target:
+        entity_id: media_player.ground_floor
+      data:
+        volume_level: "{{ vol_4 }}"
+
+    - delay:
+        seconds: 1
+
+    # === Step 10: Resume playback on speakers that were playing ===
+    - if:
+        - condition: template
+          value_template: "{{ was_playing_1 == 'True' and content_1 != '' }}"
+      then:
+        - action: media_player.play_media
+          target:
+            entity_id: media_player.office_1_2
+          data:
+            media_content_id: "{{ content_1 }}"
+            media_content_type: "music"
+
+    - if:
+        - condition: template
+          value_template: "{{ was_playing_2 == 'True' and content_2 != '' }}"
+      then:
+        - action: media_player.play_media
+          target:
+            entity_id: media_player.office_2_2
+          data:
+            media_content_id: "{{ content_2 }}"
+            media_content_type: "music"
+
+    - if:
+        - condition: template
+          value_template: "{{ was_playing_3 == 'True' and content_3 != '' }}"
+      then:
+        - action: media_player.play_media
+          target:
+            entity_id: media_player.room_3_2
+          data:
+            media_content_id: "{{ content_3 }}"
+            media_content_type: "music"
+
+    - if:
+        - condition: template
+          value_template: "{{ was_playing_4 == 'True' and content_4 != '' }}"
+      then:
+        - action: media_player.play_media
+          target:
+            entity_id: media_player.ground_floor
+          data:
+            media_content_id: "{{ content_4 }}"
+            media_content_type: "music"

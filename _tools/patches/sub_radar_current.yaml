@@ -1,0 +1,358 @@
+  # ═══════════════════════════════════════
+  # ═══════════════════════════════════════
+  # ═══════════════════════════════════════
+  # SUBVIEW: TRADING RADAR (T2.6)
+  # ═══════════════════════════════════════
+  - path: sub-radar
+    title: الرادار
+    icon: mdi:radar
+    subview: true
+    type: panel
+    cards:
+      - type: custom:stack-in-card
+        mode: vertical
+        card_mod:
+          style: |
+            ha-card {
+              background: transparent;
+              box-shadow: none;
+              padding: 8px;
+              max-width: 900px;
+              margin: 0 auto;
+            }
+        cards:
+
+          # ── 1. MARKET PULSE ──
+          - type: custom:stack-in-card
+            mode: vertical
+            card_mod:
+              style: |
+                ha-card {
+                  background:
+                    radial-gradient(circle at top left, rgba(0,180,255,0.14), transparent 22%),
+                    linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(0,180,255,0.12);
+                  border-radius: 28px;
+                  padding: 16px;
+                  box-shadow: 0 14px 32px rgba(0,0,0,0.30);
+                }
+            cards:
+              - type: custom:mushroom-title-card
+                title: Trading Radar
+                subtitle: >
+                  {% set r = 'sensor.master_ai_radar' %}
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% if state_attr(d,'market_open') %}🟢 السوق مفتوح{% else %}⚫ السوق مغلق{% endif %}
+                  · الرادار {{ 'شغال ✅' if state_attr(r,'radar_enabled') else 'واقف ⏸' }}
+                  · {{ state_attr(r,'radar_watch_count') | int(0) }} سهم
+                  {% if state_attr(r,'radar_alerts_today') | int(0) > 0 %}· {{ state_attr(r,'radar_alerts_today') }} تنبيه 🔔{% endif %}
+
+          # ── 2. DECISION CARD (3 columns) ──
+          - type: custom:stack-in-card
+            mode: vertical
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(255,170,0,0.08), rgba(255,200,60,0.03));
+                  border: 1px solid rgba(255,170,0,0.16);
+                  border-radius: 26px;
+                  padding: 14px;
+                  margin-top: 14px;
+                  box-shadow: 0 6px 20px rgba(255,170,0,0.06);
+                }
+            cards:
+              - type: custom:mushroom-title-card
+                title: "⭐ أفضل فرص اليوم"
+                subtitle: >
+                  {% set r = 'sensor.master_ai_radar' %}
+                  {% set ctx = state_attr(r,'radar_daily_context') %}
+                  {% if ctx and ctx | length > 0 %}
+                  أعلى 3 تقييماً · 1D
+                  {% if state_attr(r,'daily_context_stale') %}· ⚠️ قديمة{% endif %}
+                  {% else %}لا توجد بيانات{% endif %}
+              - type: grid
+                columns: 3
+                square: false
+                cards:
+                  - type: custom:mushroom-template-card
+                    primary: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 0 %}
+                      {% set s = ctx[0] %}
+                      {{ s.name_ar | default(s.symbol) }}
+                      {% else %}\u2014{% endif %}
+                    secondary: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 0 %}
+                      {% set s = ctx[0] %}
+                      {{ s.price }} \u0641\u0644\u0633 {% if s.change_pct is defined and s.change_pct is not none %}{% if s.change_pct >= 0 %}\u25b2+{{ s.change_pct | round(1) }}%{% else %}\u25bc{{ s.change_pct | round(1) }}%{% endif %}{% endif %}
+                      \u00b7 \u2b50 {{ s.score }}/{{ s.score_class }}
+                      {% if s.verdict %}\u00b7 {{ s.verdict[:30] }}{% endif %}
+                      {% endif %}
+                    icon: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 0 and ctx[0].trend == '\u0635\u0627\u0639\u062f' %}mdi:trending-up{% elif ctx and ctx | length > 0 and ctx[0].trend == '\u0647\u0627\u0628\u0637' %}mdi:trending-down{% else %}mdi:minus{% endif %}
+                    icon_color: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 0 and ctx[0].trend == '\u0635\u0627\u0639\u062f' %}green{% elif ctx and ctx | length > 0 and ctx[0].trend == '\u0647\u0627\u0628\u0637' %}red{% else %}grey{% endif %}
+                    card_mod:
+                      style: |
+                        ha-card {
+                          background: rgba(255,170,0,0.06);
+                          border: 1px solid rgba(255,170,0,0.14);
+                          border-radius: 18px;
+                        }
+                  - type: custom:mushroom-template-card
+                    primary: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 1 %}
+                      {% set s = ctx[1] %}
+                      {{ s.name_ar | default(s.symbol) }}
+                      {% else %}\u2014{% endif %}
+                    secondary: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 1 %}
+                      {% set s = ctx[1] %}
+                      {{ s.price }} \u0641\u0644\u0633 {% if s.change_pct is defined and s.change_pct is not none %}{% if s.change_pct >= 0 %}\u25b2+{{ s.change_pct | round(1) }}%{% else %}\u25bc{{ s.change_pct | round(1) }}%{% endif %}{% endif %}
+                      \u00b7 \u2b50 {{ s.score }}/{{ s.score_class }}
+                      {% if s.verdict %}\u00b7 {{ s.verdict[:30] }}{% endif %}
+                      {% endif %}
+                    icon: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 1 and ctx[1].trend == '\u0635\u0627\u0639\u062f' %}mdi:trending-up{% elif ctx and ctx | length > 1 and ctx[1].trend == '\u0647\u0627\u0628\u0637' %}mdi:trending-down{% else %}mdi:minus{% endif %}
+                    icon_color: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 1 and ctx[1].trend == '\u0635\u0627\u0639\u062f' %}green{% elif ctx and ctx | length > 1 and ctx[1].trend == '\u0647\u0627\u0628\u0637' %}red{% else %}grey{% endif %}
+                    card_mod:
+                      style: |
+                        ha-card {
+                          background: rgba(255,170,0,0.045);
+                          border: 1px solid rgba(255,170,0,0.11000000000000001);
+                          border-radius: 18px;
+                        }
+                  - type: custom:mushroom-template-card
+                    primary: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 2 %}
+                      {% set s = ctx[2] %}
+                      {{ s.name_ar | default(s.symbol) }}
+                      {% else %}\u2014{% endif %}
+                    secondary: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 2 %}
+                      {% set s = ctx[2] %}
+                      {{ s.price }} \u0641\u0644\u0633 {% if s.change_pct is defined and s.change_pct is not none %}{% if s.change_pct >= 0 %}\u25b2+{{ s.change_pct | round(1) }}%{% else %}\u25bc{{ s.change_pct | round(1) }}%{% endif %}{% endif %}
+                      \u00b7 \u2b50 {{ s.score }}/{{ s.score_class }}
+                      {% if s.verdict %}\u00b7 {{ s.verdict[:30] }}{% endif %}
+                      {% endif %}
+                    icon: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 2 and ctx[2].trend == '\u0635\u0627\u0639\u062f' %}mdi:trending-up{% elif ctx and ctx | length > 2 and ctx[2].trend == '\u0647\u0627\u0628\u0637' %}mdi:trending-down{% else %}mdi:minus{% endif %}
+                    icon_color: >
+                      {% set r = 'sensor.master_ai_radar' %}
+                      {% set ctx = state_attr(r,'radar_daily_context') %}
+                      {% if ctx and ctx | length > 2 and ctx[2].trend == '\u0635\u0627\u0639\u062f' %}green{% elif ctx and ctx | length > 2 and ctx[2].trend == '\u0647\u0627\u0628\u0637' %}red{% else %}grey{% endif %}
+                    card_mod:
+                      style: |
+                        ha-card {
+                          background: rgba(255,170,0,0.03);
+                          border: 1px solid rgba(255,170,0,0.08000000000000002);
+                          border-radius: 18px;
+                        }
+
+          # ── 3. DAILY CONTEXT (4-10) ──
+          - type: custom:stack-in-card
+            mode: vertical
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.015);
+                  border: 1px solid rgba(255,255,255,0.05);
+                  border-radius: 24px;
+                  padding: 12px 14px;
+                  margin-top: 14px;
+                }
+            cards:
+              - type: custom:mushroom-title-card
+                title: "بقية السياق اليومي"
+                subtitle: >
+                  {% set r = 'sensor.master_ai_radar' %}
+                  {% set ctx = state_attr(r,'radar_daily_context') %}
+                  {% if ctx and ctx | length > 3 %}{{ (ctx | length) - 3 }} سهم إضافي
+                  {% elif ctx %}Top 3 فقط{% else %}لا بيانات{% endif %}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { background: transparent; }
+                    ha-markdown { font-size: 12px; line-height: 1.7; direction: rtl; opacity: 0.85; }
+                content: |
+                  {% set r = 'sensor.master_ai_radar' %}
+                  {% set ctx = state_attr(r,'radar_daily_context') %}
+                  {% if ctx and ctx | length > 3 %}
+                  {% for s in ctx[3:10] %}{% if s.trend == 'صاعد' %}🟢{% elif s.trend == 'هابط' %}🔴{% else %}⚪{% endif %} {{ s.name_ar | default(s.symbol) }} — {{ s.price }}ف {% if s.change_pct is defined and s.change_pct is not none %}{% if s.change_pct >= 0 %}▲{{ s.change_pct | round(1) }}%{% else %}▼{{ s.change_pct | round(1) }}%{% endif %}{% endif %} · {{ s.score }}/{{ s.score_class }} · RSI {{ s.rsi | round(0) if s.rsi is not none else '-' }}
+                  {% endfor %}
+                  <small>📅 {{ (ctx[0].updated_at | string)[:16] if ctx[0].updated_at else '' }}</small>
+                  {% elif ctx and ctx | length > 0 %}
+                  <small>كل الأسهم في أفضل فرص اليوم</small>
+                  {% endif %}
+
+          # ── 4. 30m SIGNALS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(0,180,255,0.03);
+                  border: 1px solid rgba(0,180,255,0.06);
+                  border-radius: 20px;
+                  padding: 8px 14px;
+                  margin-top: 14px;
+                }
+                ha-markdown { font-size: 12px; line-height: 1.8; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set signals = state_attr(r,'radar_recent_signals') %}
+              {% if signals and signals | length > 0 %}
+              **📡 إشارات 30m**
+              {% for s in signals %}
+              {% if s.type_ar | default('') == 'صاعد' %}🟢{% else %}🔴{% endif %} **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }}ف · {{ s.time[-5:] if s.time | length > 5 else s.time }} · {{ s.score }}/{{ s.score_class }}
+              {% endfor %}
+              {% else %}
+              📡 لا إشارات 30m حالياً — يتحدث أثناء السوق
+              {% endif %}
+
+          # ── 5. TRADING CONTROLS ──
+          - type: custom:stack-in-card
+            mode: vertical
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(17,20,28,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 22px;
+                  padding: 12px;
+                  margin-top: 14px;
+                }
+            cards:
+              - type: custom:mushroom-title-card
+                title: " "
+                subtitle: "أوامر التداول"
+              - type: grid
+                columns: 4
+                square: false
+                cards:
+                  - type: custom:button-card
+                    name: "الرادار"
+                    icon: mdi:radar
+                    tap_action:
+                      action: call-service
+                      service: script.turn_on
+                      service_data:
+                        entity_id: script.master_ai_radar_toggle
+                      confirmation:
+                        text: "تشغيل/إيقاف؟"
+                    styles:
+                      card:
+                        - height: 76px
+                        - border-radius: 18px
+                        - padding: 8px
+                        - background: "rgba(0,180,255,0.08)"
+                        - border: "1px solid rgba(0,180,255,0.16)"
+                        - box-shadow: "0 4px 12px rgba(0,180,255,0.08)"
+                      name:
+                        - font-size: 11px
+                        - font-weight: 700
+                      icon:
+                        - width: 26px
+                        - color: "rgb(0,180,255)"
+                  - type: custom:button-card
+                    name: "الأسهم"
+                    icon: mdi:chart-bar
+                    tap_action:
+                      action: call-service
+                      service: script.turn_on
+                      service_data:
+                        entity_id: script.master_ai_stocks
+                    styles:
+                      card:
+                        - height: 76px
+                        - border-radius: 18px
+                        - padding: 8px
+                        - background: "rgba(120,255,140,0.08)"
+                        - border: "1px solid rgba(120,255,140,0.16)"
+                        - box-shadow: "0 4px 12px rgba(120,255,140,0.08)"
+                      name:
+                        - font-size: 11px
+                        - font-weight: 700
+                      icon:
+                        - width: 26px
+                        - color: "rgb(120,255,140)"
+                  - type: custom:button-card
+                    name: "حالة"
+                    icon: mdi:information-outline
+                    tap_action:
+                      action: call-service
+                      service: script.turn_on
+                      service_data:
+                        entity_id: script.master_ai_radar_status
+                    styles:
+                      card:
+                        - height: 76px
+                        - border-radius: 18px
+                        - padding: 8px
+                        - background: "rgba(180,120,255,0.08)"
+                        - border: "1px solid rgba(180,120,255,0.16)"
+                        - box-shadow: "0 4px 12px rgba(180,120,255,0.08)"
+                      name:
+                        - font-size: 11px
+                        - font-weight: 700
+                      icon:
+                        - width: 26px
+                        - color: "rgb(180,120,255)"
+                  - type: custom:button-card
+                    name: "أقوى"
+                    icon: mdi:trophy
+                    tap_action:
+                      action: call-service
+                      service: script.turn_on
+                      service_data:
+                        entity_id: script.master_ai_radar_top
+                    styles:
+                      card:
+                        - height: 76px
+                        - border-radius: 18px
+                        - padding: 8px
+                        - background: "rgba(255,170,0,0.08)"
+                        - border: "1px solid rgba(255,170,0,0.16)"
+                        - box-shadow: "0 4px 12px rgba(255,170,0,0.08)"
+                      name:
+                        - font-size: 11px
+                        - font-weight: 700
+                      icon:
+                        - width: 26px
+                        - color: "rgb(255,170,0)"
+
+          # ── 6. WATCHLIST (footer) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: transparent;
+                  padding: 2px 14px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 11px; opacity: 0.5; }
+            content: >
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set wl = state_attr(r,'radar_watchlist') %}
+              {% if wl and wl | length > 0 %}

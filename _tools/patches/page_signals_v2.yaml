@@ -1,0 +1,145 @@
+  - path: sub-signals
+    title: الإشارات
+    icon: mdi:signal-variant
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── SIGNAL PULSE ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 16px;
+                  padding: 10px 18px 8px;
+                  margin: 6px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.16);
+                  background: rgba(127,127,127,0.04);
+                  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h2 { font-size: 28px; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px 0; }
+                ha-markdown p { font-size: 13px; font-weight: 500; opacity: 0.85; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              ## الإشارات
+              {% set sig = 'sensor.master_ai_signals' %}
+              {% set sc = state_attr(sig,'signal_counts') or {} %}
+              {% set allsig = state_attr(sig,'all_signals') or [] %}
+              {% set avg_conf = 0 %}{% if allsig | length > 0 %}{% set ns = namespace(total=0) %}{% for o in allsig %}{% set ns.total = ns.total + o.get('confluence_score',0) %}{% endfor %}{% set avg_conf = (ns.total / allsig | length) | round(0) %}{% endif %}
+              🟢 جاهز: <span class="ltr">{{ sc.get('ready',0) }}</span> · 🔵 تهيئة: <span class="ltr">{{ sc.get('setup',0) }}</span> · 🔍 اكتشاف: <span class="ltr">{{ sc.get('discovery',0) }}</span> · 📊 إجمالي: <span class="ltr">{{ allsig | length }}</span> · متوسط التوافق: <span class="ltr">{{ avg_conf }}</span>
+
+          # ── FULL SIGNAL STATE TABLE (ALL stocks, ALL 16 indicators) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 14px 12px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.14);
+                  background: rgba(127,127,127,0.04);
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                  overflow-x: auto;
+                  -webkit-overflow-scrolling: touch;
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+                ha-markdown table { min-width: 900px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+                ha-markdown th { font-size: 11px; font-weight: 700; opacity: 0.8; padding: 6px 3px; border-bottom: 2px solid rgba(128,128,128,0.22); white-space: nowrap; text-align: center; }
+                ha-markdown td { font-size: 12px; font-weight: 500; padding: 6px 3px; border-bottom: 1px solid rgba(128,128,128,0.10); text-align: center; white-space: nowrap; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              {% set sig = 'sensor.master_ai_signals' %}
+              {% set allsig = state_attr(sig,'all_signals') or [] %}
+              {% if allsig | length > 0 %}
+              ### مصفوفة المؤشرات (<span class="ltr">{{ allsig | length }}</span> سهم)
+
+              | الرمز | الحالة | التوافق | القرار | EMA | RSI | MACD | StochK | ADX | الحجم | BB | تباين | تقاطع | دعم | مقاومة | ATR |
+              |:------|:-----:|:------:|:-----:|:---:|----:|:----:|------:|----:|-----:|:--:|:----:|:-----:|----:|------:|----:|
+              {% for s in allsig %}| <span class="ltr">{{ s.symbol }}</span> | <span style="{% if s.trade_state == 'ready' %}color:#16A34A;font-weight:700{% elif s.trade_state == 'setup' %}color:#22C55E{% elif s.trade_state == 'manage' %}color:#F59E0B;font-weight:700{% elif s.trade_state == 'entered' %}color:#F59E0B{% else %}opacity:0.7{% endif %}">{{ s.trade_state }}</span> | <span class="ltr" style="color:{% if s.confluence_score >= 71 %}#16A34A{% elif s.confluence_score >= 50 %}#22C55E{% elif s.confluence_score >= 40 %}#F59E0B{% elif s.confluence_score >= 30 %}#F97316{% else %}#DC2626{% endif %};font-weight:700">{{ s.confluence_score }}</span> | {{ s.verdict }} | {% if s.ema_state == 'bullish' %}<span style="color:#16A34A">↑</span>{% elif s.ema_state == 'bearish' %}<span style="color:#DC2626">↓</span>{% else %}→{% endif %} | <span class="ltr" style="{% if s.rsi_14 > 70 %}color:#DC2626;font-weight:700{% elif s.rsi_14 < 30 %}color:#16A34A;font-weight:700{% endif %}">{{ s.rsi_14 | round(0) }}</span> | {% if s.macd_state == 'bullish' %}<span style="color:#16A34A">+</span>{% else %}<span style="color:#DC2626">−</span>{% endif %}{% set mm = s.get('macd_momentum','') %}{% if 'accelerating' in mm %}🔺{% elif 'decelerating' in mm %}🔻{% endif %} | <span class="ltr"{% if s.stoch_k is not none and s.stoch_k > 80 %} style="color:#DC2626"{% elif s.stoch_k is not none and s.stoch_k < 20 %} style="color:#16A34A"{% endif %}>{{ s.stoch_k | default('—') }}</span> | <span class="ltr"{% if s.adx is not none and s.adx > 25 %} style="font-weight:700"{% endif %}>{{ s.adx | default('—') }}</span> | <span class="ltr"{% if s.vol_ratio is not none and s.vol_ratio > 1.5 %} style="font-weight:700;color:#16A34A"{% endif %}>{{ s.vol_ratio | default('—') }}×</span> | {% if s.bb_squeeze %}<span style="color:#DC2626;font-weight:700">🔴</span>{% else %}—{% endif %} | {% if s.rsi_divergence == 'bullish' %}<span style="color:#16A34A">↑</span>{% elif s.rsi_divergence == 'bearish' %}<span style="color:#DC2626">↓</span>{% else %}—{% endif %} | {% set ec = s.get('ema_cross') or {} %}{% if ec.get('type') == 'golden' %}<span style="color:#16A34A">🟢{{ ec.bars_ago }}d</span>{% elif ec.get('type') == 'death' %}<span style="color:#DC2626">🔴{{ ec.bars_ago }}d</span>{% else %}—{% endif %} | <span class="ltr">{{ s.support | default('—') }}</span> | <span class="ltr">{{ s.resistance | default('—') }}</span> | <span class="ltr">{{ s.atr_14 | default('—') }}</span> |
+              {% endfor %}
+              {% else %}
+              ### مصفوفة المؤشرات
+              لا إشارات مُفعّلة حالياً — تأكد أن Bridge متصل
+              {% endif %}
+
+          # ── 30m SIGNAL FLASH (from radar) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% set r = 'sensor.master_ai_radar' %}
+                  {% set signals = state_attr(r,'radar_recent_signals') or [] %}
+                  {% if signals | length == 0 %}
+                  display: none;
+                  {% else %}
+                  border-radius: 14px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(0,170,255,0.12);
+                  background: rgba(0,170,255,0.04);
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                  {% endif %}
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+                ha-markdown table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+                ha-markdown th { font-size: 12px; font-weight: 700; opacity: 0.8; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,0.18); }
+                ha-markdown td { font-size: 13px; font-weight: 500; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,0.10); }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set signals = state_attr(r,'radar_recent_signals') or [] %}
+              {% if signals | length > 0 %}
+              ### إشارات 30m (<span class="ltr">{{ signals | length }}</span>)
+
+              | الرمز | السعر | الوقت | النوع | Score | دعم | مقاومة |
+              |:------|------:|:-----:|:-----:|:-----:|----:|------:|
+              {% for s in signals[:8] %}| <span class="ltr">{{ s.symbol }}</span> | <span class="ltr">{{ s.price }}ف</span> | <span class="ltr">{{ s.time[-5:] if s.time | length > 5 else s.time }}</span> | {% if s.type_ar | default('') == 'صاعد' %}🟢{% else %}🔴{% endif %} | <span class="ltr">{{ s.score }}/{{ s.score_class }}</span> | <span class="ltr">{{ s.support | default('—') }}</span> | <span class="ltr">{{ s.resistance | default('—') }}</span> |
+              {% endfor %}
+              {% endif %}
+
+          # ── BRIDGE DIAGNOSTICS ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 10px 16px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.10);
+                  background: rgba(127,127,127,0.02);
+                }
+                ha-markdown { font-size: 11px; font-weight: 500; opacity: 0.60; direction: rtl; text-align: right; line-height: 1.6; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              {% set sig = 'sensor.master_ai_signals' %}
+              {% set ts = state_attr(sig,'timestamp') | default('—') %}
+              **تشخيص** · {% if state_attr(sig,'bridge_online') %}🟢 Bridge متصل{% else %}🔴 Bridge غير متصل{% endif %} · رموز مُخزنة: <span class="ltr">{{ state_attr(sig,'bridge_cached_count') | int(0) }}</span> · آخر تحديث: <span class="ltr">{{ ts[:16] }}</span>
+
+          # ── SIGNALS NAV ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 6px 16px;
+                  margin: 6px 8px 12px;
+                  border: 1px solid rgba(128,128,128,0.10);
+                  background: rgba(127,127,127,0.02);
+                }
+                ha-markdown { font-size: 14px; direction: rtl; text-align: right; }
+            content: >
+              [التداول](/master-ai-dashboard/sub-radar) · [السجل](/master-ai-dashboard/sub-journal) · [الرئيسية](/master-ai-dashboard/0)

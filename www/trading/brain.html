@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>عقل التداول — KSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#070D17;--navy-800:#0C1525;--navy-700:#111E32;
+  --navy-600:#162840;--navy-500:#1C334F;--navy-400:#24405F;
+  --gold:#C6974B;--gold-bright:#D4A95C;--gold-dim:#9E7A3D;
+  --gold-bg:rgba(198,151,75,.06);--gold-br:rgba(198,151,75,.25);
+  --green:#4CAF82;--green-bright:#5BC492;--green-bg:rgba(76,175,130,.08);--green-br:rgba(76,175,130,.3);
+  --red:#D94452;--red-bright:#E5606C;--red-bg:rgba(217,68,82,.08);--red-br:rgba(217,68,82,.3);
+  --amber:#E8A838;--amber-bg:rgba(232,168,56,.08);--amber-br:rgba(232,168,56,.3);
+  --cyan:#38BDF8;--cyan-bg:rgba(56,189,248,.08);--cyan-br:rgba(56,189,248,.3);
+  --text:#E8ECF0;--text-2:#A0ADBC;--text-3:#6B7D90;--text-4:#405060;
+  --card:#0E1929;--card-hover:#132137;--card-border:#1A2E45;
+  --f:'Tajawal','Noto Kufi Arabic',sans-serif;
+  --fd:'Noto Kufi Arabic','Tajawal',sans-serif;
+  --fm:'IBM Plex Mono','Consolas',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--f);font-variant-numeric:tabular-nums;
+  background:var(--navy-900);color:var(--text);
+  min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.ltr{direction:ltr;unicode-bidi:isolate}
+a{color:var(--gold);text-decoration:none}
+a:hover{color:var(--gold-bright)}
+
+/* ===== TOPBAR ===== */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,13,23,.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--card-border);
+  padding:0 1.25rem;height:56px;
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+}
+.topbar-brand{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.brand-mark{
+  background:linear-gradient(135deg,var(--gold),var(--gold-dim));
+  color:var(--navy-900);font-family:var(--fm);font-weight:700;
+  font-size:.85rem;padding:.25rem .6rem;border-radius:4px;letter-spacing:.5px;
+}
+.topbar-title{font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--text)}
+.topbar-tag{
+  font-size:.65rem;background:var(--navy-600);color:var(--text-3);
+  padding:2px 8px;border-radius:10px;white-space:nowrap;
+}
+.topbar-right{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.clock{font-family:var(--fm);font-size:.85rem;color:var(--gold);direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.btn-refresh{
+  background:none;border:1px solid var(--card-border);color:var(--text-2);
+  width:34px;height:34px;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.btn-refresh:hover{border-color:var(--gold-br);color:var(--gold)}
+.btn-refresh.spinning svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.nav-links{display:flex;gap:.15rem}
+.nav-link{
+  font-size:.75rem;padding:.3rem .6rem;border-radius:6px;color:var(--text-3);
+  transition:all .2s;
+}
+.nav-link:hover{color:var(--text);background:var(--navy-700)}
+.nav-link.active{color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br)}
+
+/* ===== MAIN CONTENT ===== */
+.main{padding:1.25rem;max-width:1200px;margin:0 auto}
+
+/* ===== PAGE HEADER ===== */
+.page-header{
+  display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;
+}
+.page-header h1{font-family:var(--fd);font-size:1.35rem;font-weight:700;color:var(--text)}
+.page-header .brain-icon{font-size:1.5rem}
+.page-header .subtitle{font-size:.85rem;color:var(--text-3);margin-right:auto}
+
+/* ===== PULSE BAR (stat cards) ===== */
+.pulse-bar{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;margin-bottom:1.5rem;
+}
+.pulse-card{
+  background:var(--card);border:1px solid var(--card-border);border-radius:10px;
+  padding:1rem;display:flex;flex-direction:column;gap:.35rem;
+  transition:border-color .2s;
+}
+.pulse-card:hover{border-color:var(--gold-br)}
+.pulse-label{font-size:.75rem;color:var(--text-3);font-weight:500}
+.pulse-value{font-family:var(--fm);font-size:1.5rem;font-weight:600;color:var(--text)}
+.pulse-value.green{color:var(--green)}
+.pulse-value.amber{color:var(--amber)}
+.pulse-value.red{color:var(--red)}
+.status-indicator{display:flex;align-items:center;gap:.5rem}
+.status-dot-lg{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-dot-lg.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.status-dot-lg.off{background:var(--red);box-shadow:0 0 8px var(--red)}
+.status-label{font-family:var(--fm);font-size:1.1rem;font-weight:600}
+.status-label.on{color:var(--green)}
+.status-label.off{color:var(--red)}
+
+/* ===== SECTION CARD ===== */
+.section{
+  background:var(--card);border:1px solid var(--card-border);border-radius:12px;
+  margin-bottom:1.25rem;overflow:hidden;
+}
+.section-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.85rem 1.15rem;border-bottom:1px solid var(--card-border);
+}
+.section-title{font-family:var(--fd);font-size:.95rem;font-weight:600;color:var(--text)}
+.section-badge{
+  font-family:var(--fm);font-size:.7rem;padding:2px 8px;border-radius:10px;
+  background:var(--navy-700);color:var(--text-3);
+}
+
+/* ===== INDICATOR WEIGHTS TABLE ===== */
+.weights-table{width:100%;border-collapse:collapse}
+.weights-table th{
+  font-size:.7rem;color:var(--text-3);font-weight:500;text-align:right;
+  padding:.65rem 1rem;border-bottom:1px solid var(--card-border);
+  background:var(--navy-800);
+}
+.weights-table td{
+  padding:.7rem 1rem;border-bottom:1px solid rgba(26,46,69,.5);
+  font-size:.85rem;vertical-align:middle;
+}
+.weights-table tr:last-child td{border-bottom:none}
+.weights-table tr:hover td{background:var(--card-hover)}
+.ind-name{
+  font-family:var(--fm);font-weight:600;font-size:.85rem;color:var(--gold);
+  letter-spacing:.5px;
+}
+.weight-cell{display:flex;align-items:center;gap:.75rem;direction:ltr}
+.weight-num{font-family:var(--fm);font-weight:600;font-size:.85rem;min-width:40px;text-align:right}
+.weight-bar-wrap{
+  flex:1;height:20px;background:var(--navy-700);border-radius:4px;
+  position:relative;overflow:hidden;min-width:120px;
+}
+.weight-bar-center{
+  position:absolute;top:0;bottom:0;width:1px;
+  left:50%;background:var(--text-4);z-index:2;
+}
+.weight-bar-fill{
+  position:absolute;top:2px;bottom:2px;border-radius:3px;
+  transition:all .4s ease;min-width:2px;
+}
+.weight-bar-fill.positive{right:50%;background:var(--green);border-radius:3px 0 0 3px}
+.weight-bar-fill.negative{left:50%;background:var(--red);border-radius:0 3px 3px 0}
+.weight-bar-fill.neutral{left:calc(50% - 1px);width:2px;background:var(--amber)}
+.hit-badge{
+  font-family:var(--fm);font-size:.75rem;font-weight:600;
+  padding:2px 8px;border-radius:6px;display:inline-block;
+}
+.hit-badge.green{color:var(--green);background:var(--green-bg);border:1px solid var(--green-br)}
+.hit-badge.amber{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-br)}
+.hit-badge.red{color:var(--red);background:var(--red-bg);border:1px solid var(--red-br)}
+.sig-count{font-family:var(--fm);font-size:.8rem;color:var(--text-3)}
+
+/* ===== RECENT EVALUATIONS TABLE ===== */
+.eval-table{width:100%;border-collapse:collapse}
+.eval-table th{
+  font-size:.7rem;color:var(--text-3);font-weight:500;text-align:right;
+  padding:.65rem 1rem;border-bottom:1px solid var(--card-border);
+  background:var(--navy-800);
+}
+.eval-table td{
+  padding:.6rem 1rem;border-bottom:1px solid rgba(26,46,69,.5);
+  font-size:.8rem;
+}
+.eval-table tr:last-child td{border-bottom:none}
+.eval-table tr:hover td{background:var(--card-hover)}
+.sym-tag{
+  font-family:var(--fm);font-weight:600;color:var(--cyan);font-size:.8rem;
+}
+.verdict-tag{
+  font-size:.75rem;padding:2px 10px;border-radius:6px;font-weight:600;
+  display:inline-block;
+}
+.verdict-tag.buy{color:var(--green);background:var(--green-bg);border:1px solid var(--green-br)}
+.verdict-tag.watch{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-br)}
+.verdict-tag.sell{color:var(--red);background:var(--red-bg);border:1px solid var(--red-br)}
+.outcome-icon{font-size:1rem}
+.pct-val{font-family:var(--fm);font-weight:600;font-size:.8rem}
+.pct-val.pos{color:var(--green)}
+.pct-val.neg{color:var(--red)}
+.date-val{font-family:var(--fm);font-size:.75rem;color:var(--text-3);direction:ltr;unicode-bidi:isolate}
+
+/* ===== WEEKLY SUMMARY ===== */
+.weekly-card{
+  padding:1.25rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;
+}
+.weekly-main{
+  grid-column:1/-1;text-align:center;padding:1rem 0;
+  border-bottom:1px solid var(--card-border);margin-bottom:.5rem;
+}
+.weekly-main .big-rate{font-family:var(--fm);font-size:2.5rem;font-weight:700}
+.weekly-main .big-label{font-size:.8rem;color:var(--text-3);margin-top:.25rem}
+.weekly-stat{text-align:center;padding:.5rem}
+.weekly-stat .stat-label{font-size:.7rem;color:var(--text-3);margin-bottom:.25rem}
+.weekly-stat .stat-val{font-family:var(--fm);font-size:1rem;font-weight:600;color:var(--text)}
+.weekly-stat .stat-sub{font-size:.75rem;color:var(--text-3);margin-top:.15rem}
+.section.gold-border{border-color:var(--gold-br)}
+.section.amber-border{border-color:var(--amber-br)}
+.section.red-border{border-color:var(--red-br)}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:4rem 2rem;text-align:center;
+}
+.empty-state.visible{display:flex}
+.empty-icon{font-size:3rem;margin-bottom:1rem;opacity:.5}
+.empty-title{font-family:var(--fd);font-size:1.1rem;color:var(--text-2);margin-bottom:.5rem}
+.empty-sub{font-size:.85rem;color:var(--text-3);max-width:360px;line-height:1.7}
+
+/* ===== LOADING ===== */
+.loading-overlay{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(7,13,23,.7);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;flex-direction:column;gap:1rem;
+}
+.loading-overlay.visible{display:flex}
+.spinner{
+  width:40px;height:40px;border:3px solid var(--navy-600);
+  border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;
+}
+.loading-text{font-size:.85rem;color:var(--text-3)}
+
+/* ===== ERROR STATE ===== */
+.error-bar{
+  display:none;padding:.75rem 1.25rem;background:var(--red-bg);
+  border:1px solid var(--red-br);border-radius:8px;margin-bottom:1rem;
+  font-size:.85rem;color:var(--red-bright);align-items:center;gap:.5rem;
+}
+.error-bar.visible{display:flex}
+.error-bar button{
+  background:none;border:1px solid var(--red-br);color:var(--red-bright);
+  padding:.25rem .65rem;border-radius:6px;cursor:pointer;font-family:var(--f);
+  font-size:.75rem;margin-right:auto;transition:all .2s;
+}
+.error-bar button:hover{background:var(--red-bg)}
+
+/* ===== FOOTER ===== */
+.footer{
+  text-align:center;padding:1.5rem 1rem;
+  border-top:1px solid var(--card-border);margin-top:2rem;
+}
+.footer-disclaimer{font-size:.7rem;color:var(--text-4);line-height:1.8}
+.footer-ts{font-family:var(--fm);font-size:.65rem;color:var(--text-4);margin-top:.35rem;direction:ltr;unicode-bidi:isolate}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1024px){
+  .pulse-bar{grid-template-columns:repeat(3,1fr)}
+  .weekly-card{grid-template-columns:1fr 1fr}
+  .weekly-stat:last-child{grid-column:1/-1}
+}
+@media(max-width:768px){
+  .topbar{padding:0 .75rem;gap:.5rem}
+  .topbar-tag,.nav-links{display:none}
+  .main{padding:.75rem}
+  .pulse-bar{grid-template-columns:repeat(2,1fr);gap:.5rem}
+  .pulse-card{padding:.75rem}
+  .pulse-value{font-size:1.2rem}
+  .weights-table th,.weights-table td{padding:.5rem .65rem}
+  .weight-bar-wrap{min-width:80px}
+  .eval-table th,.eval-table td{padding:.45rem .5rem;font-size:.75rem}
+  .weekly-card{grid-template-columns:1fr;gap:.75rem}
+  .weekly-main .big-rate{font-size:2rem}
+  .section-head{padding:.65rem .85rem}
+}
+@media(max-width:480px){
+  .pulse-bar{grid-template-columns:1fr 1fr}
+  .topbar-title{font-size:.85rem}
+  .page-header h1{font-size:1.1rem}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-mark">KSE</span>
+    <span class="topbar-title">منصة التداول</span>
+    <span class="topbar-tag">Master AI</span>
+  </div>
+  <nav class="nav-links">
+    <a href="radar.html" class="nav-link">الرادار</a>
+    <a href="signals.html" class="nav-link">الإشارات</a>
+    <a href="positions.html" class="nav-link">المراكز</a>
+    <a href="journal.html" class="nav-link">السجل</a>
+    <a href="brain.html" class="nav-link active">العقل</a>
+  </nav>
+  <div class="topbar-right">
+    <span class="clock" id="clock"></span>
+    <button class="btn-refresh" id="btnRefresh" title="تحديث">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <span class="loading-text">جاري تحميل بيانات العقل...</span>
+</div>
+
+<!-- MAIN -->
+<main class="main" id="mainContent" style="display:none">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <span class="brain-icon">&#129504;</span>
+    <h1>عقل التداول</h1>
+    <span class="subtitle">تعلم الإشارات وتحسين الأوزان</span>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-bar" id="errorBar">
+    <span>&#9888;</span>
+    <span id="errorMsg">خطأ في تحميل البيانات</span>
+    <button onclick="loadData()">إعادة المحاولة</button>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">&#129504;</div>
+    <div class="empty-title">عقل التداول يجمع البيانات</div>
+    <div class="empty-sub">الحد الأدنى 30 إشارة لبدء التعلم — سيبدأ التحليل تلقائياً عند توفر بيانات كافية</div>
+  </div>
+
+  <!-- DATA CONTENT -->
+  <div id="dataContent" style="display:none">
+
+    <!-- PULSE BAR -->
+    <div class="pulse-bar" id="pulseBar"></div>
+
+    <!-- INDICATOR WEIGHTS -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-title">أوزان المؤشرات</span>
+        <span class="section-badge" id="indCount"></span>
+      </div>
+      <table class="weights-table">
+        <thead>
+          <tr>
+            <th>المؤشر</th>
+            <th style="text-align:center">الوزن</th>
+            <th style="text-align:center">نسبة الإصابة</th>
+            <th style="text-align:center">الإشارات</th>
+          </tr>
+        </thead>
+        <tbody id="weightsBody"></tbody>
+      </table>
+    </div>
+
+    <!-- RECENT EVALUATIONS -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-title">آخر التقييمات</span>
+        <span class="section-badge" id="evalCount"></span>
+      </div>
+      <table class="eval-table">
+        <thead>
+          <tr>
+            <th>الرمز</th>
+            <th>القرار</th>
+            <th>النتيجة</th>
+            <th>التغير%</th>
+            <th>التاريخ</th>
+          </tr>
+        </thead>
+        <tbody id="evalBody"></tbody>
+      </table>
+    </div>
+
+    <!-- WEEKLY SUMMARY -->
+    <div class="section" id="weeklySection">
+      <div class="section-head">
+        <span class="section-title">ملخص الأسبوع</span>
+        <span class="section-badge" id="weekEnd"></span>
+      </div>
+      <div class="weekly-card" id="weeklyCard"></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-disclaimer">هذه المعلومات للأغراض التعليمية فقط ولا تمثل نصيحة استثمارية — بورصة الكويت</div>
+  <div class="footer-ts" id="footerTs"></div>
+</footer>
+
+<script>
+(function(){
+  /* ===== CLOCK ===== */
+  const clockEl=document.getElementById('clock');
+  function updateClock(){
+    const d=new Date();
+    clockEl.textContent=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  updateClock();setInterval(updateClock,1000);
+
+  /* ===== REFS ===== */
+  const loading=document.getElementById('loading');
+  const mainContent=document.getElementById('mainContent');
+  const dataContent=document.getElementById('dataContent');
+  const emptyState=document.getElementById('emptyState');
+  const errorBar=document.getElementById('errorBar');
+  const errorMsg=document.getElementById('errorMsg');
+  const pulseBar=document.getElementById('pulseBar');
+  const weightsBody=document.getElementById('weightsBody');
+  const evalBody=document.getElementById('evalBody');
+  const weeklyCard=document.getElementById('weeklyCard');
+  const weeklySection=document.getElementById('weeklySection');
+  const indCount=document.getElementById('indCount');
+  const evalCount=document.getElementById('evalCount');
+  const weekEnd=document.getElementById('weekEnd');
+  const footerTs=document.getElementById('footerTs');
+  const btnRefresh=document.getElementById('btnRefresh');
+
+  /* ===== HELPERS ===== */
+  function pct(v){return(v*100).toFixed(1)+'%'}
+  function rateClass(v){return v>0.6?'green':v>=0.4?'amber':'red'}
+  function ltr(v){return'<span class="ltr">'+v+'</span>'}
+
+  /* ===== RENDER PULSE BAR ===== */
+  function renderPulse(d){
+    const active=d.brain_active;
+    const hrClass=rateClass(d.overall_hit_rate);
+    pulseBar.innerHTML=`
+      <div class="pulse-card">
+        <div class="pulse-label">حالة العقل</div>
+        <div class="status-indicator">
+          <span class="status-dot-lg ${active?'on':'off'}"></span>
+          <span class="status-label ${active?'on':'off'}">${active?'نشط':'متوقف'}</span>
+        </div>
+      </div>
+      <div class="pulse-card">
+        <div class="pulse-label">إشارات متتبعة</div>
+        <div class="pulse-value">${ltr(d.total_tracked)}</div>
+      </div>
+      <div class="pulse-card">
+        <div class="pulse-label">تم تقييمها</div>
+        <div class="pulse-value">${ltr(d.total_evaluated)}</div>
+      </div>
+      <div class="pulse-card">
+        <div class="pulse-label">نسبة الإصابة الكلية</div>
+        <div class="pulse-value ${hrClass}">${ltr(pct(d.overall_hit_rate))}</div>
+      </div>
+      <div class="pulse-card">
+        <div class="pulse-label">في الانتظار</div>
+        <div class="pulse-value">${ltr(d.pending_count)}</div>
+      </div>`;
+  }
+
+  /* ===== RENDER WEIGHTS ===== */
+  function renderWeights(indicators){
+    const entries=Object.entries(indicators).sort((a,b)=>b[1].weight-a[1].weight);
+    indCount.textContent=entries.length+' مؤشر';
+    weightsBody.innerHTML=entries.map(([name,v])=>{
+      const w=v.weight;
+      const hr=v.hit_rate;
+      const hrCls=rateClass(hr);
+      /* bar calc: 1.0=50%, scale so 2.0=100%, 0=0% */
+      const barPct=Math.min(Math.max(w/2*100,0),100);
+      let barHTML='';
+      if(w>1.0){
+        const width=((w-1.0)/1.0)*50;
+        barHTML=`<div class="weight-bar-fill positive" style="width:${Math.min(width,50)}%"></div>`;
+      }else if(w<1.0){
+        const width=((1.0-w)/1.0)*50;
+        barHTML=`<div class="weight-bar-fill negative" style="width:${Math.min(width,50)}%"></div>`;
+      }else{
+        barHTML=`<div class="weight-bar-fill neutral"></div>`;
+      }
+      return`<tr>
+        <td><span class="ind-name">${name.toUpperCase()}</span></td>
+        <td>
+          <div class="weight-cell">
+            <span class="weight-num" style="color:${w>1?'var(--green)':w<1?'var(--red)':'var(--amber)'}">${w.toFixed(2)}</span>
+            <div class="weight-bar-wrap">
+              <div class="weight-bar-center"></div>
+              ${barHTML}
+            </div>
+          </div>
+        </td>
+        <td style="text-align:center"><span class="hit-badge ${hrCls}">${ltr(pct(hr))}</span></td>
+        <td style="text-align:center"><span class="sig-count">${ltr(v.signals)}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  /* ===== RENDER EVALUATIONS ===== */
+  function renderEvals(evals){
+    evalCount.textContent=evals.length+' تقييم';
+    if(!evals.length){
+      evalBody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-3);padding:2rem">لا توجد تقييمات حتى الآن</td></tr>';
+      return;
+    }
+    evalBody.innerHTML=evals.slice(0,10).map(e=>{
+      const isHit=e.outcome==='hit';
+      const verdictCls=e.verdict==='شراء'?'buy':e.verdict==='بيع'?'sell':'watch';
+      const pctV=e.pct;
+      const pctCls=pctV>=0?'pos':'neg';
+      const sign=pctV>=0?'+':'';
+      const dt=new Date(e.signal_time);
+      const dateStr=dt.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit'})
+        +' '+dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      return`<tr>
+        <td><span class="sym-tag">${e.symbol}</span></td>
+        <td><span class="verdict-tag ${verdictCls}">${e.verdict}</span></td>
+        <td><span class="outcome-icon">${isHit?'&#9989;':'&#10060;'}</span></td>
+        <td><span class="pct-val ${pctCls} ltr">${sign}${pctV.toFixed(1)}%</span></td>
+        <td><span class="date-val">${dateStr}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  /* ===== RENDER WEEKLY ===== */
+  function renderWeekly(ws){
+    if(!ws){weeklySection.style.display='none';return}
+    weeklySection.style.display='';
+    const hrCls=rateClass(ws.hit_rate);
+    weeklySection.className='section '+(ws.hit_rate>0.6?'gold-border':ws.hit_rate>=0.4?'amber-border':'red-border');
+    weekEnd.textContent=ws.week_end;
+    weeklyCard.innerHTML=`
+      <div class="weekly-main">
+        <div class="big-rate ${hrCls}">${ltr(pct(ws.hit_rate))}</div>
+        <div class="big-label">نسبة إصابة الأسبوع</div>
+      </div>
+      <div class="weekly-stat">
+        <div class="stat-label">أفضل مؤشر</div>
+        <div class="stat-val" style="color:var(--green)">${ltr(ws.best_indicator)}</div>
+      </div>
+      <div class="weekly-stat">
+        <div class="stat-label">أضعف مؤشر</div>
+        <div class="stat-val" style="color:var(--red)">${ltr(ws.worst_indicator)}</div>
+      </div>
+      <div class="weekly-stat">
+        <div class="stat-label">نهاية الأسبوع</div>
+        <div class="stat-val ltr">${ws.week_end}</div>
+      </div>`;
+  }
+
+  /* ===== LOAD DATA ===== */
+  let autoTimer=null;
+  async function loadData(showLoader){
+    if(showLoader!==false){loading.classList.add('visible')}
+    errorBar.classList.remove('visible');
+    btnRefresh.classList.add('spinning');
+    try{
+      const res=await fetch('/dashboard/brain');
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const d=await res.json();
+      mainContent.style.display='';
+      /* empty state check */
+      if(!d.brain_active||d.total_tracked===0){
+        emptyState.classList.add('visible');
+        dataContent.style.display='none';
+      }else{
+        emptyState.classList.remove('visible');
+        dataContent.style.display='';
+        renderPulse(d);
+        renderWeights(d.indicator_weights||{});
+        renderEvals(d.recent_evaluations||[]);
+        renderWeekly(d.weekly_summary);
+      }
+      footerTs.textContent='Last updated: '+new Date().toLocaleTimeString('en-GB');
+    }catch(err){
+      mainContent.style.display='';
+      errorBar.classList.add('visible');
+      errorMsg.textContent='خطأ في تحميل البيانات: '+err.message;
+    }finally{
+      loading.classList.remove('visible');
+      btnRefresh.classList.remove('spinning');
+    }
+  }
+
+  /* ===== INIT ===== */
+  btnRefresh.addEventListener('click',()=>loadData(true));
+  loadData(true);
+  autoTimer=setInterval(()=>loadData(false),120000);
+
+  /* ===== MOBILE NAV (hamburger on small screens) ===== */
+  /* Nav links are hidden on mobile via CSS; topbar brand remains */
+})();
+</script>
+</body>
+</html>

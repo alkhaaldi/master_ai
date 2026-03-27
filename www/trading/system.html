@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Master AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Kufi+Arabic:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#070D17;--navy-800:#0C1422;--navy-700:#111B2E;--navy-600:#172338;
+  --gold:#C6974B;--gold-dim:#9A7A3E;--gold-bg:rgba(198,151,75,.07);--gold-br:rgba(198,151,75,.25);
+  --green:#34D399;--green-bg:rgba(52,211,153,.07);--green-br:rgba(52,211,153,.3);
+  --red:#F87171;--red-bg:rgba(248,113,113,.07);--red-br:rgba(248,113,113,.3);
+  --amber:#FBBF24;--amber-bg:rgba(251,191,36,.07);--amber-br:rgba(251,191,36,.3);
+  --cyan:#22D3EE;--cyan-bg:rgba(34,211,238,.07);--cyan-br:rgba(34,211,238,.3);
+  --text:#E8EAED;--text-2:#9CA3AF;--text-3:#6B7280;--text-4:#4B5563;
+  --card:rgba(12,20,34,.85);--card-border:rgba(198,151,75,.1);
+  --fd:'Tajawal','Noto Kufi Arabic',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy-900);color:var(--text);font-family:var(--fd);min-height:100vh;overflow-x:hidden}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:var(--navy-800);border-bottom:1px solid var(--card-border);position:sticky;top:0;z-index:50}
+.topbar-brand{font-size:.85rem;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px}
+.topbar-brand .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.topbar-meta{display:flex;align-items:center;gap:12px;font-family:var(--fm);font-size:.65rem;color:var(--text-3)}
+.topbar-clock{color:var(--gold-dim);font-weight:600}
+main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
+.page-title{text-align:center;font-size:1.3rem;font-weight:800;color:var(--text);padding:20px 0 6px}
+.page-title span{color:var(--gold)}
+.page-sub{text-align:center;font-family:var(--fm);font-size:.6rem;color:var(--text-3);margin-bottom:16px}
+.section{margin-bottom:14px}
+.section-hdr{font-size:.72rem;font-weight:700;color:var(--gold-dim);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 16px}
+.gauge-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.gauge{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px;text-align:center}
+.gauge .g-icon{font-size:1.2rem;margin-bottom:4px}
+.gauge .g-val{font-size:1.3rem;font-weight:800;font-family:var(--fm);direction:ltr}
+.gauge .g-label{font-size:.58rem;color:var(--text-3);font-weight:600;margin-top:2px}
+.gauge .g-bar{height:4px;background:var(--navy-600);border-radius:2px;margin-top:6px;overflow:hidden}
+.gauge .g-fill{height:100%;border-radius:2px;transition:width .3s}
+.svc-list{display:flex;flex-direction:column;gap:6px}
+.svc-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--navy-700);border-radius:8px}
+.svc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.svc-dot.on{background:var(--green);box-shadow:0 0 4px var(--green)}
+.svc-dot.off{background:var(--red);box-shadow:0 0 4px var(--red)}
+.svc-name{font-size:.72rem;font-weight:600;color:var(--text);flex:1}
+.svc-info{font-family:var(--fm);font-size:.58rem;color:var(--text-3)}
+.load-bar{display:flex;gap:6px;align-items:center;padding:4px 0}
+.load-bar .lb-label{font-size:.6rem;color:var(--text-3);min-width:50px}
+.load-bar .lb-val{font-family:var(--fm);font-size:.6rem;color:var(--text-2);direction:ltr}
+.nav-bar{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;padding:12px 0}
+.nav-link{font-size:.62rem;padding:5px 10px;border-radius:6px;color:var(--text-3);background:var(--navy-700);border:1px solid var(--card-border);cursor:pointer;transition:.2s;text-decoration:none}
+.nav-link:hover,.nav-link.active{color:var(--gold);border-color:var(--gold-br);background:var(--gold-bg)}
+.footer{text-align:center;font-family:var(--fm);font-size:.5rem;color:var(--text-4);padding:12px;border-top:1px solid var(--card-border);margin-top:20px}
+@media(max-width:500px){main{padding:12px 14px 90px}.gauge-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-brand"><span class="dot" id="dot"></span>Master AI</div>
+  <div class="topbar-meta"><span class="topbar-clock" id="clock">--:--</span></div>
+</div>
+<main>
+<div class="page-title">&#x2699;&#xFE0F; <span>&#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</span></div>
+<div class="page-sub" id="page-sub">--</div>
+<div class="section">
+  <div class="gauge-grid">
+    <div class="gauge"><div class="g-icon">&#x1F9E0;</div><div class="g-val" id="g-cpu">--%</div><div class="g-label">CPU</div><div class="g-bar"><div class="g-fill" id="gf-cpu" style="width:0%;background:var(--green)"></div></div></div>
+    <div class="gauge"><div class="g-icon">&#x1F4BE;</div><div class="g-val" id="g-ram">--%</div><div class="g-label">RAM</div><div class="g-bar"><div class="g-fill" id="gf-ram" style="width:0%;background:var(--cyan)"></div></div></div>
+    <div class="gauge"><div class="g-icon">&#x1F321;&#xFE0F;</div><div class="g-val" id="g-temp">--&#xB0;C</div><div class="g-label">&#x0627;&#x0644;&#x062D;&#x0631;&#x0627;&#x0631;&#x0629;</div><div class="g-bar"><div class="g-fill" id="gf-temp" style="width:0%;background:var(--amber)"></div></div></div>
+    <div class="gauge"><div class="g-icon">&#x1F4BF;</div><div class="g-val" id="g-disk">--%</div><div class="g-label">&#x0627;&#x0644;&#x0642;&#x0631;&#x0635;</div><div class="g-bar"><div class="g-fill" id="gf-disk" style="width:0%;background:var(--gold)"></div></div></div>
+  </div>
+</div>
+<div class="section">
+  <div class="section-hdr">&#x1F50C; &#x0627;&#x0644;&#x062E;&#x062F;&#x0645;&#x0627;&#x062A;</div>
+  <div class="svc-list">
+    <div class="svc-item"><div class="svc-dot on" id="svc-mai"></div><div class="svc-name">Master AI</div><div class="svc-info" id="svc-mai-info">--</div></div>
+    <div class="svc-item"><div class="svc-dot on"></div><div class="svc-name">Home Assistant</div><div class="svc-info">RPi 5</div></div>
+    <div class="svc-item"><div class="svc-dot" id="svc-radar-dot"></div><div class="svc-name">&#x0627;&#x0644;&#x0631;&#x0627;&#x062F;&#x0627;&#x0631;</div><div class="svc-info" id="svc-radar-info">--</div></div>
+  </div>
+</div>
+<div class="section">
+  <div class="section-hdr">&#x1F4CB; &#x062A;&#x0641;&#x0627;&#x0635;&#x064A;&#x0644;</div>
+  <div class="card">
+    <div class="load-bar"><span class="lb-label">RAM</span><span class="lb-val" id="d-ram">--</span></div>
+    <div class="load-bar"><span class="lb-label">Disk</span><span class="lb-val" id="d-disk">--</span></div>
+    <div class="load-bar"><span class="lb-label">Load</span><span class="lb-val" id="d-load">--</span></div>
+    <div class="load-bar"><span class="lb-label">Uptime</span><span class="lb-val" id="d-uptime">--</span></div>
+    <div class="load-bar"><span class="lb-label">Tasks</span><span class="lb-val" id="d-tasks">--</span></div>
+    <div class="load-bar"><span class="lb-label">Mode</span><span class="lb-val" id="d-mode">--</span></div>
+  </div>
+</div>
+<div class="nav-bar">
+  <a class="nav-link" onclick="navTo('/trading/home')">&#x1F3E0; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;</a>
+  <a class="nav-link" onclick="navTo('/trading/radar')">&#x1F4C8; &#x0627;&#x0644;&#x062A;&#x062F;&#x0627;&#x0648;&#x0644;</a>
+  <a class="nav-link" onclick="navTo('/trading/signals')">&#x1F4E1; &#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0627;&#x062A;</a>
+  <a class="nav-link" onclick="navTo('/trading/calendar')">&#x1F4C5; &#x0627;&#x0644;&#x0645;&#x0648;&#x0627;&#x0639;&#x064A;&#x062F;</a>
+  <a class="nav-link" onclick="navTo('/trading/home-control')">&#x1F3E0; &#x0627;&#x0644;&#x0628;&#x064A;&#x062A;</a>
+  <a class="nav-link" onclick="navTo('/trading/assistant')">&#x1F916; &#x0627;&#x0644;&#x0645;&#x0633;&#x0627;&#x0639;&#x062F;</a>
+  <a class="nav-link active">&#x2699;&#xFE0F; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</a>
+  <a class="nav-link" onclick="navTo('/trading/email')">&#x1F4E7; &#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F;</a>
+  <a class="nav-link" onclick="navTo('/trading/news')">&#x1F4F0; &#x0627;&#x0644;&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</a>
+</div>
+</main>
+<div class="footer" id="footer">&#x0622;&#x062E;&#x0631; &#x062A;&#x062D;&#x062F;&#x064A;&#x062B;: --</div>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function navTo(p){window.location.href=p}
+window.navTo=navTo;
+function tickClock(){const now=new Date();const kwt=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kuwait'}));$('clock').textContent=kwt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+setInterval(tickClock,1000);tickClock();
+function gColor(v,t){if(v>=t[1])return'var(--red)';if(v>=t[0])return'var(--amber)';return'var(--green)'}
+function fmtUp(s){if(!s||s<0)return'--';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);if(h>=24)return Math.floor(h/24)+'d '+h%24+'h';return h+'h '+m+'m'}
+async function load(){
+  let dash=null,ext=null;
+  try{const [r1,r2]=await Promise.all([fetch('/dashboard').then(r=>r.ok?r.json():null).catch(()=>null),fetch('/dashboard/extended').then(r=>r.ok?r.json():null).catch(()=>null)]);dash=r1;ext=r2}catch(e){}
+  const online=dash&&dash.api_online!==false;
+  $('dot').style.background=online?'var(--green)':'var(--red)';
+  if(dash){$('page-sub').textContent='v'+(dash.version||'--')+' \u00b7 '+fmtUp(dash.uptime)+' \u00b7 '+(dash.degraded_mode||'normal')}
+  const cpu=ext?ext.cpu:dash?dash.cpu:0,ram=ext?ext.memory_pct:dash?dash.memory:0,temp=ext?ext.temperature:dash?dash.temperature:0,disk=ext?ext.disk_pct:dash?dash.disk:0;
+  $('g-cpu').textContent=cpu+'%';$('gf-cpu').style.width=Math.min(cpu,100)+'%';$('gf-cpu').style.background=gColor(cpu,[60,85]);
+  $('g-ram').textContent=Math.round(ram)+'%';$('gf-ram').style.width=Math.min(ram,100)+'%';$('gf-ram').style.background=gColor(ram,[70,90]);
+  $('g-temp').textContent=temp+'\u00b0C';$('gf-temp').style.width=Math.min(temp/85*100,100)+'%';$('gf-temp').style.background=gColor(temp,[65,80]);
+  $('g-disk').textContent=Math.round(disk)+'%';$('gf-disk').style.width=Math.min(disk,100)+'%';$('gf-disk').style.background=gColor(disk,[70,90]);
+  $('svc-mai').className='svc-dot '+(online?'on':'off');
+  $('svc-mai-info').textContent='v'+(dash?dash.version:'--')+' \u00b7 '+fmtUp(dash?dash.uptime:0);
+  const rOn=dash&&dash.radar_enabled;
+  $('svc-radar-dot').className='svc-dot '+(rOn?'on':'off');
+  $('svc-radar-info').textContent=rOn?'\u0645\u0641\u0639\u0651\u0644 \u2014 '+(dash.radar_watch_count||0)+' \u0633\u0647\u0645':'\u0645\u0639\u0637\u0651\u0644';
+  if(ext){
+    $('d-ram').textContent=(ext.memory_used_mb||0)+'MB / '+(ext.memory_total_mb||0)+'MB';
+    $('d-disk').textContent=(ext.disk_used_gb||0).toFixed(1)+'GB / '+(ext.disk_total_gb||0).toFixed(1)+'GB';
+    $('d-load').textContent=(ext.load_avg||[]).map(l=>l.toFixed(2)).join(' \u00b7 ');
+    $('d-uptime').textContent=(ext.uptime_hours||0).toFixed(1)+'h';
+  }
+  if(dash){$('d-tasks').textContent=(dash.background_tasks||0)+' background';$('d-mode').textContent=dash.degraded_mode||'normal'}
+  const now=new Date();const kwt=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kuwait'}));
+  $('footer').textContent='\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: '+kwt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+load();setInterval(load,30000);
+})();
+</script>
+</body>
+</html>

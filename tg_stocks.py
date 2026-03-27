@@ -70,31 +70,88 @@ async def _fetch_price(ticker: str) -> dict:
 
 
 def format_portfolio() -> str:
-    """Format portfolio status message."""
+    """Format portfolio status message — reads from journal_engine (life.db trades)."""
+    try:
+        from journal_engine import get_open_trades, get_trade_stats
+    except ImportError:
+        return "\u274c journal_engine not loaded"
+
+    trades = get_open_trades()
+    if not trades:
+        return "\U0001f4c2 \u0627\u0644\u0645\u062d\u0641\u0638\u0629 \u0641\u0627\u0636\u064a\u0629 \u2014 \u0627\u0633\u062a\u062e\u062f\u0645 /trade \u0644\u0641\u062a\u062d \u0635\u0641\u0642\u0629"
+
     lines = ["\U0001f4ca \u0627\u0644\u0645\u062d\u0641\u0638\u0629:\n"]
-    for ticker, info in PORTFOLIO.items():
-        last = _last_prices.get(ticker)
-        if last:
-            price = last["price"]
-            pnl = ((price - info["buy"]) / info["buy"]) * 100
-            icon = "\U0001f7e2" if pnl >= 0 else "\U0001f534"
-            lines.append(f"{icon} {ticker}: {price:.0f} (\u0634\u0631\u0627\u0621@{info['buy']}, {pnl:+.1f}%)")
+    total_pnl = 0
+
+    # Get current prices from stock_radar_daily (non-blocking)
+    try:
+        import sqlite3 as _sq
+        _rdb = _sq.connect("data/life.db", timeout=3)
+        _rdb.row_factory = _sq.Row
+    except Exception:
+        _rdb = None
+
+    for t in trades:
+        sym = t["symbol"]
+        entry = float(t.get("entry_price", 0))
+        qty = int(t.get("quantity", 0))
+        try:
+            from life_stocks import KNOWN_TICKERS as _KT
+        except ImportError:
+            _KT = {}
+        name_ar = t.get("name_ar") or _KT.get(sym, sym)
+        strategy = t.get("strategy", "")
+
+        # Try to get current price
+        cur_price = None
+        if _rdb:
+            try:
+                from tv_data import resolve_symbol, _normalize_price_to_fils
+                rsym = resolve_symbol(sym)
+                dr = _rdb.execute(
+                    "SELECT price FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1",
+                    (rsym,)
+                ).fetchone()
+                if dr:
+                    cur_price = _normalize_price_to_fils(float(dr["price"]), rsym)
+            except Exception:
+                pass
+
+        if cur_price and entry:
+            pnl_pct = ((cur_price / entry) - 1) * 100
+            pnl_fils = (cur_price - entry) * qty if qty else 0
+            total_pnl += pnl_fils
+            icon = "\U0001f7e2" if pnl_pct >= 0 else "\U0001f534"
+            lines.append(f"{icon} {sym}: {cur_price:.0f} (\u0634\u0631\u0627\u0621@{entry:.0f}, {pnl_pct:+.1f}%)")
+            if qty:
+                lines.append(f"   {qty} \u0633\u0647\u0645 \u00b7 P&L: {pnl_fils:+,.0f} \u0641\u0644\u0633")
         else:
-            lines.append(f"\u26aa {ticker}: \u0634\u0631\u0627\u0621@{info['buy']} (\u0644\u0627 \u0633\u0639\u0631 \u062d\u0627\u0644\u064a)")
-        if info.get("notes"):
-            lines.append(f"   \u0640 {info['notes']}")
-    
-    lines.append(f"\n\u23f0 \u0622\u062e\u0631 \u062a\u062d\u062f\u064a\u062b: {datetime.now().strftime('%H:%M')}")
+            lines.append(f"\u26aa {sym}: \u0634\u0631\u0627\u0621@{entry:.0f} \u00d7 {qty}")
+
+        if strategy:
+            lines.append(f"   \u0640 {strategy}")
+
+    if _rdb:
+        _rdb.close()
+
+    if total_pnl:
+        arrow = "\U0001f7e2" if total_pnl >= 0 else "\U0001f534"
+        lines.append(f"\n{arrow} \u0625\u062c\u0645\u0627\u0644\u064a P&L: {total_pnl:+,.0f} \u0641\u0644\u0633")
+
+    # 30d stats
+    try:
+        stats = get_trade_stats(days=30)
+        if stats.get("total_trades", 0) > 0:
+            lines.append(f"\U0001f4c8 30 \u064a\u0648\u0645: {stats['total_trades']} \u0635\u0641\u0642\u0629 \u00b7 {stats['open_trades']} \u0645\u0641\u062a\u0648\u062d\u0629 \u00b7 {stats['closed_trades']} \u0645\u063a\u0644\u0642\u0629")
+    except Exception:
+        pass
+
+    lines.append(f"\n\u23f0 {datetime.now().strftime('%H:%M')}")
     return "\n".join(lines)
 
 
 async def cmd_stocks() -> str:
-    """Handle /stocks command - refresh prices and show portfolio."""
-    for ticker in PORTFOLIO:
-        result = await _fetch_price(ticker)
-        if result:
-            _last_prices[ticker] = result
-    
+    """Handle /stocks command — show portfolio from journal_engine."""
     return format_portfolio()
 
 

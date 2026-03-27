@@ -57,6 +57,19 @@ EXCLUDE_PATTERNS = [
     "filter_cartridge_reset", "_ionizer",
 ]
 
+# Media player: junk/virtual/duplicate entities to exclude
+MEDIA_PLAYER_EXCLUDED = {
+    "media_player.none",
+    "media_player.this_device",
+    "media_player.everywhere",
+    "media_player.my_room_alexa",
+    "media_player.living_room_alexa",
+    "media_player.googletv6729",
+    "media_player.googletv6729_2",
+    "media_player.sony_men_room",
+    "media_player.sony_men_room_2",
+}
+
 # Domains to always exclude
 EXCLUDE_DOMAINS = {
     "button", "number", "select", "text", "update", "sensor",
@@ -221,6 +234,9 @@ def should_include(entity_id: str) -> bool:
     for pat in EXCLUDE_PATTERNS:
         if pat in entity_id.lower():
             return False
+    # Exclude junk/virtual/duplicate media players
+    if entity_id in MEDIA_PLAYER_EXCLUDED:
+        return False
     return True
 
 

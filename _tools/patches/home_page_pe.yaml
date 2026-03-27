@@ -1,0 +1,277 @@
+title: Master AI
+views:
+  - path: master-ai
+    title: Master AI
+    icon: mdi:brain
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. HERO (compact) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background:
+                    radial-gradient(circle at top left, rgba(0,170,255,0.16), transparent 24%),
+                    radial-gradient(circle at top right, rgba(0,255,170,0.08), transparent 22%),
+                    linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 26px 26px 0 0;
+                  padding: 16px 20px 6px;
+                  margin: 6px 8px 0;
+                  box-shadow: 0 14px 32px rgba(0,0,0,0.30);
+                }
+                h2 { font-size: 22px !important; margin: 0 0 2px !important; }
+                ha-markdown { font-size: 13px; opacity: 0.7; }
+            content: |
+              ## Master AI
+              {% set d = 'sensor.master_ai_dashboard' %}
+              v{{ state_attr(d,'version') | default('—') }} · Uptime {{ ((state_attr(d,'uptime') | float(0)) / 3600) | round(1) }}h · {% if state_attr(d,'degraded_mode') and state_attr(d,'degraded_mode') != 'normal' %}⚠️ {{ state_attr(d,'degraded_mode') }}{% else %}✅ مستقر{% endif %}
+
+          # ── 2. PRIORITY ENGINE — Top Priority (Decision Surface) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(0,170,255,0.10), rgba(0,255,170,0.05));
+                  border: 1px solid rgba(0,170,255,0.14);
+                  border-radius: 0 0 26px 26px;
+                  padding: 14px 20px;
+                  margin: 0 8px 0;
+                }
+                ha-markdown { font-size: 15px; line-height: 1.7; direction: rtl; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set pe = state_attr(d,'priority_engine') %}
+              {% if pe and pe.top_priority %}
+              {% set tp = pe.top_priority %}
+              {% set sev = tp.severity | default('info') %}
+              {% if sev == 'critical' %}🔴{% elif sev == 'high' %}🟠{% elif sev == 'medium' %}🟡{% else %}🔵{% endif %}
+              **{{ tp.title | default('—') }}**
+
+
+              {{ tp.reason | default('') }}
+              {% if tp.why_now %} · {{ tp.why_now }}{% endif %}
+
+
+              ➡️ {{ tp.action_label | default('') }}
+              {% elif pe and pe.empty_state %}
+              ✅ **الوضع العام مستقر** — لا توجد أولويات حرجة
+              {% else %}
+              🧠 {{ state_attr(d,'ai_insight') | default('جاري التحميل...') }}
+              {% endif %}
+
+          # ── 2b. MORE PRIORITIES (if any) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.05);
+                  border-radius: 16px;
+                  padding: 8px 16px;
+                  margin: 4px 8px 0;
+                }
+                ha-markdown { font-size: 13px; direction: rtl; line-height: 1.6; opacity: 0.9; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set pe = state_attr(d,'priority_engine') %}
+              {% if pe and pe.priorities | length > 1 %}
+              {% for p in pe.priorities[1:] %}
+              {% set sev = p.severity | default('info') %}
+              {% if sev == 'critical' %}🔴{% elif sev == 'high' %}🟠{% elif sev == 'medium' %}🟡{% else %}🔵{% endif %}
+              **{{ p.title }}** · {{ p.action_label }}
+              {% endfor %}
+              {% else %}
+              {% endif %}
+
+          # ── 3. SHIFT + STATUS (shift first & highlighted) ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: rgba(0,170,255,0.06);
+                      border: 1px solid rgba(0,170,255,0.14);
+                      border-radius: 18px;
+                      padding: 10px 8px;
+                      text-align: center;
+                    }
+                    ha-markdown { font-size: 14px; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  🔄 **{{ state_attr(d,'shift_today') | default('—') }}**
+
+                  غداً: {{ state_attr(d,'shift_tomorrow') | default('—') }}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 13px; direction: rtl; }
+                content: >
+                  💡{{ state_attr('sensor.master_ai_dashboard','home_lights_on') | int(0) }}
+                  ❄️{{ state_attr('sensor.master_ai_dashboard','home_ac_on') | int(0) }}
+                  🪟{{ state_attr('sensor.master_ai_dashboard','home_covers_open') | int(0) }}
+
+                  نبض البيت
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 13px; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% if state_attr(d,'market_open') %}🟢 **مفتوح**{% else %}⚫ **مغلق**{% endif %}
+
+                  الرادار {{ '✅' if state_attr(d,'radar_enabled') else '⏸' }}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 18px; padding: 10px 8px; text-align: center; }
+                    ha-markdown { font-size: 13px; direction: rtl; }
+                content: >
+                  {% set d = 'sensor.master_ai_dashboard' %}
+                  {% set ev = state_attr(d,'next_event') | default('') %}
+                  📅 **{{ ev[:16] if ev else 'لا مواعيد' }}**
+
+                  {{ state_attr(d,'events_today') | int(0) }} اليوم
+
+          # ── 4. TOP STOCK TEASER (single best) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(135deg, rgba(255,170,0,0.06), rgba(255,200,60,0.03));
+                  border: 1px solid rgba(255,170,0,0.12);
+                  border-radius: 18px;
+                  padding: 10px 16px;
+                  margin-top: 8px;
+                }
+                ha-markdown { font-size: 13px; direction: rtl; line-height: 1.7; }
+            content: >
+              {% set r = 'sensor.master_ai_radar' %}
+              {% set ctx = state_attr(r,'radar_daily_context') %}
+              {% if ctx and ctx | length > 0 %}
+              {% set s = ctx[0] %}
+              ⭐ **{{ s.name_ar | default(s.symbol) }}** — {{ s.price }}ف {% if s.change_pct is not none %}{% if s.change_pct >= 0 %}🟢 +{{ s.change_pct | round(1) }}%{% else %}🔴 {{ s.change_pct | round(1) }}%{% endif %}{% endif %} · {{ s.score }}/{{ s.score_class }}
+              {% if ctx | length > 1 %} · +{{ ctx | length - 1 }} أسهم في التداول{% endif %}
+              {% else %}
+              📉 لا بيانات يومية
+              {% endif %}
+
+          # ── 5. QUICK ACTIONS (compact) ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: button
+                name: الرادار
+                icon: mdi:radar
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_radar_toggle
+                show_state: false
+              - type: button
+                name: إطفاء الكل
+                icon: mdi:power
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_alloff
+                show_state: false
+              - type: button
+                name: Backup
+                icon: mdi:database-arrow-up
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_backup
+                show_state: false
+
+          # ── 6. COMMAND FEEDBACK ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,255,255,0.02);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 16px;
+                  padding: 6px 14px;
+                  margin-top: 6px;
+                }
+                ha-markdown { font-size: 12px; opacity: 0.85; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set cmd = state_attr(d,'last_cmd_command') | default('') %}
+              {% if cmd %}
+              {% set st = state_attr(d,'last_cmd_status') | default('?') %}
+              {% if st == 'done' %}✅{% elif st == 'error' %}❌{% elif st == 'timeout' %}⏳{% else %}🔄{% endif %}
+              **{{ cmd }}** @ {{ state_attr(d,'last_cmd_time') | default('') }}
+              · {{ state_attr(d,'last_cmd_result') | default('') | truncate(80) }}
+              {% else %}
+              💬 اضغط أي زر — النتيجة ستظهر هنا
+              {% endif %}
+
+          # ── 7. NAVIGATION (7 in one row) ──
+          - type: grid
+            columns: 7
+            square: false
+            cards:
+              - type: button
+                name: التداول
+                icon: mdi:chart-areaspline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-radar
+                show_state: false
+              - type: button
+                name: المواعيد
+                icon: mdi:calendar-check
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-calendar-tasks
+                show_state: false
+              - type: button
+                name: البيت
+                icon: mdi:home-thermometer-outline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-home
+                show_state: false
+              - type: button
+                name: المساعد
+                icon: mdi:robot-outline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-assistant
+                show_state: false
+              - type: button
+                name: النظام
+                icon: mdi:server
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-system-health
+                show_state: false
+              - type: button
+                name: البريد
+                icon: mdi:email-outline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-email
+                show_state: false
+              - type: button
+                name: الأخبار
+                icon: mdi:newspaper-variant-outline
+                tap_action:
+                  action: navigate
+                  navigation_path: /master-ai-dashboard/sub-news
+                show_state: false

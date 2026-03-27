@@ -1,0 +1,66 @@
+  # ═══ NEWS PAGE (compact) ═══
+  - path: sub-news
+    title: الأخبار
+    icon: mdi:newspaper-variant-outline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── HERO (compact) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background:
+                    radial-gradient(circle at top left, rgba(255,200,60,0.14), transparent 22%),
+                    linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(255,200,60,0.12);
+                  border-radius: 24px;
+                  padding: 14px 20px;
+                  margin: 6px 8px 0;
+                  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+                }
+                h2 { font-size: 20px !important; margin: 0 0 4px !important; }
+                ha-markdown { font-size: 13px; direction: rtl; }
+            content: |
+              ## الأخبار
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.category_ar %}
+              {{ d.category_emoji | default('📰') }} {{ d.category_ar }} · {{ d.item_count | default(0) }} خبر
+              {% elif state_attr(e,'news_available') %}📰 ملخص جاهز
+              {% else %}📰 لا يوجد ملخص — استخدم /news_now{% endif %}
+
+          # ── NEWS DIGEST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(255,200,60,0.03);
+                  border: 1px solid rgba(255,200,60,0.08);
+                  border-radius: 20px;
+                  padding: 14px 18px;
+                  margin: 8px 8px 0;
+                }
+                ha-markdown { font-size: 13px; direction: rtl; line-height: 1.8; }
+            content: |
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.summary %}
+              {{ d.summary }}
+
+              <small>📅 {{ d.date | default('') }} · {{ d.created_at | default('') | truncate(16, true, '') }}</small>
+              {% else %}
+              لا يوجد ملخص جاهز. استخدم **/news_now** عبر تليقرام.
+              {% endif %}
+
+          # ── NAV ──
+          - type: button
+            name: الرئيسية
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /master-ai-dashboard/master-ai
+            show_state: false

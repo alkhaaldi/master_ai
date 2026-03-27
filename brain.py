@@ -15,7 +15,6 @@ try:
         reload,
         resolve_aliases,
         build_system_prompt,
-        build_user_message,
         build_room_index,
         get_brain_stats as _core_stats,
     )
@@ -30,20 +29,21 @@ except Exception as e:
 # ═══════════════════════════════════════
 try:
     from brain_learning import (
-        learn_from_result,
-        _get_relevant_patterns,
-        _detect_user_correction,
-        _apply_confidence_decay,
-        _ensure_memory_table,
-        _learning_stats,
+        learn_patterns,
+        get_patterns,
+        suggest_automations,
+        format_patterns_report,
+        get_learning_stats,
     )
     LEARNING_OK = True
+    async def learn_from_result(*a, **kw): pass  # compat alias for server.py
     logger.info("brain_learning loaded")
 except Exception as e:
     LEARNING_OK = False
-    logger.error(f"brain_learning FAILED: {e}")
+    logger.warning(f"brain_learning not available: {e}")
+    async def learn_patterns(*a, **kw): return {}
     async def learn_from_result(*a, **kw): pass
-    def _learning_stats(): return {}
+    def get_learning_stats(): return {}
 
 # ═══════════════════════════════════════
 # Personality: quick responses, response prompts

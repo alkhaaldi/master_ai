@@ -127,3 +127,125 @@ async def get_memory_stats():
         cur = await db.execute("SELECT COUNT(*) FROM user_profiles"); s["users"] = (await cur.fetchone())[0]
         cur = await db.execute("SELECT COUNT(*) FROM conversations"); s["messages"] = (await cur.fetchone())[0]
         return s
+
+
+def _normalize_ar(s):
+    """Normalize Arabic text for better matching."""
+    s = (s or "").strip()
+    s = s.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")  # أإآ→ا
+    s = s.replace("ة", "ه").replace("ى", "ي")  # ة→ه, ى→ي
+    import re
+    s = re.sub(r"[^\w\s]", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+# Related word map for semantic memory search
+_MEMORY_RELATED = {
+    "زوجتي": ["عبود", "مولود", "ولادة", "بيبي"],
+    "زوجتك": ["عبود", "مولود", "ولادة", "بيبي"],
+    "ولادة": ["عبود", "مولود", "بيبي"],
+    "اربعين": ["عبود", "مولود", "ولادة", "نفاس"],
+    "الاربعين": ["عبود", "مولود", "ولادة", "نفاس"],
+    "نفاس": ["عبود", "مولود", "ولادة"],
+}
+
+_MEMORY_STOP = {
+    "شنو","شلون","متى","كيف","ليش","هل","اي","يعني","اليوم","كم",
+    "وين","من","في","و","بس","لو","اذا","ال","حق","مال","تخلص","بعد",
+    "شفتي","دوامي","شغال","شغالة","جهاز","اضاءة","نور","يوم",
+}
+
+
+async def search_memory_smart(query, limit=5):
+    """Multi-pass memory search with word-by-word + related words."""
+    import aiosqlite
+    results = []
+    seen = set()
+    
+    # Tokenize query
+    words = [w for w in query.split() if w not in _MEMORY_STOP and len(w) > 1]
+    
+    # Add related words
+    extra = []
+    for w in words:
+        if w in _MEMORY_RELATED:
+            extra.extend(_MEMORY_RELATED[w])
+    words.extend(extra)
+    words = list(set(words))  # dedupe
+    
+    if not words:
+        return results
+    
+    async with aiosqlite.connect(TASKS_DB) as db:
+        db.row_factory = aiosqlite.Row
+        for word in words[:6]:
+            try:
+                async with db.execute(
+                    "SELECT id, category, content, context, created_at FROM memory WHERE active=1 AND content LIKE ? ORDER BY created_at DESC LIMIT ?",
+                    (f"%{word}%", limit)
+                ) as cursor:
+                    async for row in cursor:
+                        c = row["content"]
+                        if c not in seen:
+                            seen.add(c)
+                            results.append(dict(row))
+            except Exception:
+                pass
+    
+    return results[:limit]
+
+
+# ── Structured Fact Extraction ──────────────────────────────
+import re as _fact_re
+
+_AR_MONTHS = {
+    "يناير": 1, "فبراير": 2, "مارس": 3, "أبريل": 4, "ابريل": 4,
+    "مايو": 5, "يونيو": 6, "يوليو": 7, "أغسطس": 8, "اغسطس": 8,
+    "سبتمبر": 9, "أكتوبر": 10, "اكتوبر": 10, "نوفمبر": 11, "ديسمبر": 12,
+}
+
+_BIRTH_PATTERNS = [
+    _fact_re.compile(r"([؀-ۿ\w]+)\s+(?:مولود|انولد|ولد)\s+(?:يوم\s+)?(\d{1,2})\s+(\S+)(?:\s+(\d{4}))?"),
+    _fact_re.compile(r"(?:ميلاد|عيد ميلاد)\s+([؀-ۿ\w]+)\s+(\d{1,2})\s+(\S+)(?:\s+(\d{4}))?"),
+]
+
+
+def extract_facts(text):
+    """Extract structured facts from Arabic text."""
+    facts = []
+    for pat in _BIRTH_PATTERNS:
+        m = pat.search(text or "")
+        if m:
+            subject = m.group(1)
+            day = int(m.group(2))
+            month_name = m.group(3)
+            year = int(m.group(4)) if m.group(4) else None
+            month = _AR_MONTHS.get(month_name)
+            if month:
+                facts.append({
+                    "subject": subject,
+                    "predicate": "birth_date",
+                    "day": day, "month": month, "year": year,
+                    "text": text.strip(),
+                })
+    return facts
+
+
+async def save_memory_with_facts(category, content, source="chat_v7"):
+    """Save memory + extract and store structured facts."""
+    # Save raw memory
+    await add_memory(category=category, type_="user_stated", content=content, source=source)
+    
+    # Extract and save facts as additional memories for better search
+    facts = extract_facts(content)
+    for f in facts:
+        subj = f["subject"]
+        date_str = f"{f['day']}/{f['month']}"
+        if f.get("year"):
+            date_str += f"/{f['year']}"
+        fact_text = f"{subj} birth_date={date_str}"
+        try:
+            await add_memory("fact", "extracted", fact_text, source="fact_extractor")
+        except Exception:
+            pass
+    return len(facts)

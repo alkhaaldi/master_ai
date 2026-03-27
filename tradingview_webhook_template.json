@@ -1,0 +1,64 @@
+{
+  "_description": "TradingView Webhook Templates for Master AI",
+  "_webhook_url": "https://ai.salem-home.com/tradingview/webhook",
+  "_notes": [
+    "Copy the alert_message_template into TradingView Alert -> Message field",
+    "Replace TV_SHARED_TOKEN with your actual secret (set via /ssh/run: sqlite3 data/life.db \"UPDATE tv_config SET value='YOUR_SECRET' WHERE key='tv_webhook_secret'\")",
+    "The webhook URL must be set in TradingView Alert -> Webhook URL field"
+  ],
+
+  "alert_message_template": {
+    "secret": "TV_SHARED_TOKEN",
+    "ticker": "{{ticker}}",
+    "exchange": "{{exchange}}",
+    "interval": "{{interval}}",
+    "price": "{{close}}",
+    "volume": "{{volume}}",
+    "signal": "breakout",
+    "strategy": "Kuwait_Breakout_v1",
+    "time": "{{time}}"
+  },
+
+  "example_payloads": {
+    "breakout_daily": {
+      "secret": "TV_SHARED_TOKEN",
+      "ticker": "KSE:KFH",
+      "exchange": "KSE",
+      "interval": "1D",
+      "price": 813,
+      "volume": 1245000,
+      "signal": "breakout",
+      "strategy": "Kuwait_Breakout_v1",
+      "time": "2026-03-15T10:25:00Z"
+    },
+    "reversal_4h": {
+      "secret": "TV_SHARED_TOKEN",
+      "ticker": "KSE:NBK",
+      "exchange": "KSE",
+      "interval": "4H",
+      "price": 1020,
+      "volume": 890000,
+      "signal": "reversal",
+      "strategy": "Smart_Reversal_v2",
+      "time": "2026-03-15T14:00:00Z"
+    },
+    "volume_spike": {
+      "secret": "TV_SHARED_TOKEN",
+      "ticker": "KSE:CLEANING",
+      "exchange": "KSE",
+      "interval": "1D",
+      "price": 105,
+      "volume": 5200000,
+      "signal": "volume_spike",
+      "strategy": "CLEANING_V3",
+      "time": "2026-03-15T09:30:00Z"
+    },
+    "minimal_signal": {
+      "secret": "TV_SHARED_TOKEN",
+      "ticker": "KSE:SENERGY",
+      "signal": "info"
+    }
+  },
+
+  "curl_test": "curl -X POST https://ai.salem-home.com/tradingview/webhook -H 'Content-Type: application/json' -d '{\"secret\":\"YOUR_SECRET\",\"ticker\":\"KSE:KFH\",\"signal\":\"breakout\",\"interval\":\"1D\",\"price\":813,\"strategy\":\"test\"}'"
+}

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>غرفة العمليات — KSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#070D17;--navy-800:#0C1525;--navy-700:#111E32;
+  --navy-600:#162840;--navy-500:#1C334F;--navy-400:#24405F;
+  --gold:#C6974B;--gold-bright:#D4A95C;--gold-dim:#9E7A3D;
+  --gold-bg:rgba(198,151,75,.06);--gold-br:rgba(198,151,75,.25);
+  --green:#4CAF82;--green-bright:#5BC492;--green-bg:rgba(76,175,130,.08);--green-br:rgba(76,175,130,.3);
+  --red:#D94452;--red-bright:#E5606C;--red-bg:rgba(217,68,82,.08);--red-br:rgba(217,68,82,.3);
+  --amber:#E8A838;--amber-bg:rgba(232,168,56,.08);--amber-br:rgba(232,168,56,.3);
+  --cyan:#38BDF8;--cyan-bg:rgba(56,189,248,.08);--cyan-br:rgba(56,189,248,.3);
+  --text:#E8ECF0;--text-2:#A0ADBC;--text-3:#6B7D90;--text-4:#405060;
+  --card:#0E1929;--card-hover:#132137;--card-border:#1A2E45;
+  --f:'Tajawal','Noto Kufi Arabic',sans-serif;
+  --fd:'Noto Kufi Arabic','Tajawal',sans-serif;
+  --fm:'IBM Plex Mono','Consolas',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--f);font-variant-numeric:tabular-nums;
+  background:var(--navy-900);color:var(--text);
+  min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.ltr{direction:ltr;unicode-bidi:isolate}
+a{color:var(--gold);text-decoration:none}
+a:hover{color:var(--gold-bright)}
+
+/* ===== TOPBAR ===== */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,13,23,.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--card-border);
+  padding:0 1.25rem;height:56px;
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+}
+.topbar-brand{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.brand-mark{
+  background:linear-gradient(135deg,var(--gold),var(--gold-dim));
+  color:var(--navy-900);font-family:var(--fm);font-weight:700;
+  font-size:.85rem;padding:.25rem .6rem;border-radius:4px;letter-spacing:.5px;
+}
+.topbar-title{font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--text)}
+.topbar-tag{
+  font-size:.65rem;background:var(--navy-600);color:var(--text-3);
+  padding:2px 8px;border-radius:10px;white-space:nowrap;
+}
+.topbar-center{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.status-chip{
+  display:flex;align-items:center;gap:.35rem;
+  font-size:.75rem;padding:.25rem .65rem;border-radius:20px;
+  border:1px solid var(--card-border);background:var(--navy-800);
+  color:var(--text-2);white-space:nowrap;
+}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.off{background:var(--red);box-shadow:0 0 6px var(--red)}
+.topbar-right{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.clock{font-family:var(--fm);font-size:.85rem;color:var(--gold);direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.btn-refresh{
+  background:none;border:1px solid var(--card-border);color:var(--text-2);
+  width:34px;height:34px;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.btn-refresh:hover{border-color:var(--gold-br);color:var(--gold)}
+.btn-refresh.spinning svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.nav-links{display:flex;gap:.15rem}
+.nav-link{
+  font-size:.75rem;padding:.3rem .6rem;border-radius:6px;color:var(--text-3);
+  transition:all .2s;
+}
+.nav-link:hover{color:var(--text);background:var(--navy-700)}
+.nav-link.active{color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br)}
+
+/* ===== TICKER STRIP ===== */
+.ticker-strip{
+  background:var(--navy-800);border-bottom:1px solid var(--card-border);
+  overflow:hidden;position:relative;height:38px;
+}
+.ticker-track{
+  display:flex;align-items:center;height:100%;gap:2rem;
+  animation:scroll-rtl 40s linear infinite;white-space:nowrap;
+  padding:0 1rem;
+}
+.ticker-strip:hover .ticker-track{animation-play-state:paused}
+@keyframes scroll-rtl{
+  0%{transform:translateX(0)}
+  100%{transform:translateX(50%)}
+}
+.ticker-item{
+  display:flex;align-items:center;gap:.5rem;font-size:.8rem;flex-shrink:0;
+}
+.ticker-sym{font-family:var(--fm);font-weight:600;color:var(--text)}
+.ticker-price{font-family:var(--fm);color:var(--text-2)}
+.ticker-chg{font-family:var(--fm);font-size:.75rem;padding:1px 6px;border-radius:4px}
+.ticker-chg.up{color:var(--green);background:var(--green-bg)}
+.ticker-chg.dn{color:var(--red);background:var(--red-bg)}
+.ticker-chg.flat{color:var(--text-3);background:var(--navy-700)}
+
+/* ===== FILTER BAR ===== */
+.filter-bar{
+  display:flex;align-items:center;gap:.5rem;padding:.75rem 1.25rem;
+  background:var(--navy-800);border-bottom:1px solid var(--card-border);
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+}
+.filter-chip{
+  font-family:var(--f);font-size:.8rem;padding:.35rem .85rem;border-radius:20px;
+  border:1px solid var(--card-border);background:var(--navy-700);color:var(--text-2);
+  cursor:pointer;white-space:nowrap;transition:all .2s;display:flex;align-items:center;gap:.35rem;
+}
+.filter-chip:hover{border-color:var(--gold-br);color:var(--text)}
+.filter-chip.active{background:var(--gold-bg);border-color:var(--gold-br);color:var(--gold)}
+.filter-count{
+  font-family:var(--fm);font-size:.7rem;background:var(--navy-600);
+  padding:0 .4rem;border-radius:8px;min-width:20px;text-align:center;
+}
+.filter-chip.active .filter-count{background:rgba(198,151,75,.15)}
+
+/* ===== MAIN CONTENT ===== */
+.main{max-width:1440px;margin:0 auto;padding:1rem 1.25rem 2rem}
+
+/* ===== HERO DECISION CARD ===== */
+.hero-card{
+  background:var(--card);border:1px solid var(--card-border);border-radius:12px;
+  padding:1.25rem 1.5rem;margin-bottom:1.25rem;position:relative;
+  border-right:4px solid var(--gold);
+}
+.hero-label{
+  font-size:.7rem;color:var(--text-3);margin-bottom:.75rem;
+  text-transform:uppercase;letter-spacing:.5px;font-family:var(--fd);
+}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem}
+.hero-ident{display:flex;flex-direction:column;gap:.15rem}
+.hero-sym{font-family:var(--fm);font-size:1.5rem;font-weight:700;color:var(--text)}
+.hero-name{font-size:.9rem;color:var(--text-2);font-family:var(--fd)}
+.hero-price-block{text-align:left;direction:ltr;unicode-bidi:isolate}
+.hero-price{font-family:var(--fm);font-size:1.5rem;font-weight:700;color:var(--text)}
+.hero-chg{font-family:var(--fm);font-size:.95rem;font-weight:600}
+.hero-chg.up{color:var(--green)}
+.hero-chg.dn{color:var(--red)}
+.hero-chg.flat{color:var(--text-3)}
+.hero-badges{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+.pill{
+  font-size:.75rem;font-weight:600;padding:.25rem .75rem;border-radius:20px;
+  display:inline-flex;align-items:center;gap:.25rem;
+}
+.pill-buy{background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+.pill-watch{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-br)}
+.pill-review{background:var(--cyan-bg);color:var(--cyan);border:1px solid var(--cyan-br)}
+.pill-avoid{background:var(--red-bg);color:var(--red);border:1px solid var(--red-br)}
+.pill-neutral{background:var(--navy-700);color:var(--text-3);border:1px solid var(--card-border)}
+.pill-hold{background:rgba(168,85,247,.08);color:#A855F7;border:1px solid rgba(168,85,247,.3)}
+.state-tag{
+  font-size:.7rem;padding:.2rem .6rem;border-radius:4px;font-family:var(--fm);
+}
+.st-manage{background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+.st-entered{background:var(--cyan-bg);color:var(--cyan);border:1px solid var(--cyan-br)}
+.st-ready{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-br)}
+.st-setup{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-br)}
+.st-discovery{background:var(--navy-700);color:var(--text-3);border:1px solid var(--card-border)}
+
+.hero-metrics{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem;
+}
+.metric-box{
+  background:var(--navy-800);border:1px solid var(--card-border);border-radius:8px;
+  padding:.6rem .75rem;
+}
+.metric-label{font-size:.65rem;color:var(--text-3);margin-bottom:.25rem;font-family:var(--fd)}
+.metric-val{font-family:var(--fm);font-size:.9rem;font-weight:600;color:var(--text)}
+
+.hero-levels{
+  display:flex;gap:1.5rem;flex-wrap:wrap;padding-top:.75rem;
+  border-top:1px solid var(--card-border);
+}
+.level-item{display:flex;align-items:center;gap:.4rem;font-size:.8rem}
+.level-dot{width:8px;height:8px;border-radius:50%}
+.level-dot.support{background:var(--green)}
+.level-dot.resistance{background:var(--red)}
+.level-dot.atr{background:var(--cyan)}
+.level-label{color:var(--text-3)}
+.level-val{font-family:var(--fm);font-weight:600}
+
+/* ===== TABLE ===== */
+.section-title{
+  font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--text);
+  margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;
+}
+.section-title .count{
+  font-family:var(--fm);font-size:.75rem;color:var(--gold);
+  background:var(--gold-bg);border:1px solid var(--gold-br);
+  padding:1px 8px;border-radius:10px;
+}
+.table-wrap{
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border:1px solid var(--card-border);border-radius:10px;
+  margin-bottom:1.5rem;background:var(--card);
+}
+table{width:100%;border-collapse:collapse;min-width:900px}
+thead th{
+  font-family:var(--fd);font-size:.72rem;font-weight:600;
+  color:var(--text-3);padding:.65rem .7rem;
+  background:var(--navy-800);border-bottom:1px solid var(--card-border);
+  text-align:right;white-space:nowrap;position:sticky;top:0;
+}
+tbody td{
+  font-size:.8rem;padding:.55rem .7rem;
+  border-bottom:1px solid rgba(26,46,69,.5);white-space:nowrap;
+}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:var(--card-hover)}
+tbody tr:last-child td{border-bottom:none}
+.cell-sym{font-family:var(--fm);font-weight:600;color:var(--text)}
+.cell-name{font-size:.72rem;color:var(--text-3);display:block}
+.cell-mono{font-family:var(--fm)}
+.confluence-cell{display:flex;align-items:center;gap:.4rem}
+.conf-bar{width:48px;height:6px;border-radius:3px;background:var(--navy-600);overflow:hidden;flex-shrink:0}
+.conf-fill{height:100%;border-radius:3px;transition:width .4s}
+.mini-pill{
+  font-size:.68rem;padding:1px 6px;border-radius:10px;font-weight:600;
+}
+
+/* ===== OPEN POSITIONS ===== */
+.positions-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:.75rem;margin-bottom:1.5rem;
+}
+.pos-card{
+  background:var(--card);border:1px solid var(--card-border);border-radius:10px;
+  padding:.85rem 1rem;transition:all .2s;
+}
+.pos-card:hover{border-color:var(--gold-br);background:var(--card-hover)}
+.pos-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.pos-sym{font-family:var(--fm);font-weight:700;font-size:.95rem}
+.pos-state{font-size:.65rem;padding:2px 6px;border-radius:4px;font-family:var(--fm)}
+.pos-row{display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:.25rem}
+.pos-label{color:var(--text-3)}
+.pos-val{font-family:var(--fm);font-weight:500}
+.pos-pnl{font-family:var(--fm);font-weight:700;font-size:.95rem;text-align:left;direction:ltr;unicode-bidi:isolate}
+.pos-pnl.up{color:var(--green)}
+.pos-pnl.dn{color:var(--red)}
+
+/* ===== FOOTER ===== */
+.footer{
+  text-align:center;padding:1.5rem 1rem;
+  border-top:1px solid var(--card-border);color:var(--text-4);font-size:.72rem;
+}
+.footer-time{color:var(--text-3);margin-top:.35rem;font-family:var(--fm);font-size:.7rem}
+
+/* ===== LOADING / ERROR ===== */
+.state-overlay{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:4rem 1rem;gap:1rem;
+}
+.spinner{
+  width:40px;height:40px;border:3px solid var(--navy-600);
+  border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;
+}
+.state-text{color:var(--text-3);font-size:.9rem}
+.btn-retry{
+  font-family:var(--f);background:var(--gold-bg);border:1px solid var(--gold-br);
+  color:var(--gold);padding:.5rem 1.5rem;border-radius:8px;cursor:pointer;
+  font-size:.85rem;transition:all .2s;
+}
+.btn-retry:hover{background:rgba(198,151,75,.15)}
+.empty-state{color:var(--text-3);text-align:center;padding:2rem;font-size:.85rem}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1024px){
+  .hero-metrics{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  .topbar{padding:0 .75rem;gap:.4rem}
+  .topbar-title{font-size:.85rem}
+  .topbar-tag,.nav-links{display:none}
+  .topbar-center{gap:.3rem}
+  .status-chip{font-size:.68rem;padding:.2rem .5rem}
+  .main{padding:.75rem}
+  .hero-card{padding:1rem}
+  .hero-sym{font-size:1.15rem}
+  .hero-price{font-size:1.15rem}
+  .hero-metrics{grid-template-columns:repeat(2,1fr);gap:.4rem}
+  .metric-box{padding:.45rem .55rem}
+  .metric-val{font-size:.8rem}
+  .hero-levels{gap:.75rem}
+  .filter-bar{padding:.6rem .75rem;gap:.35rem}
+  .positions-grid{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .hero-metrics{grid-template-columns:1fr 1fr}
+  .hero-top{flex-direction:column}
+  .hero-price-block{text-align:right}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-mark">KSE</span>
+    <span class="topbar-title">منصة التداول</span>
+    <span class="topbar-tag">Master AI</span>
+  </div>
+  <div class="topbar-center">
+    <span class="status-chip" id="chip-market">
+      <span class="status-dot off" id="dot-market"></span>
+      <span id="lbl-market">السوق مغلق</span>
+    </span>
+    <span class="status-chip" id="chip-bridge">
+      <span class="status-dot off" id="dot-bridge"></span>
+      <span id="lbl-bridge">الربط غير متصل</span>
+    </span>
+  </div>
+  <div class="topbar-right">
+    <span class="clock" id="clock">--:--:--</span>
+    <button class="btn-refresh" id="btn-refresh" title="تحديث">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    </button>
+    <nav class="nav-links">
+      <a href="radar.html" class="nav-link active">الرادار</a>
+      <a href="signals.html" class="nav-link">الإشارات</a>
+      <a href="positions.html" class="nav-link">المراكز</a>
+      <a href="journal.html" class="nav-link">السجل</a>
+    </nav>
+  </div>
+</header>
+
+<!-- TICKER STRIP -->
+<div class="ticker-strip">
+  <div class="ticker-track" id="ticker-track"></div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar" id="filter-bar">
+  <button class="filter-chip active" data-filter="all">الكل <span class="filter-count" id="fc-all">0</span></button>
+  <button class="filter-chip" data-filter="manage">إدارة <span class="filter-count" id="fc-manage">0</span></button>
+  <button class="filter-chip" data-filter="entered">داخل <span class="filter-count" id="fc-entered">0</span></button>
+  <button class="filter-chip" data-filter="ready">جاهز <span class="filter-count" id="fc-ready">0</span></button>
+  <button class="filter-chip" data-filter="setup">تحضير <span class="filter-count" id="fc-setup">0</span></button>
+  <button class="filter-chip" data-filter="discovery">استكشاف <span class="filter-count" id="fc-discovery">0</span></button>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="main" id="main-content">
+  <div class="state-overlay" id="loading-state">
+    <div class="spinner"></div>
+    <div class="state-text">جاري تحميل البيانات...</div>
+  </div>
+  <div class="state-overlay" id="error-state" style="display:none">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    <div class="state-text">فشل تحميل البيانات</div>
+    <button class="btn-retry" id="btn-retry">إعادة المحاولة</button>
+  </div>
+  <div id="data-content" style="display:none">
+    <!-- HERO -->
+    <div id="hero-section"></div>
+    <!-- TABLE -->
+    <div id="table-section"></div>
+    <!-- POSITIONS -->
+    <div id="positions-section"></div>
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div>هذه المنصة للأغراض التعليمية فقط ولا تُعد نصيحة استثمارية. جميع القرارات على مسؤولية المستخدم.</div>
+  <div class="footer-time" id="footer-time">آخر تحديث: --</div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ===== State ===== */
+let allSignals = [];
+let activeFilter = 'all';
+let refreshTimer = null;
+
+/* ===== Helpers ===== */
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const ltr = v => `<span class="ltr">${v}</span>`;
+const fmtNum = (n,d=2) => n!=null ? Number(n).toFixed(d) : '—';
+const fmtPct = n => n!=null ? (n>=0?'+':'')+Number(n).toFixed(2)+'%' : '—';
+const pctDir = n => n>0?'up':n<0?'dn':'flat';
+
+function confColor(s){
+  if(s==null) return 'var(--text-3)';
+  if(s>=71) return 'var(--green)';
+  if(s>=50) return 'var(--gold)';
+  if(s>=40) return 'var(--amber)';
+  return 'var(--red)';
+}
+function confTier(s){
+  if(s==null) return '';
+  if(s>=71) return 'tier-s';
+  if(s>=50) return 'tier-m';
+  if(s>=40) return 'tier-n';
+  return 'tier-w';
+}
+
+function verdictPill(key,label){
+  const map = {
+    'شراء':'pill-buy','buy':'pill-buy',
+    'مراقبة':'pill-watch','watch':'pill-watch',
+    'مراجعة':'pill-review','review':'pill-review',
+    'تجنب':'pill-avoid','avoid':'pill-avoid',
+    'حياد':'pill-neutral','neutral':'pill-neutral',
+    'ابقاء':'pill-hold','hold':'pill-hold'
+  };
+  const cls = map[(key||'').toLowerCase()] || map[(label||'').toLowerCase()] || 'pill-neutral';
+  return `<span class="pill ${cls}">${label||key||'—'}</span>`;
+}
+
+function stateTag(st){
+  const map = {manage:'st-manage',entered:'st-entered',ready:'st-ready',setup:'st-setup',discovery:'st-discovery'};
+  const labels = {manage:'إدارة',entered:'داخل',ready:'جاهز',setup:'تحضير',discovery:'استكشاف'};
+  const cls = map[st]||'st-discovery';
+  return `<span class="state-tag ${cls}">${labels[st]||st||'—'}</span>`;
+}
+
+function emaText(st){
+  if(!st) return {t:'—',c:'var(--text-3)'};
+  const s = st.toLowerCase();
+  if(s==='bullish') return {t:'▲ صاعد',c:'var(--green)'};
+  if(s==='bearish') return {t:'▼ هابط',c:'var(--red)'};
+  return {t:'— مختلط',c:'var(--text-3)'};
+}
+
+function momentumText(m){
+  if(!m) return {t:'—',c:'var(--text-3)'};
+  const s = m.toLowerCase().replace(/ /g,'_');
+  if(s==='accelerating_bullish') return {t:'▲▲ تسارع',c:'var(--green)'};
+  if(s==='decelerating_bullish') return {t:'▲ تباطؤ',c:'var(--green-bright)'};
+  if(s==='accelerating_bearish') return {t:'▼▼ تسارع',c:'var(--red)'};
+  if(s==='decelerating_bearish') return {t:'▼ تباطؤ',c:'var(--red-bright)'};
+  return {t:'—',c:'var(--text-3)'};
+}
+
+/* ===== Clock ===== */
+function updateClock(){
+  const now = new Date();
+  const kw = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuwait',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now);
+  $('#clock').textContent = kw;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+/* ===== Filters ===== */
+$('#filter-bar').addEventListener('click',e=>{
+  const chip = e.target.closest('.filter-chip');
+  if(!chip) return;
+  $$('.filter-chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  activeFilter = chip.dataset.filter;
+  renderTable();
+});
+
+/* ===== Refresh ===== */
+$('#btn-refresh').addEventListener('click',()=>fetchData());
+$('#btn-retry').addEventListener('click',()=>fetchData());
+
+/* ===== Fetch ===== */
+async function fetchData(){
+  const btn = $('#btn-refresh');
+  btn.classList.add('spinning');
+  try{
+    const r = await fetch('/dashboard/signals');
+    if(!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    processData(d);
+    showContent();
+  }catch(e){
+    console.error('Fetch error:',e);
+    showError();
+  }finally{
+    btn.classList.remove('spinning');
+    scheduleRefresh();
+  }
+}
+
+function scheduleRefresh(){
+  if(refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(fetchData,120000);
+}
+
+function showContent(){
+  $('#loading-state').style.display='none';
+  $('#error-state').style.display='none';
+  $('#data-content').style.display='block';
+}
+function showError(){
+  $('#loading-state').style.display='none';
+  $('#error-state').style.display='flex';
+  $('#data-content').style.display='none';
+}
+
+/* ===== Process ===== */
+function processData(d){
+  // Status chips
+  const mo = d.market_open;
+  const bo = d.bridge_online;
+  $('#dot-market').className = 'status-dot '+(mo?'on':'off');
+  $('#lbl-market').textContent = mo?'السوق مفتوح':'السوق مغلق';
+  $('#dot-bridge').className = 'status-dot '+(bo?'on':'off');
+  const bc = d.bridge_cached_count!=null ? ` (${d.bridge_cached_count})` : '';
+  $('#lbl-bridge').textContent = (bo?'الربط متصل':'الربط غير متصل') + bc;
+
+  // Signal counts
+  const sc = d.signal_counts || {};
+  const total = (sc.discovery||0)+(sc.setup||0)+(sc.ready||0)+(sc.entered||0)+(sc.manage||0);
+  $('#fc-all').textContent = total;
+  $('#fc-manage').textContent = sc.manage||0;
+  $('#fc-entered').textContent = sc.entered||0;
+  $('#fc-ready').textContent = sc.ready||0;
+  $('#fc-setup').textContent = sc.setup||0;
+  $('#fc-discovery').textContent = sc.discovery||0;
+
+  // Merge all signals
+  allSignals = d.all_signals || [];
+
+  // Ticker strip
+  renderTicker(d.opportunities || d.all_signals || []);
+
+  // Hero card
+  renderHero(d.decision_card);
+
+  // Table
+  renderTable();
+
+  // Positions
+  renderPositions(d.open_positions || []);
+
+  // Footer
+  const ts = d.timestamp ? new Date(d.timestamp).toLocaleString('ar-KW',{timeZone:'Asia/Kuwait'}) : new Date().toLocaleString('ar-KW',{timeZone:'Asia/Kuwait'});
+  $('#footer-time').textContent = 'آخر تحديث: ' + ts;
+}
+
+/* ===== Ticker ===== */
+function renderTicker(list){
+  const top = list.slice(0,8);
+  if(!top.length){$('#ticker-track').innerHTML='';return;}
+  const items = top.map(s=>{
+    const dir = pctDir(s.change_pct);
+    return `<div class="ticker-item">
+      <span class="ticker-sym">${s.symbol||''}</span>
+      <span class="ticker-price">${ltr(fmtNum(s.price,3))}</span>
+      <span class="ticker-chg ${dir}">${ltr(fmtPct(s.change_pct))}</span>
+    </div>`;
+  }).join('');
+  // Duplicate for seamless scroll
+  $('#ticker-track').innerHTML = items + items;
+}
+
+/* ===== Hero ===== */
+function renderHero(card){
+  const sec = $('#hero-section');
+  if(!card){sec.innerHTML='';return;}
+  const dir = pctDir(card.change_pct);
+  const cc = confColor(card.confluence_score);
+  const ema = emaText(card.ema_state);
+  const mom = momentumText(card.macd_momentum);
+  sec.innerHTML = `
+  <div class="hero-card" style="border-right-color:${cc}">
+    <div class="hero-label">🎯 القرار الأفضل</div>
+    <div class="hero-top">
+      <div class="hero-ident">
+        <div class="hero-sym">${ltr(card.symbol||'')}</div>
+        <div class="hero-name">${card.name_ar||''}</div>
+      </div>
+      <div class="hero-price-block">
+        <div class="hero-price">${ltr(fmtNum(card.price,3))}</div>
+        <div class="hero-chg ${dir}">${ltr(fmtPct(card.change_pct))}</div>
+      </div>
+    </div>
+    <div class="hero-badges">
+      ${verdictPill(card.verdict_key, card.verdict)}
+      ${stateTag(card.trade_state)}
+    </div>
+    <div class="hero-metrics">
+      <div class="metric-box">
+        <div class="metric-label">Confluence</div>
+        <div class="metric-val" style="color:${cc}">${ltr(card.confluence_score!=null?card.confluence_score:'—')}</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">RSI</div>
+        <div class="metric-val">${ltr(fmtNum(card.rsi_14,1))}</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">EMA</div>
+        <div class="metric-val" style="color:${ema.c}">${ema.t}</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">MACD</div>
+        <div class="metric-val" style="color:${mom.c}">${mom.t}</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">ADX</div>
+        <div class="metric-val">${ltr(fmtNum(card.adx,1))}</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">Vol Ratio</div>
+        <div class="metric-val">${ltr(fmtNum(card.vol_ratio,2))}</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">Stoch K</div>
+        <div class="metric-val">${ltr(fmtNum(card.stoch_k,1))}</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">BB Squeeze</div>
+        <div class="metric-val">${card.bb_squeeze===true?'<span style="color:var(--amber)">⬤ ضغط</span>':'<span style="color:var(--text-3)">—</span>'}</div>
+      </div>
+    </div>
+    <div class="hero-levels">
+      <div class="level-item"><span class="level-dot support"></span><span class="level-label">الدعم</span><span class="level-val">${ltr(fmtNum(card.support,3))}</span></div>
+      <div class="level-item"><span class="level-dot resistance"></span><span class="level-label">المقاومة</span><span class="level-val">${ltr(fmtNum(card.resistance,3))}</span></div>
+      <div class="level-item"><span class="level-dot atr"></span><span class="level-label">ATR</span><span class="level-val">${ltr(fmtNum(card.atr_14,3))}</span></div>
+    </div>
+  </div>`;
+}
+
+/* ===== Table ===== */
+function renderTable(){
+  const sec = $('#table-section');
+  let list = allSignals;
+  if(activeFilter!=='all'){
+    list = list.filter(s=>(s.trade_state||'').toLowerCase()===activeFilter);
+  }
+  const rows = list.slice(0,15);
+  if(!rows.length){
+    sec.innerHTML = `<div class="section-title">أهم الفرص</div><div class="empty-state">لا توجد إشارات${activeFilter!=='all'?' لهذا الفلتر':''}</div>`;
+    return;
+  }
+  let html = `<div class="section-title">أهم الفرص <span class="count">${ltr(rows.length)}</span></div>`;
+  html += `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>السهم</th><th>الحالة</th><th>السعر</th><th>التغير%</th>
+      <th>Confluence</th><th>القرار</th><th>EMA</th><th>RSI</th>
+      <th>Momentum</th><th>ADX</th><th>Vol</th>
+    </tr></thead><tbody>`;
+  rows.forEach(s=>{
+    const dir = pctDir(s.change_pct);
+    const cc = confColor(s.confluence_score);
+    const ema = emaText(s.ema_state);
+    const mom = momentumText(s.macd_momentum);
+    const confW = s.confluence_score!=null ? Math.min(s.confluence_score,100) : 0;
+    html += `<tr>
+      <td><span class="cell-sym">${ltr(s.symbol||'')}</span><span class="cell-name">${s.name_ar||''}</span></td>
+      <td>${stateTag(s.trade_state)}</td>
+      <td class="cell-mono">${ltr(fmtNum(s.price,3))}</td>
+      <td class="cell-mono" style="color:var(--${dir==='up'?'green':dir==='dn'?'red':'text-3'})">${ltr(fmtPct(s.change_pct))}</td>
+      <td><div class="confluence-cell"><span class="cell-mono" style="color:${cc}">${ltr(s.confluence_score!=null?s.confluence_score:'—')}</span><div class="conf-bar"><div class="conf-fill" style="width:${confW}%;background:${cc}"></div></div></div></td>
+      <td>${verdictPill(s.verdict_key, s.verdict)}</td>
+      <td style="color:${ema.c}">${ema.t}</td>
+      <td class="cell-mono">${ltr(fmtNum(s.rsi_14,1))}</td>
+      <td style="color:${mom.c}">${mom.t}</td>
+      <td class="cell-mono">${ltr(fmtNum(s.adx,1))}</td>
+      <td class="cell-mono">${ltr(fmtNum(s.vol_ratio,2))}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  sec.innerHTML = html;
+}
+
+/* ===== Positions ===== */
+function renderPositions(list){
+  const sec = $('#positions-section');
+  if(!list.length){sec.innerHTML='';return;}
+  let html = `<div class="section-title">المراكز المفتوحة <span class="count">${ltr(list.length)}</span></div>`;
+  html += '<div class="positions-grid">';
+  list.forEach(p=>{
+    const pDir = p.pnl_pct>=0?'up':'dn';
+    const stMap = {manage:'st-manage',entered:'st-entered',ready:'st-ready',setup:'st-setup',discovery:'st-discovery'};
+    const stCls = stMap[p.state]||'st-discovery';
+    const stLabels = {manage:'إدارة',entered:'داخل',ready:'جاهز',setup:'تحضير',discovery:'استكشاف'};
+    html += `<div class="pos-card">
+      <div class="pos-top">
+        <span class="pos-sym">${ltr(p.symbol||'')}</span>
+        <span class="pos-state ${stCls}">${stLabels[p.state]||p.state||''}</span>
+      </div>
+      <div class="pos-row"><span class="pos-label">الدخول</span><span class="pos-val">${ltr(fmtNum(p.entry,3))}</span></div>
+      <div class="pos-row"><span class="pos-label">الحالي</span><span class="pos-val">${ltr(fmtNum(p.current,3))}</span></div>
+      <div class="pos-row"><span class="pos-label">الربح/الخسارة</span>
+        <span class="pos-pnl ${pDir}">${ltr(fmtPct(p.pnl_pct))} &nbsp; ${ltr(fmtNum(p.pnl_kwd,1))} KWD</span>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  sec.innerHTML = html;
+}
+
+/* ===== Init ===== */
+fetchData();
+
+})();
+</script>
+</body>
+</html>

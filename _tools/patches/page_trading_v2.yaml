@@ -1,0 +1,292 @@
+  - path: sub-radar
+    title: التداول
+    icon: mdi:chart-areaspline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── PULSE BAR ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 16px;
+                  padding: 10px 18px 8px;
+                  margin: 6px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.16);
+                  background: rgba(127,127,127,0.04);
+                  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h2 { font-size: 28px; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px 0; }
+                ha-markdown p { font-size: 13px; font-weight: 500; opacity: 0.85; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              ## التداول
+              {% set sig = 'sensor.master_ai_signals' %}
+              {% set dc = state_attr(sig,'decision_card') or {} %}
+              {% set sc = state_attr(sig,'signal_counts') or {} %}
+              {% if state_attr(sig,'market_open') %}🟢 مفتوح{% else %}⚫ مغلق{% endif %} · {% if state_attr(sig,'bridge_online') %}🔗 Bridge{% else %}⚠️ Offline{% endif %} · <span class="ltr">{{ state_attr(sig,'bridge_cached_count') | int(0) }}</span> رمز{% if dc %} · أقوى: <span class="ltr">{{ dc.symbol }}</span> (<span class="ltr">{{ dc.confluence_score }}</span>){% endif %}{% if sc.get('ready',0) > 0 %} · 🟢 <span class="ltr">{{ sc.ready }}</span> جاهز{% endif %}{% if sc.get('setup',0) > 0 %} · 🔵 <span class="ltr">{{ sc.setup }}</span> تهيئة{% endif %}
+
+          # ── QUICK ACTIONS ──
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: button
+                name: تبديل الرادار
+                icon: mdi:radar
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_radar_toggle
+                show_state: false
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 14px; height: 48px; }
+                    ha-card .name { font-size: 11px !important; }
+              - type: button
+                name: الأسهم
+                icon: mdi:chart-bar
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_stocks
+                show_state: false
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 14px; height: 48px; }
+                    ha-card .name { font-size: 11px !important; }
+              - type: button
+                name: أعلى
+                icon: mdi:arrow-up-bold
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_radar_top
+                show_state: false
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 14px; height: 48px; }
+                    ha-card .name { font-size: 11px !important; }
+              - type: button
+                name: الحالة
+                icon: mdi:information-outline
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.master_ai_radar_status
+                show_state: false
+                card_mod:
+                  style: |
+                    ha-card { border-radius: 14px; height: 48px; }
+                    ha-card .name { font-size: 11px !important; }
+
+          # ── DECISION CARD (Action Zone) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% set sig = 'sensor.master_ai_signals' %}
+                  {% set dc = state_attr(sig,'decision_card') or {} %}
+                  {% set cs = dc.get('confluence_score',0) | int(0) %}
+                  {% if cs >= 71 %}
+                  border-right: 8px solid #16A34A;
+                  background: rgba(22,163,74,0.08);
+                  {% elif cs >= 50 %}
+                  border-right: 8px solid #22C55E;
+                  background: rgba(34,197,94,0.06);
+                  {% elif cs >= 40 %}
+                  border-right: 8px solid #F59E0B;
+                  background: rgba(245,158,11,0.06);
+                  {% elif cs >= 30 %}
+                  border-right: 8px solid #F97316;
+                  background: rgba(249,115,22,0.06);
+                  {% else %}
+                  border-right: 8px solid #DC2626;
+                  background: rgba(220,38,38,0.06);
+                  {% endif %}
+                  border-radius: 18px;
+                  padding: 18px;
+                  margin: 10px 8px 0;
+                  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 4px 0; }
+                ha-markdown p { font-size: 13px; font-weight: 500; line-height: 1.6; margin: 2px 0; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+                .primary-number { font-size: 30px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+                .secondary-big { font-size: 22px; font-weight: 700; }
+                .label { font-size: 12px; font-weight: 600; opacity: 0.72; }
+                .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+            content: |
+              {% set sig = 'sensor.master_ai_signals' %}
+              {% set dc = state_attr(sig,'decision_card') or {} %}
+              {% if dc %}
+              {% set cs = dc.get('confluence_score',0) | int(0) %}
+              {% set chg = dc.get('change_pct',0) | float(0) %}
+              ### <span class="ltr">{{ dc.symbol }}</span> {{ dc.name_ar }}
+
+              <span class="primary-number ltr">{{ dc.price }}</span> <span class="label">فلس</span> · <span class="secondary-big ltr" style="color: {% if chg >= 0 %}#16A34A{% else %}#DC2626{% endif %}">{% if chg >= 0 %}+{% endif %}{{ chg | round(2) }}%</span> · <span class="badge" style="background: {% if cs >= 71 %}rgba(22,163,74,0.15); color:#16A34A{% elif cs >= 50 %}rgba(34,197,94,0.12); color:#22C55E{% elif cs >= 40 %}rgba(245,158,11,0.12); color:#F59E0B{% else %}rgba(220,38,38,0.12); color:#DC2626{% endif %}">{{ dc.verdict }}</span>
+
+              <span class="label">درجة التوافق</span> · <span class="secondary-big ltr">{{ cs }}</span><span class="label">/100</span> · <span class="badge" style="background: rgba(128,128,128,0.10);">{{ dc.trade_state }}</span>
+
+              EMA: {% if dc.ema_state == 'bullish' %}📈 صاعد{% elif dc.ema_state == 'bearish' %}📉 هابط{% else %}➡️ مختلط{% endif %} · MACD: {% if dc.macd_state == 'bullish' %}📈{% else %}📉{% endif %} · RSI: <span class="ltr">{{ dc.rsi_14 | round(0) }}</span> · ADX: <span class="ltr">{{ dc.adx | default('—') }}</span> · Vol: <span class="ltr">{{ dc.vol_ratio | default('—') }}×</span>
+
+              MACD Momentum: {% set mm = dc.get('macd_momentum','') %}{% if 'accelerating_bullish' in mm %}🟢 تسارع صاعد{% elif 'decelerating_bullish' in mm %}🟡 تباطؤ صاعد{% elif 'accelerating_bearish' in mm %}🔴 تسارع هابط{% elif 'decelerating_bearish' in mm %}🟡 تباطؤ هابط{% else %}➡️ محايد{% endif %} · StochRSI: <span class="ltr">{{ dc.stoch_k | default('—') }}</span>{% if dc.stoch_k is not none %}{% if dc.stoch_k > 80 %} <span style="color:#DC2626">OB</span>{% elif dc.stoch_k < 20 %} <span style="color:#16A34A">OS</span>{% endif %}{% endif %} · BB: {% if dc.bb_squeeze %}🔴 ضغط{% else %}—{% endif %}
+
+              📍 دعم: <span class="ltr">{{ dc.support | default('—') }}</span> · مقاومة: <span class="ltr">{{ dc.resistance | default('—') }}</span> · ATR: <span class="ltr">{{ dc.atr_14 | default('—') }}</span>
+              {% else %}
+              ### لا إشارات
+              📊 لا بيانات — تأكد أن Bridge متصل والرادار يعمل
+              {% endif %}
+
+          # ── ALL OPPORTUNITIES (up to 10) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.14);
+                  background: rgba(127,127,127,0.04);
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                  overflow-x: auto;
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+                ha-markdown table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+                ha-markdown th { font-size: 12px; font-weight: 700; opacity: 0.8; padding: 8px 4px; border-bottom: 1px solid rgba(128,128,128,0.18); white-space: nowrap; }
+                ha-markdown td { font-size: 13px; font-weight: 500; padding: 8px 4px; border-bottom: 1px solid rgba(128,128,128,0.10); }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              {% set sig = 'sensor.master_ai_signals' %}
+              {% set opps = state_attr(sig,'opportunities') or [] %}
+              {% if opps | length > 0 %}
+              ### الفرص (<span class="ltr">{{ opps | length }}</span>)
+
+              | الرمز | السعر | التغير | التوافق | القرار | الحالة | EMA | RSI | MACD | ADX | الحجم |
+              |:------|------:|------:|:------:|:-----:|:-----:|:---:|----:|:----:|----:|-----:|
+              {% for s in opps[:10] %}| <span class="ltr">{{ s.symbol }}</span> | <span class="ltr">{{ s.price }}</span> | <span class="ltr" style="color:{% if s.change_pct >= 0 %}#16A34A{% else %}#DC2626{% endif %}">{% if s.change_pct >= 0 %}+{% endif %}{{ s.change_pct }}%</span> | <span class="ltr" style="color:{% if s.confluence_score >= 71 %}#16A34A{% elif s.confluence_score >= 50 %}#22C55E{% elif s.confluence_score >= 40 %}#F59E0B{% elif s.confluence_score >= 30 %}#F97316{% else %}#DC2626{% endif %}">{{ s.confluence_score }}</span> | {{ s.verdict }} | {{ s.trade_state }} | {% if s.ema_state == 'bullish' %}↑{% elif s.ema_state == 'bearish' %}↓{% else %}→{% endif %} | <span class="ltr" style="color:{% if s.rsi_14 > 70 %}#DC2626{% elif s.rsi_14 < 30 %}#16A34A{% else %}inherit{% endif %}">{{ s.rsi_14 | round(0) }}</span> | {% set mm = s.get('macd_momentum','') %}{% if 'accelerating_bullish' in mm %}🟢{% elif 'decelerating' in mm %}🟡{% elif 'accelerating_bearish' in mm %}🔴{% else %}{% if s.macd_state == 'bullish' %}+{% else %}−{% endif %}{% endif %} | <span class="ltr"{% if s.adx is not none and s.adx > 25 %} style="font-weight:700"{% endif %}>{{ s.adx | default('—') }}</span> | <span class="ltr"{% if s.vol_ratio is not none and s.vol_ratio > 1.5 %} style="font-weight:700"{% endif %}>{{ s.vol_ratio | default('—') }}×</span> |
+              {% endfor %}
+              {% else %}
+              ### الفرص
+              لا فرص حالياً
+              {% endif %}
+
+          # ── OPEN POSITIONS (compact P&L) ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% set sig = 'sensor.master_ai_signals' %}
+                  {% set pos = state_attr(sig,'open_positions') or [] %}
+                  {% if pos | length == 0 %}
+                  display: none;
+                  {% else %}
+                  border-radius: 14px;
+                  padding: 14px 16px;
+                  margin: 10px 8px 0;
+                  border: 1px solid rgba(39,174,96,0.14);
+                  border-right: 4px solid rgba(39,174,96,0.40);
+                  background: rgba(39,174,96,0.04);
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                  {% endif %}
+                }
+                ha-markdown {
+                  direction: rtl; text-align: right;
+                  font-family: "Segoe UI","Tahoma","Arial",sans-serif;
+                }
+                ha-markdown h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; }
+                ha-markdown table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+                ha-markdown th { font-size: 12px; font-weight: 700; opacity: 0.8; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,0.18); }
+                ha-markdown td { font-size: 13px; font-weight: 500; padding: 8px 6px; border-bottom: 1px solid rgba(128,128,128,0.10); }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-variant-numeric: tabular-nums; }
+            content: |
+              {% set sig = 'sensor.master_ai_signals' %}
+              {% set pos = state_attr(sig,'open_positions') or [] %}
+              {% if pos | length > 0 %}
+              ### صفقات مفتوحة (<span class="ltr">{{ pos | length }}</span>)
+
+              | الرمز | الدخول | الحالي | P&L% | P&L د.ك | الحالة |
+              |:------|------:|------:|-----:|--------:|:-----:|
+              {% for t in pos %}| <span class="ltr">{{ t.symbol }}</span> | <span class="ltr">{{ t.entry }}</span> | <span class="ltr">{{ t.current }}</span> | <span class="ltr" style="color:{% if t.pnl_pct >= 0 %}#16A34A{% else %}#DC2626{% endif %}">{% if t.pnl_pct >= 0 %}+{% endif %}{{ t.pnl_pct }}%</span> | <span class="ltr" style="color:{% if t.pnl_kwd >= 0 %}#16A34A{% else %}#DC2626{% endif %}">{% if t.pnl_kwd >= 0 %}+{% endif %}{{ t.pnl_kwd }}</span> | {{ t.state }} |
+              {% endfor %}
+              {% endif %}
+
+          # ── DIAGNOSTICS FOOTER ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 6px 16px;
+                  margin: 6px 8px 0;
+                  border: 1px solid rgba(128,128,128,0.10);
+                  background: rgba(127,127,127,0.02);
+                }
+                ha-markdown { font-size: 11px; font-weight: 500; opacity: 0.60; direction: rtl; text-align: right; }
+                .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+            content: >
+              {% set sig = 'sensor.master_ai_signals' %}
+              {% set ts = state_attr(sig,'timestamp') | default('') %}
+              {% if ts %}📅 {{ ts[:16] }}{% endif %}
+              · {% if state_attr(sig,'bridge_online') %}🟢 Bridge{% else %}🔴 Offline{% endif %}
+              · <span class="ltr">{{ state_attr(sig,'bridge_cached_count') | int(0) }}</span> رمز
+
+          # ── TRADING NAV ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 14px;
+                  padding: 6px 16px;
+                  margin: 6px 8px 12px;
+                  border: 1px solid rgba(128,128,128,0.10);
+                  background: rgba(127,127,127,0.02);
+                }
+                ha-markdown { font-size: 14px; direction: rtl; text-align: right; }
+            content: >
+              [الإشارات](/master-ai-dashboard/sub-signals) · [السجل](/master-ai-dashboard/sub-journal) · [الرئيسية](/master-ai-dashboard/0)
+
+          # ── COMMAND FEEDBACK ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  {% if not state_attr('sensor.master_ai_dashboard','last_cmd_command') %}
+                  display: none;
+                  {% else %}
+                  border-radius: 14px;
+                  padding: 6px 14px;
+                  margin-top: 6px;
+                  border: 1px solid rgba(128,128,128,0.10);
+                  background: rgba(127,127,127,0.02);
+                  {% endif %}
+                }
+                ha-markdown { font-size: 11px; opacity: 0.60; direction: rtl; }
+            content: >
+              {% set d = 'sensor.master_ai_dashboard' %}
+              {% set cmd = state_attr(d,'last_cmd_command') | default('') %}
+              {% if cmd %}
+              {% set st = state_attr(d,'last_cmd_status') | default('?') %}
+              {% if st == 'done' %}✅{% elif st == 'error' %}❌{% elif st == 'timeout' %}⏳{% else %}🔄{% endif %}
+              **{{ cmd }}** @ {{ state_attr(d,'last_cmd_time') | default('') }}
+              · {{ state_attr(d,'last_cmd_result') | default('') | truncate(60) }}
+              {% endif %}

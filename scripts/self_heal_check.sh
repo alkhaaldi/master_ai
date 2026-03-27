@@ -45,7 +45,7 @@ tg_notify() {
 }
 
 check_health() {
-    curl -fsS --max-time 3 "$HEALTH_URL" >/dev/null 2>&1
+    curl -fsS --max-time 15 "$HEALTH_URL" >/dev/null 2>&1
 }
 
 get_head() { git -C "$DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown"; }

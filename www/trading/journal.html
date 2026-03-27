@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سجل الأداء — KSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7/css/materialdesignicons.min.css" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#070D17;--navy-800:#0C1525;--navy-700:#111E32;
+  --navy-600:#162840;--navy-500:#1C334F;--navy-400:#24405F;
+  --gold:#C6974B;--gold-bright:#D4A95C;--gold-dim:#9E7A3D;
+  --gold-bg:rgba(198,151,75,.06);--gold-br:rgba(198,151,75,.25);
+  --green:#4CAF82;--green-bright:#5BC492;--green-bg:rgba(76,175,130,.08);--green-br:rgba(76,175,130,.3);
+  --red:#D94452;--red-bright:#E5606C;--red-bg:rgba(217,68,82,.08);--red-br:rgba(217,68,82,.3);
+  --amber:#E8A838;--amber-bg:rgba(232,168,56,.08);--amber-br:rgba(232,168,56,.3);
+  --cyan:#38BDF8;--cyan-bg:rgba(56,189,248,.08);--cyan-br:rgba(56,189,248,.3);
+  --text:#E8ECF0;--text-2:#A0ADBC;--text-3:#6B7D90;--text-4:#405060;
+  --card:#0E1929;--card-hover:#132137;--card-border:#1A2E45;
+  --f:'Tajawal','Noto Kufi Arabic',sans-serif;
+  --fd:'Noto Kufi Arabic','Tajawal',sans-serif;
+  --fm:'IBM Plex Mono','Consolas',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--f);font-variant-numeric:tabular-nums;
+  background:var(--navy-900);color:var(--text);
+  min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.ltr{direction:ltr;unicode-bidi:isolate}
+a{color:var(--gold);text-decoration:none}
+a:hover{color:var(--gold-bright)}
+
+/* ===== TOPBAR ===== */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,13,23,.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--card-border);
+  padding:0 1.25rem;height:56px;
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+}
+.topbar-brand{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.brand-mark{
+  background:linear-gradient(135deg,var(--gold),var(--gold-dim));
+  color:var(--navy-900);font-family:var(--fm);font-weight:700;
+  font-size:.85rem;padding:.25rem .6rem;border-radius:4px;letter-spacing:.5px;
+}
+.topbar-title{font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--text)}
+.topbar-tag{
+  font-size:.65rem;background:var(--navy-600);color:var(--text-3);
+  padding:2px 8px;border-radius:10px;white-space:nowrap;
+}
+.topbar-center{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.topbar-right{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.clock{font-family:var(--fm);font-size:.85rem;color:var(--gold);direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.btn-refresh{
+  background:none;border:1px solid var(--card-border);color:var(--text-2);
+  width:34px;height:34px;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.btn-refresh:hover{border-color:var(--gold-br);color:var(--gold)}
+.btn-refresh.spinning svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.nav-links{display:flex;gap:.15rem}
+.nav-link{
+  font-size:.75rem;padding:.3rem .6rem;border-radius:6px;color:var(--text-3);transition:all .2s;
+}
+.nav-link:hover{color:var(--text);background:var(--navy-700)}
+.nav-link.active{color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br)}
+
+/* ===== MAIN ===== */
+.main{padding:1.25rem;max-width:1400px;margin:0 auto}
+
+/* ===== SECTION HEADER ===== */
+.section-hdr{display:flex;align-items:center;gap:.6rem;margin-bottom:.85rem;margin-top:1.5rem}
+.section-hdr:first-child{margin-top:0}
+.section-hdr h2{font-family:var(--fd);font-size:.9rem;font-weight:700;color:var(--text-2)}
+.section-hdr .badge{
+  font-size:.6rem;font-family:var(--fm);font-weight:600;
+  color:var(--gold-dim);background:var(--gold-bg);
+  padding:2px 8px;border-radius:10px;line-height:1.4;
+}
+
+/* ===== PULSE BAR (stat cards) ===== */
+.pulse-bar{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;margin-bottom:1.5rem;
+}
+.pulse-card{
+  background:var(--navy-800);border:1px solid var(--card-border);border-radius:10px;
+  padding:1rem;display:flex;flex-direction:column;gap:.45rem;transition:border-color .2s;
+}
+.pulse-card:hover{border-color:var(--gold-br)}
+.pulse-top{display:flex;align-items:center;justify-content:space-between}
+.pulse-icon{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;
+}
+.pulse-icon.gold{background:var(--gold-bg);color:var(--gold)}
+.pulse-icon.green{background:var(--green-bg);color:var(--green)}
+.pulse-icon.red{background:var(--red-bg);color:var(--red)}
+.pulse-icon.cyan{background:var(--cyan-bg);color:var(--cyan)}
+.pulse-icon.amber{background:var(--amber-bg);color:var(--amber)}
+.pulse-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);font-weight:600}
+.pulse-val{font-family:var(--fm);font-size:1.8rem;font-weight:700;line-height:1.1}
+.pulse-val.green{color:var(--green)}
+.pulse-val.red{color:var(--red)}
+.pulse-val.amber{color:var(--amber)}
+.pulse-val.gold{color:var(--gold)}
+.pulse-val.cyan{color:var(--cyan)}
+
+/* ===== TABLES ===== */
+.tbl-wrap{
+  border-radius:10px;overflow:hidden;border:1px solid var(--card-border);
+  background:var(--card);margin-bottom:1.5rem;overflow-x:auto;
+}
+.tbl{width:100%;border-collapse:collapse;min-width:700px}
+.tbl thead th{
+  background:linear-gradient(180deg,var(--navy-700),var(--navy-800));
+  font-size:.62rem;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--gold-dim);font-weight:600;padding:10px 12px;
+  text-align:right;white-space:nowrap;border-bottom:1px solid var(--card-border);
+}
+.tbl tbody td{
+  font-size:.78rem;padding:9px 12px;border-bottom:1px solid rgba(26,46,69,.4);
+  white-space:nowrap;color:var(--text-2);vertical-align:middle;
+}
+.tbl tbody tr:nth-child(even){background:rgba(0,0,0,.08)}
+.tbl tbody tr:hover{background:rgba(198,151,75,.03)}
+.tbl tbody tr.row-green{border-right:3px solid var(--green)}
+.tbl tbody tr.row-red{border-right:3px solid var(--red)}
+.tbl .mono{font-family:var(--fm);font-size:.75rem}
+.tbl .sym{font-weight:700;color:var(--text);font-family:var(--fd)}
+.tbl .dir-long{color:var(--green);font-size:.65rem;font-weight:600}
+.tbl .dir-short{color:var(--red);font-size:.65rem;font-weight:600}
+.tbl .tag{
+  font-size:.58rem;padding:2px 6px;border-radius:4px;font-weight:500;display:inline-block;
+}
+.tbl .tag-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+.tbl .tag-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-br)}
+
+/* ===== BEST/WORST CARDS ===== */
+.bw-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.5rem}
+.bw-card{
+  background:var(--navy-800);border-radius:10px;padding:1.1rem 1.25rem;
+  display:flex;align-items:center;gap:1rem;
+}
+.bw-card.best{border:1px solid var(--green-br)}
+.bw-card.worst{border:1px solid var(--red-br)}
+.bw-card .bw-icon{
+  width:42px;height:42px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;
+}
+.bw-card.best .bw-icon{background:var(--green-bg);color:var(--green)}
+.bw-card.worst .bw-icon{background:var(--red-bg);color:var(--red)}
+.bw-card .bw-info{display:flex;flex-direction:column;gap:.15rem}
+.bw-card .bw-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3)}
+.bw-card .bw-sym{font-family:var(--fd);font-weight:700;font-size:.95rem;color:var(--text)}
+.bw-card .bw-pnl{font-family:var(--fm);font-weight:700;font-size:1.1rem}
+.bw-card.best .bw-pnl{color:var(--green)}
+.bw-card.worst .bw-pnl{color:var(--red)}
+
+/* ===== COMPARISON GRID ===== */
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.5rem}
+.cmp-block{
+  background:var(--navy-800);border:1px solid var(--card-border);border-radius:10px;
+  padding:1rem 1.25rem;
+}
+.cmp-block h3{
+  font-family:var(--fd);font-size:.78rem;font-weight:700;color:var(--gold);
+  margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;
+}
+.cmp-block h3 .mdi{font-size:1rem}
+.cmp-rows{display:flex;flex-direction:column;gap:.4rem}
+.cmp-row{display:flex;justify-content:space-between;align-items:center}
+.cmp-row .cmp-lbl{font-size:.65rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px}
+.cmp-row .cmp-val{font-family:var(--fm);font-size:.8rem;font-weight:600;color:var(--text)}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{
+  text-align:center;padding:2.5rem 1rem;color:var(--text-3);
+}
+.empty-state .mdi{font-size:2rem;margin-bottom:.5rem;display:block;color:var(--text-4)}
+.empty-state p{font-size:.8rem}
+
+/* ===== LOADING ===== */
+.loading-wrap{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:60vh;gap:1rem;
+}
+.spinner{
+  width:40px;height:40px;border:3px solid var(--navy-600);
+  border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;
+}
+.loading-wrap p{font-size:.8rem;color:var(--text-3)}
+
+/* ===== ERROR ===== */
+.error-wrap{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:60vh;gap:1rem;text-align:center;
+}
+.error-wrap .mdi{font-size:2.5rem;color:var(--red)}
+.error-wrap p{font-size:.85rem;color:var(--text-3);max-width:400px}
+.btn-retry{
+  background:var(--gold);color:var(--navy-900);border:none;
+  padding:.5rem 1.5rem;border-radius:8px;font-family:var(--f);
+  font-weight:700;font-size:.8rem;cursor:pointer;transition:background .2s;
+}
+.btn-retry:hover{background:var(--gold-bright)}
+
+/* ===== FOOTER ===== */
+.footer{
+  text-align:center;padding:2rem 1rem 1.5rem;color:var(--text-4);font-size:.65rem;
+  border-top:1px solid var(--card-border);margin-top:2rem;
+}
+.footer .ts{color:var(--text-3);font-family:var(--fm)}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1024px){
+  .pulse-bar{grid-template-columns:repeat(3,1fr)}
+  .bw-grid,.cmp-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  .topbar-tag,.nav-links{display:none}
+  .pulse-bar{grid-template-columns:repeat(2,1fr)}
+  .bw-grid,.cmp-grid{grid-template-columns:1fr}
+  .main{padding:.75rem}
+  .pulse-val{font-size:1.4rem}
+}
+@media(max-width:480px){
+  .pulse-bar{grid-template-columns:1fr}
+  .topbar{padding:0 .75rem;height:48px}
+  .topbar-title{font-size:.85rem}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-mark">KSE</span>
+    <span class="topbar-title">سجل الأداء</span>
+    <span class="topbar-tag">Performance Journal</span>
+  </div>
+  <div class="topbar-center">
+    <nav class="nav-links">
+      <a href="radar.html" class="nav-link">الرادار</a>
+      <a href="signals.html" class="nav-link">الإشارات</a>
+      <a href="positions.html" class="nav-link">المراكز</a>
+      <a href="journal.html" class="nav-link active">السجل</a>
+    </nav>
+  </div>
+  <div class="topbar-right">
+    <span class="clock" id="clock"></span>
+    <button class="btn-refresh" id="btnRefresh" title="تحديث">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- LOADING STATE -->
+<div class="main" id="app">
+  <div class="loading-wrap" id="loading">
+    <div class="spinner"></div>
+    <p>جاري تحميل سجل الأداء...</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ── helpers ── */
+  const $ = s => document.querySelector(s);
+  const params = new URLSearchParams(location.search);
+  const API_KEY = params.get('key') || '';
+  const REFRESH_MS = 120000;
+  let refreshTimer = null;
+  let data = null;
+
+  /* clock */
+  function tickClock(){
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+    $('#clock').textContent = `${h}:${m}:${s}`;
+  }
+  setInterval(tickClock, 1000);
+  tickClock();
+
+  /* format */
+  function fmt(v, dec=2){
+    if(v==null||isNaN(v)) return '—';
+    return Number(v).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  }
+  function fmtPct(v){
+    if(v==null||isNaN(v)) return '—';
+    return (v>=0?'+':'')+Number(v).toFixed(2)+'%';
+  }
+  function fmtKWD(v){
+    if(v==null||isNaN(v)) return '—';
+    return (v>=0?'+':'')+fmt(v,3);
+  }
+  function pnlClass(v){ return v>=0?'green':'red'; }
+  function wrClass(v){
+    if(v==null) return '';
+    if(v>=60) return 'green';
+    if(v>=40) return 'amber';
+    return 'red';
+  }
+  function ltr(s){ return `<span class="ltr">${s}</span>`; }
+  function fmtDate(d){
+    if(!d) return '—';
+    return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+  }
+
+  /* ── FETCH ── */
+  async function loadData(){
+    const btn = $('#btnRefresh');
+    btn.classList.add('spinning');
+    try {
+      const res = await fetch('/dashboard/journal',{
+        headers:{'X-API-Key':API_KEY,'Authorization':'Bearer '+API_KEY}
+      });
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      data = await res.json();
+      render(data);
+    } catch(e){
+      showError(e.message);
+    } finally {
+      btn.classList.remove('spinning');
+    }
+  }
+
+  /* ── ERROR ── */
+  function showError(msg){
+    $('#app').innerHTML = `
+      <div class="error-wrap">
+        <i class="mdi mdi-alert-circle-outline"></i>
+        <p>خطأ في تحميل البيانات<br><span class="ltr" style="font-size:.7rem;color:var(--text-4)">${msg}</span></p>
+        <button class="btn-retry" onclick="location.reload()">إعادة المحاولة</button>
+      </div>`;
+  }
+
+  /* ── RENDER ── */
+  function render(d){
+    const ps = d.portfolio_summary || {};
+    const s30 = d.stats_30d || {};
+    const s7 = d.stats_7d || {};
+    const open = d.open_positions || [];
+    const closed = d.closed_trades || [];
+    const monthly = d.monthly_stats || [];
+    const best = d.best_trade;
+    const worst = d.worst_trade;
+
+    let html = '';
+
+    /* ── PULSE BAR ── */
+    html += `<div class="section-hdr"><h2>نبض المحفظة</h2></div>`;
+    html += `<div class="pulse-bar">`;
+    html += pulseCard('mdi-briefcase-outline','cyan','المراكز المفتوحة', ps.open_count!=null?ps.open_count:open.length, 'cyan');
+    const netPnl = ps.total_net_pnl_kwd;
+    html += pulseCard('mdi-chart-line','green','صافي الربح / الخسارة د.ك', fmtKWD(netPnl), pnlClass(netPnl));
+    const wr30 = s30.win_rate;
+    html += pulseCard('mdi-target','gold','نسبة الفوز 30 يوم', wr30!=null?fmt(wr30,1)+'%':'—', wrClass(wr30));
+    html += pulseCard('mdi-swap-horizontal','amber','صفقات 30 يوم', s30.total_trades!=null?s30.total_trades:'—', 'amber');
+    html += pulseCard('mdi-cash-minus','red','إجمالي الرسوم د.ك', ps.total_fees_kwd!=null?fmt(ps.total_fees_kwd,3):'—', 'red');
+    html += `</div>`;
+
+    /* ── OPEN POSITIONS ── */
+    if(open.length){
+      html += `<div class="section-hdr"><h2>المراكز المفتوحة</h2><span class="badge">${open.length}</span></div>`;
+      html += `<div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>الرمز</th><th>الاتجاه</th><th>الدخول</th><th>الحالي</th>
+        <th>P&amp;L%</th><th>P&amp;L د.ك</th><th>الكمية</th><th>الاستراتيجية</th><th>التاريخ</th>
+      </tr></thead><tbody>`;
+      for(const p of open){
+        const pnl = p.pnl||{};
+        const cls = pnlClass(pnl.net_pnl_kwd||pnl.gross_pnl_kwd||0);
+        const dirCls = (p.direction||'').toLowerCase()==='short'?'dir-short':'dir-long';
+        const dirTxt = (p.direction||'').toLowerCase()==='short'?'بيع':'شراء';
+        html += `<tr class="row-${cls}">
+          <td class="sym">${p.symbol||''} <span style="font-size:.6rem;color:var(--text-3);font-weight:400">${p.name_ar||''}</span></td>
+          <td><span class="${dirCls}">${dirTxt}</span></td>
+          <td class="mono">${ltr(fmt(p.entry_price,0))}</td>
+          <td class="mono">${ltr(fmt(p.current_price,0))}</td>
+          <td class="mono"><span class="tag tag-${cls}">${ltr(fmtPct(pnl.net_pnl_pct!=null?pnl.net_pnl_pct:pnl.pnl_pct))}</span></td>
+          <td class="mono" style="color:var(--${cls})">${ltr(fmtKWD(pnl.net_pnl_kwd))}</td>
+          <td class="mono">${ltr(p.quantity!=null?p.quantity.toLocaleString():'—')}</td>
+          <td style="font-size:.65rem;color:var(--text-3)">${p.entry_reason||'—'}</td>
+          <td class="mono" style="font-size:.68rem">${ltr(fmtDate(p.entry_date))}</td>
+        </tr>`;
+      }
+      html += `</tbody></table></div>`;
+    }
+
+    /* ── CLOSED TRADES ── */
+    html += `<div class="section-hdr"><h2>الصفقات المغلقة</h2>${closed.length?`<span class="badge">${closed.length}</span>`:''}</div>`;
+    if(closed.length){
+      html += `<div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>الرمز</th><th>الدخول</th><th>الخروج</th>
+        <th>P&amp;L%</th><th>P&amp;L د.ك</th><th>السبب</th><th>تاريخ الخروج</th>
+      </tr></thead><tbody>`;
+      for(const t of closed){
+        const pnl = t.pnl||{};
+        const pnlVal = pnl.net_pnl_kwd!=null?pnl.net_pnl_kwd:(t.pnl_fils!=null?t.pnl_fils/1000:null);
+        const pnlPctVal = pnl.net_pnl_pct!=null?pnl.net_pnl_pct:t.pnl_pct;
+        const cls = pnlClass(pnlVal||0);
+        html += `<tr class="row-${cls}">
+          <td class="sym">${t.symbol||''} <span style="font-size:.6rem;color:var(--text-3);font-weight:400">${t.name_ar||''}</span></td>
+          <td class="mono">${ltr(fmt(t.entry_price,0))}</td>
+          <td class="mono">${ltr(fmt(t.exit_price,0))}</td>
+          <td class="mono"><span class="tag tag-${cls}">${ltr(fmtPct(pnlPctVal))}</span></td>
+          <td class="mono" style="color:var(--${cls})">${ltr(fmtKWD(pnlVal))}</td>
+          <td style="font-size:.65rem;color:var(--text-3)">${t.exit_reason||'—'}</td>
+          <td class="mono" style="font-size:.68rem">${ltr(fmtDate(t.exit_date))}</td>
+        </tr>`;
+      }
+      html += `</tbody></table></div>`;
+    } else {
+      html += `<div class="tbl-wrap"><div class="empty-state"><i class="mdi mdi-clipboard-text-off-outline"></i><p>لا صفقات مغلقة</p></div></div>`;
+    }
+
+    /* ── MONTHLY STATS ── */
+    if(monthly.length){
+      html += `<div class="section-hdr"><h2>الإحصائيات الشهرية</h2><span class="badge">${monthly.length}</span></div>`;
+      html += `<div class="tbl-wrap"><table class="tbl"><thead><tr>
+        <th>الشهر</th><th>الصفقات</th><th>فوز</th><th>خسارة</th><th>P&amp;L د.ك</th><th>Win%</th>
+      </tr></thead><tbody>`;
+      for(const m of monthly){
+        const wrc = wrClass(m.win_rate);
+        html += `<tr>
+          <td class="mono">${ltr(m.month||'—')}</td>
+          <td class="mono">${ltr(m.total!=null?m.total:'—')}</td>
+          <td class="mono" style="color:var(--green)">${ltr(m.wins!=null?m.wins:'—')}</td>
+          <td class="mono" style="color:var(--red)">${ltr(m.losses!=null?m.losses:'—')}</td>
+          <td class="mono" style="color:var(--${pnlClass(m.total_pnl_kwd||0)})">${ltr(fmtKWD(m.total_pnl_kwd))}</td>
+          <td class="mono" style="color:var(--${wrc})">${ltr(m.win_rate!=null?fmt(m.win_rate,1)+'%':'—')}</td>
+        </tr>`;
+      }
+      html += `</tbody></table></div>`;
+    }
+
+    /* ── BEST / WORST ── */
+    if(best||worst){
+      const sameTrade = best && worst && best.symbol === worst.symbol;
+      if(sameTrade){
+        // Only 1 trade — show single card without best/worst comparison
+        html += `<div class="section-hdr"><h2>أبرز صفقة</h2></div>`;
+        html += `<div class="bw-grid">`;
+        const pct = best.pnl_pct||0;
+        html += `<div class="bw-card ${pct>=0?'best':'worst'}">
+          <div class="bw-icon"><i class="mdi ${pct>=0?'mdi-trophy':'mdi-alert-decagram'}"></i></div>
+          <div class="bw-info">
+            <span class="bw-label">الصفقة الوحيدة</span>
+            <span class="bw-sym">${best.symbol}</span>
+            <span class="bw-pnl ltr">${fmtPct(pct)}</span>
+          </div>
+        </div>`;
+        html += `<div></div>`;
+        html += `</div>`;
+      } else {
+        html += `<div class="section-hdr"><h2>أفضل وأسوأ صفقة</h2></div>`;
+        html += `<div class="bw-grid">`;
+        if(best){
+          html += `<div class="bw-card best">
+            <div class="bw-icon"><i class="mdi mdi-trophy"></i></div>
+            <div class="bw-info">
+              <span class="bw-label">أفضل صفقة</span>
+              <span class="bw-sym">${best.symbol}</span>
+              <span class="bw-pnl ltr">${fmtPct(best.pnl_pct)}</span>
+            </div>
+          </div>`;
+        } else {
+          html += `<div></div>`;
+        }
+        if(worst){
+          html += `<div class="bw-card worst">
+            <div class="bw-icon"><i class="mdi mdi-alert-decagram"></i></div>
+            <div class="bw-info">
+              <span class="bw-label">أسوأ صفقة</span>
+              <span class="bw-sym">${worst.symbol}</span>
+              <span class="bw-pnl ltr">${fmtPct(worst.pnl_pct)}</span>
+            </div>
+          </div>`;
+        } else {
+          html += `<div></div>`;
+        }
+        html += `</div>`;
+      }
+    }
+
+    /* ── 7D vs 30D ── */
+    html += `<div class="section-hdr"><h2>مقارنة الأداء</h2></div>`;
+    html += `<div class="cmp-grid">`;
+    html += cmpBlock('mdi-calendar-week','7 أيام',s7);
+    html += cmpBlock('mdi-calendar-month','30 يوم',s30);
+    html += `</div>`;
+
+    /* ── FOOTER ── */
+    html += `<div class="footer">
+      <p>البيانات للمراجعة الشخصية فقط وليست نصيحة استثمارية</p>
+      <p class="ts ltr" style="margin-top:.35rem">Last update: ${new Date().toLocaleString('en-GB')}</p>
+    </div>`;
+
+    $('#app').innerHTML = html;
+  }
+
+  /* ── card builder ── */
+  function pulseCard(icon, iconCls, label, val, valCls){
+    return `<div class="pulse-card">
+      <div class="pulse-top">
+        <span class="pulse-label">${label}</span>
+        <div class="pulse-icon ${iconCls}"><i class="mdi ${icon}"></i></div>
+      </div>
+      <div class="pulse-val ${valCls} ltr">${val}</div>
+    </div>`;
+  }
+
+  function cmpBlock(icon, title, s){
+    s = s||{};
+    const wr = s.win_rate;
+    const wrc = wrClass(wr);
+    const pnlFils = s.total_pnl_fils;
+    const pnlCls = pnlClass(pnlFils||0);
+    return `<div class="cmp-block">
+      <h3><i class="mdi ${icon}"></i> ${title}</h3>
+      <div class="cmp-rows">
+        ${cmpRow('الصفقات', s.total_trades)}
+        ${cmpRow('فوز', s.wins, 'green')}
+        ${cmpRow('خسارة', s.losses, 'red')}
+        ${cmpRow('نسبة الفوز', wr!=null?fmt(wr,1)+'%':'—', wrc)}
+        ${cmpRow('متوسط الربح', s.avg_profit_pct!=null?fmtPct(s.avg_profit_pct):'—', 'green')}
+        ${cmpRow('متوسط الخسارة', s.avg_loss_pct!=null?fmtPct(s.avg_loss_pct):'—', 'red')}
+        ${cmpRow('إجمالي P&L فلس', pnlFils!=null?pnlFils.toLocaleString():'—', pnlCls)}
+      </div>
+    </div>`;
+  }
+
+  function cmpRow(label, val, color){
+    const style = color?` style="color:var(--${color})"` : '';
+    return `<div class="cmp-row">
+      <span class="cmp-lbl">${label}</span>
+      <span class="cmp-val ltr"${style}>${val!=null?val:'—'}</span>
+    </div>`;
+  }
+
+  /* ── refresh button ── */
+  $('#btnRefresh').addEventListener('click', ()=>{
+    clearInterval(refreshTimer);
+    loadData();
+    refreshTimer = setInterval(loadData, REFRESH_MS);
+  });
+
+  /* ── init ── */
+  loadData();
+  refreshTimer = setInterval(loadData, REFRESH_MS);
+})();
+</script>
+</body>
+</html>

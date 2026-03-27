@@ -1,0 +1,959 @@
+Below is a **direct-use visual spec** for a **Home Assistant native dashboard** using **markdown + grid + button + vertical-stack + card_mod**, optimized for **KSE swing trading**, **Arabic RTL**, **tablet/phone**, and **light/dark HA themes**.
+
+---
+
+# 1) Trading signal color system
+
+Use **semantic classes by confluence score**.  
+Goal: clear at a glance, readable in both dark/light themes, not neon.
+
+## A. Core palette
+
+### Strong Bullish `> 70`
+- Accent / border: `#16A34A`
+- Background light: `#DCFCE7`
+- Background dark: `#052E16`
+- Text on light: `#166534`
+- Text on dark: `#BBF7D0`
+
+### Moderate Bullish `50–70`
+- Accent / border: `#22C55E`
+- Background light: `#ECFDF5`
+- Background dark: `#14301F`
+- Text on light: `#15803D`
+- Text on dark: `#86EFAC`
+
+### Neutral `40–60`
+- Accent / border: `#F59E0B`
+- Background light: `#FFFBEB`
+- Background dark: `#3B2A0A`
+- Text on light: `#B45309`
+- Text on dark: `#FCD34D`
+
+### Moderate Bearish `30–50`
+- Accent / border: `#F97316`
+- Background light: `#FFF7ED`
+- Background dark: `#3A1D0B`
+- Text on light: `#C2410C`
+- Text on dark: `#FDBA74`
+
+### Strong Bearish `< 30`
+- Accent / border: `#DC2626`
+- Background light: `#FEE2E2`
+- Background dark: `#3F0A0A`
+- Text on light: `#991B1B`
+- Text on dark: `#FCA5A5`
+
+---
+
+## B. Recommended score mapping
+Use this exact scale to avoid ambiguity:
+
+- `>= 71` → Strong Bullish
+- `50–70` → Moderate Bullish
+- `40–49` → Neutral
+- `30–39` → Moderate Bearish
+- `<= 29` → Strong Bearish
+
+This is better than overlapping ranges.
+
+---
+
+## C. CSS variables you can reuse
+
+Put this in `card_mod` where possible:
+
+```yaml
+card_mod:
+  style: |
+    ha-card {
+      --sig-bull-strong: #16A34A;
+      --sig-bull-strong-bg-light: #DCFCE7;
+      --sig-bull-strong-bg-dark: #052E16;
+      --sig-bull-strong-text-light: #166534;
+      --sig-bull-strong-text-dark: #BBF7D0;
+
+      --sig-bull-mid: #22C55E;
+      --sig-bull-mid-bg-light: #ECFDF5;
+      --sig-bull-mid-bg-dark: #14301F;
+      --sig-bull-mid-text-light: #15803D;
+      --sig-bull-mid-text-dark: #86EFAC;
+
+      --sig-neutral: #F59E0B;
+      --sig-neutral-bg-light: #FFFBEB;
+      --sig-neutral-bg-dark: #3B2A0A;
+      --sig-neutral-text-light: #B45309;
+      --sig-neutral-text-dark: #FCD34D;
+
+      --sig-bear-mid: #F97316;
+      --sig-bear-mid-bg-light: #FFF7ED;
+      --sig-bear-mid-bg-dark: #3A1D0B;
+      --sig-bear-mid-text-light: #C2410C;
+      --sig-bear-mid-text-dark: #FDBA74;
+
+      --sig-bear-strong: #DC2626;
+      --sig-bear-strong-bg-light: #FEE2E2;
+      --sig-bear-strong-bg-dark: #3F0A0A;
+      --sig-bear-strong-text-light: #991B1B;
+      --sig-bear-strong-text-dark: #FCA5A5;
+    }
+
+    :host {
+      color-scheme: light dark;
+    }
+```
+
+---
+
+## D. Best practical use in HA cards
+
+Since HA theme light/dark can vary, use a **semi-transparent background + strong border-left** rather than fully opaque color blocks.
+
+### Recommended per-level styling
+These are safe and elegant:
+
+#### Strong Bullish
+- `border-right` (RTL): `6px solid #16A34A`
+- background: `rgba(22, 163, 74, 0.12)`
+- text highlight: `#16A34A`
+
+#### Moderate Bullish
+- `border-right: 6px solid #22C55E`
+- background: `rgba(34, 197, 94, 0.10)`
+- text highlight: `#22C55E`
+
+#### Neutral
+- `border-right: 6px solid #F59E0B`
+- background: `rgba(245, 158, 11, 0.10)`
+- text highlight: `#F59E0B`
+
+#### Moderate Bearish
+- `border-right: 6px solid #F97316`
+- background: `rgba(249, 115, 22, 0.10)`
+- text highlight: `#F97316`
+
+#### Strong Bearish
+- `border-right: 6px solid #DC2626`
+- background: `rgba(220, 38, 38, 0.12)`
+- text highlight: `#DC2626`
+
+For **RTL**, use **`border-right`**, not left.
+
+---
+
+# 2) Decision Card visual design
+
+This card is the **action zone**.  
+It should feel like the dashboard’s anchor.  
+Do **not** show all 10 fields with equal visual weight.
+
+## A. Visual priority
+### Primary
+1. **Symbol**
+2. **Price**
+3. **Change %**
+4. **Verdict**
+5. **Confluence score**
+
+### Secondary
+6. **EMA state**
+7. **RSI**
+8. **MACD state**
+9. **ADX**
+10. **Volume ratio**
+11. **Support**
+12. **Resistance**
+
+You listed 10 fields, but support/resistance make the total effectively 12 items.  
+Best treatment: support/resistance as a compact final row.
+
+---
+
+## B. Recommended layout structure
+
+## Row 1: Identity + live market position
+Large, high-contrast header line.
+
+**Right side in RTL**:
+- Symbol (largest)
+- Price below or beside it
+
+**Left side in RTL**:
+- Change %
+- Verdict badge
+
+Example structure:
+
+```text
+[ Verdict badge ]   [ +2.35% ]
+[      SYMBOL      ]
+[     742 فلس      ]
+```
+
+### Styling
+- Symbol: biggest text in card
+- Price: second biggest
+- Change%: colored green/red
+- Verdict: pill badge
+
+---
+
+## Row 2: Score emphasis
+A dedicated score strip:
+
+- **Confluence score** large numeric badge
+- small subtitle: `درجة التوافق`
+- colored according to score class
+
+Example:
+```text
+درجة التوافق   78/100
+```
+
+This should be visually prominent but not bigger than symbol.
+
+---
+
+## Row 3: Indicator group
+Use a **2-column compact metrics block** for:
+- EMA state
+- RSI
+- MACD state
+- ADX
+- Volume ratio
+
+Best grouping:
+
+### Group A: Trend/Momentum
+- EMA
+- MACD
+- ADX
+
+### Group B: Timing/Participation
+- RSI
+- Volume ratio
+
+You can display as compact chips or mini rows:
+```text
+EMA: صاعد        MACD: إيجابي
+ADX: 28          RSI: 61
+Vol: 1.8x
+```
+
+---
+
+## Row 4: Trade levels
+Support and Resistance should be visually separated at the bottom:
+- Support in muted green/teal style
+- Resistance in muted red/orange style
+
+Example:
+```text
+دعم: 730   |   مقاومة: 758
+```
+
+This should feel like the “execution context” row.
+
+---
+
+## C. Best card composition
+Use this order:
+
+1. **Card title**
+2. **Symbol + price + change**
+3. **Verdict + confluence**
+4. **Indicators block**
+5. **Support / resistance**
+6. **Small diagnostic timestamp**
+
+---
+
+## D. Should it use colored border?
+**Yes — absolutely.**
+
+For the Decision Card:
+- Use **`border-right: 8px solid [score color]`**
+- Add **soft tinted background**
+- Optional top shadow glow for strong bullish/bearish only
+
+### Exact spec
+```css
+border-radius: 18px;
+border-right: 8px solid #16A34A; /* dynamic */
+background: rgba(22, 163, 74, 0.08); /* dynamic */
+box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+padding: 18px 18px 16px 18px;
+```
+
+For neutral, use weaker emphasis:
+```css
+box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+```
+
+---
+
+# 3) Top 5 Opportunities table
+
+A markdown table becomes ugly fast unless you simplify.
+
+## A. Keep rows compact and score-driven
+Do **not** rely only on full-text columns.  
+Use **abbreviations/chips** inside markdown.
+
+### Keep these columns:
+1. Symbol
+2. Price
+3. Change %
+4. Confluence
+5. Verdict
+6. EMA
+7. RSI
+8. Vol
+
+Good. Do not add more.
+
+---
+
+## B. Recommended column widths
+
+For mobile/tablet markdown tables:
+
+- Symbol: `22%`
+- Price: `12%`
+- Change%: `12%`
+- Confluence: `12%`
+- Verdict: `16%`
+- EMA: `10%`
+- RSI: `8%`
+- Vol: `8%`
+
+Total: 100%
+
+If markdown width control is limited, enforce with HTML inside cells where possible.
+
+---
+
+## C. Row styling approach
+### Best option:
+Use **subtle row tint by confluence score**, not full saturated color.
+
+- Strong bullish row: `rgba(22, 163, 74, 0.06)`
+- Moderate bullish row: `rgba(34, 197, 94, 0.05)`
+- Neutral row: `rgba(245, 158, 11, 0.05)`
+- Moderate bearish row: `rgba(249, 115, 22, 0.05)`
+- Strong bearish row: `rgba(220, 38, 38, 0.06)`
+
+Also add:
+- `border-right: 4px solid [score color]`
+- thin row separators `rgba(128,128,128,0.18)`
+
+If markdown row-level styling is difficult, style the entire card neutral and color only:
+- Symbol
+- Change%
+- Confluence badge
+- Verdict badge
+
+---
+
+## D. What can use icons/emoji vs text
+
+Use icons sparingly.  
+In trading dashboards, too many emojis reduce seriousness.
+
+### Recommended compact symbols:
+- EMA: `↑` / `→` / `↓`
+- MACD if ever added: `+` / `0` / `−`
+- RSI zone:
+  - `OB` overbought
+  - `N` neutral
+  - `OS` oversold
+- Vol ratio:
+  - `1.8×`
+  - `0.9×`
+
+### Verdict options
+Use short Arabic labels:
+- `شراء`
+- `مراقبة`
+- `حياد`
+- `تجنب`
+- `بيع`
+
+### Avoid
+- rocket, fire, explosion, money bag
+- too many colored emoji circles
+
+Use clean finance language.
+
+---
+
+## E. Best table readability pattern
+Make the table read in this order:
+- first identify symbol
+- then attractiveness score
+- then entry context
+
+So visually emphasize:
+1. Symbol
+2. Confluence
+3. Verdict
+4. Change %
+
+Everything else smaller.
+
+---
+
+## F. Arabic RTL mixed with numbers/LTR
+This matters a lot.
+
+### Best practice
+- Set the whole markdown card to `direction: rtl`
+- Force numeric values/tickers to `direction: ltr; unicode-bidi: isolate;`
+- Arabic labels remain rtl
+
+For stock symbols and numbers, wrap in HTML spans:
+
+```html
+<span class="ltr">KFH</span>
+<span class="ltr">742</span>
+<span class="ltr">+2.35%</span>
+```
+
+### CSS
+```css
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+}
+.rtl {
+  direction: rtl;
+  unicode-bidi: isolate;
+  display: inline-block;
+}
+```
+
+This prevents mixed-order rendering bugs.
+
+---
+
+# 4) Typography hierarchy for HA markdown cards
+
+These sizes work well on tablet and still survive phone.
+
+## A. Exact type scale
+
+### Page title
+- Size: `28px`
+- Weight: `800`
+- Line height: `1.2`
+- Letter spacing: `-0.02em`
+
+### Section header
+- Size: `20px`
+- Weight: `700`
+- Line height: `1.3`
+
+### Card title
+- Size: `16px`
+- Weight: `700`
+- Line height: `1.35`
+- Text transform: none
+
+### Primary number (price, score)
+- Size: `30px`
+- Weight: `800`
+- Line height: `1.1`
+
+### Secondary big value (change %, symbol if not main headline)
+- Size: `22px`
+- Weight: `700`
+- Line height: `1.2`
+
+### Secondary label
+- Size: `12px`
+- Weight: `600`
+- Line height: `1.35`
+- Opacity: `0.72`
+- Letter spacing: `0.01em`
+
+### Table text
+- Size: `13px`
+- Weight: `500`
+- Line height: `1.5`
+
+### Table header
+- Size: `12px`
+- Weight: `700`
+- Line height: `1.4`
+- Text transform: none
+- Opacity: `0.8`
+
+### Footnote / diagnostic text
+- Size: `11px`
+- Weight: `500`
+- Line height: `1.4`
+- Opacity: `0.60`
+
+---
+
+## B. Recommended markdown card CSS
+```yaml
+card_mod:
+  style: |
+    ha-card {
+      padding: 16px 18px;
+      border-radius: 16px;
+    }
+
+    ha-markdown {
+      direction: rtl;
+      text-align: right;
+    }
+
+    ha-markdown h1,
+    ha-markdown h2 {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin: 0 0 14px 0;
+    }
+
+    ha-markdown h3 {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin: 0 0 10px 0;
+    }
+
+    ha-markdown h4,
+    ha-markdown strong.card-title {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    ha-markdown p,
+    ha-markdown li,
+    ha-markdown td {
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    ha-markdown th {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+      opacity: 0.8;
+    }
+
+    ha-markdown .primary-number {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    ha-markdown .secondary-big {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    ha-markdown .label {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.35;
+      opacity: 0.72;
+    }
+
+    ha-markdown .footnote {
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.4;
+      opacity: 0.60;
+    }
+```
+
+---
+
+# 5) Spacing and card layout
+
+## A. Section spacing
+Use these exact values:
+
+- Between page title and first section: `16px`
+- Between sections: `14px`
+- Between cards in same section: `12px`
+- Inside card padding: `16px` mobile, `18px` tablet
+- Between title and body inside card: `10px`
+- Between metric rows inside card: `8px`
+- Between grouped mini-metrics: `6px`
+
+This gives enough breathing room without wasting vertical space.
+
+---
+
+## B. Borders vs spacing
+### Recommendation:
+Use **soft borders + spacing**, not borderless floating cards.
+
+Why:
+- HA dashboards can look flat and mushy without edge definition.
+- Financial data benefits from containment.
+
+### Exact card shell
+```css
+border: 1px solid rgba(128, 128, 128, 0.16);
+border-radius: 16px;
+background: rgba(255,255,255,0.03);
+box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+```
+
+For major cards like Decision Card:
+```css
+box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+```
+
+---
+
+## C. Grid layout: phone vs tablet
+
+## Phone
+- **1 column**
+- Decision Card first
+- Top 5 table second
+- Diagnostics/secondary cards below
+
+## Tablet
+- **2 columns**
+- Left/main column: `minmax(0, 1.35fr)`
+- Right/secondary column: `minmax(280px, 0.85fr)`
+
+### Best structure
+- Left: Decision Card + Top 5 Opportunities
+- Right: Market breadth / signal summary / diagnostics / journal shortcuts
+
+If using HA grid:
+- phone: one card per row
+- tablet: 2-column grid with larger span for action card if possible
+
+---
+
+## D. Visual separation: Action Zone vs Info Zone
+
+### Action Zone
+Decision Card area should have:
+- stronger tint
+- larger radius
+- stronger shadow
+- colored border-right
+- slightly larger padding
+
+### Info Zone
+Tables and supporting cards:
+- neutral background
+- subtle border
+- no strong glow
+- lower contrast styling
+
+### Exact difference
+#### Action Zone
+```css
+padding: 18px;
+border-radius: 18px;
+border-right: 8px solid var(--signal-color);
+box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+background: rgba(22, 163, 74, 0.08); /* dynamic */
+```
+
+#### Info Zone
+```css
+padding: 14px 16px;
+border-radius: 14px;
+border: 1px solid rgba(128,128,128,0.14);
+box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+background: rgba(127,127,127,0.04);
+```
+
+---
+
+# 6) Arabic RTL considerations
+
+## A. Mixed Arabic + English tickers/numbers
+This is the most important rule:
+
+- Entire card: `direction: rtl; text-align: right;`
+- Tickers, numbers, percentages, ratios: wrap with `.ltr`
+- Arabic labels and names: keep normal RTL
+
+### CSS
+```css
+ha-markdown {
+  direction: rtl;
+  text-align: right;
+}
+
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+  text-align: left;
+}
+
+.rtl {
+  direction: rtl;
+  unicode-bidi: isolate;
+  display: inline-block;
+  text-align: right;
+}
+```
+
+### Example
+```html
+<span class="rtl">السهم</span>:
+<span class="ltr">KFH</span>
+—
+<span class="rtl">السعر</span>:
+<span class="ltr">742</span>
+—
+<span class="rtl">التغير</span>:
+<span class="ltr">+2.35%</span>
+```
+
+---
+
+## B. Best approach for Arabic table headers + numeric data
+For markdown tables:
+- Arabic headers are fine in RTL
+- Numeric cells should be wrapped in `span.ltr`
+- Symbol/ticker should also be `span.ltr`
+- Keep headers short
+
+### Good Arabic headers
+- الرمز
+- السعر
+- التغير
+- التوافق
+- القرار
+- EMA
+- RSI
+- الحجم
+
+Do not use long headers like:
+- “نسبة تغير السعر اليومية”
+That breaks mobile readability.
+
+---
+
+## C. Font considerations in HA markdown
+You likely depend on the system/web font from HA theme.  
+Best safe stack for Arabic + English mixed data:
+
+```css
+font-family: "Inter", "Segoe UI", "Tahoma", "Arial", sans-serif;
+```
+
+If you want stronger Arabic rendering:
+```css
+font-family: "IBM Plex Sans Arabic", "Segoe UI", "Tahoma", "Arial", sans-serif;
+```
+
+But only if available.  
+Since native HA may not load custom web fonts easily, safest practical stack:
+
+```css
+font-family: "Segoe UI", "Tahoma", "Arial", sans-serif;
+```
+
+For finance data, numbers often look cleaner with:
+```css
+font-variant-numeric: tabular-nums;
+```
+
+Add this to table and numeric spans:
+```css
+ha-markdown table,
+ha-markdown .ltr,
+ha-markdown .primary-number {
+  font-variant-numeric: tabular-nums;
+}
+```
+
+---
+
+# Recommended final visual system
+
+If you want the dashboard to look more professional immediately, use this:
+
+## Trading page
+- Large page title
+- Decision Card first, prominent, tinted by score
+- Top 5 table below, compact and clean
+- One supporting info card after that
+
+## Signals page
+- More neutral visual style
+- Score-colored rows/cards
+- Less “hero” styling than Trading page
+
+## Journal page
+- Mostly neutral cards
+- green/red only for result or outcome labels
+- avoid heavy market-color emphasis
+
+---
+
+# Exact “starter CSS” card_mod style
+
+Use this as your base shell for markdown cards:
+
+```yaml
+card_mod:
+  style: |
+    ha-card {
+      direction: rtl;
+      border-radius: 16px;
+      padding: 16px 18px;
+      border: 1px solid rgba(128, 128, 128, 0.16);
+      background: rgba(127, 127, 127, 0.04);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    ha-markdown {
+      direction: rtl;
+      text-align: right;
+      font-family: "Segoe UI", "Tahoma", "Arial", sans-serif;
+    }
+
+    ha-markdown h1,
+    ha-markdown h2 {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin: 0 0 14px 0;
+    }
+
+    ha-markdown h3 {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin: 0 0 10px 0;
+    }
+
+    ha-markdown p,
+    ha-markdown td,
+    ha-markdown li {
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    ha-markdown th {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+      opacity: 0.8;
+    }
+
+    ha-markdown table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    ha-markdown th,
+    ha-markdown td {
+      padding: 8px 6px;
+      border-bottom: 1px solid rgba(128,128,128,0.14);
+      vertical-align: middle;
+    }
+
+    ha-markdown tr:last-child td {
+      border-bottom: none;
+    }
+
+    .ltr {
+      direction: ltr;
+      unicode-bidi: isolate;
+      display: inline-block;
+      text-align: left;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .primary-number {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .secondary-big {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .label {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.35;
+      opacity: 0.72;
+    }
+
+    .footnote {
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.4;
+      opacity: 0.60;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+```
+
+---
+
+# My strongest recommendation
+
+For a dashboard that feels **professional instead of amateur**, do these 5 things:
+
+1. **Make the Decision Card visually dominant**
+   - bigger padding
+   - score-colored border-right
+   - large symbol/price
+   - compact indicators
+
+2. **Reduce visual equality**
+   - not every field should look the same
+   - score, verdict, symbol, and price must dominate
+
+3. **Use subtle row tinting, not loud colors**
+   - let confluence color guide attention
+   - keep the base calm
+
+4. **Control RTL/LTR explicitly**
+   - otherwise numbers and symbols will render messy
+
+5. **Use consistent spacing rhythm**
+   - 16 / 14 / 12 / 8 px pattern across the whole dashboard
+
+---
+
+If you want, next I can give you:
+
+1. a **full card_mod CSS theme block** for all 3 pages, or  
+2. a **ready markdown Decision Card template** in Arabic RTL, or  
+3. a **ready Top 5 markdown table template** with colored badges and `.ltr` spans.
+
+--- model: gpt-5.4 | tokens: in=1204 out=5820 ---

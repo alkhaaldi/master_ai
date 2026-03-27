@@ -103,3 +103,38 @@ def register_panel_routes(app):
         if key != MASTER_API_KEY:
             return HTMLResponse("<h1 style=\'color:#da3633;font-family:monospace;padding:40px\'>401 Unauthorized</h1>", status_code=401)
         return HTMLResponse(_PANEL_HTML)
+
+    @app.get("/trading", response_class=HTMLResponse, tags=["panel"])
+    async def trading_dashboard(key: str = Query(default="")):
+        import pathlib as _p
+        hp = _p.Path(__file__).parent.parent / "www" / "trading.html"
+        if not hp.exists():
+            return HTMLResponse("<h1>not found</h1>", status_code=404)
+        html = hp.read_text(encoding="utf-8")
+        if key:
+            html = html.replace("get('key') || ''", "get('key') || '" + key + "'")
+        resp = HTMLResponse(html)
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
+
+    # Trading platform v2 — separate pages (no-cache for live deploys)
+    @app.get("/trading/{page}", response_class=HTMLResponse, tags=["panel"])
+    async def trading_page(page: str, key: str = Query(default="")):
+        import pathlib as _p
+        safe = page.replace("..", "").replace("/", "").replace("\\", "")
+        if not safe.endswith(".html"):
+            safe += ".html"
+        hp = _p.Path(__file__).parent.parent / "www" / "trading" / safe
+        if not hp.exists():
+            return HTMLResponse("<h1>not found</h1>", status_code=404)
+        html = hp.read_text(encoding="utf-8")
+        if key:
+            html = html.replace("get('key') || ''", "get('key') || '" + key + "'")
+        resp = HTMLResponse(html)
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
+

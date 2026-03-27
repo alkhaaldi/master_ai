@@ -58,12 +58,13 @@ def get_alias_stats():
 # --- Action patterns ---
 # Pattern: (verb)(optional_space)(device_keyword)(optional_space)(room_keyword)
 ACTION_VERBS = {
-    "شغل": "on", "افتح": "on", "فتح": "on", "خل": "set_brightness", "حط": "set_brightness", "ولع": "on", "نور": "on",
+    "شغل": "on", "افتح": "on", "فتح": "on", "ولع": "on", "نور": "on",
     "طفي": "off", "سكر": "off", "وقف": "off", "أغلق": "off",
     "زيد": "increase", "نقص": "decrease", "نزل": "decrease",
     "خفف": "dim", "عتم": "dim", "خفّف": "dim", "عتّم": "dim",
-    "اضبط": "set_temp", "حط": "set_temp", "خل": "set_temp",
+    "اضبط": "set_value", "حط": "set_value", "خل": "set_value",
 }
+# NOTE: "set_value" is resolved by context: climate domain → set_temp, light domain → set_brightness
 
 # Device keywords → entity domain + name fragment
 DEVICE_KEYWORDS = {
@@ -174,14 +175,21 @@ async def _ha_call(entity_id, action, temp=None):
         "on": {"light": "turn_on", "switch": "turn_on", "fan": "turn_on", "climate": "turn_on", "cover": "open_cover", "media_player": "turn_on"},
         "off": {"light": "turn_off", "switch": "turn_off", "fan": "turn_off", "climate": "turn_off", "cover": "close_cover", "media_player": "turn_off"},
         "set_temp": {"climate": "set_temperature"},
+        "set_value": {"climate": "set_temperature", "light": "turn_on"},
+        "set_brightness": {"light": "turn_on"},
+        "dim": {"light": "turn_on"},
     }
     svc = svc_map.get(action, {}).get(domain)
     if not svc:
         return False, f"unsupported: {action}/{domain}"
 
     data = {"entity_id": entity_id}
-    if action == "set_temp" and temp is not None:
+    if action in ("set_temp", "set_value") and domain == "climate" and temp is not None:
         data["temperature"] = temp
+    elif action in ("set_value", "set_brightness") and domain == "light" and temp is not None:
+        data["brightness_pct"] = min(100, max(1, int(temp)))
+    elif action == "dim" and domain == "light":
+        data["brightness_pct"] = 30
     elif action == "increase":
         # Get current temp and add 1
         try:
@@ -204,7 +212,9 @@ async def _ha_call(entity_id, action, temp=None):
 
     try:
         async with httpx.AsyncClient(timeout=10) as c:
-            await c.post(f"{HA_URL}/api/services/{domain}/{svc}", headers=headers, json=data)
+            r = await c.post(f"{HA_URL}/api/services/{domain}/{svc}", headers=headers, json=data)
+            if r.status_code not in (200, 201):
+                return False, f"HA error {r.status_code}"
         detail = f"{data.get('temperature', '')}°" if "temperature" in data else ""
         return True, detail
     except Exception as e:
@@ -235,10 +245,12 @@ async def route_intent(text: str) -> dict | None:
                 _act = ACTION_VERBS[_w]
                 break
         if _act and _act != "query":
-            _alias_r = await _ha_call(_alias_eid, _act)
-            if _alias_r:
+            _alias_ok, _alias_detail = await _ha_call(_alias_eid, _act)
+            if _alias_ok:
                 logger.info(f"Alias hit: {text} -> {_alias_eid} ({_act})")
-                return {"text": _alias_r, "entities": [_alias_eid], "action": _act, "source": "alias"}
+                return {"text": f"✅ {_alias_detail}", "entities": [_alias_eid], "action": _act, "source": "alias"}
+            else:
+                return {"text": f"❌ {_alias_detail}", "entities": [_alias_eid], "action": _act, "source": "alias", "error": True}
 
     text = text.strip()
     words = text.split()
@@ -312,7 +324,10 @@ async def route_intent(text: str) -> dict | None:
             return pat_result
 
     # --- 2.5 History / Log requests ---
-    if any(hw in text for hw in HISTORY_WORDS):
+    # Skip history if message is about Islamic dates (عيد/رمضان/هجري) — let chat_v7 handle
+    _islamic_date_q = any(w in text for w in ("عيد", "رمضان", "هجري", "شوال", "حجة", "محرم"))
+    _is_date_question = "تاريخ" in text and _islamic_date_q
+    if any(hw in text for hw in HISTORY_WORDS) and not _is_date_question:
         hist_result = await _handle_history(text, words, emap)
         if hist_result:
             return hist_result

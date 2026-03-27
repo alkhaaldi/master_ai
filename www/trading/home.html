@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Master AI — الرئيسية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Kufi+Arabic:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══ DESIGN SYSTEM (Boursa Kuwait) ═══ */
+:root{
+  --navy-900:#070D17;--navy-800:#0C1422;--navy-700:#111B2E;--navy-600:#172338;
+  --gold:#C6974B;--gold-dim:#9A7A3E;--gold-bg:rgba(198,151,75,.07);--gold-br:rgba(198,151,75,.25);
+  --green:#34D399;--green-bg:rgba(52,211,153,.07);--green-br:rgba(52,211,153,.3);
+  --red:#F87171;--red-bg:rgba(248,113,113,.07);--red-br:rgba(248,113,113,.3);
+  --amber:#FBBF24;--amber-bg:rgba(251,191,36,.07);--amber-br:rgba(251,191,36,.3);
+  --cyan:#22D3EE;--cyan-bg:rgba(34,211,238,.07);--cyan-br:rgba(34,211,238,.3);
+  --text:#E8EAED;--text-2:#9CA3AF;--text-3:#6B7280;--text-4:#4B5563;
+  --card:rgba(12,20,34,.85);--card-border:rgba(198,151,75,.1);
+  --fd:'Tajawal','Noto Kufi Arabic',sans-serif;
+  --fm:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--navy-900);color:var(--text);font-family:var(--fd);min-height:100vh;overflow-x:hidden}
+
+/* ═══ TOPBAR ═══ */
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;padding:10px 20px;
+  background:var(--navy-800);border-bottom:1px solid var(--card-border);position:sticky;top:0;z-index:50;
+}
+.topbar-brand{font-size:.85rem;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px}
+.topbar-brand .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.topbar-brand .dot.off{background:var(--red);box-shadow:0 0 6px var(--red)}
+.topbar-ver{font-family:var(--fm);font-size:.6rem;color:var(--text-3);background:var(--navy-700);padding:2px 8px;border-radius:4px}
+.topbar-meta{display:flex;align-items:center;gap:12px;font-family:var(--fm);font-size:.65rem;color:var(--text-3)}
+.topbar-clock{color:var(--gold-dim);font-weight:600}
+
+main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
+
+/* ═══ HERO ═══ */
+.hero{text-align:center;padding:28px 0 18px}
+.hero-title{font-size:1.6rem;font-weight:800;color:var(--text);letter-spacing:-.5px}
+.hero-title span{color:var(--gold)}
+.hero-sub{font-family:var(--fm);font-size:.65rem;color:var(--text-3);margin-top:6px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.hero-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;font-size:.6rem;font-weight:600}
+.hero-badge.online{background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+.hero-badge.warn{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-br)}
+.hero-badge.off{background:var(--red-bg);color:var(--red);border:1px solid var(--red-br)}
+.auto-badge{display:inline-flex;padding:3px 10px;border-radius:6px;font-size:.6rem;font-weight:600;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-br);margin-top:8px}
+
+/* ═══ CARDS ═══ */
+.section{margin-bottom:14px}
+.section-hdr{font-size:.72rem;font-weight:700;color:var(--gold-dim);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 16px}
+
+/* ═══ AI INSIGHT ═══ */
+.insight-card{position:relative;overflow:hidden}
+.insight-card::before{content:'';position:absolute;right:0;top:0;bottom:0;width:3px;border-radius:10px 0 0 10px}
+.insight-card.lvl-info::before{background:var(--green)}
+.insight-card.lvl-warning::before{background:var(--amber)}
+.insight-card.lvl-alert::before,.insight-card.lvl-critical::before{background:var(--red)}
+.insight-icon{font-size:1.1rem;margin-left:8px}
+.insight-text{font-size:.8rem;font-weight:600;color:var(--text);line-height:1.6}
+.insight-meta{font-family:var(--fm);font-size:.55rem;color:var(--text-4);margin-top:6px}
+.insight-actions{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.insight-action{font-size:.62rem;padding:3px 10px;border-radius:5px;background:var(--navy-700);color:var(--text-2);border:1px solid var(--card-border)}
+
+/* ═══ DAILY NOTE ═══ */
+.note-card{font-size:.75rem;color:var(--text-2);line-height:1.6}
+.note-card .note-empty{color:var(--text-4);font-style:italic}
+
+/* ═══ STATUS GRID ═══ */
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.status-chip{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:12px 14px}
+.status-chip .chip-label{font-size:.6rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.status-chip .chip-value{font-size:.85rem;font-weight:700;color:var(--text)}
+.status-chip .chip-sub{font-family:var(--fm);font-size:.58rem;color:var(--text-4);margin-top:3px}
+.chip-icon{font-size:.9rem;margin-left:4px}
+
+/* ═══ TRADING TEASER ═══ */
+.teaser{background:linear-gradient(135deg,rgba(198,151,75,.08),rgba(198,151,75,.02));border:1px solid var(--gold-br);border-radius:10px;padding:14px 16px;cursor:pointer;transition:.2s}
+.teaser:hover{border-color:var(--gold);box-shadow:0 0 12px rgba(198,151,75,.12)}
+.teaser-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.teaser-sym{font-size:.9rem;font-weight:700;color:var(--gold)}
+.teaser-verdict{font-size:.6rem;padding:3px 8px;border-radius:5px;font-weight:600}
+.teaser-verdict.buy{background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+.teaser-verdict.watch{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-br)}
+.teaser-verdict.avoid{background:var(--red-bg);color:var(--red);border:1px solid var(--red-br)}
+.teaser-row{display:flex;gap:16px;font-family:var(--fm);font-size:.62rem;color:var(--text-2)}
+.teaser-empty{font-size:.7rem;color:var(--text-4);text-align:center;padding:4px}
+
+/* ═══ NAVIGATION ═══ */
+.nav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.nav-btn{
+  background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 8px;
+  text-align:center;cursor:pointer;transition:.2s;text-decoration:none;display:block;
+}
+.nav-btn:hover,.nav-btn:active{border-color:var(--gold);box-shadow:0 0 10px rgba(198,151,75,.1)}
+.nav-btn .nav-icon{font-size:1.2rem;margin-bottom:4px}
+.nav-btn .nav-label{font-size:.65rem;font-weight:700;color:var(--text-2)}
+
+/* ═══ LATER TODAY ═══ */
+.later-list{display:flex;flex-direction:column;gap:6px}
+.later-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--navy-700);border-radius:8px;font-size:.7rem;color:var(--text-2)}
+.later-item .later-domain{font-size:.55rem;padding:2px 6px;border-radius:4px;font-weight:600;background:var(--navy-600);color:var(--text-3)}
+
+/* ═══ FOOTER ═══ */
+.footer{text-align:center;font-family:var(--fm);font-size:.5rem;color:var(--text-4);padding:12px;border-top:1px solid var(--card-border);margin-top:20px}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:500px){
+  main{padding:12px 14px 90px}
+  .hero-title{font-size:1.3rem}
+  .status-grid{grid-template-columns:1fr 1fr}
+  .nav-grid{grid-template-columns:repeat(3,1fr)}
+}
+.hide{display:none!important}
+.ltr{direction:ltr;text-align:left}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="dot" id="status-dot"></span>
+    Master AI
+    <span class="topbar-ver" id="ver">--</span>
+  </div>
+  <div class="topbar-meta">
+    <span id="uptime-txt">--</span>
+    <span class="topbar-clock" id="clock">--:--</span>
+  </div>
+</div>
+
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-title">Master <span>AI</span></div>
+  <div class="hero-sub">
+    <span id="hero-ver">--</span>
+    <span id="hero-uptime">--</span>
+    <span class="hero-badge online" id="hero-status">متصل</span>
+  </div>
+  <div class="auto-badge" id="hero-auto">--</div>
+</div>
+
+<!-- AI INSIGHT -->
+<div class="section">
+  <div class="section-hdr">🧠 الذكاء الاصطناعي</div>
+  <div class="card insight-card lvl-info" id="insight-card">
+    <div style="display:flex;align-items:flex-start">
+      <span class="insight-icon" id="insight-icon">💡</span>
+      <div>
+        <div class="insight-text" id="insight-text">جاري التحميل...</div>
+        <div class="insight-meta" id="insight-meta"></div>
+      </div>
+    </div>
+    <div class="insight-actions" id="insight-actions"></div>
+  </div>
+</div>
+
+<!-- NEXT ACTIONS -->
+<div class="section hide" id="next-section">
+  <div class="section-hdr">⚡ الإجراءات القادمة</div>
+  <div class="later-list" id="next-actions"></div>
+</div>
+
+<!-- DAILY NOTE -->
+<div class="section" id="note-section">
+  <div class="section-hdr">📝 لاحظ اليوم</div>
+  <div class="card note-card" id="note-body">
+    <span class="note-empty">لا ملاحظات</span>
+  </div>
+</div>
+
+<!-- STATUS GRID -->
+<div class="section">
+  <div class="section-hdr">📊 الحالة</div>
+  <div class="status-grid">
+    <div class="status-chip">
+      <div class="chip-label">الشفت</div>
+      <div class="chip-value" id="s-shift">--</div>
+      <div class="chip-sub" id="s-shift-next">--</div>
+    </div>
+    <div class="status-chip">
+      <div class="chip-label">نبض البيت</div>
+      <div class="chip-value" id="s-home">--</div>
+      <div class="chip-sub" id="s-home-sub">--</div>
+    </div>
+    <div class="status-chip">
+      <div class="chip-label">الرادار</div>
+      <div class="chip-value" id="s-radar">--</div>
+      <div class="chip-sub" id="s-radar-sub">--</div>
+    </div>
+    <div class="status-chip">
+      <div class="chip-label">النظام</div>
+      <div class="chip-value" id="s-sys">--</div>
+      <div class="chip-sub" id="s-sys-sub">--</div>
+    </div>
+  </div>
+</div>
+
+<!-- LATER TODAY -->
+<div class="section hide" id="later-section">
+  <div class="section-hdr">🕐 لاحقاً اليوم</div>
+  <div class="later-list" id="later-items"></div>
+</div>
+
+<!-- TRADING TEASER -->
+<div class="section">
+  <div class="section-hdr">📈 أفضل فرصة تداول</div>
+  <div class="teaser" id="teaser" onclick="navTo('/master-ai-dashboard/sub-radar')">
+    <div class="teaser-empty">جاري التحميل...</div>
+  </div>
+</div>
+
+<!-- NAVIGATION -->
+<div class="section">
+  <div class="section-hdr">🧭 التنقل</div>
+  <div class="nav-grid">
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-radar')"><div class="nav-icon">📈</div><div class="nav-label">التداول</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-signals')"><div class="nav-icon">📡</div><div class="nav-label">الإشارات</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-brain')"><div class="nav-icon">🧠</div><div class="nav-label">العقل</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-calendar-tasks')"><div class="nav-icon">📅</div><div class="nav-label">المواعيد</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-home')"><div class="nav-icon">🏠</div><div class="nav-label">البيت</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-assistant')"><div class="nav-icon">🤖</div><div class="nav-label">المساعد</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-system-health')"><div class="nav-icon">⚙️</div><div class="nav-label">النظام</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-email')"><div class="nav-icon">📧</div><div class="nav-label">البريد</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-news')"><div class="nav-icon">📰</div><div class="nav-label">الأخبار</div></a>
+  </div>
+</div>
+
+</main>
+
+<div class="footer" id="footer">آخر تحديث: --</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── Navigation (all same-origin) ── */
+function navTo(path){
+  const MAP = {
+    '/master-ai-dashboard/master-ai': '/trading/home',
+    '/master-ai-dashboard/sub-radar': '/trading/radar',
+    '/master-ai-dashboard/sub-signals': '/trading/signals',
+    '/master-ai-dashboard/sub-brain': '/trading/brain',
+    '/master-ai-dashboard/sub-positions': '/trading/positions',
+    '/master-ai-dashboard/sub-journal': '/trading/journal',
+    '/master-ai-dashboard/sub-calendar-tasks': '/trading/calendar',
+    '/master-ai-dashboard/sub-home': '/trading/home-control',
+    '/master-ai-dashboard/sub-assistant': '/trading/assistant',
+    '/master-ai-dashboard/sub-system-health': '/trading/system',
+    '/master-ai-dashboard/sub-email': '/trading/email',
+    '/master-ai-dashboard/sub-news': '/trading/news',
+  };
+  window.location.href = MAP[path] || path;
+}
+window.navTo = navTo;
+
+/* ── Clock ── */
+function tickClock(){
+  const now = new Date();
+  const kwt = new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kuwait'}));
+  document.getElementById('clock').textContent = kwt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+/* ── Helpers ── */
+const $=id=>document.getElementById(id);
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function fmtUptime(s){
+  if(!s||s<0) return '--';
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
+  if(h>=24) return Math.floor(h/24)+'d '+h%24+'h';
+  return h+'h '+m+'m';
+}
+
+/* ── Main fetch ── */
+async function load(){
+  let dash=null, ext=null, sig=null;
+  try{
+    const [r1,r2,r3] = await Promise.all([
+      fetch('/dashboard').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('/dashboard/extended').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('/dashboard/signals').then(r=>r.ok?r.json():null).catch(()=>null)
+    ]);
+    dash=r1; ext=r2; sig=r3;
+  }catch(e){ console.error('fetch err',e); }
+
+  /* ── HERO ── */
+  if(dash){
+    const online = dash.api_online !== false;
+    $('status-dot').className = 'dot' + (online?'':' off');
+    $('ver').textContent = dash.version || '--';
+    $('hero-ver').textContent = dash.version || '--';
+    $('hero-uptime').textContent = '⏱ ' + fmtUptime(dash.uptime);
+    const badge=$('hero-status');
+    if(online){ badge.textContent='متصل'; badge.className='hero-badge online'; }
+    else { badge.textContent='غير متصل'; badge.className='hero-badge off'; }
+    $('hero-auto').textContent = 'مستوى الاستقلالية: ' + (dash.autonomy_level||'standard');
+  }
+
+  /* ── AI INSIGHT (from assistant_surface) ── */
+  if(dash){
+    const as = dash.assistant_surface || {};
+    const ta = as.top_action || {};
+    const ic = $('insight-card');
+
+    // Determine level
+    const sev = ta.severity || 'info';
+    ic.className = 'card insight-card lvl-' + (sev==='critical'||sev==='high'?'alert': sev==='medium'?'warning':'info');
+
+    // Icon
+    const icons = {trading:'📈',calendar:'📅',home:'🏠',email:'📧',system:'⚙️',tasks:'✅'};
+    $('insight-icon').textContent = icons[ta.domain]||'💡';
+
+    // Text
+    const headline = ta.headline || dash.ai_insight || '✅ كل شي تحت السيطرة';
+    const whyNow = ta.why_now || '';
+    $('insight-text').textContent = headline;
+    $('insight-meta').textContent = whyNow;
+
+    // Next actions
+    const nextActions = as.next_actions || [];
+    const naSec = $('next-section');
+    const naDiv = $('next-actions');
+    if(nextActions.length){
+      naSec.classList.remove('hide');
+      naDiv.innerHTML = nextActions.map(a =>
+        '<div class="later-item"><span class="later-domain">'+esc(a.domain||'')+'</span>'+esc(a.headline||a.action_label||'')+'</div>'
+      ).join('');
+    } else { naSec.classList.add('hide'); }
+
+    // Later today
+    const laterToday = as.later_today || [];
+    const ltSec = $('later-section');
+    const ltDiv = $('later-items');
+    if(laterToday.length){
+      ltSec.classList.remove('hide');
+      ltDiv.innerHTML = laterToday.map(a =>
+        '<div class="later-item"><span class="later-domain">'+esc(a.domain||'')+'</span>'+esc(a.headline||a.action_label||'')+'</div>'
+      ).join('');
+    } else { ltSec.classList.add('hide'); }
+  }
+
+  /* ── DAILY NOTE ── */
+  if(ext && ext.daily_note){
+    $('note-body').innerHTML = esc(ext.daily_note);
+    $('note-section').classList.remove('hide');
+  }
+
+  /* ── STATUS GRID ── */
+  if(dash){
+    $('s-shift').textContent = dash.shift_today || '--';
+    $('s-shift-next').textContent = 'غداً: ' + (dash.shift_tomorrow||'--');
+
+    // Home
+    const lights = dash.home_lights_on >=0 ? dash.home_lights_on : '--';
+    const ac = dash.home_ac_on >=0 ? dash.home_ac_on : '--';
+    const covers = dash.home_covers_open >=0 ? dash.home_covers_open : '--';
+    $('s-home').textContent = '💡'+lights+' ❄️'+ac+' 🪟'+covers;
+    $('s-home-sub').textContent = (dash.active_devices_count||0)+' جهاز نشط';
+
+    // Radar
+    const mkt = dash.market_open ? '🟢 السوق مفتوح' : '🔴 السوق مغلق';
+    $('s-radar').textContent = (dash.radar_enabled?'🟢':'🔴') + ' ' + (dash.radar_watch_count||0) + ' سهم';
+    $('s-radar-sub').textContent = mkt + ' · ' + (dash.radar_alerts_today||0) + ' إشارة';
+  }
+  if(ext){
+    const cpu = ext.cpu||0, mem = ext.memory_pct||0, tmp = ext.temperature||0;
+    $('s-sys').textContent = 'CPU '+cpu+'%';
+    $('s-sys-sub').textContent = 'RAM '+mem+'% · '+tmp+'°C';
+  }
+
+  /* ── TRADING TEASER ── */
+  const teaser = $('teaser');
+  if(sig && sig.decision_card && sig.decision_card.symbol){
+    const dc = sig.decision_card;
+    const verdictClass = (dc.verdict||'').includes('buy')||dc.confluence_score>70?'buy':
+                         (dc.verdict||'').includes('avoid')?'avoid':'watch';
+    const verdictLabel = verdictClass==='buy'?'شراء': verdictClass==='avoid'?'تجنب':'مراقبة';
+    teaser.innerHTML =
+      '<div class="teaser-top"><span class="teaser-sym">'+esc(dc.symbol)+(dc.name_ar?' — '+esc(dc.name_ar):'')+'</span>'+
+      '<span class="teaser-verdict '+verdictClass+'">'+verdictLabel+'</span></div>'+
+      '<div class="teaser-row">'+
+      '<span>السعر: '+(dc.price||'--')+' فلس</span>'+
+      '<span>التوافق: '+(dc.confluence_score||'--')+'</span>'+
+      '<span>RSI: '+(dc.rsi!==undefined?dc.rsi:'--')+'</span>'+
+      '</div>';
+  } else if(dash && dash.top_signal){
+    teaser.innerHTML = '<div class="teaser-top"><span class="teaser-sym">'+esc(dash.top_signal)+'</span></div>';
+  } else {
+    teaser.innerHTML = '<div class="teaser-empty">لا توجد فرص حالياً</div>';
+  }
+
+  /* ── FOOTER ── */
+  const now = new Date();
+  const kwt = new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kuwait'}));
+  $('footer').textContent = 'آخر تحديث: '+kwt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+/* ── Init ── */
+load();
+setInterval(load, 60000);
+
+})();
+</script>
+</body>
+</html>

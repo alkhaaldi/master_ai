@@ -214,6 +214,40 @@ def get_trade(trade_id):
     return dict(row) if row else None
 
 
+def suggest_trailing_stop(trade_id, atr_multiplier=2.0):
+    """Suggest trailing stop based on ATR from daily snapshot."""
+    trade = get_trade(trade_id)
+    if not trade or trade["status"] != "open":
+        return None
+    sym = trade["symbol"]
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=3)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT atr, price FROM stock_radar_daily WHERE symbol=?", (sym,)
+        ).fetchone()
+        conn.close()
+    except Exception:
+        return None
+    if not row or not row["atr"]:
+        return None
+    atr = float(row["atr"])
+    current_price = float(row["price"])
+    if trade.get("direction") == "short":
+        trailing_stop = round(current_price + (atr * atr_multiplier), 3)
+    else:
+        trailing_stop = round(current_price - (atr * atr_multiplier), 3)
+    return {
+        "trade_id": trade_id,
+        "symbol": sym,
+        "current_price": current_price,
+        "atr": round(atr, 3),
+        "multiplier": atr_multiplier,
+        "suggested_stop": trailing_stop,
+        "distance_pct": round(abs(current_price - trailing_stop) / current_price * 100, 2),
+    }
+
+
 def update_trade_notes(trade_id, notes):
     """Add/update notes on a trade."""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

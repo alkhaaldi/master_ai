@@ -1,0 +1,95 @@
+  # ═══ NEWS PAGE ═══
+  - path: sub-news
+    title: الأخبار
+    icon: mdi:newspaper-variant-outline
+    subview: true
+    type: panel
+    cards:
+      - type: vertical-stack
+        cards:
+
+          # ── 1. PULSE HERO ──
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background:
+                        radial-gradient(circle at top left, rgba(255,200,60,0.16), transparent 24%),
+                        radial-gradient(circle at top right, rgba(255,160,0,0.08), transparent 22%),
+                        linear-gradient(180deg, rgba(17,19,24,0.98), rgba(10,12,16,0.99));
+                      border: 1px solid rgba(255,200,60,0.14);
+                      border-radius: 30px 30px 0 0;
+                      padding: 22px 22px 10px;
+                      margin: 8px 8px 0;
+                      box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+                    }
+                    h2 { font-size: 24px !important; margin: 0 0 4px !important; }
+                    ha-markdown { font-size: 14px; opacity: 0.8; direction: rtl; }
+                content: |
+                  ## الأخبار
+                  {% set e = 'sensor.master_ai_extended' %}
+                  {% set d = state_attr(e,'news_digest') %}
+                  {% if d and d.category_ar %}
+                  {{ d.category_emoji | default('📰') }} {{ d.category_ar }} · {{ d.item_count | default(0) }} خبر
+                  {% elif state_attr(e,'news_available') %}
+                  📰 ملخص جاهز
+                  {% else %}
+                  📰 لا يوجد ملخص
+                  {% endif %}
+              - type: markdown
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: linear-gradient(135deg, rgba(255,200,60,0.06), rgba(255,160,0,0.03));
+                      border: 1px solid rgba(255,200,60,0.10);
+                      border-radius: 0 0 30px 30px;
+                      padding: 10px 22px;
+                      margin: 0 8px 0;
+                    }
+                    ha-markdown { font-size: 15px; line-height: 1.7; direction: rtl; }
+                content: >
+                  {% set e = 'sensor.master_ai_extended' %}
+                  {% if state_attr(e,'news_available') %}
+                  ✅ آخر ملخص جاهز للعرض
+                  {% else %}
+                  {% set reason = state_attr(e,'news_reason') | default('') %}
+                  ⚠️ لا يوجد ملخص{% if reason %} — {{ reason }}{% endif %}
+                  {% endif %}
+
+          # ── 2. NEWS DIGEST ──
+          - type: markdown
+            card_mod:
+              style: |
+                ha-card {
+                  background: linear-gradient(180deg, rgba(28,24,16,0.98), rgba(10,12,16,0.99));
+                  border: 1px solid rgba(255,200,60,0.10);
+                  border-radius: 22px;
+                  padding: 16px;
+                  margin-top: 12px;
+                }
+                ha-markdown { font-size: 14px; direction: rtl; line-height: 1.8; }
+            content: |
+              ### ملخص الأخبار
+              {% set e = 'sensor.master_ai_extended' %}
+              {% set d = state_attr(e,'news_digest') %}
+              {% if d and d.summary %}
+              {{ d.summary }}
+
+              ---
+              📅 {{ d.date | default('') }} · {{ d.created_at | default('') | truncate(16, true, '') }}
+              {% else %}
+              لا يوجد ملخص جاهز.
+
+              استخدم **/news_now** عبر تليقرام لتوليد ملخص جديد.
+              {% endif %}
+
+          # ── NAV ──
+          - type: button
+            name: الرئيسية
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /master-ai-dashboard/master-ai
+            show_state: false

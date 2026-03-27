@@ -703,7 +703,8 @@ async def ha_dashboard_portfolio():
             # Enrich with signal_health + alerts from signal_engine
             try:
                 from signal_engine import build_signals
-                sig_result = build_signals()
+                import asyncio as _asyncio
+                sig_result = await _asyncio.get_event_loop().run_in_executor(None, build_signals)
                 sig_map = {s["symbol"]: s for s in (sig_result.get("all_signals") or [])}
                 for t in open_trades:
                     sym = t.get("symbol", "").upper()
@@ -1555,14 +1556,14 @@ def _get_bridge_candidates(mode: str = "auto") -> list[str]:
 # ═══════════════════════════════════════════════════
 
 @router.get("/dashboard/signals")
-async def dashboard_signals():
+def dashboard_signals():
     """Composite trading signals: radar + bridge + journal merged."""
     from signal_engine import build_signals
     return build_signals()
 
 
 @router.get("/dashboard/signals-30m")
-async def dashboard_signals_30m():
+def dashboard_signals_30m():
     """30m signals for all watchlist symbols using Brain weights."""
     from signal_engine import build_signals_30m
     return build_signals_30m()

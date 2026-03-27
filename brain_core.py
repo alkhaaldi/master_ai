@@ -216,7 +216,6 @@ def get_system_awareness() -> str:
 _entity_map = {}
 _entity_index = {}
 _alias_cache = []
-_learn_queue = None
 
 _DOMAIN_ICONS = {
     "light": "💡", "climate": "🌡", "cover": "🪟",
@@ -287,8 +286,8 @@ def reload():
     try:
         _ensure_memory_table()
         _apply_confidence_decay()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Brain reload failed: {e}")
     logger.info(
         f"Brain loaded: {len(_entity_map)} rooms, "
         f"{total_entities} entities, {len(_alias_cache)} alias groups"
@@ -338,14 +337,13 @@ def _get_learned_aliases(text):
     try:
         if not AUDIT_DB.exists():
             return []
-        conn = sqlite3.connect(str(AUDIT_DB))
-        rows = conn.execute(
-            "SELECT content, context FROM memory WHERE category='alias' AND active=1"
-        ).fetchall()
-        conn.close()
+        with sqlite3.connect(str(AUDIT_DB), timeout=3) as conn:
+            rows = conn.execute(
+                "SELECT content, context FROM memory WHERE category='alias' AND active=1"
+            ).fetchall()
         results = []
         for content, context in rows:
-            if content and content.lower() in text.lower():
+            if content and re.search(r"(?:^|\s)" + re.escape(content.lower()) + r"(?:\s|$)", text.lower()):
                 try:
                     ctx = json.loads(context) if context else {}
                     results.append({
@@ -366,10 +364,9 @@ def get_brain_stats():
     stats = {"brain_version": "1.1", "knowledge_loaded": bool(_knowledge),
              "aliases_compiled": len(_alias_cache), "entity_index_size": len(_entity_index)}
     try:
-        conn = sqlite3.connect(str(AUDIT_DB))
-        rows = conn.execute("SELECT category, COUNT(*), AVG(confidence), SUM(hit_count) "
-                           "FROM memory WHERE active=1 GROUP BY category").fetchall()
-        conn.close()
+        with sqlite3.connect(str(AUDIT_DB), timeout=3) as conn:
+            rows = conn.execute("SELECT category, COUNT(*), AVG(confidence), SUM(COALESCE(use_count,0)) "
+                               "FROM memory WHERE active=1 GROUP BY category").fetchall()
         stats["memory"] = {r[0]: {"count": r[1], "avg_conf": round(r[2],2), "hits": r[3] or 0} for r in rows}
         stats["total_memories"] = sum(r[1] for r in rows)
     except:
@@ -380,13 +377,6 @@ def get_brain_stats():
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 2. ENTITY CONTEXT — COMPACT INDEX
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-_DOMAIN_ICONS = {
-    "light": "💡", "climate": "🌡", "cover": "🪟",
-    "fan": "🌀", "scene": "🎬", "media_player": "🔊",
-    "switch": "🔌", "button": "⏺", "sensor": "📊"
-}
-
 
 
 def _build_compact_room_line(room_name, entities):
@@ -588,7 +578,7 @@ def build_system_prompt():
 استخدم سياق الشفت والوقت عشان تفهم وينه ومزاجه بدون ما يشرحلك.
 
 Tools: ha_get_state, ha_call_service, ssh_run, respond_text, http_request, memory_store, win_diagnostics, win_powershell, win_winget_install
-الستائر inverted: open=مسكرة, closed=مفتوحة. entity_id: exact ID أو pattern مثل "climate.*" أو "sensor.*temp*" أو "*" للكل. استخدم exact IDs من Room Index أولاً.
+الستائر inverted: open=مفتوحة, closed=مسكّرة (نفس منطق الستائر العادية). entity_id: exact ID أو pattern مثل "climate.*" أو "sensor.*temp*" أو "*" للكل. استخدم exact IDs من Room Index أولاً.
 
 {room_index}
 
@@ -601,18 +591,62 @@ JSON: {{"mode":"single_step|multi_step","thought":"","next_step":{{"type":"","ar
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # MEMORY INTEGRATION
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-_AUDIT_DB = os.path.join(os.path.dirname(__file__), "data", "audit.db")
+_AUDIT_DB = str(AUDIT_DB)  # Unified: same as AUDIT_DB Path object
+
+
+def build_system_prompt_v7():
+    """V7 system prompt — uses useful context from brain_core, skips old JSON/action instructions."""
+    parts = []
+    
+    # System awareness (version, modules, automations — USEFUL)
+    sa = get_system_awareness()
+    if sa:
+        parts.append(sa)
+    
+    # Room index (entity map — USEFUL for knowing what devices exist)
+    ri = build_room_index()
+    if ri:
+        parts.append(ri)
+    
+    # Diagnostic guide (self-check — USEFUL)
+    dg = get_diagnostic_guide()
+    if dg:
+        parts.append(dg)
+    
+    # Repair guide (auto-fix — USEFUL)
+    rg = get_repair_guide()
+    if rg:
+        parts.append(rg)
+    
+    # Expert knowledge domains (USEFUL)
+    try:
+        ek_domains = list(_expert_knowledge.keys()) if _expert_knowledge else []
+        if ek_domains:
+            parts.append("Expert domains: " + ", ".join(ek_domains))
+    except Exception:
+        pass
+    
+    # Owner context (USEFUL)
+    oc = get_owner_context()
+    if oc:
+        parts.append(oc)
+    
+    # SKIP: agent_dir (old JSON format instructions)
+    # SKIP: action_map (old action format)
+    # SKIP: learn_guide (old learning format)
+    # These are replaced by V7_SYSTEM_OVERRIDE in chat_v7.py
+    
+    return chr(10).join(parts)
 
 def get_relevant_memories(query: str, limit: int = 5) -> str:
     """Retrieve relevant memories. Uses keyword + category matching."""
     try:
-        conn = sqlite3.connect(_AUDIT_DB, timeout=5)
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            "SELECT id, category, type, content, confidence "
-            "FROM memory WHERE active=1 ORDER BY confidence DESC LIMIT 50"
-        ).fetchall()
-        conn.close()
+        with sqlite3.connect(_AUDIT_DB, timeout=5) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT id, category, type, content, confidence "
+                "FROM memory WHERE active=1 ORDER BY confidence DESC LIMIT 50"
+            ).fetchall()
         if not rows:
             return ""
         CAT_MAP = {
@@ -647,7 +681,7 @@ def get_relevant_memories(query: str, limit: int = 5) -> str:
             conn2 = sqlite3.connect(_AUDIT_DB, timeout=3)
             for _, r in top:
                 conn2.execute(
-                    "UPDATE memory SET hit_count=COALESCE(hit_count,0)+1, "
+                    "UPDATE memory SET use_count=COALESCE(use_count,0)+1, "
                     "hits=COALESCE(hits,0)+1, last_used=datetime('now') WHERE id=?",
                     (r["id"],)
                 )
@@ -679,6 +713,7 @@ def save_conversation(role: str, content: str, channel: str = "telegram"):
 
 
 def auto_learn(query: str, response: str, actions: list = None):
+    """DEPRECATED: Placeholder only. Real learning via corrections_loop + structured_memory."""
     """Extract and save learnings from a completed interaction.
     
     Simple rule-based extraction (no LLM needed):
@@ -704,91 +739,47 @@ def auto_learn(query: str, response: str, actions: list = None):
         pass
 
 
-def build_user_message(goal, context=None, previous_results=None):
-    """Build enriched user message with aliases, targeted entity details, and context."""
-
-    parts = [f"User request: {goal}"]
-
-    # Short-term conversation context (for follow-up understanding)
-    if context and context.get("short_term"):
-        stm_lines = context["short_term"][-3:]  # last 3 exchanges
-        stm_text = chr(10).join(f"[{m.get('role','?')}] {m.get('content','')[:200]}" for m in stm_lines)
-        parts.append("Recent conversation:" + chr(10) + stm_text)
-
-    # Memory context — let Opus learn from past interactions
-    mem_ctx = get_relevant_memories(goal)
-    if mem_ctx:
-        parts.append("═══ Memory context ═══\n" + mem_ctx)
-
-    # Alias resolution
-    alias_matches = resolve_aliases(goal)
-    if alias_matches:
-        alias_lines = []
-        for m in alias_matches:
-            line = f"  [{m['match']}] → {', '.join(m['entities'])}"
-            if m.get("note"):
-                line += f"  ⚠️ {m['note']}"
-            alias_lines.append(line)
-        parts.append("═══ Resolved aliases ═══\n" + "\n".join(alias_lines))
-
-    # Targeted entity details (only for relevant rooms)
-    room_details = _get_room_entities_for_query(goal)
-    if room_details and len(room_details) <= 60:
-        parts.append("═══ Relevant entity IDs ═══\n" + "\n".join(room_details))
-
-    # Device notes for relevant domains
-    device_notes = _knowledge.get("device_notes", {})
-    relevant_notes = []
-    goal_lower = goal.lower()
-    domain_keywords = {
-        "media_player": ["سماعة", "بلو", "تلفزيون", "tv", "speaker", "bluesound", "alexa", "ساوند"],
-        "cover": ["ستائر", "شتر", "shutter", "curtain", "ستاير"],
-        "climate": ["مكيف", "حرارة", "AC", "temp", "درجة"],
-        "scene": ["مشهد", "وضع", "scene", "mode", "نوم", "ضيوف", "سينما", "طفي", "صباح"],
-        "light": ["نور", "لمبة", "ضوء", "سبوت", "ستريب", "ثريا", "light", "أنوار"],
-        "fan": ["شفاط", "منقي", "purifier", "vent", "تنقية"]
-    }
-    for domain, keywords in domain_keywords.items():
-        if any(kw in goal_lower for kw in keywords):
-            if domain in device_notes:
-                relevant_notes.append(f"⚠️ {domain}: {device_notes[domain]}")
-
-    if relevant_notes:
-        parts.append("═══ Device notes ═══\n" + "\n".join(relevant_notes))
-
-    # Previous step results (iterative planning)
-    if previous_results:
-        parts.append("═══ Previous step results ═══")
-        for i, pr in enumerate(previous_results[-5:]):
-            parts.append(f"Step {i}: {json.dumps(pr, ensure_ascii=False)[:300]}")
-
-    # Extra context
-    if context:
-        for k in ("extra", "task_context"):
-            if k in context:
-                parts.append(f"\n{k}: {context[k]}")
-        if context.get("validation_error"):
-            parts.append(f"\nvalidation_error: {context['validation_error']}")
-            parts.append("Your previous response had a validation error. Fix and respond with valid JSON.")
-
-    # Add relevant past patterns
-    try:
-        from brain_learning import _get_relevant_patterns
-        patterns = _get_relevant_patterns(goal)
-    except Exception:
-        patterns = []
-    if patterns:
-        parts.append("═══ Past patterns ═══")
-        for p in patterns:
-            acts = ", ".join(p.get("actions", []))
-            g = p.get("goal", "?")
-            h = p.get("hits", 0)
-            parts.append("  [%s] -> %s (x%d)" % (g, acts, h))
-
-
-    return "\n\n".join(parts)
-
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 5. LEARNING (queue + single worker)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+
+def get_islamic_dates_context():
+    try:
+        from hijridate import Hijri, Gregorian
+        from datetime import date
+        today = date.today()
+        h = Gregorian(today.year, today.month, today.day).to_hijri()
+        hijri_year = h.year
+        if h.month > 10:
+            hijri_year += 1
+        lines = []
+        lines.append("Today Hijri: %d %s %d AH" % (h.day, h.month_name(), h.year))
+        try:
+            ram_start = Hijri(hijri_year, 9, 1).to_gregorian()
+            try:
+                ram_end = Hijri(hijri_year, 9, 30).to_gregorian()
+            except:
+                ram_end = Hijri(hijri_year, 9, 29).to_gregorian()
+            lines.append("Ramadan %d: %s - %s" % (hijri_year, ram_start.strftime("%b %d"), ram_end.strftime("%b %d, %Y")))
+        except:
+            pass
+        try:
+            fitr = Hijri(hijri_year, 10, 1).to_gregorian()
+            fd = [Hijri(hijri_year, 10, d).to_gregorian() for d in range(1, 5)]
+            ds = ", ".join("Day %d=%s" % (i+1, d.strftime("%b %d")) for i, d in enumerate(fd))
+            lines.append("Eid al-Fitr (%d AH, 1 Shawwal): starts %s. %s" % (hijri_year, fitr.strftime("%B %d, %Y"), ds))
+        except:
+            pass
+        adha_yr = hijri_year
+        if h.month > 12 or (h.month == 12 and h.day > 13):
+            adha_yr += 1
+        try:
+            adha = Hijri(adha_yr, 12, 10).to_gregorian()
+            lines.append("Eid al-Adha (%d AH, 10 Dhul Hijjah): %s" % (adha_yr, adha.strftime("%B %d, %Y")))
+        except:
+            pass
+        return chr(10).join(lines)
+    except Exception as e:
+        return "Islamic dates unavailable: %s" % e
