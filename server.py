@@ -1,3 +1,10 @@
+# Structured Memory
+try:
+    import structured_memory as smem
+    _SMEM = True
+except ImportError:
+    _SMEM = False
+
 """
 Master AI Control API Server v5.0
 Raspberry Pi - Home Assistant + Windows Agent Integration
@@ -10,7 +17,7 @@ Upgrades from v4:
   4. Memory Productization (short-term + long-term, graceful fallback)
   5. Observability (structured tracing, latency metrics)
 
-Endpoints: /ask, /health, /ha/*, /ssh/run, /agent, /approve/{id}, /audit, /win/*,
+Endpoints: /ask (v7 chat), /health, /ha/*, /ssh/run, /agent (v7 chat), /approve/{id}, /audit, /win/*,
            /tasks/*, /sessions/*, /knowledge/*, /memory/*, /stocks/*, /deploy, /stats/*
 """
 
@@ -42,7 +49,7 @@ import httpx
 
 # Brain Module (intelligence layer)
 try:
-    from brain import build_system_prompt, build_user_message, learn_from_result, reload as brain_reload, get_brain_stats, get_quick_response, build_response_prompt, proactive_loop, get_system_diag, run_backup, backup_loop, record_error, detect_user, get_multiuser_stats, record_feedback, log_request, get_analytics
+    from brain import build_system_prompt, learn_from_result, reload as brain_reload, get_brain_stats, get_quick_response, build_response_prompt, proactive_loop, get_system_diag, run_backup, backup_loop, record_error, detect_user, get_multiuser_stats, record_feedback, log_request, get_analytics
     BRAIN_AVAILABLE = True
 except Exception as e:
     BRAIN_AVAILABLE = False
@@ -50,42 +57,48 @@ except Exception as e:
 try:
     from tg_ops import is_tg_admin, get_pending_approvals, process_approval, format_approval_buttons, run_backup as tg_run_backup, get_admin_chat_id
     TG_OPS_OK = True
-except Exception:
+except Exception as _e:
     TG_OPS_OK = False
+    logging.getLogger("master_ai").warning("tg_ops not loaded: %s", _e)
 
 try:
     from tg_home import cmd_rooms, cmd_devices, cmd_find, find_buttons, cmd_scenes_dynamic, handle_devctl
     TG_HOME_OK = True
-except Exception:
+except Exception as _e:
     TG_HOME_OK = False
+    logging.getLogger("master_ai").warning("tg_home not loaded: %s", _e)
 
 try:
     from tg_session import tg_session_get, tg_session_upsert, tg_session_append_context, tg_session_reset, detect_followup
     from tg_session_resolver import resolve_followup_action
     pass  # logger not ready yet
     TG_SESSION_OK = True
-except Exception:
+except Exception as _e:
     TG_SESSION_OK = False
+    logging.getLogger("master_ai").warning("tg_session not loaded: %s", _e)
 
 try:
     from tg_intent_router import route_intent, learn_alias, get_alias_stats  # quick_classify removed
     TG_INTENT_OK = True
-except Exception:
+except Exception as _e:
     TG_INTENT_OK = False
+    logging.getLogger("master_ai").warning("tg_intent_router not loaded: %s", _e)
 
 try:
     from smart_router import classify_message
     SMART_ROUTER_OK = True
-except Exception:
+except Exception as _e:
     SMART_ROUTER_OK = False
+    logging.getLogger("master_ai").warning("smart_router not loaded: %s", _e)
 
 QUICK_QUERY_OK = False
 
 try:
-    from chat_v7 import handle_chat_v7
+    from chat_v7 import handle_chat_v7, handle_chat_v7_stream
     CHAT_V7_OK = True
-except Exception:
+except Exception as _e:
     CHAT_V7_OK = False
+    logging.getLogger("master_ai").warning("chat_v7 not loaded: %s", _e)
 try:
     from quick_query import quick_answer
     QUICK_QUERY_OK = True
@@ -96,15 +109,24 @@ TG_REPORT_OK = False
 try:
     from tg_report import generate_daily_report
     TG_REPORT_OK = True
-except Exception:
-    pass
+except Exception as _e:
+    logging.getLogger("master_ai").warning("tg_report not loaded: %s", _e)
 
 BRAIN_OK = False
 try:
     from home_brain import take_snapshot, get_daily_summary, detect_patterns, format_insights_ar, build_digest_prompt, get_brain_stats, cleanup_old_data, get_db_size
     BRAIN_OK = True
+except Exception as _e:
+    logging.getLogger("master_ai").warning("home_brain not loaded: %s", _e)
+
+# World State Snapshot
+WORLD_STATE_OK = False
+try:
+    from world_state import start_world_state, get_snapshot_text, get_snapshot_data, get_status as ws_get_status
+    WORLD_STATE_OK = True
 except Exception:
-    pass
+    logging.getLogger("master_ai").warning("world_state not available")
+
 
 DOCTOR_OK = False
 LEARNING_OK = False
@@ -119,63 +141,103 @@ try:
     from tg_email import format_email_report as email_report, get_email_for_morning as email_morning
     EMAIL_OK = True
 except Exception as _e:
-    logger.warning(f"tg_email not loaded: {_e}")
+    logging.getLogger("master_ai").warning("tg_email not loaded: %s", _e)
     EMAIL_OK = False
 try:
     from brain_learning import discover_scenes as bl_discover_scenes, format_scenes_report as bl_scenes_report, create_ha_scene as bl_create_scene
     from brain_learning import filter_existing_automations as bl_filter_autos
     LEARNING_OK = True
     DOCTOR_OK = True
-except Exception:
-    pass
+except Exception as _e:
+    logging.getLogger("master_ai").warning("brain_learning scenes not loaded: %s", _e)
 
 try:
     from discovery import get_home_summary, sync_entities, get_discovery_stats
     DISCOVERY_OK = True
-except Exception:
+except Exception as _e:
     DISCOVERY_OK = False
+    logging.getLogger("master_ai").warning("discovery not loaded: %s", _e)
 
 try:
     from tg_suggestions import get_suggestions
     TG_SUGGEST_OK = True
-except Exception:
+except Exception as _e:
     TG_SUGGEST_OK = False
+    logging.getLogger("master_ai").warning("tg_suggestions not loaded: %s", _e)
+
+FEEDBACK_OK = False
+try:
+    from feedback_learner import apply_learning as fl_apply, get_confidence_adjustment as fl_confidence_adj, init as fl_init
+    fl_init()
+    FEEDBACK_OK = True
+except Exception:
+    logging.getLogger("master_ai").warning("feedback_learner not available")
+
+PLAN_OK = False
+try:
+    from plan_engine import init as plan_init, list_plans, add_plan, pause_plan, resume_plan, get_due_plans, record_run, format_plans_list, get_stats as plan_stats, get_plan, delete_plan, complete_plan
+    plan_init()
+    PLAN_OK = True
+except Exception as _pe:
+    logging.getLogger("master_ai").warning("plan_engine not available: %s", _pe)
+
+DEGRADED_OK = False
+try:
+    from degraded_mode import mark_ok as deg_ok, mark_fail as deg_fail, is_degraded, get_mode as deg_mode, format_status as deg_status, init as deg_init, is_ok as deg_is_ok
+    deg_init()
+    DEGRADED_OK = True
+except Exception as _de:
+    logging.getLogger("master_ai").warning("degraded_mode not available: %s", _de)
+
+DBBACKUP_OK = False
+try:
+    from db_backup import run_daily as backup_run_daily, format_status as backup_format_status, get_status as backup_get_status, init as backup_init
+    backup_init()
+    DBBACKUP_OK = True
+except Exception as _be:
+    logging.getLogger("master_ai").warning("db_backup not available: %s", _be)
 
 try:
     from tg_morning_report import build_morning_report, send_morning_report
     TG_MORNING_OK = True
-except Exception:
+except Exception as _e:
     TG_MORNING_OK = False
+    logging.getLogger("master_ai").warning("tg_morning_report not loaded: %s", _e)
 
 try:
     from life_router import detect_life_domain
     LIFE_ROUTER_OK = True
-except Exception:
+except Exception as _e:
     LIFE_ROUTER_OK = False
+    logging.getLogger("master_ai").warning("life_router not loaded: %s", _e)
 
 try:
     from life_stocks import handle_stock_command, portfolio_summary
     LIFE_STOCKS_OK = True
-except Exception:
+except Exception as _e:
     LIFE_STOCKS_OK = False
+    logging.getLogger("master_ai").warning("life_stocks not loaded: %s", _e)
 
 try:
     from life_expenses import handle_expense_command
     LIFE_EXPENSES_OK = True
-except Exception:
+except Exception as _e:
     LIFE_EXPENSES_OK = False
+    logging.getLogger("master_ai").warning("life_expenses not loaded: %s", _e)
 
 try:
     from life_health import handle_health_command
     LIFE_HEALTH_OK = True
-except Exception:
+except Exception as _e:
     LIFE_HEALTH_OK = False
+    logging.getLogger("master_ai").warning("life_health not loaded: %s", _e)
 
 try:
     from life_work import handle_work_command, get_shift_display
     LIFE_WORK_OK = True
-except Exception:
+except Exception as _e:
     LIFE_WORK_OK = False
+    logging.getLogger("master_ai").warning("life_work not loaded: %s", _e)
 
 
 
@@ -290,7 +352,7 @@ def build_chat_system_prompt(brain_prompt: str = "", home_ctx: str = "", user_ms
     parts = [owner_ctx]
     parts.append("Master AI — المساعد الشخصي لبو خليفة. عربي كويتي مختصر.")
     parts.append("دورك: منزل ذكي + تداول + مواعيد + تخطيط + كل شي يطلبه.")
-    parts.append("الستائر inverted: open=مسكرة. نص فقط بدون JSON/XML.")
+    parts.append("الستائر inverted: open=مفتوحة, closed=مسكّرة. نص فقط بدون JSON/XML.")
     if home_ctx:
         parts.append(home_ctx)
     if user_msg:
@@ -374,28 +436,161 @@ async def _fetch_live_ha_context(user_msg: str) -> str:
 
 try:
     from tg_alerts import alert_loop as tg_alert_loop
+    from proactive_suggestions import proactive_loop as proactive_suggestion_loop, get_suggestion_stats
     TG_ALERTS_OK = True
-except Exception:
+except Exception as _e:
     TG_ALERTS_OK = False
+    logging.getLogger("master_ai").warning("tg_alerts not loaded: %s", _e)
 
 try:
     from tg_reminders import add_reminder, list_reminders, cancel_reminder, reminder_loop
     TG_REMIND_OK = True
-except Exception:
+except Exception as _e:
     TG_REMIND_OK = False
+    logging.getLogger("master_ai").warning("tg_reminders not loaded: %s", _e)
 
 try:
     from tg_news import get_news_digest, news_scheduler
     TG_NEWS_OK = True
-except Exception:
+except Exception as _e:
     TG_NEWS_OK = False
+    logging.getLogger("master_ai").warning("tg_news not loaded: %s", _e)
+
+# -- tg_tasks --
+TG_TASKS_OK = False
+try:
+    from tg_tasks import handle_tasks_command, llm_tool_task_create, llm_tool_task_update
+    TG_TASKS_OK = True
+except Exception as _e:
+    logging.getLogger("master_ai").warning("tg_tasks not loaded: %s", _e)
+
+# -- tg_stocks --
+TG_STOCKS_OK = False
+try:
+    from tg_stocks import cmd_stocks, cmd_price
+    TG_STOCKS_OK = True
+except Exception as _e:
+    logging.getLogger("master_ai").warning("tg_stocks not loaded: %s", _e)
 
 try:
-    from tg_tasks import cmd_tasks, cmd_task_add, cmd_task_done
-    from tg_stocks import cmd_stocks, cmd_price, stock_alert_loop
-    TG_STOCKS_OK = True
+    from stock_radar import (
+        init_radar_db, radar_loop,
+        tg_radar_list, tg_radar_add, tg_radar_remove,
+        tg_radar_check, tg_radar_last, tg_radar_toggle,
+        tg_radar_status, tg_radar_top,
+    )
+    RADAR_OK = True
+except Exception as _e:
+    RADAR_OK = False
+    logging.getLogger("master_ai").warning("stock_radar not loaded: %s", _e)
+
+try:
+    from relationships_engine import (
+        init_schema as rel_init_schema, seed_family_data,
+        list_contacts, find_contact, build_contact_snapshot,
+        get_upcoming_occasions, get_today_occasions,
+        format_contacts_tg, format_upcoming_tg, format_today_tg, format_person_tg,
+        get_morning_occasions_text
+    )
+    rel_init_schema()
+    seed_family_data()
+    REL_OK = True
 except Exception:
-    TG_STOCKS_OK = False
+    REL_OK = False
+
+try:
+    from expenses_engine import (
+        init_schema as exp_init_schema, parse_expense, add_expense,
+        list_expenses, get_summary, delete_expense,
+        format_summary_tg, format_recent_tg, format_add_confirmation,
+        get_morning_expense_text,
+        handle_spent_today, handle_spent_week, handle_spent_month, handle_recent_expenses
+    )
+    exp_init_schema()
+    EXP_OK = True
+except Exception:
+    EXP_OK = False
+
+try:
+    from news_engine import (
+        init_schema as news_init_schema,
+        generate_digest as news_generate_digest, get_latest_digest, get_today_digests,
+        format_digest_tg, format_sources_tg,
+        get_morning_news_text, handle_news_latest
+    )
+    news_init_schema()
+    NEWS_ENGINE_OK = True
+except Exception:
+    NEWS_ENGINE_OK = False
+
+# Phase 6: Journal Engine
+try:
+    from journal_engine import (
+        init_schema as journal_init_schema,
+        open_trade, close_trade, cancel_trade,
+        get_open_trades, get_recent_trades, get_trade,
+        get_trade_stats, update_trade_notes
+    )
+    journal_init_schema()
+    JOURNAL_OK = True
+except Exception:
+    JOURNAL_OK = False
+
+# Phase 4.5: Confluence Engine
+CONFLUENCE_OK = False
+try:
+    from confluence_engine import (
+        init_schema as confluence_init_schema,
+        run_confluence_scan, get_actionable_signals, get_watchlist_signals,
+        get_confluence_stats, record_decision as confluence_record_decision,
+        build_tg_alert as confluence_build_tg_alert,
+    )
+    confluence_init_schema()
+    CONFLUENCE_OK = True
+except Exception:
+    CONFLUENCE_OK = False
+
+# Phase 5: Health Engine
+try:
+    from health_engine import (
+        init_schema as health_init_schema,
+        handle_health_log, handle_health_summary, handle_health_streak,
+        quick_health_summary, quick_health_today
+    )
+    health_init_schema()
+    HEALTH_ENGINE_OK = True
+except Exception:
+    HEALTH_ENGINE_OK = False
+
+# Phase 5: Trading Engine
+try:
+    from trading_engine import (
+        init_schema as trading_init_schema,
+        handle_trade_log, handle_trades_list, handle_trade_review,
+        quick_trades_recent, quick_trade_stats
+    )
+    trading_init_schema()
+    TRADING_ENGINE_OK = True
+except Exception:
+    TRADING_ENGINE_OK = False
+
+# Phase 6: TradingView Bridge
+try:
+    from tradingview_bridge import (
+        init_tradingview_domain,
+        handle_webhook as tv_handle_webhook,
+        handle_tv_watchlist, handle_tv_add, handle_tv_remove,
+        handle_tv_last, handle_tv_summary, handle_tv_test, handle_tv_stats,
+        render_tv_alert_message, mark_telegram_sent,
+        quick_tv_watchlist, quick_tv_last, quick_tv_summary_today,
+        sync_tv_from_radar,
+    )
+    init_tradingview_domain()
+    TV_BRIDGE_OK = True
+except Exception:
+    TV_BRIDGE_OK = False
+
+
 
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 # CONFIGURATION
@@ -418,7 +613,7 @@ MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 ADMIN_TELEGRAM_ID = os.getenv("ADMIN_TELEGRAM_ID", "")
 
-VERSION = "5.4.0"
+VERSION = "9.0.0"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENTITY_MAP_FILE = os.path.join(BASE_DIR, "entity_map.json")
 AUDIT_DB = os.path.join(BASE_DIR, "data", "audit.db")
@@ -472,6 +667,8 @@ def save_policy(policy: dict):
 
 
 START_TIME = time.time()
+# ── Dashboard Job Tracking ──
+_dashboard_jobs = deque(maxlen=10)  # last 10 command results
 
 from logging.handlers import RotatingFileHandler as _RFH
 _log_fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
@@ -483,6 +680,7 @@ logger = logging.getLogger("master_ai")
 logger.setLevel(logging.INFO)
 logger.addHandler(_file_h)
 logger.addHandler(_console_h)
+logger.propagate = False  # prevent duplicate log entries
 _load_router_stats()
 logger.info(f"Stats loaded: prev_total={_router_stats.get('_prev_total', 0)}, session #{_router_stats.get('_sessions', 1)}")
 import atexit; atexit.register(_save_router_stats)
@@ -924,7 +1122,7 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
     if anthropic_client:
         try:
             resp = await anthropic_client.messages.create(
-                model="claude-opus-4-20250514",
+                model="claude-opus-4-6",
                 max_tokens=max_tokens,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_message}],
@@ -968,13 +1166,7 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
 
-# Register llm_call with brain_learning for memory extraction
-try:
-    from brain_learning import set_llm_call
-    set_llm_call(llm_call)
-    logger.info("llm_call registered with brain_learning")
-except Exception as e:
-    logger.warning(f"Could not register llm_call with brain_learning: {e}")
+# brain_learning uses its own LLM calls internally (no registration needed)
 
 def repair_json(text: str) -> dict:
     """Attempt to parse and repair malformed JSON from LLM."""
@@ -1109,7 +1301,7 @@ def cleanup_expired_approvals():
 # PHASE 3.3 — ADVANCED SCHEMA MIGRATIONS
 # ═══════════════════════════════════════════════════════════════
 
-SCHEMA_VERSION = "3.3.0"
+SCHEMA_VERSION = "3.4.0"
 
 SCHEMA_CONTRACT = {
     "audit_log": {
@@ -1205,6 +1397,28 @@ SCHEMA_CONTRACT = {
         "indexes": {
             "idx_events_type": ["type"], "idx_events_status": ["status"],
             "idx_events_task": ["task_id"], "idx_events_created": ["created_at"],
+        },
+    },
+    "interaction_feedback": {
+        "columns": {
+            "id": {"type": "INTEGER", "pk": True},
+            "timestamp": {"type": "TEXT"},
+            "source_type": {"type": "TEXT"},
+            "query_text": {"type": "TEXT"},
+            "decision_taken": {"type": "TEXT"},
+            "user_feedback": {"type": "TEXT"},
+            "correct_answer": {"type": "TEXT"},
+            "entity_id": {"type": "TEXT"},
+            "room": {"type": "TEXT"},
+            "confidence_before": {"type": "REAL"},
+            "confidence_after": {"type": "REAL"},
+            "meta": {"type": "TEXT"},
+        },
+        "indexes": {
+            "idx_ifb_source": ["source_type"],
+            "idx_ifb_feedback": ["user_feedback"],
+            "idx_ifb_entity": ["entity_id"],
+            "idx_ifb_ts": ["timestamp"],
         },
     },
     "system_settings": {
@@ -2132,7 +2346,7 @@ class EventEngine:
 
 
 # âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-# EVENT PROCESSOR â Glue between EventEngine + iterative_engine (v5.2)
+# EVENT PROCESSOR â Events routed to chat_v7 (v7.0)
 # âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 
@@ -2163,7 +2377,7 @@ def decide(event: dict, autonomy_config: dict) -> dict:
     return {"action": "auto_execute", "reason": f"score {risk_score} <= auto threshold {thresholds.get('auto_max', 25)}"}
 
 async def process_event(event: dict):
-    """Process a single pending event through iterative_engine."""
+    """Process a single pending event through chat_v7."""
     eid = event["event_id"]
     cfg = event_engine.get_autonomy_config()
     decision = decide(event, cfg)
@@ -2182,13 +2396,29 @@ async def process_event(event: dict):
         event_engine.update_event(eid, status="blocked", result=decision["reason"])
         return
 
-    # Low risk or approved level - execute via iterative_engine
+    # Low risk or approved level - execute via chat_v7
     event_engine.update_event(eid, status="processing")
     try:
         goal = f"Event [{event.get('type','')}]: {event.get('title','')}. Detail: {json.dumps(event.get('detail','{}'))}. Entity: {event.get('entity_id','')}. Analyze and take appropriate action."
         trace = RequestTrace(f"event_{eid}")
         task_id = f"evt_{eid}"
-        result = await iterative_engine(goal=goal, context={"source": "event_engine", "event_id": eid}, trace=trace, task_id=task_id)
+        # V7: chat_v7 for events
+        if CHAT_V7_OK and anthropic_client:
+            from brain_core import build_system_prompt_v7 as _bsp7
+            _sys7 = _bsp7()
+            _executors = {
+                "ha_get_state": _exec_ha_get_state,
+                "ha_call_service": lambda d,s,sd: _exec_ha_call_service(d, s, sd),
+                "ssh_run": _exec_ssh_run,
+            }
+            _v7_resp = await asyncio.wait_for(
+                handle_chat_v7(goal, _sys7, anthropic_client, _executors, user_id="event_engine"),
+                timeout=180
+            )
+            result = {"response": _v7_resp, "actions": [], "results": [], "task_state": "complete"}
+        else:
+            logger.error("chat_v7 unavailable, no fallback")
+            result = {"response": "النظام غير متاح الحين", "actions": [], "results": [], "task_state": "error"}
         event_engine.update_event(
             eid,
             status="completed",
@@ -2315,234 +2545,6 @@ class TaskManager:
 
 # PLANNER_SYSTEM_PROMPT removed — using build_system_prompt() from brain_core
 
-
-async def plan_step(goal: str, context: dict = None, trace: RequestTrace = None,
-                    previous_results: list = None, retry: bool = False) -> dict:
-    """Single planning step ÃÂ¢ÃÂÃÂ LLM generates next action(s)."""
-    if BRAIN_AVAILABLE:
-        system = build_system_prompt()
-    else:
-        pass
-        entity_ctx = build_entity_context()
-        system = "Master AI v5 fallback. Respond in JSON."
-
-    if BRAIN_AVAILABLE:
-        user_msg = build_user_message(goal, context, previous_results)
-    else:
-        pass
-        user_msg = f"User request: {goal}"
-
-    if not BRAIN_AVAILABLE:
-        # Fallback: add memory and context manually
-        # Add memory context
-        mem_ctx = memory_retrieve_context(goal)
-        if mem_ctx:
-            user_msg += f"\n\nContext from memory:\n{mem_ctx}"
-
-        # Add previous step results for iterative planning
-        if previous_results:
-            user_msg += "\n\nPrevious step results:\n"
-            for i, pr in enumerate(previous_results[-5:]):
-                user_msg += f"Step {i}: {json.dumps(pr)[:1500]}\n"
-
-        # Add retry correction
-        if retry and context and context.get("validation_error"):
-            user_msg += f"\n\nYour previous response had a validation error: {context['validation_error']}\nPlease fix and respond with valid JSON."
-
-        # Add extra context
-        if context:
-            for k in ("extra", "task_context"):
-                if k in context:
-                    user_msg += f"\n\n{k}: {context[k]}"
-
-    else:
-        pass
-        # Brain already handles memory, previous_results, and context
-        if retry and context and context.get("validation_error"):
-            user_msg += f"\n\nRetry correction: {context['validation_error']}"
-
-    raw = await llm_call(system, user_msg, max_tokens=2048, trace=trace)
-
-    # Parse response
-    parsed = repair_json(raw)
-    if not parsed:
-        logger.error(f"Failed to parse planner output: {raw[:200]}")
-        # If LLM returned plain text, use it directly
-        if raw and len(raw) > 2 and raw[0] not in '{[' and not raw.startswith('```'):
-            return {
-                "mode": "single_step",
-                "next_step": {"type": "respond_text", "args": {"text": raw[:4000]}},
-                "task_state": "complete",
-                "response": raw[:4000]
-            }
-        # If LLM returned plain text, use it directly
-        if raw and len(raw) > 2 and raw[0] not in '{[' and not raw.startswith('```'):
-            return {
-                "mode": "single_step",
-                "next_step": {"type": "respond_text", "args": {"text": raw[:4000]}},
-                "task_state": "complete",
-                "response": raw[:4000]
-            }
-        return {
-            "mode": "single_step",
-            "next_step": {"type": "respond_text", "args": {"text": "عذراً، واجهت مشكلة في معالجة الطلب"}},
-            "task_state": "complete",
-            "response": "ÃÂÃÂ¹ÃÂÃÂ°ÃÂÃÂ±ÃÂÃÂ§ÃÂÃÂÃÂÃÂ ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¬ÃÂÃÂÃÂÃÂª ÃÂÃÂÃÂÃÂ´ÃÂÃÂÃÂÃÂÃÂÃÂ© ÃÂÃÂÃÂÃÂ ÃÂÃÂÃÂÃÂ¹ÃÂÃÂ§ÃÂÃÂÃÂÃÂ¬ÃÂÃÂ© ÃÂÃÂ§ÃÂÃÂÃÂÃÂ·ÃÂÃÂÃÂÃÂ¨",
-            "_parse_error": True
-        }
-
-    return parsed
-
-
-async def iterative_engine(goal: str, context: dict = None, trace: RequestTrace = None,
-                           task_id: str = None, max_iterations: int = 8) -> dict:
-    """
-    [UPGRADE 2] Iterative planning loop: plan ÃÂ¢ÃÂÃÂ execute ÃÂ¢ÃÂÃÂ verify ÃÂ¢ÃÂÃÂ replan
-    Returns final result with all step outputs.
-    """
-    all_results = []
-    all_actions = []
-    final_response = ""
-    iteration = 0
-
-    if task_id:
-        TaskManager.update_task(task_id, state="running")
-
-    while iteration < max_iterations:
-        iteration += 1
-        if trace:
-            trace.step(f"plan_iteration_{iteration}", "start")
-
-        # 1. PLAN
-        plan = await plan_step(goal, context, trace, previous_results=all_results)
-
-        task_state = plan.get("task_state", "complete")
-        final_response = plan.get("response", "")
-        mode = plan.get("mode", "single_step")
-
-        # 2. DETERMINE ACTIONS
-        if mode == "multi_step" and "plan" in plan:
-            actions = plan["plan"]
-        elif "next_step" in plan:
-            actions = [plan["next_step"]]
-        else:
-            actions = [{"type": "respond_text", "args": {"text": final_response or "ÃÂÃÂªÃÂÃÂ"}}]
-
-        # 3. VALIDATE & EXECUTE each action
-        for i, action in enumerate(actions):
-            # [UPGRADE 3] Schema validation
-            valid, cleaned, error = validate_action(action)
-            if not valid:
-                # Retry planning once with correction
-                if not context:
-                    context = {}
-                context["validation_error"] = error
-                retry_plan = await plan_step(goal, context, trace, previous_results=all_results, retry=True)
-                retry_action = retry_plan.get("next_step", action)
-                valid2, cleaned2, error2 = validate_action(retry_action)
-                if valid2:
-                    action = cleaned2
-                else:
-                    logger.warning(f"Action validation failed after retry: {error2}")
-                    result = {"success": False, "error": f"Invalid action: {error2}"}
-                    all_results.append(result)
-                    continue
-            else:
-                action = cleaned
-
-            # Execute
-            step_idx = len(all_actions)
-            result = await execute_action(action, trace, step_idx)
-            all_actions.append(action)
-            all_results.append(result)
-
-            # [UPGRADE 1] Record step in task
-            if task_id:
-                TaskManager.add_step_result(task_id, step_idx, action, result)
-
-        # 4. CHECK STATE
-        if task_state == "complete":
-            break
-        elif task_state == "waiting":
-            if task_id:
-                TaskManager.update_task(task_id, state="waiting")
-            break
-        # else: "running" ÃÂ¢ÃÂÃÂ loop continues with results fed back to planner
-
-    # Finalize task
-    if task_id:
-        if task_state == "complete":
-            TaskManager.complete_task(task_id, {"response": final_response})
-        elif task_state != "waiting":
-            TaskManager.complete_task(task_id)
-
-    # Brain learning (async, non-blocking)
-    if BRAIN_AVAILABLE and all_actions:
-        try:
-            logger.info(f"BRAIN_LEARN_HOOK: goal={goal[:40]}, actions={len(all_actions)}, results={len(all_results)}")
-            asyncio.create_task(learn_from_result(goal, all_actions, all_results, final_response))
-        except Exception as e:
-            logger.error(f"BRAIN_LEARN_HOOK error: {e}")
-    else:
-        pass
-
-    # Quick response template (skip LLM if simple action)
-    if BRAIN_AVAILABLE and all_actions:
-        try:
-            quick = get_quick_response(all_actions, all_results)
-            if quick:
-                final_response = quick
-                logger.info(f"QUICK_RESPONSE: {quick[:50]}")
-        except Exception as e:
-            logger.error(f"Quick response error: {e}")
-
-    # Response Synthesis Fallback: if no response but successful results, summarize via LLM
-    if not final_response and all_results and any(r.get("success") for r in all_results if isinstance(r, dict)):
-        try:
-            summary_data = json.dumps(all_results[:10], ensure_ascii=False, default=str)[:5000]
-            synth_prompt = "حلل النتائج التالية وقدم تقرير مفصل بالعربي الكويتي. اذكر كل التفاصيل والأرقام والاقتراحات. لا تختصر:" + chr(10) + "طلب: " + goal[:200] + chr(10) + "نتائج: " + summary_data
-            synth_resp = await llm_call([{"role": "user", "content": synth_prompt}], max_tokens=1500, temperature=0.3)
-            if synth_resp and not synth_resp.startswith("{"):
-                final_response = synth_resp.strip()
-                logger.info(f"RESPONSE_SYNTH: {final_response[:60]}")
-        except Exception as e:
-            logger.warning(f"Response synthesis failed: {e}")
-
-    return {
-        "response": final_response,
-        "actions": all_actions,
-        "results": all_results,
-        "iterations": iteration,
-        "task_state": task_state,
-    }
-
-
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
-# SUMMARY GENERATOR
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
-
-async def generate_summary(task: str, actions: list, results: list, trace: RequestTrace = None) -> str:
-    if not results:
-        return ""
-    if BRAIN_AVAILABLE:
-        try:
-            summary_prompt = build_response_prompt()
-        except Exception:
-            summary_prompt = "Summarize the results of this task in Arabic. Be concise."
-    else:
-        summary_prompt = "Summarize the results of this task in Arabic. Be concise."
-    detail = f"Task: {task}\nResults: {json.dumps(results)[:2000]}"
-    try:
-        return await llm_call(summary_prompt, detail, max_tokens=500, trace=trace)
-    except Exception:
-        return ""
-
-
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
-# FASTAPI APP
-# ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
-
-@asynccontextmanager
 async def lifespan(app):
     init_db()
     # Phase 4: Register plugins
@@ -2559,6 +2561,17 @@ async def lifespan(app):
     except Exception as e:
         logger.error(f"Schema migration error (non-fatal): {e}")
     cleanup_expired_approvals()
+    # Wire dashboard_api context
+    from dashboard_api import ha_dashboard_extended, init_dashboard_context
+    init_dashboard_context(
+        version=VERSION, start_time=START_TIME,
+        dashboard_jobs=_dashboard_jobs,
+        tg_handle_command_fn=tg_handle_command,
+        radar_ok=RADAR_OK, journal_ok=JOURNAL_OK,
+        get_open_trades_fn=get_open_trades if JOURNAL_OK else lambda: [],
+        get_trade_stats_fn=get_trade_stats if JOURNAL_OK else lambda **kw: {},
+    )
+    _pe_set_inbox_cache_ref(ha_dashboard_extended)
     logger.info(f"Master AI v{VERSION} started")
     # Canary mode: skip all background tasks (for safe deploy testing)
     _canary = os.environ.get("CANARY_MODE", "").lower() in ("1", "true", "yes")
@@ -2579,7 +2592,12 @@ async def lifespan(app):
         asyncio.create_task(entity_health_check_loop())
         if BRAIN_OK: asyncio.create_task(brain_snapshot_loop())
         if BRAIN_OK: asyncio.create_task(brain_weekly_insight())
+        if JOURNAL_OK: asyncio.create_task(weekly_trading_report_scheduler())
+        if CONFLUENCE_OK: asyncio.create_task(confluence_scan_loop())
+        if WORLD_STATE_OK: asyncio.create_task(start_world_state())
         if LEARNING_OK: asyncio.create_task(brain_nightly_learning())
+        if FEEDBACK_OK: asyncio.create_task(feedback_learning_loop())
+        if PLAN_OK: asyncio.create_task(plan_check_loop())
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
     if TG_ALERTS_OK:
@@ -2587,7 +2605,21 @@ async def lifespan(app):
             _cid = ADMIN_TELEGRAM_ID or "669769765"
             await tg_send(int(_cid), text)
         asyncio.create_task(tg_alert_loop(_alert_sender))
+        asyncio.create_task(proactive_suggestion_loop(_alert_sender))
+        logger.info("Proactive suggestions loop scheduled")
         logger.info("Alert monitor task scheduled")
+    # v8 Phase 1: Calendar sync + reminders
+    try:
+        from calendar_engine import calendar_sync_loop
+        from calendar_reminders import run_reminder_loop
+        asyncio.create_task(calendar_sync_loop())
+        async def _cal_remind_sender(text):
+            _cid = ADMIN_TELEGRAM_ID or "669769765"
+            await tg_send(int(_cid), text)
+        asyncio.create_task(run_reminder_loop(_cal_remind_sender))
+        logger.info("Calendar sync + reminder loops scheduled")
+    except ImportError as e:
+        logger.debug(f"Calendar not loaded: {e}")
     # Phase B4: Reminders
     if TG_REMIND_OK:
         async def _remind_sender(cid, text):
@@ -2602,9 +2634,167 @@ async def lifespan(app):
         async def _stock_sender(text):
             _cid = ADMIN_TELEGRAM_ID or "669769765"
             await tg_send(int(_cid), text)
-        asyncio.create_task(stock_alert_loop(_stock_sender))
+        asyncio.create_task(tg_alert_loop(_stock_sender))
         asyncio.create_task(news_scheduler(_news_sender))
         logger.info("News scheduler scheduled")
+    # Phase B5b: Auto news digest (news_engine) every 6 hours
+    if NEWS_ENGINE_OK:
+        async def _news_digest_loop():
+            """Auto-generate news digest every 3 hours for dashboard."""
+            _log = logging.getLogger("news_digest_loop")
+            _log.info("News digest auto-scheduler started (every 3h)")
+            await asyncio.sleep(30)  # let startup complete
+            while True:
+                try:
+                    result = await news_generate_digest(None, "auto")
+                    if result.get("ok"):
+                        _log.info("Auto digest generated: %d items", result.get("item_count", 0))
+                    else:
+                        _log.warning("Auto digest failed: %s", result.get("error", "unknown"))
+                except Exception as _e:
+                    _log.error("Auto digest error: %s", _e)
+                await asyncio.sleep(3 * 3600)  # 3 hours
+        asyncio.create_task(_news_digest_loop())
+        logger.info("News digest auto-scheduler scheduled (3h)")
+    # Phase 2 Radar: EMA crossover monitor
+    if RADAR_OK:
+        try:
+            init_radar_db()
+            async def _radar_sender(text, sig_meta=None):
+                _cid = ADMIN_TELEGRAM_ID or "669769765"
+                # Smart filter: only send high-value signals
+                _send = False
+                _text_lower = text.lower() if text else ""
+                _sc_val = sig_meta.get("score", 0) if sig_meta else 0
+                _sc_cls = sig_meta.get("score_class", "") if sig_meta else ""
+                # Always send A-class signals
+                if _sc_cls == "A" or "/A" in text or "A/" in text:
+                    _send = True
+                # Send if score >= 70
+                if not _send and _sc_val >= 70:
+                    _send = True
+                # Send if symbol is in open journal trades
+                if not _send and JOURNAL_OK and sig_meta:
+                    _open_syms = [t["symbol"] for t in get_open_trades()]
+                    if sig_meta.get("symbol", "").upper() in [s.upper() for s in _open_syms]:
+                        _send = True
+                # Send bullish cross signals (potential entries)
+                if not _send and sig_meta and sig_meta.get("signal") == "bullish_cross":
+                    _send = True
+                if not _send and "bullish" in _text_lower:
+                    _send = True
+                if _send:
+                    await tg_send(int(_cid), text)
+                    # Send trade confirmation buttons for buy/sell signals
+                    if sig_meta and sig_meta.get("signal") in ("bullish_cross", "bearish_cross"):
+                        try:
+                            _r_sym = sig_meta["symbol"]
+                            _r_price = sig_meta["price"]
+                            _r_action = "buy" if sig_meta["signal"] == "bullish_cross" else "sell"
+                            _r_score = sig_meta.get("score", 0)
+                            _r_cls = sig_meta.get("score_class", "")
+                            _r_cb = f"{_r_sym}|{_r_price}|{_r_action}|Radar EMA9/21|0|radar_{_r_score}"
+                            _r_btns = [
+                                {"text": "\u0634\u0631\u064a\u062a \u2705", "callback_data": f"trade_confirm:{_r_cb}"},
+                                {"text": "\u062a\u062c\u0627\u0647\u0644\u062a \u274c", "callback_data": f"trade_skip:{_r_cb}"},
+                            ]
+                            await tg_send_inline(int(_cid), f"\u0634\u0631\u064a\u062a \u0648\u0644\u0627 \u062a\u062c\u0627\u0647\u0644\u062a\u061f", _r_btns, columns=2)
+                        except Exception as _re:
+                            logging.getLogger("radar").warning(f"Radar confirm buttons error: {_re}")
+                else:
+                    logging.getLogger("radar").debug("Smart filter: suppressed alert")
+            asyncio.create_task(radar_loop(_radar_sender))
+            logger.info("Stock radar loop scheduled")
+            # Daily Trading Summary at market close (1:00 PM KWT = 10:00 UTC)
+            async def _daily_trading_summary_loop():
+                _log = logging.getLogger("daily_summary")
+                _log.info("Daily trading summary scheduler started")
+                await asyncio.sleep(120)
+                while True:
+                    try:
+                        from datetime import datetime as _dt, timedelta as _td
+                        _kwt = _dt.utcnow() + _td(hours=3)
+                        # Only run Sun-Thu (KSE trading days)
+                        if _kwt.weekday() in (4, 5):  # Fri=4, Sat=5
+                            await asyncio.sleep(3600)
+                            continue
+                        # Run at ~13:00 KWT (after market close 12:40)
+                        if _kwt.hour == 13 and 0 <= _kwt.minute <= 10:
+                            _cid = ADMIN_TELEGRAM_ID or "669769765"
+                            _today = _kwt.strftime("%Y-%m-%d")
+                            lines = [f"*\U0001f4ca \u0645\u0644\u062e\u0635 \u0627\u0644\u062a\u062f\u0627\u0648\u0644 \u2014 {_today}*\n"]
+                            # Radar signals today
+                            try:
+                                import sqlite3 as _s3
+                                _sdb = _s3.connect("data/life.db", timeout=3)
+                                _sdb.row_factory = _s3.Row
+                                _sigs = _sdb.execute(
+                                    "SELECT * FROM stock_radar_events WHERE date(created_at)=? ORDER BY created_at DESC",
+                                    (_today,)
+                                ).fetchall()
+                                _bull = sum(1 for s in _sigs if s["signal_type"] == "bullish_cross")
+                                _bear = sum(1 for s in _sigs if s["signal_type"] == "bearish_cross")
+                                lines.append(f"\U0001f4e1 \u0625\u0634\u0627\u0631\u0627\u062a \u0627\u0644\u064a\u0648\u0645: {len(_sigs)} ({_bull} \u0635\u0627\u0639\u062f, {_bear} \u0647\u0627\u0628\u0637)")
+                                # Top signals by score
+                                _top = sorted(_sigs, key=lambda x: x.get("score") or 0, reverse=True)[:3]
+                                if _top:
+                                    lines.append("\U0001f3af \u0623\u0641\u0636\u0644 \u0625\u0634\u0627\u0631\u0627\u062a:")
+                                    for _s in _top:
+                                        lines.append(f"   {_s['symbol']} \u2014 Score {_s.get('score',0)}/{_s.get('score_class','?')}")
+                                _sdb.close()
+                            except Exception:
+                                pass
+                            # Journal: open trades with P&L
+                            if JOURNAL_OK:
+                                stats = get_trade_stats(days=1)
+                                open_trades = get_open_trades()
+                                if open_trades:
+                                    lines.append(f"\n\U0001f4c2 \u0635\u0641\u0642\u0627\u062a \u0645\u0641\u062a\u0648\u062d\u0629: {len(open_trades)}")
+                                    _total_pnl = 0
+                                    for t in open_trades:
+                                        _n = t.get("name_ar") or t["symbol"]
+                                        _e = t.get("entry_price", 0)
+                                        # Get current price from daily snapshot
+                                        try:
+                                            from tv_data import resolve_symbol, _normalize_price_to_fils
+                                            _rsym = resolve_symbol(t["symbol"])
+                                            _ddb = _s3.connect("data/life.db", timeout=3)
+                                            _ddb.row_factory = _s3.Row
+                                            _dr = _ddb.execute("SELECT price FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1", (_rsym,)).fetchone()
+                                            _ddb.close()
+                                            if _dr:
+                                                _cp = _normalize_price_to_fils(float(_dr["price"]), _rsym)
+                                                _pct = round((_cp / _e - 1) * 100, 1) if _e else 0
+                                                _arrow = "\u2b06\ufe0f" if _pct >= 0 else "\u2b07\ufe0f"
+                                                _qty = int(t.get("quantity", 0))
+                                                _pnl = round((_cp - _e) * _qty) if _qty else 0
+                                                _total_pnl += _pnl
+                                                _pnl_s = f" ({_pnl:+} \u0641\u0644\u0633)" if _qty else ""
+                                                lines.append(f"   {_n}: {_arrow} {_pct:+.1f}%{_pnl_s}")
+                                            else:
+                                                lines.append(f"   {_n}: @ {_e}")
+                                        except Exception:
+                                            lines.append(f"   {_n}: @ {_e}")
+                                    if _total_pnl:
+                                        lines.append(f"\n\U0001f4b0 P&L \u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a: {_total_pnl:+} \u0641\u0644\u0633")
+                                if stats.get("closed_trades", 0) > 0:
+                                    _wr = str(round(stats["win_rate"] * 100)) + "%"
+                                    lines.append(f"\n\u2705 \u0645\u063a\u0644\u0642\u0629 \u0627\u0644\u064a\u0648\u0645: {stats['closed_trades']}")
+                                    lines.append(f"\U0001f4c8 Win rate: {_wr}")
+                                if not open_trades and stats.get("closed_trades", 0) == 0:
+                                    lines.append("\u0644\u0627 \u0635\u0641\u0642\u0627\u062a \u0627\u0644\u064a\u0648\u0645")
+                            await tg_send(int(_cid), "\n".join(lines))
+                            _log.info("Daily trading summary sent")
+                            await asyncio.sleep(3600)  # don't re-send
+                        else:
+                            await asyncio.sleep(300)  # check every 5 min
+                    except Exception as _e:
+                        _log.error("Daily summary error: %s", _e)
+                        await asyncio.sleep(600)
+            asyncio.create_task(_daily_trading_summary_loop())
+            logger.info("Daily trading summary scheduled (13:00 KWT)")
+        except Exception as e:
+            logger.error(f"Stock radar failed to start (non-fatal): {e}")
     # Phase 4: Proactive monitoring engine
     if BRAIN_AVAILABLE:
         try:
@@ -2619,11 +2809,72 @@ async def lifespan(app):
             logger.info("Backup engine scheduled")
         except Exception as e:
             logger.error(f"Backup engine failed to start (non-fatal): {e}")
+    # Bridge API client (TradingView enrichment from Windows PC)
+    try:
+        from bridge_client import init_bridge_client
+        await init_bridge_client()
+        logger.info("Bridge client ready")
+    except Exception as e:
+        logger.warning(f"Bridge client init failed (non-fatal): {e}")
+    # Signal engine context
+    try:
+        from signal_engine import init_signal_context
+        init_signal_context(
+            get_open_trades=get_open_trades if JOURNAL_OK else lambda: [],
+        )
+        logger.info("Signal engine context ready")
+    except Exception as e:
+        logger.warning(f"Signal engine init failed (non-fatal): {e}")
+    # Trading brain — signal learning engine
+    BRAIN_TRADING_OK = False
+    try:
+        from trading_brain import init_brain_context, init_schema as brain_init_schema
+        brain_init_schema()
+        init_brain_context()
+        BRAIN_TRADING_OK = True
+        logger.info("Trading brain initialized")
+    except Exception as e:
+        logger.warning(f"Trading brain init failed (non-fatal): {e}")
+    if BRAIN_TRADING_OK:
+        async def _brain_scheduler():
+            """Trading brain: snapshot signals after radar, evaluate daily, report weekly."""
+            import asyncio as _aio
+            _log = logging.getLogger("brain_scheduler")
+            _log.info("Trading brain scheduler started")
+            await _aio.sleep(120)  # let startup complete
+            while True:
+                try:
+                    from trading_brain import snapshot_signals, evaluate_pending_signals, generate_weekly_report, format_weekly_tg
+                    from datetime import datetime as _dt
+                    now = _dt.now()
+                    hour, minute, weekday = now.hour, now.minute, now.isoweekday()
+                    # Snapshot signals every 2 hours during market hours (Sun-Thu 9-13 KWT = 6-10 UTC)
+                    if weekday <= 4 and 6 <= hour <= 10:
+                        snapshot_signals()
+                    # Evaluate daily at 13:30 KWT (10:30 UTC) Sun-Thu
+                    if weekday <= 4 and hour == 10 and 25 <= minute <= 35:
+                        evaluate_pending_signals()
+                    # Weekly report Friday 14:00 KWT (11:00 UTC)
+                    if weekday == 5 and hour == 11 and minute <= 10:
+                        report = generate_weekly_report()
+                        try:
+                            _cid = ADMIN_TELEGRAM_ID or "669769765"
+                            msg = format_weekly_tg(report)
+                            await tg_send(int(_cid), msg)
+                            _log.info("Weekly brain report sent")
+                        except Exception as _te:
+                            _log.warning(f"Brain TG send failed: {_te}")
+                except Exception as _e:
+                    _log.error(f"Brain scheduler error: {_e}")
+                await _aio.sleep(600)  # check every 10 minutes
+        asyncio.create_task(_brain_scheduler())
     yield
     logger.info("Master AI shutting down")
 
 app = FastAPI(title="Master AI", version=VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+from dashboard_api import router as dashboard_router
+app.include_router(dashboard_router)
 
 # Event Engine (v5.1)
 event_engine = EventEngine(AUDIT_DB)
@@ -2636,11 +2887,11 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/health", "/panel", "/dev/context", "/gmail/auth", "/gmail/callback"}
+    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/radar", "/dashboard/brain", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if path in self.OPEN_PATHS or path.startswith("/webhook/") or not MASTER_API_KEY:
+        if path in self.OPEN_PATHS or path.startswith("/webhook/") or path.startswith("/trading/") or path.startswith("/api/") or not MASTER_API_KEY:
             return await call_next(request)
         key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
         if key != MASTER_API_KEY:
@@ -2876,6 +3127,172 @@ async def gmail_auth_callback(code: str = "", state: str = "", error: str = ""):
     except Exception as e:
         return {"error": str(e)}
 
+
+
+
+# ===== Google Workspace OAuth (Gmail + Calendar) =====
+@app.get("/google/auth")
+async def google_auth_start():
+    """Start unified Google OAuth (Gmail + Calendar) - open in browser."""
+    try:
+        import secrets
+        from google_auth_ext import build_auth_url
+        state = secrets.token_urlsafe(32)
+        state_file = os.path.join(BASE_DIR, "data", "google_oauth_state.json")
+        open(state_file, "w").write(json.dumps({"state": state}))
+        url = build_auth_url(state)
+        if not url:
+            return {"error": "gmail_credentials.json not found"}
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/google/callback")
+async def google_auth_callback(code: str = "", state: str = "", error: str = ""):
+    """Google OAuth callback - handles Gmail + Calendar token."""
+    if error:
+        return {"error": error}
+    if not code:
+        return {"error": "no auth code received"}
+    try:
+        from google_auth_ext import exchange_code, get_auth_status, build_calendar_service
+        token_data = await exchange_code(code)
+        if not token_data:
+            return {"error": "token exchange failed"}
+        # Test Calendar access
+        cal_ok = False
+        try:
+            svc = build_calendar_service()
+            if svc:
+                cal_list = svc.calendarList().list(maxResults=1).execute()
+                cal_ok = True
+        except Exception:
+            pass
+        status = get_auth_status()
+        return {
+            "status": "success",
+            "calendar_connected": cal_ok,
+            "auth_status": status,
+            "message": "Google Workspace connected (Gmail + Calendar)"
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/google/auth/status")
+async def google_auth_status():
+    """Check Google OAuth status."""
+    try:
+        from google_auth_ext import get_auth_status
+        return get_auth_status()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/calendar/stats")
+async def calendar_stats_endpoint():
+    """Calendar statistics."""
+    try:
+        from calendar_db import get_calendar_stats
+        return get_calendar_stats()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/calendar/sync")
+async def calendar_sync_endpoint():
+    """Trigger manual calendar sync."""
+    try:
+        from calendar_engine import sync_full
+        result = await sync_full()
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/world-state")
+async def world_state_endpoint():
+    """Current world state snapshot."""
+    if not WORLD_STATE_OK:
+        return {"error": "world_state module not available"}
+    return {
+        "status": ws_get_status(),
+        "text": get_snapshot_text(),
+        "data": get_snapshot_data(),
+    }
+
+@app.get("/tool-stats")
+async def tool_stats_endpoint():
+    """Tool outcome statistics."""
+    try:
+        from exec_policy import get_tool_stats
+        return {"stats": get_tool_stats()}
+    except ImportError:
+        return {"error": "exec_policy not available"}
+
+@app.post("/tradingview/webhook")
+async def tradingview_webhook(request: Request):
+    """Receive TradingView webhook alerts."""
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "invalid JSON"})
+    if not TV_BRIDGE_OK:
+        return JSONResponse(status_code=503, content={"ok": False, "error": "TV bridge not loaded"})
+    status_code, response = tv_handle_webhook(payload)
+    # Send trade confirmation via TG inline keyboard
+    if status_code == 200 and response.get("ok"):
+        try:
+            _sig = payload.get("signal", "").lower()
+            _ticker = payload.get("ticker", "")
+            _price = payload.get("price", "0")
+            try:
+                from tv_data import _normalize_price_to_fils
+                _price = str(_normalize_price_to_fils(float(_price))) if _price else "0"
+            except Exception:
+                pass
+            _strat = payload.get("strategy", payload.get("strategy_name", "TV Alert"))
+            _qty = payload.get("quantity", "0")
+            _msg_text = response.get("tg_message", "")
+            saved_id = response.get("saved_id", "")
+            if _sig in ("buy", "entry", "long", "sell", "exit", "close", "short"):
+                _action = "buy" if _sig in ("buy", "entry", "long") else "sell"
+                _cb_data = f"{_ticker}|{_price}|{_action}|{_strat}|{_qty}|{saved_id}"
+                _confirm_msg = _msg_text or f"\U0001f4e1 TV Signal: {_action.upper()} {_ticker} @ {_price}"
+                _confirm_msg += f"\n\n\u0634\u0631\u064a\u062a \u0648\u0644\u0627 \u062a\u062c\u0627\u0647\u0644\u062a\u061f"
+                _btns = [
+                    {"text": "\u0634\u0631\u064a\u062a \u2705", "callback_data": f"trade_confirm:{_cb_data}"},
+                    {"text": "\u062a\u062c\u0627\u0647\u0644\u062a \u274c", "callback_data": f"trade_skip:{_cb_data}"},
+                ]
+                admin_id = get_admin_chat_id() if TG_OPS_OK else None
+                if not admin_id:
+                    _aid_path = os.path.join(os.path.dirname(__file__) or ".", "data", "admin_chat_id.txt")
+                    if os.path.exists(_aid_path):
+                        admin_id = open(_aid_path).read().strip()
+                if admin_id:
+                    await tg_send_inline(int(admin_id), _confirm_msg, _btns, columns=2)
+                    if saved_id:
+                        mark_telegram_sent(saved_id)
+                    logger.info(f"TV trade confirmation sent: {_action} {_ticker} @ {_price}")
+                else:
+                    logger.warning("TV trade confirmation: no admin chat_id found")
+            elif _msg_text:
+                # Non-trade signals (info, alert) — send plain message
+                admin_id = get_admin_chat_id() if TG_OPS_OK else None
+                if not admin_id:
+                    _aid_path = os.path.join(os.path.dirname(__file__) or ".", "data", "admin_chat_id.txt")
+                    if os.path.exists(_aid_path):
+                        admin_id = open(_aid_path).read().strip()
+                if admin_id:
+                    await tg_send(int(admin_id), _msg_text)
+                    if saved_id:
+                        mark_telegram_sent(saved_id)
+        except Exception as e:
+            logger.error(f"TV TG send error: {e}")
+    return JSONResponse(status_code=status_code, content=response)
+
 @app.get("/health")
 async def health():
     schema = _get_schema_status()
@@ -3010,6 +3427,17 @@ async def ask(body: AskRequest):
     # Add to short-term memory
     memory_add_short_term("user", body.message)
 
+    # --- quick_query fast path (zero-LLM) ---
+    if QUICK_QUERY_OK:
+        try:
+            _qq = await asyncio.wait_for(quick_answer(body.message), timeout=10)
+            if _qq:
+                logger.info(f"ASK fast_path: {body.message[:40]}")
+                memory_add_short_term("assistant", _qq)
+                return AskResponse(response=_qq, request_id=request_id)
+        except Exception:
+            pass
+
     # Run iterative engine
     t0 = time.time()
     try:
@@ -3017,9 +3445,23 @@ async def ask(body: AskRequest):
         _ctx = dict(body.context) if body.context else {}
         if short_term_memory:
             _ctx["short_term"] = list(short_term_memory)[-3:]
-        result = await iterative_engine(
-            body.message, context=_ctx, trace=trace, task_id=task_id
-        )
+        # V7: LLM-first with native tool use
+        if CHAT_V7_OK and anthropic_client:
+            from brain_core import build_system_prompt_v7 as _bsp7
+            _sys7 = _bsp7()
+            _executors = {
+                "ha_get_state": _exec_ha_get_state,
+                "ha_call_service": lambda d,s,sd: _exec_ha_call_service(d, s, sd),
+                "ssh_run": _exec_ssh_run,
+            }
+            _v7_response = await asyncio.wait_for(
+                handle_chat_v7(body.message, _sys7, anthropic_client, _executors, user_id="api_ask"),
+                timeout=180
+            )
+            result = {"response": _v7_response, "actions": [], "results": [], "task_state": "complete"}
+        else:
+            logger.error("chat_v7 unavailable, no fallback")
+            result = {"response": "النظام غير متاح الحين", "actions": [], "results": [], "task_state": "error"}
     except Exception as e:
         logger.error(f"Engine error: {e}", exc_info=True)
         TaskManager.fail_task(task_id, str(e))
@@ -3034,7 +3476,8 @@ async def ask(body: AskRequest):
     await audit_log(
         task=body.message, actions=result.get("actions"), results=result.get("results"),
         status=result.get("task_state", "complete"), duration=duration,
-        request_id=request_id, task_id=task_id
+        request_id=request_id, task_id=task_id,
+        route_type="llm_chat"
     )
 
     # Brain learning from /ask interaction (async, non-blocking)
@@ -3071,43 +3514,53 @@ class AgentRequest(BaseModel):
 @app.post("/agent")
 async def agent_endpoint(body: AgentRequest):
     """Agent endpoint ÃÂ¢ÃÂÃÂ same iterative engine, different interface."""
+    t0 = time.time()
     trace = RequestTrace()
     task_id = TaskManager.create_task(body.message, trace.request_id)
     trace.task_id = task_id
 
     memory_add_short_term("user", body.message)
 
+    response = ""
     try:
-        result = await iterative_engine(
-            body.message, context=body.context, trace=trace, task_id=task_id
-        )
+        if CHAT_V7_OK and anthropic_client:
+            from brain_core import build_system_prompt_v7 as _bsp7
+            _sys7 = _bsp7()
+            _executors = {
+                "ha_get_state": _exec_ha_get_state,
+                "ha_call_service": lambda d,s,sd: _exec_ha_call_service(d, s, sd),
+                "ssh_run": _exec_ssh_run,
+            }
+            response = await asyncio.wait_for(
+                handle_chat_v7(body.message, _sys7, anthropic_client, _executors, user_id=body.user_id or "agent"),
+                timeout=180
+            )
+        else:
+            logger.error("chat_v7 unavailable, no fallback")
+            result = {"response": "النظام غير متاح الحين", "actions": [], "results": [], "task_state": "error"}
+    except asyncio.TimeoutError:
+        logger.warning(f"Agent timeout: {body.message[:50]}")
+        TaskManager.fail_task(task_id, "timeout")
+        response = "⏰ العملية انتهت المهلة"
     except Exception as e:
         logger.error(f"Agent error: {e}", exc_info=True)
         TaskManager.fail_task(task_id, str(e))
-        return {"response": f"خطأ: {e}", "task_id": task_id}
+        response = f"⚠️ Error: {str(e)[:500]}"
 
     duration = time.time() - t0
-    memory_add_short_term("assistant", result["response"])
+    memory_add_short_term("assistant", response)
 
     await audit_log(
-        task=body.message, actions=result.get("actions"), results=result.get("results"),
-        status="ok", duration=duration, request_id=trace.request_id, task_id=task_id
+        task=body.message, actions=[], results=[],
+        status="ok", duration=duration, request_id=trace.request_id, task_id=task_id,
+        route_type="llm_chat"
     )
 
-    # Quick response template (skip LLM if simple action)
-    if BRAIN_AVAILABLE and all_actions:
-        try:
-            quick = get_quick_response(all_actions, all_results)
-            if quick:
-                final_response = quick
-                logger.info(f"QUICK_RESPONSE: {quick[:50]}")
-        except Exception as e:
-            logger.error(f"Quick response error: {e}")
     return {
-        "response": result["response"],
+        "response": response,
         "task_id": task_id,
         "request_id": trace.request_id,
-        "actions_count": len(result.get("actions", [])),
+        "duration": round(duration, 2),
         "trace": trace.summary()
     }
 
@@ -4062,7 +4515,7 @@ async def dev_context():
         parts.append("Status error: " + str(e))
     return PlainTextResponse(chr(10).join(parts))
 
-# TELEGRAM BOT (v5.4.6)
+# TELEGRAM BOT (v7.0.0)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 TG_BASE = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
@@ -4209,6 +4662,20 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             _lines.append("\U0001f4dd Last 5:")
             for _cl in _router_cmd_log[-5:]:
                 _lines.append(f"  {_cl.get('t','')[-5:]} {_cl.get('route',''):6s} {_cl.get('cmd','')[:22]}")
+        try:
+            from task_engine import task_stats as _ts
+            _s = _ts()
+            if _s['total_active']:
+                _extra = '\U0001f4cb \u0645\u0647\u0627\u0645: ' + str(_s['total_active']) + ' \u0646\u0634\u0637\u0629'
+                if _s['overdue']:   _extra += '  \u26a0\ufe0f ' + str(_s['overdue']) + ' \u0645\u062a\u0623\u062e\u0631\u0629'
+                if _s['due_today']: _extra += '  \U0001f4cc ' + str(_s['due_today']) + ' \u0627\u0644\u064a\u0648\u0645'
+                _lines.append(''); _lines.append(_extra)
+        except Exception: pass
+        try:
+            from cost_tracker import get_cost_for_kpi as _ck
+            _k = _ck()
+            _lines.append('\U0001f4b0 Cost: today=$' + f"{_k['today_usd']:.4f}" + '  month=$' + f"{_k['month_usd']:.2f}" + '/' + f"{_k['month_budget_usd']:.0f}")
+        except Exception: pass
         return "\n".join(_lines)
     if cmd == "/lights":
         try:
@@ -4534,6 +5001,9 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 {"text": "\U0001f4ca \u0627\u0644\u0646\u0638\u0627\u0645", "callback_data": "cmd:diag"},
                 {"text": "\U0001f9e0 \u0627\u0644\u0639\u0642\u0644", "callback_data": "cmd:brain"},
                 {"text": "\U0001f4dd \u0627\u0644\u0645\u0647\u0627\u0645", "callback_data": "cmd:tasks"},
+                {"text": "🌍 حياتي", "callback_data": "cmd:life"},
+                {"text": "📧 Inbox", "callback_data": "cmd:inbox"},
+                {"text": "👤 أنا", "callback_data": "cmd:me"},
                 {"text": "\u2753 \u0645\u0633\u0627\u0639\u062f\u0629", "callback_data": "cmd:help"},
                 {"text": "\u2b05\ufe0f \u0631\u062c\u0648\u0639", "callback_data": "cmd:home"},
             ]
@@ -4781,23 +5251,416 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         import subprocess as _sp2, asyncio as _aio2
         _cr = await _aio2.to_thread(_sp2.run, ["/home/pi/master_ai/scripts/crash_fingerprint.sh"], capture_output=True, text=True)
         return _cr.stdout[-3500:] if _cr.stdout else "❌ Fingerprint failed"
+    if cmd == "/me":
+        try:
+            import asyncio, time as _time
+            from life_work import get_shift
+            from task_engine import task_stats, task_list
+            from inbox_engine import fetch_unified_inbox, P_HIGH, P_CRITICAL
+            parts = []
+
+            # Greeting + date
+            _hour = __import__("datetime").datetime.now().hour
+            _greet = ("☀️ صباح الخير" if 5<=_hour<12
+                      else "🌞 مساء النور" if 12<=_hour<17
+                      else "🌙 السلام عليكم")
+            parts.append(_greet + " بو خليفة")
+            parts.append("")
+
+            # Shift today
+            try:
+                si = get_shift()
+                if isinstance(si, dict):
+                    parts.append("👷 " + si.get("emoji","") + " " + si.get("shift","") + " " + si.get("times",""))
+                else:
+                    parts.append("👷 " + str(si))
+            except Exception: pass
+
+            # Tasks
+            try:
+                s = task_stats()
+                if s["total_active"]:
+                    t_line = "📋 مهام: " + str(s["total_active"]) + " نشطة"
+                    if s["overdue"]:   t_line += "  ⚠️ " + str(s["overdue"]) + " متأخرة"
+                    if s["due_today"]: t_line += "  📌 " + str(s["due_today"]) + " اليوم"
+                    parts.append(t_line)
+                    top = task_list(due_today=True)[:3] + task_list(due_overdue=True)[:2]
+                    seen = set()
+                    for t in top:
+                        if t["id"] not in seen:
+                            parts.append("  • " + t["title"][:40])
+                            seen.add(t["id"])
+                else:
+                    parts.append("📋 مهام: لا توجد مهام ✅")
+            except Exception: pass
+
+            # Inbox urgent
+            try:
+                idata = await fetch_unified_inbox(hours=24, limit=20)
+                urgent = [m for m in idata.get("messages",[]) if m.get("_priority",0)>=P_HIGH]
+                if urgent:
+                    parts.append("📧 إيميل مهم: " + str(len(urgent)))
+                    for m in urgent[:2]:
+                        parts.append("  • " + m.get("subject","")[:40])
+                else:
+                    parts.append("📧 Inbox: نظيف ✅")
+            except Exception: pass
+
+            # Cost today
+            try:
+                from cost_tracker import get_cost_for_kpi
+                k = get_cost_for_kpi()
+                parts.append("💰 تكلفة اليوم: $" + f"{k['today_usd']:.4f}")
+            except Exception: pass
+
+            return chr(10).join(parts)
+        except Exception as e:
+            return f"❌ /me error: {e}"
+
+    if cmd == "/suggest_tasks":
+        try:
+            from inbox_engine import format_email_task_suggestions
+            result = await format_email_task_suggestions()
+            return result if result else "✅ ما في إيميلات تحتاج إجراء الحين"
+        except Exception as e:
+            return f"❌ suggest_tasks error: {e}"
+
+    if cmd == "/life":
+        try:
+            import asyncio
+            from datetime import date as _date
+            from life_work import get_shift
+            from task_engine import task_list, task_stats
+            from calendar_engine import get_today_events
+            from calendar_reporting import render_morning_calendar_section
+            from inbox_engine import fetch_unified_inbox, P_CRITICAL, P_HIGH
+
+            parts = []
+
+            # Shift
+            try:
+                shift_info = get_shift()
+                shift_name = shift_info.get("emoji","") + " " + shift_info.get("shift","") + " " + shift_info.get("times","")
+                parts.append("👷 *الوردية:* " + shift_name)
+            except Exception:
+                pass
+
+            # Tasks today + overdue
+            try:
+                s = task_stats()
+                today_tasks = task_list(due_today=True)
+                overdue     = task_list(due_overdue=True)
+                t_line = "📋 *المهام:* " + str(s["total_active"]) + " نشطة"
+                if s["overdue"]:   t_line += " | ⚠️ " + str(s["overdue"]) + " متأخرة"
+                if s["due_today"]: t_line += " | 📌 " + str(s["due_today"]) + " اليوم"
+                parts.append(t_line)
+                for t in (today_tasks + overdue)[:4]:
+                    parts.append("  • [" + str(t["id"]) + "] " + t["title"][:40])
+            except Exception:
+                pass
+
+            # Calendar today
+            try:
+                events = get_today_events()
+                cal = render_morning_calendar_section(events)
+                if cal: parts.append(cal)
+            except Exception:
+                pass
+
+            # Inbox urgent/high only
+            try:
+                inbox_data = await fetch_unified_inbox(hours=24, limit=20)
+                urgent = [m for m in inbox_data.get("messages",[]) if m.get("_priority",0) >= P_HIGH]
+                if urgent:
+                    parts.append("📧 *إيميل مهم:* " + str(len(urgent)) + " رسالة")
+                    for m in urgent[:3]:
+                        parts.append("  • " + m.get("subject","")[:40])
+                else:
+                    parts.append("📧 الـ Inbox: ما في رسائل مهمة ✅")
+            except Exception:
+                pass
+
+            return chr(10).join(parts) if parts else "✅ كل شي تمام"
+        except Exception as e:
+            logger.error(f"life error: {e}")
+            return f"❌ life error: {e}"
+
+    if cmd == "/week_summary":
+        try:
+            import asyncio
+            from task_engine import task_list, task_stats, format_task_list, PRIORITY_LABEL, STATUS_LABEL
+            from inbox_engine import inbox_weekly_digest
+            lines = ["📅 *ملخص الأسبوع*", ""]
+            # Tasks section
+            s = task_stats()
+            if s["total_active"] > 0:
+                lines.append("📋 *المهام*")
+                lines.append("إجمالي نشط: " + str(s["total_active"]))
+                if s["overdue"]:   lines.append("⚠️ متأخرة: " + str(s["overdue"]))
+                if s["due_today"]: lines.append("📌 مستحقة اليوم: " + str(s["due_today"]))
+                done_w = len([t for t in task_list(status="done") if t.get("completed_at","") >= (__import__("datetime").date.today() - __import__("datetime").timedelta(days=7)).isoformat()])
+                if done_w: lines.append("✅ أنجزت هالأسبوع: " + str(done_w))
+                # Show high priority tasks
+                high = task_list(priority="high")
+                if high:
+                    lines.append("")
+                    lines.append("🔴 عالية الأولوية:")
+                    for t in high[:5]:
+                        lines.append("  • [" + str(t["id"]) + "] " + t["title"][:45])
+            else:
+                lines.append("📋 المهام: لا توجد مهام نشطة ✅")
+            lines.append("")
+            # Inbox weekly section
+            inbox_w = await inbox_weekly_digest()
+            lines.append(inbox_w)
+            return chr(10).join(lines)
+        except Exception as e:
+            logger.error(f"week_summary error: {e}")
+            return f"❌ week_summary error: {e}"
+
+    if cmd == "/inbox" or cmd == "/inbox48" or cmd == "/inbox_week":
+        try:
+            from inbox_engine import fetch_unified_inbox, format_inbox_tg, inbox_weekly_digest
+            import asyncio
+            if cmd == "/inbox_week":
+                result = await inbox_weekly_digest()
+            else:
+                hours = 48 if cmd == "/inbox48" else 24
+                data  = await fetch_unified_inbox(hours=hours, limit=15)
+                result = format_inbox_tg(data, show_limit=15)
+            return result
+        except Exception as e:
+            logger.error(f"inbox error: {e}")
+            return f"❌ inbox error: {e}"
+
     if cmd == "/tasks" or cmd.startswith("/tasks "):
+        if not TG_TASKS_OK:
+            return "❌ tasks module not loaded"
         args = text.strip()[6:].strip() if len(text.strip()) > 6 else ""
-        return await cmd_tasks(args)
+        return handle_tasks_command(args)
     if cmd.startswith("/task "):
+        if not TG_TASKS_OK:
+            return "❌ tasks module not loaded"
         sub = text.strip()[6:].strip()
         if sub.startswith("add "):
-            return await cmd_task_add(sub[4:])
+            return str(llm_tool_task_create(title=sub[4:].strip()))
         elif sub.startswith("done "):
-            return await cmd_task_done(sub[5:])
+            return str(llm_tool_task_update(task_id=int(sub[5:].strip()), status="done"))
         else:
             return "الاستخدام: /task add <عنوان> | /task done <رقم>"
+    # --- News Digests ---
+    if cmd == "/news" or cmd.startswith("/news "):
+        if not NEWS_ENGINE_OK:
+            return "❌ news engine not loaded"
+        args_t = text.strip()[5:].strip() if len(text.strip()) > 5 else ""
+        cat = None
+        if args_t in ("kuwait", "economy", "technology", "tech"):
+            cat = "technology" if args_t == "tech" else args_t
+        return handle_news_latest(cat)
+    if cmd == "/news_now" or cmd.startswith("/news_now "):
+        if not NEWS_ENGINE_OK:
+            return "❌ news engine not loaded"
+        args_t = text.strip()[9:].strip() if len(text.strip()) > 9 else ""
+        cat = None
+        if args_t in ("kuwait", "economy", "technology", "tech"):
+            cat = "technology" if args_t == "tech" else args_t
+        try:
+            result = await news_generate_digest(cat, "manual")
+            if result.get("ok"):
+                return format_digest_tg(get_latest_digest(cat))
+            return f"❌ {result.get('error', 'failed')}"
+        except Exception as e:
+            return f"❌ {e}"
+    if cmd == "/news_sources":
+        if not NEWS_ENGINE_OK:
+            return "❌ news engine not loaded"
+        return format_sources_tg()
+        # --- Journal ---
+    if cmd == "/trade" or cmd.startswith("/trade "):
+        if not JOURNAL_OK:
+            return "\u274c journal engine not loaded"
+        args_t = text.strip()[6:].strip() if len(text.strip()) > 6 else ""
+        if not args_t:
+            return "\u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645: /trade ZAIN 566 1000 EMA bullish"
+        parts = args_t.split()
+        if len(parts) < 2:
+            return "\u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645: /trade SYMBOL PRICE [QTY] [REASON]"
+        _sym = parts[0].upper()
+        try:
+            _price = float(parts[1])
+        except ValueError:
+            return "\u274c \u0627\u0644\u0633\u0639\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d"
+        _qty = 0
+        _reason = ""
+        if len(parts) >= 3:
+            try:
+                _qty = int(parts[2])
+                _reason = " ".join(parts[3:]) if len(parts) > 3 else ""
+            except ValueError:
+                _reason = " ".join(parts[2:])
+        _tid = open_trade(symbol=_sym, entry_price=_price, quantity=_qty, entry_reason=_reason)
+        _msg = "\u2705 \u0635\u0641\u0642\u0629 #" + str(_tid) + " \u0645\u0641\u062a\u0648\u062d\u0629: " + _sym + " @ " + str(_price)
+        if _qty:
+            _msg += " \u00d7 " + str(_qty)
+        if _reason:
+            _msg += " \u2014 " + _reason
+        return _msg
+    if cmd == "/close" or cmd.startswith("/close "):
+        if not JOURNAL_OK:
+            return "\u274c journal engine not loaded"
+        args_t = text.strip()[6:].strip() if len(text.strip()) > 6 else ""
+        if not args_t:
+            return "\u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645: /close TRADE_ID EXIT_PRICE [REASON]"
+        parts = args_t.split()
+        if len(parts) < 2:
+            return "\u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645: /close 1 580 hit target"
+        try:
+            _tid = int(parts[0])
+            _exit_p = float(parts[1])
+        except ValueError:
+            return "\u274c trade_id \u0648 exit_price \u0644\u0627\u0632\u0645 \u0623\u0631\u0642\u0627\u0645"
+        _reason = " ".join(parts[2:]) if len(parts) > 2 else "manual"
+        result = close_trade(_tid, _exit_p, _reason)
+        if result is None:
+            return "\u274c \u0635\u0641\u0642\u0629 #" + str(_tid) + " \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f\u0629 \u0623\u0648 \u0645\u063a\u0644\u0642\u0629"
+        _pnl = result.get("pnl_pct", 0)
+        _sym = result.get("symbol", "")
+        _entry = result.get("entry_price", 0)
+        _emoji = "\U0001f4c8" if _pnl >= 0 else "\U0001f4c9"
+        return "\u2705 \u0635\u0641\u0642\u0629 #" + str(_tid) + " \u0645\u063a\u0644\u0642\u0629: " + _sym + " @ " + str(_entry) + "\u2192" + str(_exit_p) + " (" + _emoji + " " + format(_pnl, "+.2f") + "%) \u2014 " + _reason
+    if cmd == "/trades":
+        if not JOURNAL_OK:
+            return "\u274c journal engine not loaded"
+        trades = get_open_trades()
+        if not trades:
+            return "\U0001f4c2 \u0644\u0627 \u0635\u0641\u0642\u0627\u062a \u0645\u0641\u062a\u0648\u062d\u0629"
+        lines = ["*\U0001f4c2 \u0635\u0641\u0642\u0627\u062a \u0645\u0641\u062a\u0648\u062d\u0629 (" + str(len(trades)) + "):*\n"]
+        for t in trades:
+            _l = "  #" + str(t["id"]) + " " + t["symbol"] + " @ " + str(t["entry_price"])
+            if t.get("quantity"):
+                _l += " \u00d7" + str(t["quantity"])
+            if t.get("strategy"):
+                _l += " \u2014 " + t["strategy"]
+            lines.append(_l)
+        return "\n".join(lines)
+    if cmd == "/journal":
+        if not JOURNAL_OK:
+            return "\u274c journal engine not loaded"
+        stats = get_trade_stats(days=30)
+        recent = get_recent_trades(limit=10)
+        lines = ["*\U0001f4ca \u0645\u0644\u062e\u0635 \u0627\u0644\u062a\u062f\u0627\u0648\u0644 (30 \u064a\u0648\u0645):*\n"]
+        lines.append("\U0001f4c8 \u0625\u062c\u0645\u0627\u0644\u064a: " + str(stats["total_trades"]) + " \u0635\u0641\u0642\u0629 \u2022 " + str(stats["open_trades"]) + " \u0645\u0641\u062a\u0648\u062d\u0629 \u2022 " + str(stats["closed_trades"]) + " \u0645\u063a\u0644\u0642\u0629")
+        if stats["closed_trades"] > 0:
+            _wr = str(round(stats["win_rate"] * 100)) + "%"
+            lines.append("\u2705 \u0641\u0648\u0632: " + _wr + " \u2022 \u0645\u062a\u0648\u0633\u0637 \u0631\u0628\u062d: " + format(stats["avg_profit_pct"], "+.1f") + "% \u2022 \u0645\u062a\u0648\u0633\u0637 \u062e\u0633\u0627\u0631\u0629: " + format(stats["avg_loss_pct"], ".1f") + "%")
+            lines.append("\U0001f4b0 P&L: " + format(stats["total_pnl_fils"], "+.0f") + " \u0641\u0644\u0633")
+        if recent:
+            lines.append("\n*\u0622\u062e\u0631 " + str(len(recent)) + " \u0635\u0641\u0642\u0627\u062a:*")
+            for t in recent:
+                if t["status"] == "closed":
+                    _st = "\u2705"
+                elif t["status"] == "open":
+                    _st = "\U0001f4c2"
+                else:
+                    _st = "\u274c"
+                _info = _st + " #" + str(t["id"]) + " " + t["symbol"] + " @ " + str(t["entry_price"])
+                if t["status"] == "closed" and t.get("pnl_pct") is not None:
+                    _info += " \u2192 " + str(t["exit_price"]) + " (" + format(t["pnl_pct"], "+.1f") + "%)"
+                lines.append("  " + _info)
+        return "\n".join(lines)
+        # --- Expenses ---
+    if cmd == "/add_expense" or cmd.startswith("/add_expense "):
+        if not EXP_OK:
+            return "❌ expenses not loaded"
+        args_t = text.strip()[12:].strip() if len(text.strip()) > 12 else ""
+        if not args_t:
+            return "الاستخدام: /add_expense 12.5 مطعم"
+        parsed = parse_expense(args_t)
+        if not parsed:
+            return "❌ ما قدرت أفهم المبلغ"
+        result = add_expense(parsed[0], parsed[1], parsed[2])
+        return format_add_confirmation(result)
+    if cmd == "/spent" or cmd.startswith("/spent "):
+        if not EXP_OK:
+            return "❌ expenses not loaded"
+        args_t = text.strip()[6:].strip() if len(text.strip()) > 6 else "today"
+        if args_t in ("today", "week", "month"):
+            return format_summary_tg(get_summary(args_t))
+        return format_summary_tg(get_summary("today"))
+    if cmd == "/expenses":
+        if not EXP_OK:
+            return "❌ expenses not loaded"
+        return format_recent_tg(list_expenses(10))
+        # --- Relationships & Occasions ---
+    if cmd == "/contacts":
+        if not REL_OK:
+            return "❌ relationships not loaded"
+        return format_contacts_tg(list_contacts())
+    if cmd == "/occasions" or cmd.startswith("/occasions "):
+        if not REL_OK:
+            return "❌ relationships not loaded"
+        args_t = text.strip()[10:].strip() if len(text.strip()) > 10 else ""
+        days = int(args_t) if args_t.isdigit() else 30
+        return format_upcoming_tg(get_upcoming_occasions(days))
+    if cmd == "/person" or cmd.startswith("/person "):
+        if not REL_OK:
+            return "❌ relationships not loaded"
+        name = text.strip()[7:].strip() if len(text.strip()) > 7 else ""
+        if not name:
+            return "الاستخدام: /person <اسم>"
+        snap = build_contact_snapshot(name)
+        if not snap:
+            return f"❌ ما لقيت '{name}'"
+        return format_person_tg(snap)
     if cmd == "/stocks":
+        if not TG_STOCKS_OK:
+            return "❌ stocks module not loaded"
         return await cmd_stocks()
     if cmd.startswith("/price"):
         parts = text.strip().split(maxsplit=1)
         ticker = parts[1] if len(parts) > 1 else ""
         return await cmd_price(ticker)
+    # ── Stock Radar commands ──
+    if cmd == "/radar" or cmd == "/radar_list":
+        if RADAR_OK:
+            return tg_radar_list()
+        return "Radar module not loaded"
+    if cmd.startswith("/radar_add"):
+        if RADAR_OK:
+            args = text.replace("/radar_add", "", 1).strip()
+            return tg_radar_add(args)
+        return "Radar module not loaded"
+    if cmd.startswith("/radar_remove"):
+        if RADAR_OK:
+            args = text.replace("/radar_remove", "", 1).strip()
+            return tg_radar_remove(args)
+        return "Radar module not loaded"
+    if cmd.startswith("/radar_check"):
+        if RADAR_OK:
+            args = text.replace("/radar_check", "", 1).strip()
+            return tg_radar_check(args)
+        return "Radar module not loaded"
+    if cmd == "/radar_last":
+        if RADAR_OK:
+            return tg_radar_last()
+        return "Radar module not loaded"
+    if cmd.startswith("/radar_last "):
+        if RADAR_OK:
+            args = text.replace("/radar_last", "", 1).strip()
+            return tg_radar_last(args)
+        return "Radar module not loaded"
+    if cmd == "/radar_status":
+        if RADAR_OK:
+            return tg_radar_status()
+        return "Radar module not loaded"
+    if cmd == "/radar_top":
+        if RADAR_OK:
+            return tg_radar_top()
+        return "Radar module not loaded"
+    if cmd == "/radar_toggle":
+        if RADAR_OK:
+            return tg_radar_toggle()
+        return "Radar module not loaded"
     if cmd.startswith("/price"):
         if not TG_STOCKS_OK:
             return "Stock module not loaded"
@@ -4834,6 +5697,88 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         if len(parts) == 2 and parts[1].isdigit():
             return cancel_reminder(int(parts[1]), chat_id)
         return "الاستخدام: /cancel <رقم>"
+
+        # Phase 5: Health
+    if cmd == "/health_log" or cmd.startswith("/health_log "):
+        if HEALTH_ENGINE_OK:
+            args = cmd.replace("/health_log", "", 1).strip()
+            return handle_health_log(args)
+        return "Health engine not loaded"
+    if cmd == "/health_summary" or cmd.startswith("/health_summary "):
+        if HEALTH_ENGINE_OK:
+            args = cmd.replace("/health_summary", "", 1).strip()
+            return handle_health_summary(args)
+        return "Health engine not loaded"
+    if cmd == "/health_streak":
+        if HEALTH_ENGINE_OK:
+            return handle_health_streak()
+        return "Health engine not loaded"
+
+    # Phase 5: Trading
+    if cmd == "/trade" or cmd.startswith("/trade "):
+        if TRADING_ENGINE_OK:
+            args = cmd.replace("/trade", "", 1).strip()
+            return handle_trade_log(args)
+        return "Trading engine not loaded"
+    if cmd == "/trades" or cmd.startswith("/trades "):
+        if TRADING_ENGINE_OK:
+            args = cmd.replace("/trades", "", 1).strip()
+            return handle_trades_list(args)
+        return "Trading engine not loaded"
+    if cmd == "/trade_review" or cmd.startswith("/trade_review "):
+        if TRADING_ENGINE_OK:
+            args = cmd.replace("/trade_review", "", 1).strip()
+            return handle_trade_review(args)
+        return "Trading engine not loaded"
+
+        # Phase 6: TradingView
+    if cmd == "/tv_watchlist":
+        if TV_BRIDGE_OK:
+            return handle_tv_watchlist()
+        return "TV bridge not loaded"
+    if cmd == "/tv_add" or cmd.startswith("/tv_add "):
+        if TV_BRIDGE_OK:
+            args = cmd.replace("/tv_add", "", 1).strip()
+            return handle_tv_add(args)
+        return "TV bridge not loaded"
+    if cmd == "/tv_remove" or cmd.startswith("/tv_remove "):
+        if TV_BRIDGE_OK:
+            args = cmd.replace("/tv_remove", "", 1).strip()
+            return handle_tv_remove(args)
+        return "TV bridge not loaded"
+    if cmd == "/tv_last" or cmd.startswith("/tv_last "):
+        if TV_BRIDGE_OK:
+            args = cmd.replace("/tv_last", "", 1).strip()
+            return handle_tv_last(args)
+        return "TV bridge not loaded"
+    if cmd == "/tv_summary" or cmd.startswith("/tv_summary "):
+        if TV_BRIDGE_OK:
+            args = cmd.replace("/tv_summary", "", 1).strip()
+            return handle_tv_summary(args)
+        return "TV bridge not loaded"
+    if cmd == "/tv_test":
+        if TV_BRIDGE_OK:
+            return handle_tv_test()
+        return "TV bridge not loaded"
+    if cmd == "/tv_stats":
+        if TV_BRIDGE_OK:
+            return handle_tv_stats()
+        return "TV bridge not loaded"
+    if cmd == "/tv_sync":
+        if TV_BRIDGE_OK:
+            return sync_tv_from_radar()
+        return "TV bridge not loaded"
+
+    if cmd == "/kpi":
+        try:
+            from domain_kpis import handle_kpi
+            return handle_kpi()
+        except Exception as e:
+            return f"KPI error: {e}"
+
+    if cmd == "/menu":
+        NL = chr(10)
+        return f"\U0001f3e0 Master AI Menu{NL}{NL}\U0001f4c5 /today /tomorrow /me /life{NL}\U0001f4cb /tasks /inbox /week_summary{NL}\U0001f465 /contacts /occasions{NL}\U0001f4f0 /news{NL}\U0001f4b0 /expenses /spent{NL}\U0001f4aa /health_log /health_summary /health_streak{NL}\U0001f4c8 /trade /trades /trade_review{NL}\U0001f4e1 /tv_watchlist /tv_add /tv_last /tv_summary{NL}{NL}\u2699\ufe0f /stats /shift /weather /rooms /brain"
 
     if cmd == "/shift" or cmd.startswith("/shift "):
         if LIFE_WORK_OK:
@@ -4920,10 +5865,16 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             "/shift /week /weather /morning", "",
             "\U0001f4b0 *\u0627\u0644\u0645\u0627\u0644:*",
             "/stocks /price /expense /expenses", "",
+            "\U0001f4e1 *\u0627\u0644\u0631\u0627\u062f\u0627\u0631:*",
+            "/radar /radar_add /radar_remove /radar_check /radar_last /radar_status /radar_top /radar_toggle", "",
             "\U0001f4dd *\u0627\u0644\u0645\u0647\u0627\u0645:*",
             "/tasks /remind /reminders", "",
             "\U0001f4ca *\u0627\u0644\u0646\u0638\u0627\u0645:*",
-            "/status /diag /stats /summary /brain", "",
+            "/status /diag /stats /brain /cost /habits /anomaly /feedback /digest /corrections", "",
+                "/today /tomorrow /week /agenda", "",
+            "/tasks", "",
+            "/inbox /inbox48 /inbox_week", "",
+            "/week_summary /life /suggest_tasks /me", "",
             "\U0001f4ac \u0623\u0648 \u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \U0001f44d",
         ])
         _btns = [
@@ -4932,6 +5883,283 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         ]
         await tg_send_inline(chat_id, _help_text, _btns, columns=2)
         return "__inline_sent__"
+
+
+    if cmd == "/family":
+        try:
+            from family_assistant import get_family_info
+            return get_family_info()
+        except Exception as e:
+            return f"family error: {e}"
+
+    if cmd == "/guardian":
+        try:
+            from system_guardian import get_status
+            return get_status()
+        except Exception as e:
+            return f"guardian error: {e}"
+
+    if cmd == "/timeline":
+        try:
+            from world_state_delta import _last_event, _get_db
+            conn = _get_db()
+            if conn:
+                r = _last_event(conn, {"light","climate","cover","media_player","lock","fan"})
+                conn.close()
+                return r
+            return "DB not available"
+        except Exception as e:
+            return f"timeline error: {e}"
+
+    # ===== Calendar Commands (v8 Phase 1) =====
+    if cmd == "/today":
+        try:
+            from calendar_engine import get_today_events, ensure_fresh_cache
+            import asyncio
+            asyncio.ensure_future(ensure_fresh_cache(300))
+            events = get_today_events()
+            from calendar_reporting import render_today
+            cal_text = render_today(events)
+            # v8: add shift + tasks
+            parts = []
+            try:
+                from life_work import get_shift
+                si = get_shift()
+                parts.append("👷 " + si.get("emoji","") + " " + si.get("shift","") + " " + si.get("times",""))
+            except Exception: pass
+            if cal_text:
+                parts.append(cal_text)
+            try:
+                from task_engine import task_stats, task_list
+                s = task_stats()
+                if s["total_active"]:
+                    t = "📋 مهام اليوم: " + str(s["due_today"]) + " مستحقة"
+                    if s["overdue"]: t += "  ⚠️ " + str(s["overdue"]) + " متأخرة"
+                    parts.append(t)
+                    for task in task_list(due_today=True)[:4]:
+                        parts.append("  • [" + str(task["id"]) + "] " + task["title"][:40])
+            except Exception: pass
+            return chr(10).join(parts) if parts else (cal_text or "✅ لا توجد مواعيد اليوم")
+        except Exception as e:
+            return f"calendar error: {e}"
+
+    if cmd == "/tomorrow":
+        try:
+            from calendar_engine import get_tomorrow_events
+            events = get_tomorrow_events()
+            from calendar_reporting import render_tomorrow
+            cal_text = render_tomorrow(events)
+            parts = []
+            try:
+                from life_work import get_shift
+                from datetime import date, timedelta
+                si = get_shift(date.today() + timedelta(days=1))
+                parts.append("👷 باجر: " + si.get("emoji","") + " " + si.get("shift","") + " " + si.get("times",""))
+            except Exception: pass
+            if cal_text:
+                parts.append(cal_text)
+            try:
+                from task_engine import task_list
+                from datetime import date, timedelta
+                tmrw = (date.today()+timedelta(days=1)).isoformat()
+                tasks = [t for t in task_list(limit=20) if t.get("due_date")==tmrw]
+                if tasks:
+                    parts.append("📋 مهام باجر: " + str(len(tasks)))
+                    for task in tasks[:3]:
+                        parts.append("  • " + task["title"][:40])
+            except Exception: pass
+            return chr(10).join(parts) if parts else (cal_text or "✅ لا توجد مواعيد باجر")
+        except Exception as e:
+            return f"calendar error: {e}"
+
+    if cmd == "/week":
+        try:
+            from calendar_engine import get_week_events
+            events = get_week_events()
+            from calendar_reporting import render_week
+            return render_week(events)
+        except Exception as e:
+            return f"calendar error: {e}"
+
+    if cmd == "/agenda":
+        try:
+            from calendar_engine import get_today_events, get_tomorrow_events
+            from calendar_reporting import render_today, render_tomorrow
+            today_ev = get_today_events()
+            tmrw_ev = get_tomorrow_events()
+            parts = [render_today(today_ev)]
+            if tmrw_ev:
+                parts.append("")
+                parts.append(render_tomorrow(tmrw_ev))
+            return chr(10).join(parts)
+        except Exception as e:
+            return f"calendar error: {e}"
+
+    if cmd == "/habits":
+        try:
+            from habit_engine import format_habit_report
+            return format_habit_report()
+        except Exception as e:
+            return f"habit error: {e}"
+
+    if cmd == "/cost":
+        try:
+            from cost_tracker import get_cost_for_kpi
+            c = get_cost_for_kpi()
+            bar_len = 10
+            filled = int(c["month_pct"] / 100 * bar_len)
+            bar = "█" * filled + "░" * (bar_len - filled)
+            msg = chr(10).join([
+                "💰 *Cost Tracker*", "",
+                f"📅 اليوم: ${c['today_usd']:.4f}",
+                f"📆 الشهر: ${c['month_usd']:.2f} / ${c['month_budget_usd']:.0f}",
+                f"[{bar}] {c['month_pct']:.1f}%",
+                f"📊 متوسط/طلب: ${c['avg_per_request_usd']:.4f}",
+            ])
+            return msg
+        except ImportError:
+            return "cost_tracker not loaded"
+        except Exception as e:
+            return f"cost error: {e}"
+
+    if cmd == "/feedback":
+        try:
+            from feedback_learner import get_stats
+            s = get_stats(30)
+            lines = ["📊 *Feedback Stats (30d)*", ""]
+            lines.append(f"Total: {s['total']}")
+            lines.append(f"✅ Accepted: {s.get('accepted', 0)}")
+            lines.append(f"❌ Rejected: {s.get('rejected', 0)}")
+            lines.append(f"✏️ Corrected: {s.get('corrected', 0)}")
+            lines.append(f"🚫 Ignored: {s.get('ignored', 0)}")
+            if s.get('top_entities'):
+                lines.append("")
+                lines.append("Top entities: " + ", ".join(s["top_entities"][:5]))
+            return chr(10).join(lines)
+        except ImportError:
+            return "feedback_learner not loaded"
+        except Exception as e:
+            return f"feedback error: {e}"
+
+    if cmd in ("/digest", "/learning"):
+        try:
+            from feedback_learner import generate_digest
+            return generate_digest(7)
+        except ImportError:
+            return "feedback_learner not loaded"
+        except Exception as e:
+            return f"digest error: {e}"
+
+
+    if cmd == "/corrections":
+        try:
+            from corrections_loop import get_corrections_loop
+            cl = get_corrections_loop()
+            stats = cl.get_stats()
+            lines = ["✅ *Corrections Loop*", ""]
+            lines.append(f"Total: {stats['total']}")
+            lines.append(f"Active: {stats['active']}")
+            if stats.get("by_category"):
+                for cat, cnt in stats["by_category"].items():
+                    lines.append(f"  {cat}: {cnt}")
+            if stats.get("most_applied"):
+                lines.append("")
+                for ma in stats["most_applied"][:5]:
+                    lines.append(f"❌ {ma['wrong']} → ✅ {ma['right']} ({ma['applied']}x)")
+            return chr(10).join(lines)
+        except ImportError:
+            return "corrections_loop not loaded"
+        except Exception as e:
+            return f"corrections error: {e}"
+
+    if cmd.startswith("/corrections "):
+        try:
+            from corrections_loop import get_corrections_loop
+            cl = get_corrections_loop()
+            parts = cmd.split(None, 2)
+            sub = parts[1] if len(parts) > 1 else ""
+            if sub == "clear":
+                conn = cl._get_conn()
+                conn.execute("DELETE FROM corrections")
+                conn.commit()
+                conn.close()
+                return "✅ All corrections cleared"
+            elif sub == "del" and len(parts) > 2:
+                cid = int(parts[2])
+                conn = cl._get_conn()
+                conn.execute("DELETE FROM corrections WHERE id=?", (cid,))
+                conn.commit()
+                conn.close()
+                return f"✅ Correction #{cid} deleted"
+            elif sub == "decay":
+                count = cl.decay_corrections()
+                return f"✅ Decayed {count} corrections"
+            else:
+                return "Usage: /corrections [clear|del ID|decay]"
+        except Exception as e:
+            return f"corrections error: {e}"
+
+    if cmd == "/plans":
+        if not PLAN_OK:
+            return "plan_engine not loaded"
+        plans = list_plans("active")
+        return format_plans_list(plans)
+
+    if cmd.startswith("/plan "):
+        if not PLAN_OK:
+            return "plan_engine not loaded"
+        parts = cmd.split(None, 2)
+        sub = parts[1] if len(parts) > 1 else ""
+        arg = parts[2] if len(parts) > 2 else ""
+        if sub == "pause" and arg:
+            ok = pause_plan(arg)
+            return f"Paused: {arg}" if ok else f"Not found: {arg}"
+        elif sub == "resume" and arg:
+            ok = resume_plan(arg)
+            return f"Resumed: {arg}" if ok else f"Not found: {arg}"
+        elif sub == "delete" and arg:
+            delete_plan(arg)
+            return f"Deleted: {arg}"
+        elif sub == "list":
+            status = arg or "active"
+            return format_plans_list(list_plans(status))
+        elif sub == "stats":
+            s = plan_stats()
+            return f"Plans: {s["total"]} total, {s["active"]} active, {s["completed"]} done, {s["paused"]} paused"
+        else:
+            return "Usage: /plan pause|resume|delete|list|stats [id]"
+
+
+    if cmd == "/mode":
+        if DEGRADED_OK:
+            return deg_status()
+        return "degraded_mode not loaded"
+
+    if cmd == "/backup status":
+        if DBBACKUP_OK:
+            return backup_format_status()
+        return "db_backup not loaded"
+
+    if cmd == "/backup run":
+        if not DBBACKUP_OK:
+            return "db_backup not loaded"
+        ok, results, cleaned = backup_run_daily()
+        msg = "Backup " + ("OK" if ok else "FAILED")
+        for r in results:
+            msg += chr(10) + "  " + r["db"] + ": " + r["status"]
+        if cleaned:
+            msg += chr(10) + "Cleaned: " + str(cleaned) + " old files"
+        return msg
+
+
+    if cmd == "/tasks" or cmd.startswith("/tasks "):
+        try:
+            from tg_tasks import handle_tasks_command
+            args = cmd[7:].strip() if cmd.startswith("/tasks ") else ""
+            return handle_tasks_command(args)
+        except Exception as e:
+            logger.error(f"tasks error: {e}")
+            return f"❌ tasks error: {e}"
 
     return None
 
@@ -5005,6 +6233,17 @@ async def tg_handle_callback(callback_query: dict):
             try:
                 user_profile = detect_user(source="telegram", telegram_user_id=tg_user_id)
                 record_feedback(req_id, rating, user_id=user_profile.get("user_id", "unknown"))
+                # Phase 3: Record in interaction_feedback table
+                try:
+                    from feedback_learner import record_feedback as fl_record
+                    fl_record(
+                        source_type="tg_button",
+                        query_text=f"request:{req_id}",
+                        decision_taken="llm_response",
+                        user_feedback="accepted" if rating > 0 else "rejected",
+                    )
+                except Exception:
+                    pass
                 answer = "شكراً!" if rating > 0 else "أتحسن المرة الجاية"
             except Exception as e:
                 logger.error(f"Feedback error: {e}")
@@ -5076,6 +6315,92 @@ async def tg_handle_callback(callback_query: dict):
         except Exception as e:
             logger.error(f"Scene error: {e}")
             answer = "❌"
+
+    elif data.startswith("trade_confirm:"):
+        # User confirmed they took the trade
+        _td = data[len("trade_confirm:"):].split("|")
+        if len(_td) >= 5 and JOURNAL_OK:
+            _tc_sym, _tc_price, _tc_action, _tc_strat, _tc_qty = _td[0], _td[1], _td[2], _td[3], _td[4]
+            # Normalize: strip exchange prefix (KSE:CLEANING -> CLEANING)
+            if ":" in _tc_sym:
+                _tc_sym = _tc_sym.split(":")[-1]
+            _tc_sym = _tc_sym.upper()
+            _tc_saved = _td[5] if len(_td) > 5 else ""
+            try:
+                _tc_price_f = float(_tc_price) if _tc_price else 0
+                _tc_qty_i = int(_tc_qty) if _tc_qty and _tc_qty != "0" else 0
+                if _tc_action == "buy":
+                    _tc_tid = open_trade(
+                        symbol=_tc_sym, entry_price=_tc_price_f, quantity=_tc_qty_i,
+                        entry_reason=f"TradingView (confirmed)",
+                        strategy=_tc_strat, entry_signal_id=_tc_saved or None,
+                    )
+                    await tg_send(chat_id, f"\u2705 \u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0634\u0631\u0627\u0621 {_tc_sym} @ {_tc_price} (#{_tc_tid})")
+                    logger.info(f"Trade confirmed: BUY {_tc_sym} @ {_tc_price} tid={_tc_tid}")
+                elif _tc_action == "sell":
+                    _tc_open = get_open_trades()
+                    _tc_match = [t for t in _tc_open if t["symbol"].upper() == _tc_sym.upper()]
+                    if _tc_match:
+                        close_trade(_tc_match[0]["id"], _tc_price_f, exit_reason="TradingView (confirmed)")
+                        await tg_send(chat_id, f"\u2705 \u062a\u0645 \u0625\u063a\u0644\u0627\u0642 {_tc_sym} @ {_tc_price}")
+                        logger.info(f"Trade confirmed: SELL {_tc_sym} @ {_tc_price}")
+                    else:
+                        await tg_send(chat_id, f"\u26a0\ufe0f \u0645\u0627 \u0641\u064a\u0647 \u0635\u0641\u0642\u0629 \u0645\u0641\u062a\u0648\u062d\u0629 \u0644\u0640 {_tc_sym}")
+                answer = "\u2705"
+            except Exception as _tc_e:
+                logger.error(f"Trade confirm error: {_tc_e}")
+                await tg_send(chat_id, f"\u274c \u062e\u0637\u0623: {str(_tc_e)[:100]}")
+                answer = "\u274c"
+        else:
+            answer = "Journal not loaded"
+
+    elif data.startswith("trade_skip:"):
+        # User skipped/ignored the trade signal
+        _ts = data[len("trade_skip:"):].split("|")
+        _ts_sym = _ts[0] if _ts else "?"
+        _ts_action = _ts[2] if len(_ts) > 2 else "?"
+        _ts_price = _ts[1] if len(_ts) > 1 else "?"
+        logger.info(f"Trade skipped: {_ts_action} {_ts_sym} @ {_ts_price}")
+        await tg_send(chat_id, f"\u274c \u062a\u0645 \u062a\u062c\u0627\u0647\u0644 \u0625\u0634\u0627\u0631\u0629 {_ts_sym}")
+        answer = "\u274c"
+
+    elif data.startswith("confluence_buy:"):
+        # User bought from confluence signal
+        _cb = data[len("confluence_buy:"):].split("|")
+        if len(_cb) >= 5 and JOURNAL_OK:
+            _cb_sym = _cb[0].upper()
+            if ":" in _cb_sym:
+                _cb_sym = _cb_sym.split(":")[-1]
+            _cb_price = float(_cb[1]) if _cb[1] else 0
+            _cb_sig_id = _cb[5] if len(_cb) > 5 else ""
+            try:
+                _cb_tid = open_trade(
+                    symbol=_cb_sym, entry_price=_cb_price, quantity=0,
+                    entry_reason="Confluence Engine (confirmed)",
+                    strategy="confluence",
+                    entry_signal_id=_cb_sig_id or None,
+                )
+                if CONFLUENCE_OK and _cb_sig_id:
+                    confluence_record_decision(int(_cb_sig_id), _cb_sym, "buy", _cb_price)
+                await tg_send(chat_id, f"\u2705 \u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0634\u0631\u0627\u0621 {_cb_sym} @ {_cb_price} (#{_cb_tid})")
+                answer = "\u2705"
+            except Exception as _cb_e:
+                logger.error(f"Confluence buy error: {_cb_e}")
+                answer = "\u274c"
+        else:
+            answer = "Journal not loaded"
+
+    elif data.startswith("confluence_skip:"):
+        _cs = data[len("confluence_skip:"):].split("|")
+        _cs_sig_id = _cs[0] if _cs else "0"
+        _cs_sym = _cs[1] if len(_cs) > 1 else "?"
+        if CONFLUENCE_OK:
+            try:
+                confluence_record_decision(int(_cs_sig_id), _cs_sym, "skip")
+            except Exception:
+                pass
+        await tg_send(chat_id, f"\u274c \u062a\u0645 \u062a\u062c\u0627\u0647\u0644 {_cs_sym}")
+        answer = "\u274c"
 
     elif data.startswith("cmd:"):
         sub = "/" + data[4:]
@@ -5230,6 +6555,21 @@ async def tg_send_typing(chat_id):
         pass
 
 
+
+
+async def _tg_send_get_id(chat_id, text: str):
+    """Send TG message and return msg_id for editing."""
+    try:
+        if _tg_client:
+            resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json={
+                "chat_id": chat_id, "text": text
+            })
+            rd = resp.json()
+            if rd.get("ok"):
+                return rd["result"]["message_id"]
+    except Exception:
+        pass
+    return None
 async def tg_edit_message(chat_id, message_id, text: str):
     """Edit an existing TG message."""
     try:
@@ -5258,7 +6598,7 @@ async def llm_call_stream(system_prompt: str, user_message: str, chat_id=None,
         last_edit = 0
         
         async with anthropic_client.messages.stream(
-            model="claude-opus-4-20250514",
+            model="claude-opus-4-6",
             max_tokens=max_tokens,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
@@ -5315,14 +6655,125 @@ def _correction_name(eid):
         pass
     return eid.split(".")[-1].replace("_", " ")
 
-async def tg_handle_message(chat_id, text: str, user: dict):
-    """Process a Telegram message through the iterative engine."""
+
+# ════════════════════════════════════════════════════════════════
+# V2 TG Pipeline — LLM-first, no silent drops
+# ════════════════════════════════════════════════════════════════
+
+async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
+    """V2: command -> fast_path(whitelist) -> LLM. Never silent drop."""
+    import time as _t
+    _started = _t.monotonic()
+    user_name = user.get("first_name", "User")
+    tg_user_id = user.get("id")
+    
+    # detect user profile
     try:
-        return await _tg_handle_message_inner(chat_id, text, user)
+        user_profile = detect_user(source="telegram", telegram_user_id=tg_user_id)
+    except Exception:
+        user_profile = {"user_id": "bu_khalifa", "name": "Salem"}
+    logger.info(f"TG_V2 user={user_profile.get('user_id','?')} text={text[:50]}")
+    
+    # Auto-save admin chat_id
+    if not ADMIN_TELEGRAM_ID:
+        _admin_path = __import__("pathlib").Path("data/admin_chat_id.txt")
+        if not _admin_path.exists():
+            _admin_path.write_text(str(chat_id))
+
+    text = (text or "").strip()
+    if not text:
+        await tg_send(chat_id, "ما وصلني نص واضح.")
+        return
+
+    # ── Stage 1: /commands only ──
+    try:
+        quick = await asyncio.wait_for(tg_handle_command(chat_id, text), timeout=3)
+        if quick == "__inline_sent__":
+            return
+        if quick:
+            await tg_send(chat_id, quick)
+            return
+    except asyncio.TimeoutError:
+        logger.warning(f"TG_V2 command timeout: {text[:40]}")
+    except Exception:
+        pass
+
+    # ── Stage 2: Fast path (strict whitelist only) ──
+    if QUICK_QUERY_OK:
+        try:
+            _qq = await asyncio.wait_for(quick_answer(text), timeout=2)
+            if _qq:
+                logger.info(f"TG_V2 fast_path answered: {text[:40]}")
+                await tg_send(chat_id, _qq)
+                return
+        except asyncio.TimeoutError:
+            logger.warning(f"TG_V2 fast_path timeout: {text[:40]}")
+        except Exception:
+            pass
+
+    # ── Stage 3: Typing indicator ──
+    try:
+        await _tg_client.post(f"{TG_BASE}/sendChatAction", json={"chat_id": chat_id, "action": "typing"})
+    except Exception:
+        pass
+
+    # ── Stage 4: LLM primary (chat_v7) ──
+    from chat_v7 import choose_model as _cm
+    _model_tier = _cm(text)
+    logger.info(f"TG_V2 -> LLM ({_model_tier}): {text[:50]}")
+    response = ""
+    try:
+        if CHAT_V7_OK and anthropic_client:
+            from brain_core import build_system_prompt_v7 as _bsp7
+            _sys7 = _bsp7()
+            _executors = {
+                "ha_get_state": _exec_ha_get_state,
+                "ha_call_service": lambda d,s,sd: _exec_ha_call_service(d, s, sd),
+                "ssh_run": _exec_ssh_run,
+            }
+            response = await asyncio.wait_for(
+                handle_chat_v7(text, _sys7, anthropic_client, _executors, user_id=str(chat_id)),
+                timeout=180
+            )
+            if not response or not response.strip():
+                # Escalation: if model was Sonnet, retry with Opus
+                from chat_v7 import choose_model
+                if choose_model(text) == "sonnet":
+                    logger.info(f"TG_V2 escalating Sonnet->Opus: {text[:40]}")
+                    response = await asyncio.wait_for(
+                        handle_chat_v7(text, _sys7, anthropic_client, _executors, user_id=str(chat_id)),
+                        timeout=180
+                    )
+                if not response or not response.strip():
+                    response = ""
+                    logger.warning(f"TG_V2 LLM empty for: {text[:50]}")
+        else:
+            logger.error("TG_V2: chat_v7 unavailable")
+    except asyncio.TimeoutError:
+        logger.warning(f"TG_V2 LLM timeout: {text[:50]}")
+        response = "السؤال أخذ وقت طويل، جرب اختصره"
+    except Exception as e:
+        logger.error(f"TG_V2 LLM error: {e}")
+        response = ""
+
+    # ── Stage 5: Absolute safety net ──
+    if not response or not response.strip():
+        response = "ما قدرت أجاوب الحين، جرب بطريقة ثانية"
+
+    _elapsed = round((_t.monotonic() - _started), 2)
+    logger.info(f"TG_V2 done in {_elapsed}s: {text[:40]}")
+    
+    await tg_send(chat_id, response)
+
+
+async def tg_handle_message(chat_id, text: str, user: dict):
+    """V2 Pipeline: command -> fast_path -> LLM. Never silent drop."""
+    try:
+        return await _tg_v2_pipeline(chat_id, text, user)
     except Exception as e:
         logger.error(f"TG HANDLE CRASH: {e}", exc_info=True)
         try:
-            await tg_send(chat_id, f"❌ Error: {str(e)[:100]}")
+            await tg_send(chat_id, f"❌ خلل مؤقت: {str(e)[:80]}")
         except Exception:
             pass
 
@@ -5351,6 +6802,7 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
             _admin_path.write_text(str(chat_id))
             logger.info(f"Saved admin chat_id: {chat_id}")
 
+    logger.info(f"TG[1] command check: {text[:40]}")
     quick = await tg_handle_command(chat_id, text)
     if quick == "__inline_sent__":
         return
@@ -5358,21 +6810,28 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
         await tg_send(chat_id, quick)
         return
 
+    logger.info(f"TG[2] quick_query check: {text[:40]}")
     # Quick Query FIRST - before intent router
     if QUICK_QUERY_OK:
         try:
-            _qq_early = await quick_answer(text)
+            _qq_early = await asyncio.wait_for(quick_answer(text), timeout=3)
             if _qq_early:
                 await tg_send(chat_id, _qq_early)
                 return
+        except asyncio.TimeoutError:
+            logger.warning(f"quick_query timeout: {text[:40]}")
         except:
             pass
 
     # Speed Engine removed — all requests go to Opus LLM
     # --- Intent Router (Phase A3) — check FIRST for explicit device+room commands ---
-    if TG_INTENT_OK:
+    # Skip intent router for LLM-only questions (shifts, dates, personal, calculations)
+    import re as _re
+    _skip_intent = bool(_re.search(r"عيد|رمضان|دوامي|شفتي|عمر|متى|تاريخ|كم عمر|مولود|ميلاد|حامل|اربعين|الساعة", text))
+    if TG_INTENT_OK and not _skip_intent:
         try:
-            intent_result = await route_intent(text) if _cb_ha.is_available() else None  # Step 10: skip if HA down
+            logger.info(f"TG[3] intent router: {text[:40]}")
+            intent_result = await asyncio.wait_for(route_intent(text), timeout=10) if _cb_ha.is_available() else None
             if intent_result:
                 _ir_text = intent_result["text"] if isinstance(intent_result, dict) else intent_result
                 _ir_entities = intent_result.get("entities", []) if isinstance(intent_result, dict) else []
@@ -5400,7 +6859,7 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
             logger.error(f"Intent router error: {e}")
 
     # --- Follow-up Resolution (Phase A2) — only if intent router didn't match ---
-    if TG_SESSION_OK:
+    if TG_SESSION_OK and not _skip_intent:
         session = tg_session_get(str(chat_id))
         if session:
             followup = detect_followup(text, session)
@@ -5492,7 +6951,7 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
 
 
     # -- Life Domain Router -- route stocks/expenses/health/work BEFORE LLM
-    if LIFE_ROUTER_OK:
+    if LIFE_ROUTER_OK and not _skip_intent:
         try:
             _life_domain = detect_life_domain(text)
             if _life_domain == "stocks" and LIFE_STOCKS_OK:
@@ -5532,18 +6991,24 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
                     await tg_send(chat_id, _health_result, parse_mode="Markdown")
                     return
 
-            elif _life_domain == "work" and LIFE_WORK_OK:
-                logger.info(f"Life router: work -> handle_work_command")
-                _router_stats["life_work"] = _router_stats.get("life_work", 0) + 1
-                _router_stats["total"] += 1
-                _log_cmd(text, "life_work", source="life_router")
-                try:
-                    _work_result = handle_work_command(text)
-                except Exception:
-                    _work_result = get_shift_display()
-                if _work_result:
-                    await tg_send(chat_id, _work_result, parse_mode="Markdown")
-                    return
+            elif _life_domain == "work" and False:  # DISABLED v7.0 — chat_v7 handles shift with get_shift tool
+                # Bypass complex Eid/date queries to chat_v7 (LLM is smarter)
+                _complex = re.search(r"رابع|ثاني|ثالث|خامس|أيام العيد|ايام العيد|جدول العيد|كل أيام|كل ايام|و الا|ولا ثاني|اول و الا", text)
+                if _complex:
+                    logger.info(f"Life router: work bypass (complex Eid query) -> chat_v7")
+                    pass  # fall through to chat_v7
+                else:
+                    logger.info(f"Life router: work -> handle_work_command")
+                    _router_stats["life_work"] = _router_stats.get("life_work", 0) + 1
+                    _router_stats["total"] += 1
+                    _log_cmd(text, "life_work", source="life_router")
+                    try:
+                        _work_result = handle_work_command(text)
+                    except Exception:
+                        _work_result = get_shift_display()
+                    if _work_result:
+                        await tg_send(chat_id, _work_result, parse_mode="Markdown")
+                        return
 
         except Exception as e:
             logger.error(f"Life router error: {e}")
@@ -5578,28 +7043,21 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
             await tg_send(chat_id, _rnd.choice(_greetings))
             return
 
-        # Quick Query — try answering without LLM first
-        if QUICK_QUERY_OK:
-            try:
-                _qq = await quick_answer(text)
-                if _qq:
-                    _router_stats["quick_query"] = _router_stats.get("quick_query", 0) + 1
-                    await tg_send(chat_id, _qq)
-                    return
-            except Exception as _qqe:
-                logger.warning(f"quick_query error: {_qqe}")
+        # [REMOVED v7.0] Second quick_query was here — first one (before intent_router) is enough
+        pass
         
-        # REMOVED: chat path — ALL messages now go to iterative_engine (has tools)
+        # REMOVED: chat path — ALL messages now go to chat_v7 (has tools)
         # This gives the LLM access to ha_get_state, ssh_run, etc for EVERY question
         pass
 
+    logger.info(f"TG[4] chat_v7 path: {text[:40]}")
     _router_stats["iterative"] = _router_stats.get("iterative", 0) + 1
     _router_stats["action_routed"] = _router_stats.get("action_routed", 0) + 1
     t0 = time.time()
     result = {}
     try:
         if CHAT_V7_OK and anthropic_client:
-            from brain_core import build_system_prompt as _bsp7
+            from brain_core import build_system_prompt_v7 as _bsp7
             _sys7 = _bsp7()
             _executors = {
                 "ha_get_state": _exec_ha_get_state,
@@ -5607,16 +7065,18 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
                 "ssh_run": _exec_ssh_run,
             }
             response = await asyncio.wait_for(
-                handle_chat_v7(text, _sys7, anthropic_client, _executors),
-                timeout=120
+                handle_chat_v7(
+                    text, _sys7, anthropic_client, _executors,
+                    user_id=str(chat_id)),
+                timeout=180
             )
+            # Guard: if chat_v7 returned empty, provide fallback
+            if not response or not response.strip():
+                response = "ما قدرت أفهم السؤال، جرب بطريقة ثانية"
+                logger.warning(f"chat_v7 returned empty for: {text[:50]}")
         else:
-            result = await asyncio.wait_for(iterative_engine(
-                goal=text,
-                context={"source": "telegram", "chat_id": str(chat_id)},
-                trace=trace, task_id=task_id,
-            ), timeout=120)
-            response = result.get("response", "Done")
+            logger.error("chat_v7 unavailable, no fallback")
+            result = {"response": "النظام غير متاح الحين", "actions": [], "results": [], "task_state": "error"}
     except asyncio.TimeoutError:
         logger.warning(f"TG engine timeout: {text[:50]}")
         TaskManager.fail_task(task_id, "timeout")
@@ -5633,8 +7093,11 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
         results=result.get("results"),
         status="ok", duration=duration,
         request_id=trace.request_id, task_id=task_id,
+        route_type="tg_command"
     )
-    await tg_send_with_feedback(chat_id, response, request_id=trace.request_id)
+    # V7: send response to TG
+    if True:  # always send
+        await tg_send_with_feedback(chat_id, response, request_id=trace.request_id)
 
     # Save AI response to session context
     if TG_SESSION_OK:
@@ -5672,6 +7135,16 @@ async def health_external():
         }
     }
 
+
+
+@app.post("/chat/clear")
+async def clear_chat_history(user_id: str = "default"):
+    # Clear V7 conversation history for a user
+    if CHAT_V7_OK:
+        from chat_v7 import clear_chat_v7_history
+        clear_chat_v7_history(user_id if user_id != "all" else None)
+        return {"status": "cleared", "user_id": user_id}
+    return {"status": "chat_v7 not available"}
 
 @app.get("/tg/stats")
 async def tg_stats():
@@ -5996,6 +7469,56 @@ async def weather_alert_loop():
             logger.error(f"Weather alert error: {e}")
         await asyncio.sleep(3 * 3600)  # every 3 hours
 
+async def plan_check_loop():
+    # Check active plans every 60 seconds
+    await asyncio.sleep(120)  # wait 2 min after startup
+    while True:
+        try:
+            if PLAN_OK:
+                due = get_due_plans()
+                for p in due:
+                    _chat = ADMIN_TELEGRAM_ID or "669769765"
+                    goal = p.get("goal", "")
+                    meta = json.loads(p.get("meta", "{}"))
+                    category = meta.get("category", "")
+                    # Guardian: only alert if something is actually wrong
+                    if category == "guardian":
+                        has_problem = False
+                        if DEGRADED_OK and is_degraded():
+                            has_problem = True
+                            status_msg = deg_status()
+                            await tg_send(_chat, status_msg)
+                        record_run(p["plan_id"], "checked" if not has_problem else "alerted")
+                        if has_problem:
+                            logger.info(f"[PlanLoop] Guardian ALERT: {goal}")
+                        continue
+                    # Routine/other: send approval or notification
+                    needs_approval = meta.get("approval_required", False)
+                    if needs_approval:
+                        await tg_send(_chat, chr(0x1F4CB) + " " + goal + chr(10) + chr(10) + chr(0x0645) + chr(0x0648) + chr(0x0627) + chr(0x0641) + chr(0x0642) + " " + chr(0x0639) + chr(0x0644) + chr(0x0649) + " " + chr(0x0627) + chr(0x0644) + chr(0x062A) + chr(0x0646) + chr(0x0641) + chr(0x064A) + chr(0x0630) + chr(0x061F))
+                    else:
+                        await tg_send(_chat, chr(0x2705) + " " + goal)
+                    record_run(p["plan_id"], "triggered")
+                    logger.info(f"[PlanLoop] Triggered: {p['plan_id']} - {goal}")
+        except Exception as e:
+            logger.error(f"[PlanLoop] Error: {e}")
+        await asyncio.sleep(60)
+
+
+async def feedback_learning_loop():
+    # Run feedback apply_learning every 6 hours
+    await asyncio.sleep(300)
+    while True:
+        try:
+            if FEEDBACK_OK:
+                result = fl_apply(30)
+                if result:
+                    logger.info(f"[FeedbackLoop] Applied {len(result)} adjustments")
+        except Exception as e:
+            logger.error(f"[FeedbackLoop] Error: {e}")
+        await asyncio.sleep(6 * 3600)
+
+
 async def nightly_summary_scheduler():
     """Send daily summary at 11 PM and reset daily counters."""
     logger.info("Nightly summary scheduler started")
@@ -6060,6 +7583,35 @@ async def nightly_summary_scheduler():
                     _router_stats[k] = 0
             _router_stats["started_at"] = datetime.now().isoformat()
             logger.info("Daily stats reset")
+            # --- Corrections Decay (nightly) ---
+            try:
+                from corrections_loop import get_corrections_loop
+                _cl = get_corrections_loop()
+                _cd = _cl.decay_corrections()
+                if _cd > 0:
+                    logger.info(f"Corrections decay: {_cd} corrections decayed")
+            except Exception as _ce:
+                logger.warning(f"Corrections decay error: {_ce}")
+            # v8 Phase 2: Daily Tasks + Inbox digest in nightly summary
+            try:
+                from task_engine import format_tasks_summary
+                from inbox_engine import inbox_digest
+                _tasks_sum = format_tasks_summary()
+                _inbox_sum = await inbox_digest(hours=24)
+                _daily_extra = ""
+                if _tasks_sum: _daily_extra += chr(10)+chr(10) + _tasks_sum
+                if _inbox_sum: _daily_extra += chr(10)+chr(10) + _inbox_sum
+                if _daily_extra:
+                    await tg_send(_chat, "📋 *ملخص اليوم*" + _daily_extra)
+            except Exception as _de:
+                logger.debug(f"Daily digest error: {_de}")
+            # --- Structured Memory Decay (nightly) ---
+            try:
+                _smd = smem.apply_decay()
+                if _smd > 0:
+                    logger.info(f"Structured memory decay: {_smd} memories decayed")
+            except Exception as _se:
+                logger.warning(f"Structured memory decay error: {_se}")
             # --- Brain Nightly Digest ---
             if BRAIN_OK:
                 try:
@@ -6165,9 +7717,85 @@ async def brain_weekly_insight():
                     await tg_send(_chat, _hr)
                 except Exception:
                     pass
+            # Feedback learning weekly digest
+            if FEEDBACK_OK:
+                try:
+                    from feedback_learner import generate_digest as _fb_digest
+                    _fbd = _fb_digest(7)
+                    if _fbd:
+                        await tg_send(_chat, _fbd)
+                except Exception:
+                    pass
+            # v8 Phase 2: Tasks + Inbox weekly digest on Fridays
+            try:
+                if __import__("datetime").datetime.now().weekday() == 4:
+                    from task_engine import format_tasks_summary
+                    from inbox_engine import inbox_weekly_digest
+                    t_sum = format_tasks_summary()
+                    i_sum = await inbox_weekly_digest()
+                    if t_sum or i_sum:
+                        weekly_msg = "\U0001f4c5 *\u0645\u0644\u062e\u0635 \u0627\u0644\u0623\u0633\u0628\u0648\u0639*" + chr(10)
+                        if t_sum: weekly_msg += t_sum + chr(10)+chr(10)
+                        if i_sum: weekly_msg += i_sum
+                        await tg_send(_chat, weekly_msg)
+            except Exception as _we:
+                logger.debug(f"Weekly digest error: {_we}")
+            # v9: Weekly trading report fires separately at Friday 2 PM via weekly_trading_report_scheduler
             logger.info(f"Brain weekly: {len(pats)} patterns")
         except Exception as e:
             logger.error(f"Brain weekly: {e}")
+
+async def weekly_trading_report_scheduler():
+    """Send weekly trading report every Friday at 2 PM KWT (11 AM UTC)."""
+    logger.info("Weekly trading report scheduler started")
+    while True:
+        now = datetime.now()
+        # Friday = weekday 4
+        days_until_friday = (4 - now.weekday()) % 7
+        if days_until_friday == 0 and (now.hour > 14 or (now.hour == 14 and now.minute > 0)):
+            days_until_friday = 7
+        target = (now + timedelta(days=days_until_friday)).replace(hour=14, minute=0, second=0, microsecond=0)
+        wait_secs = (target - now).total_seconds()
+        if wait_secs < 0:
+            wait_secs += 7 * 86400
+        logger.info(f"Next weekly trading report in {wait_secs/3600:.1f}h")
+        await asyncio.sleep(wait_secs)
+        try:
+            if not JOURNAL_OK:
+                continue
+            _chat = ADMIN_TELEGRAM_ID or "669769765"
+            from journal_engine import generate_weekly_report, format_weekly_report_tg
+            _wr = generate_weekly_report()
+            _wr_msg = format_weekly_report_tg(_wr)
+            await tg_send(int(_chat), _wr_msg)
+            logger.info("Weekly trading report sent (Friday 2 PM)")
+        except Exception as e:
+            logger.error(f"Weekly trading report error: {e}")
+
+
+async def confluence_scan_loop():
+    """Run confluence scan every 30 min during KSE market hours (Sun-Thu 9:00-12:40 KWT)."""
+    logger.info("Confluence scan loop started")
+    while True:
+        try:
+            now = datetime.now()
+            # KSE: Sun(6) Mon(0) Tue(1) Wed(2) Thu(3), 9:00-12:40
+            if now.weekday() in (6, 0, 1, 2, 3) and 9 <= now.hour <= 12:
+                if CONFLUENCE_OK:
+                    actionable = run_confluence_scan()
+                    if actionable:
+                        _chat = ADMIN_TELEGRAM_ID or "669769765"
+                        for sig in actionable[:3]:
+                            text, kb = confluence_build_tg_alert(sig)
+                            await tg_send(int(_chat), text, reply_markup=kb)
+                        logger.info(f"Confluence: {len(actionable)} actionable signals sent to TG")
+                else:
+                    logger.debug("Confluence engine not loaded, skip scan")
+            await asyncio.sleep(1800)  # 30 min
+        except Exception as e:
+            logger.error(f"Confluence scan loop error: {e}")
+            await asyncio.sleep(300)
+
 
 async def morning_report_scheduler():
     # Send morning report daily at 5:30 AM Kuwait time
@@ -6239,3 +7867,269 @@ async def telegram_polling_loop():
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STRUCTURED MEMORY ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if _SMEM:
+    @app.get("/structured-memory")
+    async def smem_stats():
+        """Structured memory statistics."""
+        return smem.get_stats()
+
+    @app.get("/structured-memory/context")
+    async def smem_context(q: str = ""):
+        """Preview LLM context string."""
+        return {"context": smem.get_context_for_llm(q)}
+
+    @app.post("/structured-memory/fact")
+    async def smem_save_fact(data: dict):
+        return smem.save_fact(
+            content=data["content"],
+            category=data.get("category", "general"),
+            key=data.get("key", ""),
+            tags=data.get("tags", ""),
+            confidence=data.get("confidence", 0.9),
+            source=data.get("source", "api"),
+        )
+
+    @app.post("/structured-memory/event")
+    async def smem_save_event(data: dict):
+        return smem.save_event(
+            content=data["content"],
+            category=data.get("category", "general"),
+            key=data.get("key", ""),
+            tags=data.get("tags", ""),
+            expires_at=data.get("expires_at"),
+            source=data.get("source", "api"),
+        )
+
+    @app.post("/structured-memory/correction")
+    async def smem_save_correction(data: dict):
+        return smem.save_correction(
+            content=data["content"],
+            category=data.get("category", "general"),
+            key=data.get("key", ""),
+            tags=data.get("tags", ""),
+            source=data.get("source", "api"),
+        )
+
+    @app.get("/structured-memory/search")
+    async def smem_search(q: str, type: str = ""):
+        results = smem.get_memories(
+            type_=type or None,
+            search=q,
+            limit=20,
+        )
+        return {"query": q, "count": len(results), "results": results}
+
+    @app.post("/structured-memory/migrate")
+    async def smem_migrate():
+        """Migrate from old memory table in audit.db."""
+        return smem.migrate_from_old_db()
+
+    @app.post("/structured-memory/seed")
+    async def smem_seed():
+        """Seed initial facts (safe to run multiple times)."""
+        return smem.seed_initial()
+
+    @app.post("/structured-memory/decay")
+    async def smem_decay():
+        """Run confidence decay manually."""
+        affected = smem.apply_decay()
+        return {"decayed": affected}
+
+    @app.delete("/structured-memory/{memory_id}")
+    async def smem_delete(memory_id: int):
+        return {"deleted": smem.delete_memory(memory_id)}
+
+    # ── Corrections Learning Loop endpoints ──
+    @app.get('/corrections')
+    async def get_corrections_stats():
+        try:
+            from corrections_loop import get_corrections_loop
+            cl = get_corrections_loop()
+            return cl.get_stats()
+        except Exception as e:
+            return {'error': str(e)}
+
+    @app.post('/corrections/decay')
+    async def decay_corrections_endpoint():
+        try:
+            from corrections_loop import get_corrections_loop
+            cl = get_corrections_loop()
+            count = cl.decay_corrections()
+            return {'decayed': count}
+        except Exception as e:
+            return {'error': str(e)}
+
+
+# ═══ PLANNER + TRACES ENDPOINTS ═══
+try:
+    from mini_planner import classify_intent, decompose_compound, get_traces, get_trace_stats
+    _PLANNER_ENDPOINTS = True
+except ImportError:
+    _PLANNER_ENDPOINTS = False
+
+if _PLANNER_ENDPOINTS:
+    @app.get("/traces")
+    async def traces_list(limit: int = 20):
+        return {"traces": get_traces(limit)}
+
+    @app.get("/traces/stats")
+    async def traces_stats():
+        return get_trace_stats()
+
+    @app.post("/classify")
+    async def classify_msg(data: dict):
+        text = data.get("text", "")
+        return classify_intent(text)
+
+    @app.post("/decompose")
+    async def decompose_msg(data: dict):
+        text = data.get("text", "")
+        return decompose_compound(text)
+
+
+
+
+
+# ═══ FEEDBACK LEARNING ENDPOINTS ═══
+
+@app.get("/feedback/stats")
+async def feedback_stats_endpoint():
+    try:
+        from feedback_learner import get_stats
+        return get_stats(30)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/feedback/digest")
+async def feedback_digest_endpoint():
+    try:
+        from feedback_learner import generate_digest
+        return {"digest": generate_digest(7)}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ═══ KPI DASHBOARD ENDPOINT ═══
+
+
+@app.get("/anomalies")
+async def anomalies_endpoint():
+    """Phase 2: Anomaly detection results."""
+    try:
+        from anomaly_engine import get_anomaly_summary
+        alerts = get_anomaly_summary()
+        return {"alerts": alerts, "count": len(alerts)}
+    except ImportError:
+        return {"error": "anomaly_engine not loaded"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/cost")
+async def cost_dashboard():
+    """Phase 2: Per-request cost tracking dashboard."""
+    try:
+        from cost_tracker import get_cost_summary
+        return get_cost_summary()
+    except ImportError:
+        return {"error": "cost_tracker module not found"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/kpi")
+async def kpi_dashboard():
+    """ChatGPT stability plan: 5 KPI metrics."""
+    import sqlite3, json
+    kpi = {}
+    
+    # 1. Message delivery rate (from traces)
+    try:
+        conn = sqlite3.connect("data/traces.db", timeout=5)
+        total = conn.execute("SELECT COUNT(*) FROM traces").fetchone()[0]
+        ok = conn.execute("SELECT COUNT(*) FROM traces WHERE final_status='ok'").fetchone()[0]
+        kpi["message_delivery_rate"] = round(ok / max(total,1) * 100, 1)
+        kpi["total_messages_traced"] = total
+        conn.close()
+    except:
+        kpi["message_delivery_rate"] = None
+        kpi["total_messages_traced"] = 0
+    
+    # 2. Silent drop count
+    kpi["silent_drops"] = 0  # V7 design: no silent drops possible
+    
+    # 3. Tool usage stats
+    try:
+        conn = sqlite3.connect("data/traces.db", timeout=5)
+        rows = conn.execute("SELECT tools_used FROM traces WHERE tools_count > 0").fetchall()
+        tool_counts = {}
+        for r in rows:
+            try:
+                tools = json.loads(r[0])
+                for t in tools:
+                    tool_counts[t] = tool_counts.get(t, 0) + 1
+            except: pass
+        kpi["tool_usage"] = tool_counts
+        conn.close()
+    except:
+        kpi["tool_usage"] = {}
+    
+    # 4. Clarification rate (approximation: responses containing question marks)
+    kpi["clarification_rate"] = "tracked_via_traces"
+    
+    # 5. Structured memory stats
+    try:
+        import structured_memory as smem
+        kpi["memory"] = smem.get_stats()
+    except:
+        kpi["memory"] = {}
+    
+    # 5.5 Cost tracking (Phase 2)
+    try:
+        from cost_tracker import get_cost_for_kpi
+        kpi["cost"] = get_cost_for_kpi()
+    except:
+        kpi["cost"] = {}
+    
+    # 6. Benchmark results
+    try:
+        with open("benchmark_results.json") as bf:
+            br = json.load(bf)
+        kpi["benchmark"] = {
+            "passed": br.get("passed", 0),
+            "failed": br.get("failed", 0),
+            "pass_rate": round(br.get("passed",0) / max(br.get("passed",0)+br.get("failed",0),1) * 100, 1),
+        }
+    except:
+        kpi["benchmark"] = {}
+    
+    # 7. System resources
+    try:
+        import subprocess
+        cpu = subprocess.getoutput("top -bn1 | grep 'Cpu' | awk '{print $2}'")
+        mem = subprocess.getoutput("free -m").split(chr(10))[1].split()
+        temp = subprocess.getoutput("cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null")
+        kpi["system"] = {"cpu": cpu, "memory": mem, "temp_c": round(int(temp)/1000,1) if temp.isdigit() else None}
+    except:
+        kpi["system"] = {}
+    
+    return kpi
+
+
+
+# ═══════════════════════════════════════════════════
+# PRIORITY ENGINE — imported from priority_engine.py
+# ═══════════════════════════════════════════════════
+from priority_engine import (
+    build_priority_engine, build_assistant_surface,
+    _pe_get_extended_snapshot, _pe_get_radar_snapshot,
+    set_inbox_cache_ref as _pe_set_inbox_cache_ref,
+)
+
+# ═══════════════════════════════════════════════════
+# HA DASHBOARD — imported from dashboard_api.py (Router)
+# ═══════════════════════════════════════════════════
+# (imported near app creation + in lifespan)

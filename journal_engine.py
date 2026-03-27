@@ -1,0 +1,433 @@
+"""
+journal_engine.py — Trading Journal for Master AI V12
+Tables in life.db: trades
+"""
+import os
+import sqlite3
+import logging
+from datetime import datetime, date, timedelta
+
+logger = logging.getLogger("journal")
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "data", "life.db")
+
+# ═══════════════════════════════════════════════════
+# DB SCHEMA
+# ═══════════════════════════════════════════════════
+
+_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT NOT NULL,
+    name_ar TEXT,
+    direction TEXT NOT NULL DEFAULT 'long',
+    status TEXT NOT NULL DEFAULT 'open',
+    entry_price REAL NOT NULL,
+    entry_date TEXT NOT NULL,
+    entry_reason TEXT,
+    entry_signal_id INTEGER,
+    quantity INTEGER DEFAULT 0,
+    exit_price REAL,
+    exit_date TEXT,
+    exit_reason TEXT,
+    pnl_fils REAL,
+    pnl_pct REAL,
+    strategy TEXT,
+    timeframe TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
+CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);
+CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(entry_date);
+"""
+
+
+def _conn():
+    c = sqlite3.connect(DB_PATH, timeout=10)
+    c.row_factory = sqlite3.Row
+    c.execute("PRAGMA journal_mode=WAL")
+    return c
+
+
+def init_schema():
+    with _conn() as c:
+        c.executescript(_SCHEMA_SQL)
+        # Migration: add stop_loss/take_profit columns if missing
+        cols = [r[1] for r in c.execute("PRAGMA table_info(trades)").fetchall()]
+        if "stop_loss" not in cols:
+            c.execute("ALTER TABLE trades ADD COLUMN stop_loss REAL")
+        if "take_profit" not in cols:
+            c.execute("ALTER TABLE trades ADD COLUMN take_profit REAL")
+    logger.info("journal schema initialized")
+
+
+def _row_to_dict(row):
+    if row is None:
+        return None
+    return dict(row)
+
+
+# ═══════════════════════════════════════════════════
+# P&L CALCULATOR — KWD with Broker Fees
+# ═══════════════════════════════════════════════════
+
+def calculate_real_pnl(entry_price_fils, current_price_fils, quantity, broker_fee_pct=0.125):
+    """Calculate real P&L with broker commission.
+    KSE broker fee: ~0.125% per trade (entry + exit = 0.25% total)
+    Prices in fils. Returns dict with KWD and fils values.
+    """
+    entry_total_fils = entry_price_fils * quantity
+    current_total_fils = current_price_fils * quantity
+
+    # Broker fees (entry + estimated exit)
+    entry_fee_fils = entry_total_fils * (broker_fee_pct / 100)
+    exit_fee_fils = current_total_fils * (broker_fee_pct / 100)
+    total_fees_fils = entry_fee_fils + exit_fee_fils
+
+    # Net P&L
+    gross_pnl_fils = current_total_fils - entry_total_fils
+    net_pnl_fils = gross_pnl_fils - total_fees_fils
+
+    # Convert to KWD
+    gross_pnl_kwd = gross_pnl_fils / 1000
+    net_pnl_kwd = net_pnl_fils / 1000
+    entry_total_kwd = entry_total_fils / 1000
+    current_total_kwd = current_total_fils / 1000
+
+    # Percentages
+    pnl_pct = ((current_price_fils / entry_price_fils) - 1) * 100 if entry_price_fils else 0
+    net_pnl_pct = (net_pnl_fils / entry_total_fils) * 100 if entry_total_fils else 0
+
+    return {
+        "entry_total_kwd": round(entry_total_kwd, 3),
+        "current_total_kwd": round(current_total_kwd, 3),
+        "gross_pnl_fils": round(gross_pnl_fils),
+        "gross_pnl_kwd": round(gross_pnl_kwd, 3),
+        "net_pnl_fils": round(net_pnl_fils),
+        "net_pnl_kwd": round(net_pnl_kwd, 3),
+        "pnl_pct": round(pnl_pct, 2),
+        "net_pnl_pct": round(net_pnl_pct, 2),
+        "total_fees_kwd": round(total_fees_fils / 1000, 3),
+        "broker_fee_pct": broker_fee_pct,
+    }
+
+
+# ═══════════════════════════════════════════════════
+# CORE FUNCTIONS
+# ═══════════════════════════════════════════════════
+
+def open_trade(symbol, entry_price, quantity=0, entry_reason="",
+               strategy="manual", timeframe="1D", direction="long",
+               name_ar="", entry_signal_id=None, stop_loss=None, take_profit=None):
+    """Open a new trade. Returns trade_id."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    today = date.today().isoformat()
+    with _conn() as c:
+        c.execute("""INSERT INTO trades
+            (symbol, name_ar, direction, status, entry_price, entry_date,
+             entry_reason, entry_signal_id, quantity, strategy, timeframe,
+             stop_loss, take_profit, created_at)
+            VALUES (?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (symbol.upper(), name_ar, direction, entry_price, today,
+             entry_reason, entry_signal_id, quantity, strategy, timeframe,
+             stop_loss, take_profit, now))
+        trade_id = c.execute("SELECT last_insert_rowid()").fetchone()[0]
+    logger.info("Opened trade #%d: %s @ %s", trade_id, symbol, entry_price)
+    return trade_id
+
+
+def close_trade(trade_id, exit_price, exit_reason="manual"):
+    """Close a trade. Calculates P&L. Returns updated trade dict."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    today = date.today().isoformat()
+    with _conn() as c:
+        row = c.execute("SELECT * FROM trades WHERE id=?", (trade_id,)).fetchone()
+        if not row:
+            return None
+        trade = dict(row)
+        if trade["status"] != "open":
+            return None
+
+        entry = trade["entry_price"]
+        qty = trade["quantity"] or 0
+        direction = trade["direction"]
+
+        if direction == "long":
+            pnl_fils = (exit_price - entry) * qty if qty else (exit_price - entry)
+            pnl_pct = ((exit_price - entry) / entry * 100) if entry else 0
+        else:
+            pnl_fils = (entry - exit_price) * qty if qty else (entry - exit_price)
+            pnl_pct = ((entry - exit_price) / entry * 100) if entry else 0
+
+        c.execute("""UPDATE trades SET
+            status='closed', exit_price=?, exit_date=?, exit_reason=?,
+            pnl_fils=?, pnl_pct=?, updated_at=?
+            WHERE id=?""",
+            (exit_price, today, exit_reason, round(pnl_fils, 2),
+             round(pnl_pct, 2), now, trade_id))
+
+        trade.update({
+            "status": "closed", "exit_price": exit_price, "exit_date": today,
+            "exit_reason": exit_reason, "pnl_fils": round(pnl_fils, 2),
+            "pnl_pct": round(pnl_pct, 2), "updated_at": now,
+        })
+    logger.info("Closed trade #%d: %s @ %s → %s (%.2f%%)",
+                trade_id, trade["symbol"], entry, exit_price, pnl_pct)
+    return trade
+
+
+def cancel_trade(trade_id):
+    """Cancel a trade (never executed)."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with _conn() as c:
+        row = c.execute("SELECT * FROM trades WHERE id=? AND status='open'", (trade_id,)).fetchone()
+        if not row:
+            return None
+        c.execute("UPDATE trades SET status='cancelled', updated_at=? WHERE id=?", (now, trade_id))
+    return True
+
+
+def get_open_trades():
+    """Get all open trades. Returns list of dicts."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM trades WHERE status='open' ORDER BY entry_date DESC"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_recent_trades(limit=20):
+    """Get recent trades (all statuses). Returns list of dicts."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM trades ORDER BY created_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_trade(trade_id):
+    """Get single trade by ID."""
+    with _conn() as c:
+        row = c.execute("SELECT * FROM trades WHERE id=?", (trade_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def update_trade_notes(trade_id, notes):
+    """Add/update notes on a trade."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with _conn() as c:
+        c.execute("UPDATE trades SET notes=?, updated_at=? WHERE id=?",
+                  (notes, now, trade_id))
+    return True
+
+
+def update_trade_levels(trade_id, stop_loss=None, take_profit=None):
+    """Update stop loss and/or take profit on an open trade."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with _conn() as c:
+        row = c.execute("SELECT id, status FROM trades WHERE id=?", (trade_id,)).fetchone()
+        if not row or row["status"] != "open":
+            return None
+        updates = []
+        params = []
+        if stop_loss is not None:
+            updates.append("stop_loss=?")
+            params.append(stop_loss)
+        if take_profit is not None:
+            updates.append("take_profit=?")
+            params.append(take_profit)
+        if not updates:
+            return None
+        updates.append("updated_at=?")
+        params.append(now)
+        params.append(trade_id)
+        c.execute(f"UPDATE trades SET {','.join(updates)} WHERE id=?", params)
+    logger.info("Updated trade #%d levels: SL=%s TP=%s", trade_id, stop_loss, take_profit)
+    return True
+
+
+def get_fresh_price(symbol):
+    """Get freshest price: bridge cache → stock_radar_daily fallback."""
+    import time as _t
+    # 1. Try bridge cache
+    try:
+        from bridge_client import get_bridge_client
+        client = get_bridge_client()
+        for key, entry in client._cache.items():
+            if key.startswith("analysis:") and key.split(":")[-1] == symbol.upper():
+                age = _t.time() - entry.get("ts", 0)
+                data = entry.get("data", {})
+                price = data.get("price")
+                if price:
+                    return {"price": price, "source": "bridge", "stale": age > 300}
+    except Exception:
+        pass
+    # 2. Fallback: stock_radar_daily
+    try:
+        db = sqlite3.connect(DB_PATH, timeout=3)
+        db.row_factory = sqlite3.Row
+        row = db.execute(
+            "SELECT price FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1",
+            (symbol.upper(),)
+        ).fetchone()
+        db.close()
+        if row:
+            return {"price": float(row["price"]), "source": "radar_daily", "stale": True}
+    except Exception:
+        pass
+    return {"price": None, "source": "none", "stale": True}
+
+
+def get_trade_stats(days=30):
+    """Get trading statistics for the last N days."""
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    with _conn() as c:
+        all_trades = c.execute(
+            "SELECT * FROM trades WHERE entry_date >= ?", (cutoff,)
+        ).fetchall()
+
+    trades = [dict(r) for r in all_trades]
+    closed = [t for t in trades if t["status"] == "closed"]
+    open_t = [t for t in trades if t["status"] == "open"]
+    wins = [t for t in closed if (t["pnl_pct"] or 0) > 0]
+    losses = [t for t in closed if (t["pnl_pct"] or 0) <= 0]
+
+    total_pnl = sum(t.get("pnl_fils", 0) or 0 for t in closed)
+    avg_profit = (sum(t["pnl_pct"] for t in wins) / len(wins)) if wins else 0
+    avg_loss = (sum(t["pnl_pct"] for t in losses) / len(losses)) if losses else 0
+
+    best = max(closed, key=lambda t: t.get("pnl_pct", 0)) if closed else None
+    worst = min(closed, key=lambda t: t.get("pnl_pct", 0)) if closed else None
+
+    return {
+        "days": days,
+        "total_trades": len(trades),
+        "open_trades": len(open_t),
+        "closed_trades": len(closed),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": (len(wins) / len(closed)) if closed else 0,
+        "avg_profit_pct": round(avg_profit, 2),
+        "avg_loss_pct": round(avg_loss, 2),
+        "total_pnl_fils": round(total_pnl, 2),
+        "best_trade": {"symbol": best["symbol"], "pnl_pct": best["pnl_pct"]} if best else None,
+        "worst_trade": {"symbol": worst["symbol"], "pnl_pct": worst["pnl_pct"]} if worst else None,
+    }
+
+
+# ═══════════════════════════════════════════════════
+# WEEKLY PERFORMANCE REPORT
+# ═══════════════════════════════════════════════════
+
+def generate_weekly_report():
+    """Generate weekly trading performance report.
+    Covers last 7 days of trading activity + radar signal stats.
+    Returns dict suitable for Telegram message or dashboard.
+    """
+    stats_7d = get_trade_stats(days=7)
+
+    # Closed trades this week with KWD P&L
+    cutoff = (date.today() - timedelta(days=7)).isoformat()
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM trades WHERE exit_date >= ? AND status='closed' ORDER BY exit_date DESC",
+            (cutoff,)
+        ).fetchall()
+    closed_this_week = [dict(r) for r in rows]
+
+    # Calculate KWD totals
+    total_net_kwd = 0
+    trades_detail = []
+    for t in closed_this_week:
+        entry = float(t.get("entry_price", 0))
+        exit_p = float(t.get("exit_price", 0))
+        qty = int(t.get("quantity", 0))
+        if entry and exit_p and qty:
+            pnl = calculate_real_pnl(entry, exit_p, qty)
+            total_net_kwd += pnl["net_pnl_kwd"]
+            trades_detail.append({
+                "symbol": t["symbol"],
+                "name_ar": t.get("name_ar", t["symbol"]),
+                "net_pnl_kwd": pnl["net_pnl_kwd"],
+                "pnl_pct": pnl["pnl_pct"],
+            })
+
+    # Radar signal stats (from stock_radar_events)
+    signal_stats = {"total": 0, "bullish": 0, "bearish": 0}
+    try:
+        import sqlite3 as _sq3
+        _conn2 = _sq3.connect(DB_PATH, timeout=5)
+        _conn2.row_factory = _sq3.Row
+        cutoff_dt = (date.today() - timedelta(days=7)).isoformat()
+        sig_rows = _conn2.execute(
+            "SELECT signal_type, COUNT(*) as cnt FROM stock_radar_events "
+            "WHERE created_at >= ? GROUP BY signal_type", (cutoff_dt,)
+        ).fetchall()
+        for r in sig_rows:
+            cnt = r["cnt"]
+            signal_stats["total"] += cnt
+            if "bullish" in r["signal_type"]:
+                signal_stats["bullish"] += cnt
+            elif "bearish" in r["signal_type"]:
+                signal_stats["bearish"] += cnt
+
+        # Top stocks by score this week
+        top_stocks = _conn2.execute("""
+            SELECT symbol, MAX(score) as max_score, COUNT(*) as signals
+            FROM stock_radar_events WHERE created_at >= ? AND score > 0
+            GROUP BY symbol ORDER BY max_score DESC LIMIT 5
+        """, (cutoff_dt,)).fetchall()
+        signal_stats["top_stocks"] = [{"symbol": r["symbol"], "max_score": r["max_score"],
+                                        "signals": r["signals"]} for r in top_stocks]
+        _conn2.close()
+    except Exception:
+        signal_stats["top_stocks"] = []
+
+    # Date range
+    end_date = date.today()
+    start_date = end_date - timedelta(days=6)
+
+    return {
+        "period": f"{start_date.isoformat()} — {end_date.isoformat()}",
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "stats": stats_7d,
+        "total_net_kwd": round(total_net_kwd, 3),
+        "trades_detail": trades_detail,
+        "signal_stats": signal_stats,
+        "confirmed_from_signals": stats_7d.get("total_trades", 0),
+    }
+
+
+def format_weekly_report_tg(report):
+    """Format weekly report for Telegram message."""
+    s = report["stats"]
+    ss = report["signal_stats"]
+    lines = [
+        f"\U0001f4ca \u062a\u0642\u0631\u064a\u0631 \u0627\u0644\u062a\u062f\u0627\u0648\u0644 \u0627\u0644\u0623\u0633\u0628\u0648\u0639\u064a \u2014 {report['period']}",
+        "",
+        "\U0001f4c8 \u0627\u0644\u0623\u062f\u0627\u0621:",
+        f"  \u0635\u0641\u0642\u0627\u062a: {s.get('closed_trades', 0)} ({s.get('wins', 0)} \u0641\u0648\u0632, {s.get('losses', 0)} \u062e\u0633\u0627\u0631\u0629) \u2014 {round(s.get('win_rate', 0) * 100)}% win rate",
+        f"  \u0627\u0644\u0631\u0628\u062d \u0627\u0644\u0635\u0627\u0641\u064a: {'+' if report['total_net_kwd'] >= 0 else ''}{report['total_net_kwd']} \u062f.\u0643",
+    ]
+    # Best/worst
+    if s.get("best_trade"):
+        lines.append(f"  \u0623\u0641\u0636\u0644 \u0635\u0641\u0642\u0629: {s['best_trade']['symbol']} {'+' if s['best_trade']['pnl_pct'] >= 0 else ''}{s['best_trade']['pnl_pct']}%")
+    if s.get("worst_trade"):
+        lines.append(f"  \u0623\u0633\u0648\u0623 \u0635\u0641\u0642\u0629: {s['worst_trade']['symbol']} {s['worst_trade']['pnl_pct']}%")
+    lines.append("")
+    lines.append("\U0001f4e1 \u0627\u0644\u0631\u0627\u062f\u0627\u0631:")
+    lines.append(f"  \u0625\u0634\u0627\u0631\u0627\u062a: {ss['total']} ({ss['bullish']} \u0635\u0627\u0639\u062f, {ss['bearish']} \u0647\u0627\u0628\u0637)")
+    if ss.get("top_stocks"):
+        lines.append("")
+        lines.append("\U0001f3c6 \u0623\u0641\u0636\u0644 \u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0633\u0628\u0648\u0639:")
+        for i, ts in enumerate(ss["top_stocks"][:3], 1):
+            lines.append(f"  {i}. {ts['symbol']} \u2014 Score {ts['max_score']}, {ts['signals']} \u0625\u0634\u0627\u0631\u0629")
+    # Market sentiment
+    if ss["total"] > 0:
+        bull_pct = round(ss["bullish"] / ss["total"] * 100)
+        lines.append("")
+        lines.append(f"\U0001f4ca \u0627\u0644\u0633\u0648\u0642 \u0628\u0634\u0643\u0644 \u0639\u0627\u0645: {'صاعد' if bull_pct > 55 else 'هابط' if bull_pct < 45 else 'محايد'} ({bull_pct}% \u0625\u0634\u0627\u0631\u0627\u062a \u0635\u0627\u0639\u062f\u0629)")
+    return chr(10).join(lines)
