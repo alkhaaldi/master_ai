@@ -20,7 +20,7 @@ CACHE_TTL_ANALYSIS = 120
 CACHE_TTL_OHLCV = 300
 
 # Circuit breaker
-MAX_FAILURES = 3
+MAX_FAILURES = 15
 COOLDOWN_SECONDS = 60
 
 
@@ -38,7 +38,7 @@ class BridgeClient:
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                timeout=httpx.Timeout(connect=2.0, read=45.0, write=3.0, pool=2.0),
+                timeout=httpx.Timeout(connect=2.0, read=60.0, write=3.0, pool=2.0),
                 limits=httpx.Limits(max_connections=5, max_keepalive_connections=2),
             )
         return self._client
