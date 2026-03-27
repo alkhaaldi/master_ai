@@ -2874,7 +2874,25 @@ async def lifespan(app):
 
 app = FastAPI(title="Master AI", version=VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-app.mount("/trading", StaticFiles(directory="www/trading", html=True), name="trading")
+from fastapi.responses import FileResponse
+import os as _os
+
+TRADING_HTML_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "www", "trading")
+
+@app.get("/trading/{page}")
+async def serve_trading_page(page: str):
+    """Serve trading HTML pages with or without .html extension."""
+    if page.endswith(".html"):
+        filepath = _os.path.join(TRADING_HTML_DIR, page)
+    else:
+        filepath = _os.path.join(TRADING_HTML_DIR, page + ".html")
+    if _os.path.isfile(filepath):
+        return FileResponse(filepath, media_type="text/html")
+    exact = _os.path.join(TRADING_HTML_DIR, page)
+    if _os.path.isfile(exact):
+        return FileResponse(exact)
+    return JSONResponse({"detail": "Not Found"}, status_code=404)
+
 from dashboard_api import router as dashboard_router
 app.include_router(dashboard_router)
 
