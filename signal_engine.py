@@ -35,7 +35,8 @@ _THRESHOLDS_TTL    = 300  # refresh every 5 min
 import threading as _threading
 _bridge_cache: dict = {}
 _bridge_cache_ts: dict = {}
-_bridge_fetch_lock = _threading.Lock()
+_bridge_daily_lock = _threading.Lock()  # separate lock for daily fetch
+_bridge_30m_lock   = _threading.Lock()  # separate lock for 30m fetch
 _BRIDGE_DAILY_TTL = 300  # 5 min cache for daily signals
 _BRIDGE_30M_TTL   = 120  # 2 min cache for 30m signals
 
@@ -303,7 +304,7 @@ def _get_bridge_data_safe() -> dict:
     if _bridge_cache.get("daily") and (now - _bridge_cache_ts.get("daily", 0)) < _BRIDGE_DAILY_TTL:
         return _bridge_cache["daily"]
     # If another thread is already fetching, return stale immediately
-    if not _bridge_fetch_lock.acquire(blocking=False):
+    if not _bridge_daily_lock.acquire(blocking=False):
         return _bridge_cache.get("daily") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
     try:
         from bridge_client import BridgeClient, BRIDGE_BASE_URL
@@ -354,7 +355,7 @@ def _get_bridge_data_safe() -> dict:
         logger.warning("Bridge data fetch failed: %s", e)
         return _bridge_cache.get("daily") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
     finally:
-        _bridge_fetch_lock.release()
+        _bridge_daily_lock.release()
 
 
 def _get_bridge_data_30m_safe() -> dict:
@@ -363,7 +364,7 @@ def _get_bridge_data_30m_safe() -> dict:
     now = _time.time()
     if _bridge_cache.get("30m") and (now - _bridge_cache_ts.get("30m", 0)) < _BRIDGE_30M_TTL:
         return _bridge_cache["30m"]
-    if not _bridge_fetch_lock.acquire(blocking=False):
+    if not _bridge_30m_lock.acquire(blocking=False):
         return _bridge_cache.get("30m") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
     try:
         from bridge_client import BridgeClient, BRIDGE_BASE_URL
@@ -411,7 +412,7 @@ def _get_bridge_data_30m_safe() -> dict:
         logger.warning("Bridge 30m data fetch failed: %s", e)
         return _bridge_cache.get("30m") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
     finally:
-        _bridge_fetch_lock.release()
+        _bridge_30m_lock.release()
 
 
 def build_signals_30m() -> dict:
