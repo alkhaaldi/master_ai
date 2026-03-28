@@ -3313,6 +3313,44 @@ async def tradingview_webhook(request: Request):
             logger.error(f"TV TG send error: {e}")
     return JSONResponse(status_code=status_code, content=response)
 
+@app.get("/api/decisions-now")
+async def api_decisions_now():
+    """Golden opportunities — match live data with historical patterns."""
+    from golden_engine import scan_opportunities
+    live_list = []
+    try:
+        from signal_engine import build_signals_30m
+        sig_data = build_signals_30m()
+        live_list = sig_data.get("signals", [])
+    except Exception:
+        pass
+    if not live_list:
+        try:
+            from signal_engine import build_signals
+            sig_data = build_signals()
+            live_list = sig_data.get("all_signals", [])
+        except Exception:
+            pass
+    # Fallback: use stock_radar_daily DB when bridge is offline
+    if not live_list:
+        import sqlite3 as _sq
+        _db = os.path.join(os.path.dirname(__file__), "data", "life.db")
+        try:
+            _c = _sq.connect(_db, timeout=5)
+            _c.row_factory = _sq.Row
+            _rows = _c.execute(
+                "SELECT symbol, price, rsi, vol_ratio, support, resistance, "
+                "macd_cross AS macd_state, daily_ema_cross AS ema_state, "
+                "stoch_k, adx, atr, bb_squeeze, confluence_score, change_pct "
+                "FROM stock_radar_daily"
+            ).fetchall()
+            _c.close()
+            live_list = [dict(r) for r in _rows]
+        except Exception:
+            pass
+    return scan_opportunities(live_list)
+
+
 @app.get("/api/stocks/symbol/{symbol}")
 async def get_stock_personality(symbol: str, timeframe: str = "1D"):
     """Get stock personality: profile + patterns + notes."""
