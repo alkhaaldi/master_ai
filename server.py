@@ -3313,6 +3313,19 @@ async def tradingview_webhook(request: Request):
             logger.error(f"TV TG send error: {e}")
     return JSONResponse(status_code=status_code, content=response)
 
+@app.get("/api/stocks/symbol/{symbol}")
+async def get_stock_personality(symbol: str, timeframe: str = "1D"):
+    """Get stock personality: profile + patterns + notes."""
+    from stock_personality_engine import get_symbol_personality
+    return get_symbol_personality(symbol.upper(), timeframe)
+
+@app.get("/api/stocks/profiles")
+async def get_all_stock_profiles():
+    """Get summary of all stock profiles."""
+    from stock_personality_engine import get_all_profiles_summary
+    return {"profiles": get_all_profiles_summary()}
+
+
 @app.get("/health")
 async def health():
     schema = _get_schema_status()
