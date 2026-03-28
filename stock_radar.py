@@ -130,6 +130,8 @@ def init_radar_db():
         "ALTER TABLE stock_radar_daily ADD COLUMN atr REAL",
         "ALTER TABLE stock_radar_daily ADD COLUMN ema_fast REAL",
         "ALTER TABLE stock_radar_daily ADD COLUMN ema_slow REAL",
+        "ALTER TABLE stock_radar_daily ADD COLUMN bb_squeeze BOOLEAN DEFAULT 0",
+        "ALTER TABLE stock_radar_daily ADD COLUMN bb_bandwidth REAL",
     ]:
         try:
             conn.execute(col_sql)
@@ -671,7 +673,7 @@ def _fetch_bridge_30m(ticker: str) -> dict:
     import requests as _req
     r = _req.get(
         "http://192.168.111.158:8059/analysis",
-        params={"symbol": ticker, "exchange": "KSE", "interval": "30m", "bars": 60},
+        params={"symbol": ticker, "exchange": "KSE", "interval": "30", "bars": 60},
         timeout=8,
     )
     if r.status_code != 200:
@@ -712,9 +714,11 @@ def check_symbol(symbol, fast=9, slow=21):
 
         candle_time = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
 
-        # Derive support/resistance from Bridge indicators
-        _sup = ind.get("support_1") or ind.get("pivot_low")
-        _res = ind.get("resistance_1") or ind.get("pivot_high")
+        # Fix 6: S/R from top-level arrays in Bridge response
+        _sup_arr = raw.get("support", []) if isinstance(raw, dict) else []
+        _res_arr = raw.get("resistance", []) if isinstance(raw, dict) else []
+        _sup = _sup_arr[0] if _sup_arr else (ind.get("support_1") or ind.get("pivot_low"))
+        _res = _res_arr[0] if _res_arr else (ind.get("resistance_1") or ind.get("pivot_high"))
         sr = {"support_1": _sup, "resistance_1": _res} if (_sup or _res) else None
 
         vol_sig = {
@@ -783,7 +787,8 @@ async def radar_loop(send_fn):
             if not _daily_snapshot_is_fresh():
                 try:
                     logger.info("Refreshing daily snapshot (stale or missing)...")
-                    refresh_daily_snapshot()
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, refresh_daily_snapshot)
                 except Exception as de:
                     logger.warning(f"Daily snapshot refresh failed (non-fatal): {de}")
             # Only run during KSE market hours (Sun-Thu 9:00-12:40 KWT)
@@ -812,7 +817,8 @@ async def radar_loop(send_fn):
                 fast = item.get("fast_len", cfg.get("fast_ema", 9))
                 slow = item.get("slow_len", cfg.get("slow_ema", 21))
                 try:
-                    result = check_symbol(sym, fast, slow)
+                    loop = asyncio.get_event_loop()
+                    result = await loop.run_in_executor(None, check_symbol, sym, fast, slow)
                     if result.get("error"):
                         continue
                     signal = result.get("signal")
@@ -1201,9 +1207,18 @@ def refresh_daily_snapshot(symbols=None):
                 adx_val     = ind.get("adx")
                 atr_val     = ind.get("atr_14")
                 rsi_div_val = (raw.get("signals") or {}).get("rsi_divergence")
+                if rsi_div_val == "none" or rsi_div_val == "":
+                    rsi_div_val = None
 
-                support    = ind.get("support_1") or ind.get("pivot_low")
-                resistance = ind.get("resistance_1") or ind.get("pivot_high")
+                # Fix 1: S/R are top-level arrays, not in indicators dict
+                sup_arr = raw.get("support", [])
+                res_arr = raw.get("resistance", [])
+                support    = sup_arr[0] if sup_arr else None
+                resistance = res_arr[0] if res_arr else None
+
+                # Fix 2b: bb_squeeze + bb_bandwidth
+                bb_squeeze_val  = bool(ind.get("bb_squeeze") or False)
+                bb_bandwidth_val = ind.get("bb_bandwidth")
 
                 vol_sig_proxy = {"signal": "high_volume" if vol_ratio >= 1.5 else "normal", "ratio": vol_ratio}
                 confluence = _compute_confluence(None, {
@@ -1229,18 +1244,20 @@ def refresh_daily_snapshot(symbols=None):
                      daily_ema9, daily_ema21, daily_ema_cross,
                      confluence_score, confluence_direction,
                      avg_volume, volume_spike, macd_above_zero,
-                     stoch_k, adx, rsi_divergence, atr)
+                     stoch_k, adx, rsi_divergence, atr,
+                     bb_squeeze, bb_bandwidth)
                     VALUES (?, 'KSE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '1D', ?, ?, ?,
                             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?)
+                            ?, ?, ?, ?, ?, ?)
                 """, (sym, price, trend_ar, rsi, support, resistance,
                       score, score_class, verdict, volume, vol_ratio, change_pct, now,
                       ema9, ema21,
                       macd_val, macd_sig, macd_hist, macd_cross,
                       ema9, ema21, daily_ema_cross,
                       confluence["confluence_score"], confluence["direction"],
-                      0, 1 if vol_ratio >= 3 else 0, 1 if macd_above_zero else 0,
-                      stoch_k_val, adx_val, rsi_div_val, atr_val))
+                      0, 1 if vol_ratio >= 2 else 0, 1 if macd_above_zero else 0,
+                      stoch_k_val, adx_val, rsi_div_val, atr_val,
+                      bb_squeeze_val, bb_bandwidth_val))
                 ok_count += 1
             except Exception as e:
                 logger.warning(f"daily_snapshot skip {sym}: {e}")

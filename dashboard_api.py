@@ -558,6 +558,8 @@ async def ha_dashboard_radar():
                 "adx": d.get("adx"),
                 "rsi_divergence": d.get("rsi_divergence"),
                 "atr": d.get("atr"),
+                "bb_squeeze": bool(d.get("bb_squeeze", False)),
+                "bb_bandwidth": d.get("bb_bandwidth"),
             })
         data["radar_daily_context"] = daily_clean
         data["daily_context_stale"] = all(d.get("is_stale", True) for d in daily) if daily else True
