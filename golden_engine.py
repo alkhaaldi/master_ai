@@ -1,7 +1,7 @@
 """
 golden_engine.py — Golden Opportunities Engine.
 Matches LIVE market data against historical winning patterns.
-Produces ranked opportunities with confidence scores.
+Produces ranked opportunities with confidence scores, entry decisions, and Telegram alerts.
 
 Endpoint: GET /api/decisions-now
 """
@@ -9,11 +9,18 @@ import os
 import math
 import sqlite3
 import logging
+import json
 from datetime import datetime
 
 logger = logging.getLogger("golden_engine")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "life.db")
+
+
+def _conn():
+    c = sqlite3.connect(DB_PATH, timeout=10)
+    c.row_factory = sqlite3.Row
+    return c
 
 
 # ═══════════════════════════════════
@@ -36,38 +43,29 @@ def build_live_atoms(live: dict) -> set:
     resistance = float(live.get("resistance") or 0)
     atr        = float(live.get("atr_14") or live.get("atr") or 0)
 
-    # RSI
     if rsi < 30:           atoms.add("rsi_lt_30")
     if 30 <= rsi < 45:     atoms.add("rsi_30_45")
     if rsi > 70:           atoms.add("rsi_gt_70")
 
-    # MACD
     if "bullish" in macd_state: atoms.add("macd_bullish")
     if "bearish" in macd_state: atoms.add("macd_bearish")
 
-    # EMA
     if "bullish" in ema_state: atoms.add("ema_bullish")
     if "bearish" in ema_state: atoms.add("ema_bearish")
 
-    # ADX
     if adx >= 25: atoms.add("adx_ge_25")
     if adx < 20:  atoms.add("adx_lt_20")
 
-    # Volume
     if vol >= 1.5: atoms.add("vol_ge_1_5")
     if vol >= 2.0: atoms.add("vol_ge_2")
 
-    # Stochastic
     if stoch < 20: atoms.add("stoch_lt_20")
     if stoch > 80: atoms.add("stoch_gt_80")
 
-    # Bollinger
     if bb_squeeze: atoms.add("bb_squeeze")
 
-    # Confluence
     if confluence >= 70: atoms.add("confluence_ge_70")
 
-    # S/R proximity (within 3%)
     if price > 0 and support > 0:
         dist = (price - support) / support
         if 0 <= dist <= 0.03: atoms.add("near_support")
@@ -78,7 +76,6 @@ def build_live_atoms(live: dict) -> set:
         if 0 <= dist <= 0.03:  atoms.add("near_resistance")
         if price > resistance: atoms.add("above_resistance")
 
-    # ATR volatility
     if price > 0 and atr > 0:
         atr_pct = atr / price
         if atr_pct > 0.03:  atoms.add("high_atr")
@@ -110,25 +107,15 @@ def calc_confidence(pattern: dict, profile: dict, match_ratio: float) -> float:
     pat_score = float(pattern.get("pattern_score") or 0)
     baseline  = float(profile.get("baseline_win_rate") or 0.3)
 
-    # 1. Match quality (35%)
-    match_score = match_ratio * 100
-
-    # 2. Win rate vs baseline (20%)
-    excess   = (wr - baseline) * 100
-    wr_score = max(0, min(100, (excess + 10) / 30 * 100))
-
-    # 3. Sample size (15%)
+    match_score  = match_ratio * 100
+    excess       = (wr - baseline) * 100
+    wr_score     = max(0, min(100, (excess + 10) / 30 * 100))
     sample_score = min(100, math.log1p(occ) / math.log1p(50) * 100)
+    ps_norm      = min(100, pat_score)
+    gain_score   = min(100, avg_gain / 12 * 100)
 
-    # 4. Pattern score (10%)
-    ps_norm = min(100, pat_score)
-
-    # 5. Gain quality (10%)
-    gain_score = min(100, avg_gain / 12 * 100)
-
-    # 6. Profile alignment (10%) — dominant driver matches pattern?
     align = 50
-    dom          = str(profile.get("dominant_driver") or "").lower()
+    dom           = str(profile.get("dominant_driver") or "").lower()
     pat_atoms_str = str(pattern.get("pattern_atoms") or "").lower()
     if "stoch"  in dom and "stoch" in pat_atoms_str:  align = 90
     elif "volume" in dom and "vol"  in pat_atoms_str: align = 85
@@ -148,13 +135,13 @@ def calc_confidence(pattern: dict, profile: dict, match_ratio: float) -> float:
 
 
 # ═══════════════════════════════════
-# STOP LOSS
+# STOP LOSS (simple — trading_decision_engine provides full plan)
 # ═══════════════════════════════════
 
 def suggest_stop(live: dict) -> dict:
-    price      = float(live.get("price") or 0)
-    atr        = float(live.get("atr_14") or live.get("atr") or 0)
-    support    = float(live.get("support") or 0)
+    price   = float(live.get("price") or 0)
+    atr     = float(live.get("atr_14") or live.get("atr") or 0)
+    support = float(live.get("support") or 0)
     if price <= 0:
         return {"method": "N/A", "stop_price": None, "distance_pct": None}
     if support > 0 and atr > 0:
@@ -190,6 +177,95 @@ def atoms_to_ar(atoms_str: str) -> str:
 
 
 # ═══════════════════════════════════
+# TELEGRAM ALERTS
+# ═══════════════════════════════════
+
+def _read_file(path):
+    try:
+        p = os.path.expanduser(path)
+        with open(p) as f:
+            return f.read().strip()
+    except Exception:
+        return None
+
+
+def _init_alert_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS alert_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            pattern_key TEXT,
+            entry_status TEXT,
+            confidence REAL,
+            dedup_key TEXT UNIQUE,
+            sent_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+
+
+def should_alert(conn, opp: dict) -> bool:
+    """Return True if this opportunity should trigger a Telegram alert."""
+    status = opp.get("entry_status", "")
+    if status not in ("enter_now", "wait_pullback"):
+        return False
+    if opp.get("confidence", 0) < 75:
+        return False
+    dedup = f"{opp['symbol']}:{opp.get('pattern_atoms', '')}:{status}"
+    row = conn.execute("SELECT id FROM alert_history WHERE dedup_key=?", (dedup,)).fetchone()
+    return row is None
+
+
+def record_alert(conn, opp: dict):
+    """Record a sent alert to prevent duplicates."""
+    dedup = f"{opp['symbol']}:{opp.get('pattern_atoms', '')}:{opp.get('entry_status', '')}"
+    conn.execute(
+        "INSERT OR IGNORE INTO alert_history (symbol, pattern_key, entry_status, confidence, dedup_key) VALUES (?,?,?,?,?)",
+        (opp["symbol"], opp.get("pattern_atoms"), opp.get("entry_status"), opp.get("confidence"), dedup)
+    )
+    conn.commit()
+
+
+def send_golden_alert(opp: dict) -> bool:
+    """Send a Telegram alert for a golden opportunity."""
+    import requests as _req
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN") or _read_file("~/.telegram_bot_token")
+    chat_id   = os.environ.get("TELEGRAM_CHAT_ID")   or _read_file("~/.telegram_chat_id")
+    if not bot_token or not chat_id:
+        return False
+
+    tp = opp.get("trade_plan") or {}
+
+    text = (
+        f"🚨 <b>فرصة ذهبية — {opp['symbol']}</b>\n\n"
+        f"📊 <b>النمط:</b> {opp.get('pattern_ar', '')}\n"
+        f"✅ <b>نسبة نجاح:</b> {opp.get('win_rate', 0):.0f}% ({opp.get('occurrences', 0)} مرة)\n"
+        f"{opp.get('entry_status_ar', '')}\n\n"
+        f"💰 <b>السعر:</b> {opp.get('price', 0)}\n"
+        f"🎯 <b>منطقة الدخول:</b> {tp.get('entry_zone_low', '')} - {tp.get('entry_zone_high', '')}\n"
+        f"🛑 <b>وقف:</b> {tp.get('stop_loss', '')} ({tp.get('stop_distance_pct', '')}%)\n"
+        f"🏁 <b>هدف 1:</b> {tp.get('target_1', '')}\n"
+        f"🏁 <b>هدف 2:</b> {tp.get('target_2', '')}\n"
+        f"⚖️ <b>R/R:</b> {tp.get('rr_ratio', 0)}x\n\n"
+    )
+    reasons = opp.get("reasoning_ar", [])
+    if reasons:
+        text += "<b>السبب:</b>\n"
+        text += "\n".join(f"- {r}" for r in reasons[:4])
+
+    try:
+        r = _req.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+            timeout=10,
+        )
+        return r.status_code == 200
+    except Exception as e:
+        logger.warning(f"Telegram alert failed: {e}")
+        return False
+
+
+# ═══════════════════════════════════
 # MAIN ENGINE
 # ═══════════════════════════════════
 
@@ -203,18 +279,19 @@ def scan_opportunities(live_data: list) -> dict:
     """
     Main entry point.
     live_data: list of dicts with live indicator data per symbol.
-    Each dict needs: symbol, price, rsi_14, vol_ratio, adx, stoch_k,
-                     macd_state/macd_cross, ema_state/daily_ema_cross,
-                     bb_squeeze, support, resistance, atr_14, confluence_score
-    Returns ranked opportunities.
+    Returns ranked opportunities enriched with S/R, entry decisions, and trade plans.
     """
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
+    from trading_decision_engine import compute_entry_status
 
+    conn = _conn()
+    _init_alert_table(conn)
+
+    # Load profiles (includes sr_json from sr_engine)
     profiles = {}
     for r in conn.execute("SELECT * FROM stock_profiles").fetchall():
         profiles[r["symbol"]] = dict(r)
 
+    # Load qualifying patterns
     patterns_by_sym = {}
     for r in conn.execute(
         "SELECT * FROM symbol_patterns WHERE occurrences >= ? AND win_rate >= ? ORDER BY pattern_score DESC",
@@ -234,8 +311,8 @@ def scan_opportunities(live_data: list) -> dict:
         if not sym or sym not in patterns_by_sym:
             continue
 
-        live_atoms  = build_live_atoms(live)
-        profile     = profiles.get(sym, {"baseline_win_rate": 0.3})
+        live_atoms   = build_live_atoms(live)
+        profile      = profiles.get(sym, {"baseline_win_rate": 0.3})
         sym_patterns = patterns_by_sym.get(sym, [])
 
         best_opp = None
@@ -257,42 +334,85 @@ def scan_opportunities(live_data: list) -> dict:
                 opp_type = "🟡 مراقبة"
 
             opp = {
-                "symbol":        sym,
-                "name_ar":       profile.get("name_ar") or "",
-                "personality_ar": profile.get("personality_ar") or "",
+                "symbol":          sym,
+                "name_ar":         profile.get("name_ar") or "",
+                "personality_ar":  profile.get("personality_ar") or "",
                 "opportunity_type": opp_type,
-                "confidence":    confidence,
-                "price":         float(live.get("price") or 0),
-                "change_pct":    float(live.get("change_pct") or 0),
-                "pattern_ar":    atoms_to_ar(pat.get("pattern_atoms", "")),
-                "pattern_atoms": pat.get("pattern_atoms", ""),
-                "matched_atoms": ",".join(matched),
-                "missing_atoms": ",".join(missing),
-                "match_ratio":   round(ratio, 2),
-                "occurrences":   pat.get("occurrences", 0),
-                "hits":          pat.get("hits", 0),
-                "win_rate":      round(float(pat.get("win_rate", 0)) * 100, 1),
-                "avg_gain_pct":  round(float(pat.get("avg_gain_pct", 0)), 1),
-                "pattern_score": pat.get("pattern_score", 0),
-                "current_rsi":   float(live.get("rsi_14") or live.get("rsi") or 0),
-                "current_vol":   float(live.get("vol_ratio") or 0),
-                "current_adx":   float(live.get("adx") or 0),
-                "current_stoch": float(live.get("stoch_k") or 0),
-                "live_atoms":    sorted(list(live_atoms)),
-                "stop_loss":     suggest_stop(live),
+                "confidence":      confidence,
+                "price":           float(live.get("price") or 0),
+                "change_pct":      float(live.get("change_pct") or 0),
+                "pattern_ar":      atoms_to_ar(pat.get("pattern_atoms", "")),
+                "pattern_atoms":   pat.get("pattern_atoms", ""),
+                "matched_atoms":   ",".join(matched),
+                "missing_atoms":   ",".join(missing),
+                "match_ratio":     round(ratio, 2),
+                "occurrences":     pat.get("occurrences", 0),
+                "hits":            pat.get("hits", 0),
+                "win_rate":        round(float(pat.get("win_rate", 0)) * 100, 1),
+                "avg_gain_pct":    round(float(pat.get("avg_gain_pct", 0)), 1),
+                "pattern_score":   pat.get("pattern_score", 0),
+                "current_rsi":     float(live.get("rsi_14") or live.get("rsi") or 0),
+                "current_vol":     float(live.get("vol_ratio") or 0),
+                "current_adx":     float(live.get("adx") or 0),
+                "current_stoch":   float(live.get("stoch_k") or 0),
+                "live_atoms":      sorted(list(live_atoms)),
+                "stop_loss":       suggest_stop(live),
                 "dominant_driver": profile.get("dominant_driver", ""),
-                "baseline_wr":   round(float(profile.get("baseline_win_rate", 0)) * 100, 1),
+                "baseline_wr":     round(float(profile.get("baseline_win_rate", 0)) * 100, 1),
             }
 
             if best_opp is None or confidence > best_opp["confidence"]:
                 best_opp = opp
 
         if best_opp:
+            # ── Phase 3: Enrich with S/R from profile ──────────
+            sr_json = profile.get("sr_json")
+            if sr_json:
+                try:
+                    sr_data = json.loads(sr_json) if isinstance(sr_json, str) else sr_json
+                    best_opp["key_support"]          = sr_data.get("key_support")
+                    best_opp["key_resistance"]        = sr_data.get("key_resistance")
+                    best_opp["support_levels"]        = sr_data.get("support_levels", [])
+                    best_opp["resistance_levels"]     = sr_data.get("resistance_levels", [])
+                    best_opp["support_touches"]       = sr_data.get("key_support_touches", 0)
+                    best_opp["resistance_touches"]    = sr_data.get("key_resistance_touches", 0)
+                except Exception:
+                    pass
+
+            # Fallback: use live data S/R
+            if not best_opp.get("key_support"):
+                best_opp["key_support"]    = float(live.get("support") or 0) or None
+            if not best_opp.get("key_resistance"):
+                best_opp["key_resistance"] = float(live.get("resistance") or 0) or None
+
+            # Also attach atr for decision engine
+            best_opp["atr_14"] = float(live.get("atr_14") or live.get("atr") or 0)
+
+            # ── Phase 3: Compute entry decision + trade plan ────
+            decision = compute_entry_status(best_opp, profile)
+            best_opp["entry_status"]    = decision["entry_status"]
+            best_opp["entry_status_ar"] = decision["entry_status_ar"]
+            best_opp["entry_score"]     = decision["entry_score"]
+            best_opp["reasoning_ar"]    = decision["reasoning_ar"]
+            best_opp["trade_plan"]      = decision["trade_plan"]
+
             all_opportunities.append(best_opp)
 
     all_opportunities.sort(key=lambda x: x["confidence"], reverse=True)
     for i, opp in enumerate(all_opportunities):
         opp["rank"] = i + 1
+
+    # ── Phase 4: Telegram alerts for new "enter_now" opps ───────
+    alert_conn = _conn()
+    _init_alert_table(alert_conn)
+    alerts_sent = 0
+    for opp in all_opportunities:
+        if opp.get("entry_status") == "enter_now" and opp.get("confidence", 0) >= 80:
+            if should_alert(alert_conn, opp):
+                if send_golden_alert(opp):
+                    record_alert(alert_conn, opp)
+                    alerts_sent += 1
+    alert_conn.close()
 
     golden     = [o for o in all_opportunities if o["confidence"] >= 80]
     candidates = [o for o in all_opportunities if 70 <= o["confidence"] < 80]
@@ -305,6 +425,7 @@ def scan_opportunities(live_data: list) -> dict:
         "golden_count":        len(golden),
         "candidate_count":     len(candidates),
         "watch_count":         len(watch),
+        "alerts_sent":         alerts_sent,
         "top_10":              all_opportunities[:10],
         "all_opportunities":   all_opportunities,
     }

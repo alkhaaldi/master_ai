@@ -1125,14 +1125,7 @@ def refresh_daily_snapshot(symbols=None):
         err_count = 0
         now = datetime.utcnow().isoformat()
 
-        # Load previous daily EMA and MACD values for cross detection
-        prev_daily_ema = {}
-        prev_daily_macd = {}
-        for row in conn.execute("SELECT symbol, ema_fast, ema_slow, macd, macd_signal FROM stock_radar_daily").fetchall():
-            if row["ema_fast"] and row["ema_slow"]:
-                prev_daily_ema[row["symbol"]] = (float(row["ema_fast"]), float(row["ema_slow"]))
-            if row["macd"] is not None and row["macd_signal"] is not None:
-                prev_daily_macd[row["symbol"]] = (float(row["macd"]), float(row["macd_signal"]))
+        # Bridge signals provide pre-computed crosses — no need for prev lookups
 
         for sym in symbols:
             try:
@@ -1153,73 +1146,84 @@ def refresh_daily_snapshot(symbols=None):
                 ema9  = ind.get("ema_9") or ind.get("ema9") or 0
                 ema21 = ind.get("ema_20") or ind.get("ema21") or 0
 
-                prev_f, prev_s = prev_daily_ema.get(sym, (None, None))
-
+                # === EMA Direction (always set) ===
                 if ema9 and ema21:
-                    # Direction (always set)
                     if ema9 > ema21:
                         trend_ar = "صاعد"
                     elif ema9 < ema21:
                         trend_ar = "هابط"
                     else:
                         trend_ar = "محايد"
-
-                    # Cross detection (requires previous data)
-                    if prev_f is not None and prev_s is not None:
-                        if prev_f <= prev_s and ema9 > ema21:
-                            daily_ema_cross = "bullish"
-                            daily_signal = "bullish_cross"
-                        elif prev_f >= prev_s and ema9 < ema21:
-                            daily_ema_cross = "bearish"
-                            daily_signal = "bearish_cross"
-                        else:
-                            daily_ema_cross = "none"
-                            daily_signal = None
-                    else:
-                        # No previous data — direction as fallback label, no signal
-                        daily_ema_cross = "bullish" if ema9 > ema21 else "bearish" if ema9 < ema21 else "none"
-                        daily_signal = None
                 else:
                     trend_ar = "محايد"
-                    daily_ema_cross = "none"
-                    daily_signal = None
 
+                # === Bridge pre-computed signals ===
+                bridge_signals = raw.get("signals") or {}
+                bridge_ema_cross = bridge_signals.get("ema_cross") or {}
+                bridge_confluence = bridge_signals.get("confluence") or {}
+                bridge_macd_mom = bridge_signals.get("macd_momentum") or ""
+
+                # === EMA Cross from Bridge ===
+                if isinstance(bridge_ema_cross, dict) and bridge_ema_cross.get("type"):
+                    cross_type = bridge_ema_cross["type"]
+                    if cross_type == "golden":
+                        daily_ema_cross = "bullish"
+                    elif cross_type == "death":
+                        daily_ema_cross = "bearish"
+                    else:
+                        daily_ema_cross = "none"
+                else:
+                    daily_ema_cross = "bullish" if ema9 and ema21 and ema9 > ema21 else "bearish" if ema9 and ema21 and ema9 < ema21 else "none"
+
+                # === MACD ===
                 macd_val  = ind.get("macd") or 0
                 macd_sig  = ind.get("macd_signal") or 0
                 macd_hist = ind.get("macd_hist") or 0
-
-                # MACD cross detection (actual cross, not just direction)
-                prev_m, prev_ms = prev_daily_macd.get(sym, (None, None))
-                if prev_m is not None and prev_ms is not None:
-                    prev_hist = prev_m - prev_ms
-                    curr_hist = macd_val - macd_sig
-                    if prev_hist <= 0 and curr_hist > 0:
-                        macd_cross = "bullish"
-                    elif prev_hist >= 0 and curr_hist < 0:
-                        macd_cross = "bearish"
-                    else:
-                        macd_cross = "none"
-                else:
-                    macd_cross = "bullish" if macd_val > macd_sig else "bearish" if macd_val < macd_sig else "none"
+                macd_cross = "bullish" if macd_hist > 0 else "bearish" if macd_hist < 0 else "none"
                 macd_above_zero = bool(macd_val > 0)
 
+                # === Other indicators ===
                 stoch_k_val = ind.get("stoch_k")
                 adx_val     = ind.get("adx")
                 atr_val     = ind.get("atr_14")
-                rsi_div_val = (raw.get("signals") or {}).get("rsi_divergence")
+                rsi_div_val = bridge_signals.get("rsi_divergence")
                 if rsi_div_val == "none" or rsi_div_val == "":
                     rsi_div_val = None
 
-                # Fix 1: S/R are top-level arrays, not in indicators dict
+                # S/R from top-level arrays
                 sup_arr = raw.get("support", [])
                 res_arr = raw.get("resistance", [])
                 support    = sup_arr[0] if sup_arr else None
                 resistance = res_arr[0] if res_arr else None
 
-                # Fix 2b: bb_squeeze + bb_bandwidth
+                # BB from indicators
                 bb_squeeze_val  = bool(ind.get("bb_squeeze") or False)
                 bb_bandwidth_val = ind.get("bb_bandwidth")
 
+                # === Volume spike ===
+                volume_spike = 1 if vol_ratio >= 2 else 0
+
+                # === Score: use Bridge confluence if available, else compute ===
+                bridge_conf_score = bridge_confluence.get("score", 0)
+                if bridge_conf_score > 0:
+                    score = bridge_conf_score
+                else:
+                    vol_sig_proxy = {"signal": "high_volume" if vol_ratio >= 1.5 else "normal", "ratio": vol_ratio}
+                    conf_result = _compute_confluence(None, {
+                        "daily_ema_cross": daily_ema_cross,
+                        "macd_cross": macd_cross,
+                        "macd_above_zero": macd_above_zero,
+                        "vol_ratio": vol_ratio,
+                        "rsi": rsi,
+                    })
+                    score = conf_result.get("confluence_score", 0)
+
+                if score >= 75: score_class = "A"
+                elif score >= 50: score_class = "B"
+                elif score >= 30: score_class = "C"
+                else: score_class = "D"
+
+                # === Confluence for DB ===
                 vol_sig_proxy = {"signal": "high_volume" if vol_ratio >= 1.5 else "normal", "ratio": vol_ratio}
                 confluence = _compute_confluence(None, {
                     "daily_ema_cross": daily_ema_cross,
@@ -1228,12 +1232,24 @@ def refresh_daily_snapshot(symbols=None):
                     "vol_ratio": vol_ratio,
                     "rsi": rsi,
                 })
-                score, score_class = _compute_score(
-                    daily_signal, rsi, None, price, vol_sig_proxy, ema9, ema21, None
-                )
-                verdict = _smart_verdict(
-                    daily_signal, rsi, None, price, vol_sig_proxy, ema9, ema21
-                )
+
+                # === Verdict: smart, based on all data ===
+                if score >= 70 and daily_ema_cross == "bullish" and vol_ratio >= 1.2:
+                    verdict = "\U0001f525 فرصة قوية"
+                elif score >= 50 and daily_ema_cross == "bullish":
+                    verdict = "\U0001f7e2 صاعد — مراقبة"
+                elif score >= 50 and macd_cross == "bullish":
+                    verdict = "\U0001f7e2 زخم صاعد"
+                elif score >= 40:
+                    verdict = "\U0001f7e1 محايد — انتظار"
+                elif daily_ema_cross == "bearish" and score < 40:
+                    verdict = "\U0001f534 ضغط بيعي"
+                elif rsi and rsi < 30:
+                    verdict = "\U0001f7e2 تشبع بيعي — فرصة"
+                elif rsi and rsi > 70:
+                    verdict = "\U0001f534 تشبع شرائي — حذر"
+                else:
+                    verdict = "\u26AA محايد"
 
                 conn.execute("""
                     INSERT OR REPLACE INTO stock_radar_daily
@@ -1267,6 +1283,14 @@ def refresh_daily_snapshot(symbols=None):
         conn.commit()
         conn.close()
         logger.info(f"Daily snapshot refreshed: {ok_count} ok, {err_count} errors")
+
+        # Refresh S/R levels for all symbols from daily data
+        try:
+            from sr_engine import refresh_sr_for_all
+            refresh_sr_for_all()
+        except Exception as e:
+            logger.warning(f"S/R refresh failed (non-critical): {e}")
+
         return {"ok": ok_count, "errors": err_count}
     finally:
         _daily_refresh_lock = False
