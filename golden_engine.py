@@ -898,6 +898,24 @@ def scan_opportunities(live_data: list) -> dict:
 
             all_opportunities.append(best_opp)
 
+    # ── Phase 3 V10: Risk Gate ────────────────────────
+    try:
+        from risk_engine import RiskEngine
+        from journal_engine import get_open_trades
+        _risk = RiskEngine()
+        _open_pos = get_open_trades()
+        all_opportunities = _risk.apply_risk_gate(all_opportunities, _open_pos)
+    except Exception as e:
+        logger.warning("Risk gate error (skipped): %s", e)
+        # Ensure sector is set even if risk gate fails
+        try:
+            from sector_map import get_sector
+            for opp in all_opportunities:
+                if not opp.get("sector"):
+                    opp["sector"] = get_sector(opp.get("symbol", ""))
+        except Exception:
+            pass
+
     # Sort: ENTER first, then WAIT, then SKIP; within each group by confidence
     action_priority = {"ENTER": 0, "WAIT": 1, "SKIP": 2}
     all_opportunities.sort(
