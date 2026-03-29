@@ -594,6 +594,43 @@ def scan_opportunities(live_data: list) -> dict:
             best_opp["reasoning_ar"]    = decision["reasoning_ar"]
             best_opp["trade_plan"]      = decision["trade_plan"]
 
+            # ── Phase 8: Match mined strategies ────────────────
+            try:
+                strat_matches = match_strategies(live, timeframe="1D", top_n=3)
+                if strat_matches:
+                    best_strat = strat_matches[0]
+                    best_opp["strategy_match"] = {
+                        "strategy_id": best_strat.get("strategy_id", ""),
+                        "pattern_ar": best_strat.get("pattern_ar", ""),
+                        "ev": best_strat.get("ev", 0),
+                        "profitable_rate": best_strat.get("profitable_rate", 0),
+                        "profit_factor": best_strat.get("profit_factor", 0),
+                        "final_score": best_strat.get("final_score", 0),
+                        "sample_size": best_strat.get("sample_size", 0),
+                        "stability": best_strat.get("stability", 0),
+                        "total_matches": len(strat_matches),
+                        "target_1_pct": best_strat.get("target_1_pct", 0),
+                        "target_2_pct": best_strat.get("target_2_pct", 0),
+                        "stop_pct": best_strat.get("stop_pct", 0),
+                        "rr_ratio": best_strat.get("rr_ratio", 0),
+                        "est_hold_days": best_strat.get("est_hold_days", 0),
+                        "entry_price": best_strat.get("entry_price"),
+                        "target_1_price": best_strat.get("target_1_price"),
+                        "target_2_price": best_strat.get("target_2_price"),
+                        "stop_price": best_strat.get("stop_price"),
+                    }
+                    # Boost confidence if strong strategy match
+                    strat_ev = best_strat.get("ev", 0)
+                    strat_boost = min(strat_ev * 0.25, 5)  # max +5
+                    best_opp["confidence"] = min(
+                        best_opp["confidence"] + strat_boost, 99.9
+                    )
+                else:
+                    best_opp["strategy_match"] = None
+            except Exception as e:
+                logger.warning("Strategy match error for %s: %s", sym, e)
+                best_opp["strategy_match"] = None
+
             all_opportunities.append(best_opp)
 
     all_opportunities.sort(key=lambda x: x["confidence"], reverse=True)
