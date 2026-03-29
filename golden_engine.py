@@ -699,6 +699,10 @@ def scan_opportunities(live_data: list) -> dict:
 
     all_opportunities = []
 
+    # ── Data Integrity Gate ───────────────────────────
+    from data_integrity import DataIntegrityGate
+    _gate = DataIntegrityGate()
+
     for live in live_data:
         sym = (live.get("symbol") or "").upper()
         if not sym or sym not in patterns_by_sym:
@@ -758,8 +762,28 @@ def scan_opportunities(live_data: list) -> dict:
                 best_opp = opp
 
         if best_opp:
+            # ── Data Integrity Gate ────────────────────────────
+            sr_json_raw = profile.get("sr_json")
+            _sr_parsed = None
+            if sr_json_raw:
+                try:
+                    _sr_parsed = json.loads(sr_json_raw) if isinstance(sr_json_raw, str) else sr_json_raw
+                except Exception:
+                    pass
+
+            integrity = _gate.check(sym, live, _sr_parsed)
+            best_opp["data_quality"]   = integrity["quality_score"]
+            best_opp["data_freshness"] = integrity["freshness"]
+            best_opp["sr_status"]      = integrity["sr_status"]
+            best_opp["gate_decision"]  = integrity["gate_decision"]
+
+            # force_skip → don't add to list at all
+            if integrity["gate_decision"] == "force_skip":
+                logger.debug("Skipping %s — data quality %d (force_skip)", sym, integrity["quality_score"])
+                continue
+
             # ── Phase 3: Enrich with S/R from profile ──────────
-            sr_json = profile.get("sr_json")
+            sr_json = sr_json_raw
             if sr_json:
                 try:
                     sr_data = json.loads(sr_json) if isinstance(sr_json, str) else sr_json
@@ -780,6 +804,19 @@ def scan_opportunities(live_data: list) -> dict:
 
             # Also attach atr for decision engine
             best_opp["atr_14"] = float(live.get("atr_14") or live.get("atr") or 0)
+
+            # ── ATR-based fallback S/R when levels are missing ──
+            best_opp["fallback_levels"] = False
+            if not best_opp.get("key_support") or not best_opp.get("key_resistance"):
+                fb = integrity.get("fallback_levels")
+                if fb:
+                    if not best_opp.get("key_support"):
+                        best_opp["key_support"] = fb["stop"]
+                    if not best_opp.get("key_resistance"):
+                        best_opp["key_resistance"] = fb["target1"]
+                    best_opp["fallback_levels"] = True
+                    logger.debug("%s using ATR fallback S/R: sup=%s res=%s",
+                                 sym, best_opp["key_support"], best_opp["key_resistance"])
 
             # ── Phase 3: Compute entry decision + trade plan ────
             decision = compute_entry_status(best_opp, profile)
@@ -849,6 +886,15 @@ def scan_opportunities(live_data: list) -> dict:
                     best_opp["confidence"] = min(best_opp["confidence"], 80)
             except Exception as e:
                 logger.warning("Smart decision error for %s: %s", sym, e)
+
+            # ── Data Integrity: downgrade ENTER → WAIT if wait_only ──
+            if integrity["gate_decision"] == "wait_only":
+                if best_opp.get("smart_decision") == "ENTER":
+                    best_opp["smart_decision"]    = "WAIT"
+                    best_opp["smart_decision_ar"] = "\u23f3 \u0627\u0646\u062a\u0638\u0631"
+                    best_opp["smart_reason_ar"]   = "\u0628\u064a\u0627\u0646\u0627\u062a \u063a\u064a\u0631 \u0645\u0643\u062a\u0645\u0644\u0629 \u2014 \u062c\u0648\u062f\u0629 {}/100".format(integrity["quality_score"])
+                    best_opp["opportunity_type"]  = "\u23f3 \u0627\u0646\u062a\u0638\u0631"
+                    best_opp["confidence"]        = min(best_opp["confidence"], 75)
 
             all_opportunities.append(best_opp)
 
