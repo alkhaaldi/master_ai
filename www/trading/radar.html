@@ -302,6 +302,7 @@ tbody tr:last-child td{border-bottom:none}
   .hero-price-block{text-align:right}
 }
 </style>
+<link rel="stylesheet" href="indicator-tooltips.css">
 </head>
 <body>
 
@@ -328,10 +329,12 @@ tbody tr:last-child td{border-bottom:none}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
     </button>
     <nav class="nav-links">
-      <a href="radar.html" class="nav-link active">الرادار</a>
-      <a href="signals.html" class="nav-link">الإشارات</a>
-      <a href="positions.html" class="nav-link">المراكز</a>
-      <a href="journal.html" class="nav-link">السجل</a>
+      <a href="decisions" class="nav-link">القرارات</a>
+      <a href="positions" class="nav-link">المراكز</a>
+      <a href="radar" class="nav-link active">الرادار</a>
+      <a href="journal" class="nav-link">السجل</a>
+      <a href="strategies" class="nav-link">الاستراتيجيات</a>
+      <a href="brain" class="nav-link">العقل</a>
     </nav>
   </div>
 </header>
@@ -480,6 +483,19 @@ async function fetchData(){
     if(!r.ok) throw new Error(r.status);
     const d = await r.json();
     processData(d);
+    /* Brain badge */
+    try{
+      var dc=d.decision_card||{};var cd=dc.confluence_detail||{};
+      if(cd.brain_weighted){
+        var regime=cd.regime||'';
+        var regimeAr=regime==='trending'?'\u0627\u062a\u062c\u0627\u0647\u064a':regime==='ranging'?'\u0639\u0631\u0636\u064a':'\u0627\u0646\u062a\u0642\u0627\u0644\u064a';
+        var el=document.getElementById('brain-radar-badge');
+        if(!el){el=document.createElement('div');el.id='brain-radar-badge';el.style.cssText='text-align:center;padding:4px 0 8px';
+          var main=document.querySelector('.main')||document.body;
+          var first=main.firstElementChild;if(first)main.insertBefore(el,first.nextSibling);else main.appendChild(el);}
+        el.innerHTML='<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(198,151,75,0.08);border:1px solid rgba(198,151,75,0.25);color:#C6974B;font-size:11px;padding:3px 12px;border-radius:12px;font-weight:600">\u{1F9E0} \u0623\u0648\u0632\u0627\u0646 \u0630\u0643\u064a\u0629 (Brain) \u2022 \u0646\u0638\u0627\u0645: '+regimeAr+'</span>';
+      }
+    }catch(e){}
     showContent();
   }catch(e){
     console.error('Fetch error:',e);
@@ -647,7 +663,7 @@ function renderTable(){
     <thead><tr>
       <th>السهم</th><th>الحالة</th><th>السعر</th><th>التغير%</th>
       <th>Confluence</th><th>القرار</th><th>EMA</th><th>RSI</th>
-      <th>Momentum</th><th>ADX</th><th>Vol</th>
+      <th>Momentum</th><th>ADX</th><th>النظام</th><th>Vol</th>
     </tr></thead><tbody>`;
   rows.forEach(s=>{
     const dir = pctDir(s.change_pct);
@@ -656,7 +672,7 @@ function renderTable(){
     const mom = momentumText(s.macd_momentum);
     const confW = s.confluence_score!=null ? Math.min(s.confluence_score,100) : 0;
     html += `<tr>
-      <td><span class="cell-sym">${ltr(s.symbol||'')}</span><span class="cell-name">${s.name_ar||''}</span></td>
+      <td style="cursor:pointer" onclick="showPersonality('${s.symbol||''}')" title="&#1588;&#1582;&#1589;&#1610;&#1577; &#1575;&#1604;&#1587;&#1607;&#1605;"><span class="cell-sym">${ltr(s.symbol||'')}</span><span class="cell-name">${s.name_ar||''}</span></td>
       <td>${stateTag(s.trade_state)}</td>
       <td class="cell-mono">${ltr(fmtNum(s.price,3))}</td>
       <td class="cell-mono" style="color:var(--${dir==='up'?'green':dir==='dn'?'red':'text-3'})">${ltr(fmtPct(s.change_pct))}</td>
@@ -666,6 +682,7 @@ function renderTable(){
       <td class="cell-mono">${ltr(fmtNum(s.rsi_14,1))}</td>
       <td style="color:${mom.c}">${mom.t}</td>
       <td class="cell-mono">${ltr(fmtNum(s.adx,1))}</td>
+      <td style="font-size:.72rem;white-space:nowrap">${(s.adx||0)>=25?'<span style="color:var(--green)">\u{1F7E2} \u0627\u062A\u062C\u0627\u0647\u064A</span>':(s.adx||0)<=20?'<span style="color:var(--red)">\u{1F534} \u0639\u0631\u0636\u064A</span>':'<span style="color:var(--amber)">\u{1F7E1} \u0627\u0646\u062A\u0642\u0627\u0644\u064A</span>'}</td>
       <td class="cell-mono">${ltr(fmtNum(s.vol_ratio,2))}</td>
     </tr>`;
   });
@@ -705,5 +722,52 @@ fetchData();
 
 })();
 </script>
+<!-- PERSONALITY POPUP -->
+<div id="personalityPopup" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(7,13,23,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this)closePersonality()">
+  <div style="background:var(--navy-800);border:1px solid var(--gold-br);border-radius:16px;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:1.25rem;position:relative">
+    <button onclick="closePersonality()" style="position:absolute;top:.75rem;left:.75rem;background:none;border:none;color:var(--text-3);font-size:1.2rem;cursor:pointer">&times;</button>
+    <div id="personalityContent"></div>
+    <div style="text-align:center;margin-top:1rem"><a id="personalityLink" href="#" style="font-size:.75rem;color:var(--gold)">&#1601;&#1578;&#1581; &#1575;&#1604;&#1589;&#1601;&#1581;&#1577; &#1575;&#1604;&#1603;&#1575;&#1605;&#1604;&#1577; &#8594;</a></div>
+  </div>
+</div>
+<script>
+function closePersonality(){document.getElementById('personalityPopup').style.display='none'}
+async function showPersonality(sym){
+  var popup=document.getElementById('personalityPopup');
+  var content=document.getElementById('personalityContent');
+  var link=document.getElementById('personalityLink');
+  popup.style.display='flex';
+  content.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-3)">&#1580;&#1575;&#1585;&#1610; &#1575;&#1604;&#1578;&#1581;&#1605;&#1610;&#1604;...</div>';
+  link.href='personality?symbol='+sym;
+  try{
+    var r=await fetch('/api/stocks/symbol/'+sym);
+    if(!r.ok)throw new Error(r.status);
+    var d=await r.json();var p=d.profile||{};var pats=d.top_patterns||[];var notes=d.notes||'';
+    var h='<div style="text-align:center;margin-bottom:1rem">';
+    h+='<div style="font-family:var(--fm);font-size:1.3rem;font-weight:700;color:var(--gold)">'+sym+'</div>';
+    h+='<div style="font-size:.8rem;color:var(--text-2);margin-top:.25rem">'+(p.personality_ar||'')+'</div>';
+    h+='<div style="margin-top:.5rem;display:flex;justify-content:center;gap:1.5rem">';
+    h+='<span style="font-family:var(--fm);color:var(--green);font-weight:700">'+((p.baseline_win_rate||0)*100).toFixed(1)+'%</span>';
+    h+='<span style="font-family:var(--fm);color:var(--cyan)">'+((p.reward_risk_ratio||0)).toFixed(1)+'x R/R</span>';
+    h+='<span style="font-family:var(--fm);color:var(--amber)">'+(p.signals_count||0)+' sig</span>';
+    h+='</div></div>';
+    h+='<div style="font-size:.75rem;color:var(--text-3);margin-bottom:.5rem">Driver: <span style="color:var(--cyan);font-weight:700">'+(p.dominant_driver||'-')+'</span></div>';
+    if(pats.length>0){
+      h+='<div style="font-size:.78rem;font-weight:600;color:var(--gold);margin:.75rem 0 .4rem">\u{1F3C6} Top 3:</div>';
+      pats.slice(0,3).forEach(function(pt){
+        var wc=pt.win_rate>=0.6?'var(--green)':pt.win_rate>=0.4?'var(--amber)':'var(--red)';
+        h+='<div style="background:var(--navy-900);border-radius:8px;padding:.5rem .75rem;margin-bottom:.4rem;font-size:.78rem">';
+        h+='<span style="color:var(--cyan)">'+pt.pattern_ar+'</span>';
+        h+=' <span style="font-family:var(--fm);color:'+wc+';font-weight:600">'+pt.hits+'/'+pt.occurrences+' ('+(pt.win_rate*100).toFixed(0)+'%)</span>';
+        h+=' <span style="font-family:var(--fm);color:var(--green)">+'+((pt.avg_gain_pct||0)).toFixed(1)+'%</span>';
+        h+='</div>';
+      });
+    }
+    content.innerHTML=h;
+  }catch(e){content.innerHTML='<div style="color:var(--red);text-align:center">Error: '+e.message+'</div>'}
+}
+window.showPersonality=showPersonality;
+</script>
+<script src="indicator-tooltips.js"></script>
 </body>
 </html>

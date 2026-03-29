@@ -286,6 +286,7 @@ tbody tr.row-tier-w:hover{background:rgba(217,68,82,.05)}
   .filter-search,.filter-select{width:100%}
 }
 </style>
+<link rel="stylesheet" href="indicator-tooltips.css">
 </head>
 <body>
 
@@ -341,6 +342,11 @@ tbody tr.row-tier-w:hover{background:rgba(217,68,82,.05)}
   <button id="tab-1d" class="tf-tab" onclick="switchTF('1d')" style="padding:6px 20px;border-radius:8px;border:1px solid rgba(198,151,75,0.25);background:transparent;color:#6B7280;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:.2s">&#x1F4C5; &#x0627;&#x0644;&#x062A;&#x062D;&#x0644;&#x064A;&#x0644; &#x0627;&#x0644;&#x064A;&#x0648;&#x0645;&#x064A; (1D)</button>
 </div>
 <div id="data-source-info" style="text-align:center;font-size:11px;color:#6B7280;padding:0 12px 6px;direction:rtl"></div>
+<div id="brain-status-bar" style="display:none;text-align:center;padding:0 12px 8px">
+  <span id="brain-badge" style="display:inline-flex;align-items:center;gap:5px;background:rgba(198,151,75,0.08);border:1px solid rgba(198,151,75,0.25);color:#C6974B;font-size:11px;padding:3px 12px;border-radius:12px;font-weight:600">
+    &#x1F9E0; <span id="brain-badge-text"></span>
+  </span>
+</div>
 
 <!-- FILTER CONTROLS -->
 <div class="filter-bar" id="filter-bar">
@@ -654,13 +660,15 @@ async function fetchData(){
   const btn = $('#btn-refresh');
   btn.classList.add('spinning');
   try{
-    const [r1, r2] = await Promise.all([
+    const [r1, r2, r30m] = await Promise.all([
       fetch('/dashboard/signals').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('/dashboard/radar').then(r=>r.ok?r.json():null).catch(()=>null)
+      fetch('/dashboard/radar').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('/dashboard/signals-30m').then(r=>r.ok?r.json():null).catch(()=>null)
     ]);
     const d = r1 || {};
     /* === Store both data sources === */
-    liveSignals = d.all_signals || [];
+    /* 30m: use dedicated 30m endpoint (real 30m data, brain-weighted, all 128 symbols) */
+    liveSignals = (r30m && r30m.signals && r30m.signals.length > 0) ? r30m.signals : (d.all_signals || []);
     
     /* Build daily signals from radar_daily_context */
     const dailyCtx = r2 && r2.radar_daily_context && r2.radar_daily_context.length > 0 ? r2.radar_daily_context : [];
@@ -721,13 +729,31 @@ async function fetchData(){
     
     /* Update info line */
     if(activeTF==='30m'){
-      $('#data-source-info').textContent = liveSignals.length ? '\u26A1 '+liveSignals.length+' \u0625\u0634\u0627\u0631\u0629 \u0645\u0646 Bridge' : '\u0644\u0627 \u0628\u064A\u0627\u0646\u0627\u062A \u062D\u064A\u0629';
+      const is30m = r30m && r30m.signals && r30m.signals.length > 0;
+      $('#data-source-info').textContent = liveSignals.length ? '\u26A1 '+liveSignals.length+' \u0633\u0647\u0645 (30m '+(is30m?'\u0641\u0639\u0644\u064A':'fallback 1D')+') \u2014 Brain-weighted' : '\u0644\u0627 \u0628\u064A\u0627\u0646\u0627\u062A \u062D\u064A\u0629';
     } else {
       const age = dailySignals[0] && dailySignals[0].data_age_hours ? Math.round(dailySignals[0].data_age_hours)+'h' : '';
-      $('#data-source-info').textContent = dailySignals.length ? '\u{1F4C5} '+dailySignals.length+' \u0633\u0647\u0645 \u2014 \u0639\u0645\u0631: '+age : '\u0644\u0627 \u0628\u064A\u0627\u0646\u0627\u062A \u064A\u0648\u0645\u064A\u0629';
+      $('#data-source-info').textContent = dailySignals.length ? '\u{1F4C5} '+dailySignals.length+' \u0633\u0647\u0645 (1D) \u2014 \u0639\u0645\u0631: '+age+' \u2014 Brain-weighted' : '\u0644\u0627 \u0628\u064A\u0627\u0646\u0627\u062A \u064A\u0648\u0645\u064A\u0629';
     }
     
     processData(d);
+    /* Brain status badge */
+    try{
+      var brainSrc = activeTF==='30m' && r30m ? r30m : d;
+      var dc = (activeTF==='30m' && r30m && r30m.signals && r30m.signals[0]) ? r30m.signals[0] : (d.decision_card||{});
+      var cd = dc.confluence_detail||{};
+      var brainBar = document.getElementById('brain-status-bar');
+      var brainText = document.getElementById('brain-badge-text');
+      if(cd.brain_weighted){
+        var regime = cd.regime||'';
+        var regimeAr = regime==='trending'?'\u0627\u062a\u062c\u0627\u0647\u064a':regime==='ranging'?'\u0639\u0631\u0636\u064a':regime==='transition'?'\u0627\u0646\u062a\u0642\u0627\u0644\u064a':'';
+        var tfLabel = activeTF==='30m'?'30m':'1D';
+        brainText.textContent='\u0623\u0648\u0632\u0627\u0646 \u0630\u0643\u064a\u0629 (Brain) \u2022 '+tfLabel+' \u2022 \u0646\u0638\u0627\u0645: '+regimeAr;
+        brainBar.style.display='';
+      }else{
+        brainBar.style.display='none';
+      }
+    }catch(e){}
     showContent();
   }catch(e){
     console.error('Fetch error:',e);
@@ -878,20 +904,21 @@ function renderTable(){
     {key:'state',label:'\u0627\u0644\u062D\u0627\u0644\u0629'},
     {key:'price',label:'\u0627\u0644\u0633\u0639\u0631'},
     {key:'change',label:'%\u0627\u0644\u062A\u063A\u064A\u0631'},
-    {key:'confluence',label:'Confluence'},
+    {key:'confluence',label:'Confluence',tip:'Confluence'},
     {key:'verdict',label:'\u0627\u0644\u0642\u0631\u0627\u0631'},
-    {key:'ema',label:'EMA'},
-    {key:'rsi',label:'RSI'},
-    {key:'stoch_k',label:'StochK'},
-    {key:'momentum',label:'Momentum'},
-    {key:'adx',label:'ADX'},
-    {key:'vol',label:'Vol'},
-    {key:'bb',label:'BB Sq'},
-    {key:'rsi_div',label:'RSI Div'},
-    {key:'ema_cross',label:'EMA Cross'},
-    {key:'support',label:'\u0627\u0644\u062F\u0639\u0645'},
-    {key:'resistance',label:'\u0627\u0644\u0645\u0642\u0627\u0648\u0645\u0629'},
-    {key:'atr',label:'ATR'}
+    {key:'ema',label:'EMA',tip:'EMA'},
+    {key:'rsi',label:'RSI',tip:'RSI'},
+    {key:'stoch_k',label:'StochK',tip:'Stoch'},
+    {key:'momentum',label:'Momentum',tip:'MACD'},
+    {key:'adx',label:'ADX',tip:'ADX'},
+    {key:'regime',label:'\u0627\u0644\u0646\u0638\u0627\u0645',tip:'Regime'},
+    {key:'vol',label:'Vol',tip:'Vol'},
+    {key:'bb',label:'BB Sq',tip:'BB'},
+    {key:'rsi_div',label:'RSI Div',tip:'RSI'},
+    {key:'ema_cross',label:'EMA Cross',tip:'EMA'},
+    {key:'support',label:'\u0627\u0644\u062F\u0639\u0645',tip:'S/R'},
+    {key:'resistance',label:'\u0627\u0644\u0645\u0642\u0627\u0648\u0645\u0629',tip:'S/R'},
+    {key:'atr',label:'ATR',tip:'ATR'}
   ];
   const sortable = ['symbol','price','change','confluence','rsi','stoch_k','adx','vol','atr'];
 
@@ -900,10 +927,11 @@ function renderTable(){
     const isSortable = sortable.includes(c.key);
     const isSorted = sortCol===c.key;
     const arrow = isSorted ? (sortAsc ? '\u25B2' : '\u25BC') : '';
+    const tipAttr = c.tip ? ` data-tip="${c.tip}"` : '';
     if(isSortable){
-      html += `<th class="${isSorted?'sorted':''}" data-sort="${c.key}"><span class="sort-arrow">${arrow}</span>${c.label}</th>`;
+      html += `<th class="${isSorted?'sorted':''}" data-sort="${c.key}"${tipAttr}><span class="sort-arrow">${arrow}</span>${c.label}</th>`;
     } else {
-      html += `<th>${c.label}</th>`;
+      html += `<th${tipAttr}>${c.label}</th>`;
     }
   });
   html += '</tr></thead><tbody>';
@@ -920,8 +948,8 @@ function renderTable(){
     const volBold = (s.vol_ratio||0)>1.5 ? 'font-weight:700;color:var(--gold)' : '';
 
     html += `<tr class="row-${tier}">`;
-    /* Symbol */
-    html += `<td><span class="cell-sym">${ltr(s.symbol||'')}</span><span class="cell-name">${s.name_ar||''}</span></td>`;
+    /* Symbol — clickable for personality */
+    html += `<td style="cursor:pointer" onclick="showPersonality('${s.symbol||''}')"><span class="cell-sym">${ltr(s.symbol||'')}</span><span class="cell-name">${s.name_ar||''}</span></td>`;
     /* State */
     html += `<td>${stateTag(s.trade_state)}</td>`;
     /* Price */
@@ -929,7 +957,9 @@ function renderTable(){
     /* Change */
     html += `<td class="cell-mono" style="color:var(--${dir==='up'?'green':dir==='dn'?'red':'text-3'})">${ltr(fmtPct(s.change_pct))}</td>`;
     /* Confluence */
-    html += `<td><div class="confluence-cell"><span class="cell-mono" style="color:${cc};font-weight:700">${ltr(s.confluence_score!=null?s.confluence_score:'\u2014')}</span><div class="conf-bar"><div class="conf-fill" style="width:${confW}%;background:${cc}"></div></div></div></td>`;
+    const bDelta = s.confluence_detail && s.confluence_detail.brain_delta ? s.confluence_detail.brain_delta : null;
+    const deltaHtml = bDelta!==null && bDelta!==0 ? '<span style="font-size:.65rem;color:'+(bDelta>0?'var(--green)':'var(--red)')+'"> '+(bDelta>0?'+':'')+bDelta+'</span>' : '';
+    html += `<td><div class="confluence-cell"><span class="cell-mono" style="color:${cc};font-weight:700">${ltr(s.confluence_score!=null?s.confluence_score:'\u2014')}</span>${deltaHtml}<div class="conf-bar"><div class="conf-fill" style="width:${confW}%;background:${cc}"></div></div></div></td>`;
     /* Verdict */
     html += `<td>${verdictPill(s.verdict_key, s.verdict)}</td>`;
     /* EMA */
@@ -942,6 +972,12 @@ function renderTable(){
     html += `<td style="color:${mom.c};font-size:.72rem">${mom.t}</td>`;
     /* ADX */
     html += `<td class="cell-mono" style="${adxBold}">${ltr(fmtNum(s.adx,1))}</td>`;
+    /* Regime */
+    const adxV=s.adx||0;
+    const regT=adxV>=25?'\u0627\u062A\u062C\u0627\u0647\u064A':adxV<=20?'\u0639\u0631\u0636\u064A':'\u0627\u0646\u062A\u0642\u0627\u0644\u064A';
+    const regC=adxV>=25?'var(--green)':adxV<=20?'var(--red)':'var(--amber)';
+    const regE=adxV>=25?'\u{1F7E2}':adxV<=20?'\u{1F534}':'\u{1F7E1}';
+    html += `<td style="font-size:.72rem;color:${regC};white-space:nowrap">${regE} ${regT}</td>`;
     /* Vol */
     html += `<td class="cell-mono" style="${volBold}">${ltr(fmtNum(s.vol_ratio,2))}</td>`;
     /* BB Squeeze */
@@ -973,5 +1009,58 @@ fetchData();
 
 })();
 </script>
+<!-- PERSONALITY POPUP -->
+<div id="personalityPopup" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(7,13,23,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this)closePersonality()">
+  <div style="background:var(--navy-800);border:1px solid var(--gold-br);border-radius:16px;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;padding:1.25rem;position:relative">
+    <button onclick="closePersonality()" style="position:absolute;top:.75rem;left:.75rem;background:none;border:none;color:var(--text-3);font-size:1.2rem;cursor:pointer">&times;</button>
+    <div id="personalityContent" style="font-size:.85rem"></div>
+    <div style="text-align:center;margin-top:1rem"><a id="personalityLink" href="#" style="font-size:.75rem;color:var(--gold)">&#1601;&#1578;&#1581; &#1575;&#1604;&#1589;&#1601;&#1581;&#1577; &#1575;&#1604;&#1603;&#1575;&#1605;&#1604;&#1577; &#8594;</a></div>
+  </div>
+</div>
+<script>
+function closePersonality(){document.getElementById('personalityPopup').style.display='none'}
+async function showPersonality(sym){
+  var popup=document.getElementById('personalityPopup');
+  var content=document.getElementById('personalityContent');
+  var link=document.getElementById('personalityLink');
+  popup.style.display='flex';
+  content.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-3)"><div class="spinner" style="margin:0 auto 1rem;width:30px;height:30px;border:2px solid var(--navy-600);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite"></div>&#1580;&#1575;&#1585;&#1610; &#1575;&#1604;&#1578;&#1581;&#1605;&#1610;&#1604;...</div>';
+  link.href='personality?symbol='+sym;
+  try{
+    var r=await fetch('/api/stocks/symbol/'+sym);
+    if(!r.ok)throw new Error(r.status);
+    var d=await r.json();var p=d.profile||{};var pats=d.top_patterns||[];var notes=d.notes||'';
+    var h='<div style="text-align:center;margin-bottom:1rem">';
+    h+='<div style="font-family:var(--fm);font-size:1.3rem;font-weight:700;color:var(--gold)">'+sym+'</div>';
+    h+='<div style="font-size:.8rem;color:var(--text-2);margin-top:.25rem">'+(p.personality_ar||'')+'</div>';
+    h+='<div style="margin-top:.5rem;display:flex;justify-content:center;gap:1.5rem">';
+    h+='<span style="font-family:var(--fm);color:var(--green);font-weight:700">'+((p.baseline_win_rate||0)*100).toFixed(1)+'% &#1606;&#1580;&#1575;&#1581;</span>';
+    h+='<span style="font-family:var(--fm);color:var(--cyan)">'+((p.reward_risk_ratio||0)).toFixed(1)+'x R/R</span>';
+    h+='<span style="font-family:var(--fm);color:var(--amber)">'+(p.signals_count||0)+' &#1573;&#1588;&#1575;&#1585;&#1577;</span>';
+    h+='</div></div>';
+    h+='<div style="font-size:.75rem;color:var(--text-3);margin-bottom:.5rem">&#1571;&#1602;&#1608;&#1609; &#1605;&#1572;&#1588;&#1585;: <span style="color:var(--cyan);font-weight:700">'+(p.dominant_driver||'-')+'</span></div>';
+    if(pats.length>0){
+      h+='<div style="font-size:.78rem;font-weight:600;color:var(--gold);margin:.75rem 0 .4rem">\u{1F3C6} &#1571;&#1601;&#1590;&#1604; 3 &#1571;&#1606;&#1605;&#1575;&#1591;:</div>';
+      pats.slice(0,3).forEach(function(pt,i){
+        var wc=pt.win_rate>=0.6?'var(--green)':pt.win_rate>=0.4?'var(--amber)':'var(--red)';
+        h+='<div style="background:var(--navy-900);border-radius:8px;padding:.5rem .75rem;margin-bottom:.4rem;font-size:.78rem">';
+        h+='<span style="color:var(--cyan)">'+pt.pattern_ar+'</span>';
+        h+=' <span style="font-family:var(--fm);color:'+wc+';font-weight:600">'+pt.hits+'/'+pt.occurrences+' ('+(pt.win_rate*100).toFixed(0)+'%)</span>';
+        h+=' <span style="font-family:var(--fm);color:var(--green);font-size:.72rem">+'+((pt.avg_gain_pct||0)).toFixed(1)+'%</span>';
+        h+='</div>';
+      });
+    }
+    if(notes){
+      var lines=notes.split('|').slice(0,5).map(function(l){return l.trim()}).filter(function(l){return l});
+      h+='<div style="margin-top:.75rem;font-size:.75rem;color:var(--text-2);line-height:1.9;border-top:1px solid var(--card-border);padding-top:.75rem">';
+      lines.forEach(function(l){h+='<div>'+l+'</div>'});
+      h+='</div>';
+    }
+    content.innerHTML=h;
+  }catch(e){content.innerHTML='<div style="color:var(--red);text-align:center;padding:2rem">&#1582;&#1591;&#1571;: '+e.message+'</div>'}
+}
+window.showPersonality=showPersonality;
+</script>
+<script src="indicator-tooltips.js"></script>
 </body>
 </html>

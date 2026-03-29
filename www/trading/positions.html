@@ -65,6 +65,7 @@ a:hover{color:var(--gold-bright)}
 .btn-refresh:hover{border-color:var(--gold-br);color:var(--gold)}
 .btn-refresh.spinning svg{animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes stopFlash{0%,100%{opacity:1}50%{opacity:.6}}
 .nav-links{display:flex;gap:.15rem}
 .nav-link{
   font-size:.75rem;padding:.3rem .6rem;border-radius:6px;color:var(--text-3);transition:all .2s;
@@ -404,6 +405,7 @@ a:hover{color:var(--gold-bright)}
   .modal{padding:18px;width:95%}
 }
 </style>
+<link rel="stylesheet" href="indicator-tooltips.css">
 </head>
 <body>
 
@@ -416,10 +418,13 @@ a:hover{color:var(--gold-bright)}
   </div>
   <div class="topbar-center">
     <nav class="nav-links">
-      <a href="radar.html" class="nav-link">الرادار</a>
-      <a href="signals.html" class="nav-link">الإشارات</a>
-      <a href="positions.html" class="nav-link active">المراكز</a>
-      <a href="journal.html" class="nav-link">السجل</a>
+      <a href="decisions" class="nav-link">القرارات</a>
+      <a href="positions" class="nav-link active">المراكز</a>
+      <a href="radar" class="nav-link">الرادار</a>
+      <a href="journal" class="nav-link">السجل</a>
+      <a href="strategies" class="nav-link">الاستراتيجيات</a>
+      <a href="brain" class="nav-link">العقل</a>
+      <a href="system" class="nav-link">النظام</a>
     </nav>
   </div>
   <div class="topbar-right">
@@ -853,6 +858,27 @@ function render(data){
         html += '</div>';
       }
 
+      /* Stop Hit Alert */
+      if(p.stop_hit){
+        html += '<div style="background:var(--red-bg);border:1px solid var(--red-br);border-radius:8px;padding:.65rem 1rem;margin-top:.5rem;display:flex;align-items:center;gap:.5rem;animation:stopFlash 1.5s ease infinite">';
+        html += '<span style="font-size:1.1rem">\u26A0\uFE0F</span>';
+        html += '<span style="color:var(--red-bright);font-weight:700;font-size:.85rem">\u0648\u0635\u0644 \u0627\u0644\u0633\u062A\u0648\u0628! \u0627\u0644\u0633\u0639\u0631 '+n3(curP)+' \u2264 SL '+n3(slVal)+'</span>';
+        html += '</div>';
+      }
+
+      /* ATR Trailing Stop Suggestion */
+      if(p.trailing_stop && !p.stop_hit){
+        const trDist = p.trailing_distance_pct||0;
+        const trColor = trDist>3?'var(--green)':trDist>1.5?'var(--amber)':'var(--red)';
+        html += '<div style="background:var(--cyan-bg);border:1px solid var(--cyan-br);border-radius:8px;padding:.55rem 1rem;margin-top:.4rem;font-size:.8rem;display:flex;align-items:center;gap:.5rem">';
+        html += '<span style="font-size:.9rem">\u{1F6E1}\uFE0F</span>';
+        html += '<span style="color:var(--cyan)">Trailing Stop (ATR\u00D72): </span>';
+        html += '<span class="ltr" style="font-family:var(--fm);font-weight:600;color:'+trColor+'">'+n3(p.trailing_stop)+'</span>';
+        html += '<span class="ltr" style="font-family:var(--fm);font-size:.75rem;color:var(--text-3)">(-'+trDist+'%)</span>';
+        if(p.atr) html += '<span class="ltr" style="font-family:var(--fm);font-size:.72rem;color:var(--text-4);margin-right:auto">ATR: '+n3(p.atr)+'</span>';
+        html += '</div>';
+      }
+
       /* Signal health strip */
       if(sh && (sh.confluence_score!=null || sh.rsi!=null || sh.macd_momentum!=null)){
         html += '<div class="signal-health-strip">';
@@ -1055,5 +1081,6 @@ document.addEventListener('keydown', function(e){
 
 })();
 </script>
+<script src="indicator-tooltips.js"></script>
 </body>
 </html>

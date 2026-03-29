@@ -90,7 +90,7 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 .teaser-empty{font-size:.7rem;color:var(--text-4);text-align:center;padding:4px}
 
 /* ═══ NAVIGATION ═══ */
-.nav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.nav-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .nav-btn{
   background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 8px;
   text-align:center;cursor:pointer;transition:.2s;text-decoration:none;display:block;
@@ -112,11 +112,12 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
   main{padding:12px 14px 90px}
   .hero-title{font-size:1.3rem}
   .status-grid{grid-template-columns:1fr 1fr}
-  .nav-grid{grid-template-columns:repeat(3,1fr)}
+  .nav-grid{grid-template-columns:repeat(4,1fr)}
 }
 .hide{display:none!important}
 .ltr{direction:ltr;text-align:left}
 </style>
+<link rel="stylesheet" href="indicator-tooltips.css">
 </head>
 <body>
 
@@ -220,9 +221,11 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 <div class="section">
   <div class="section-hdr">🧭 التنقل</div>
   <div class="nav-grid">
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-decisions')" style="border-color:var(--gold-br);background:var(--gold-bg)"><div class="nav-icon">🔥</div><div class="nav-label">القرارات</div></a>
     <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-radar')"><div class="nav-icon">📈</div><div class="nav-label">التداول</div></a>
     <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-signals')"><div class="nav-icon">📡</div><div class="nav-label">الإشارات</div></a>
     <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-brain')"><div class="nav-icon">🧠</div><div class="nav-label">العقل</div></a>
+    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-personality')"><div class="nav-icon">⭐</div><div class="nav-label">الشخصية</div></a>
     <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-calendar-tasks')"><div class="nav-icon">📅</div><div class="nav-label">المواعيد</div></a>
     <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-home')"><div class="nav-icon">🏠</div><div class="nav-label">البيت</div></a>
     <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-assistant')"><div class="nav-icon">🤖</div><div class="nav-label">المساعد</div></a>
@@ -255,6 +258,8 @@ function navTo(path){
     '/master-ai-dashboard/sub-system-health': '/trading/system',
     '/master-ai-dashboard/sub-email': '/trading/email',
     '/master-ai-dashboard/sub-news': '/trading/news',
+    '/master-ai-dashboard/sub-decisions': '/trading/decisions',
+    '/master-ai-dashboard/sub-personality': '/trading/personality',
   };
   window.location.href = MAP[path] || path;
 }
@@ -409,5 +414,6 @@ setInterval(load, 60000);
 
 })();
 </script>
+<script src="indicator-tooltips.js"></script>
 </body>
 </html>

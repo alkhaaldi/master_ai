@@ -236,6 +236,7 @@ a:hover{color:var(--gold-bright)}
   .topbar-title{font-size:.85rem}
 }
 </style>
+<link rel="stylesheet" href="indicator-tooltips.css">
 </head>
 <body>
 
@@ -248,10 +249,12 @@ a:hover{color:var(--gold-bright)}
   </div>
   <div class="topbar-center">
     <nav class="nav-links">
-      <a href="radar.html" class="nav-link">الرادار</a>
-      <a href="signals.html" class="nav-link">الإشارات</a>
-      <a href="positions.html" class="nav-link">المراكز</a>
-      <a href="journal.html" class="nav-link active">السجل</a>
+      <a href="decisions" class="nav-link">القرارات</a>
+      <a href="positions" class="nav-link">المراكز</a>
+      <a href="radar" class="nav-link">الرادار</a>
+      <a href="journal" class="nav-link active">السجل</a>
+      <a href="strategies" class="nav-link">الاستراتيجيات</a>
+      <a href="brain" class="nav-link">العقل</a>
     </nav>
   </div>
   <div class="topbar-right">
@@ -560,5 +563,6 @@ a:hover{color:var(--gold-bright)}
   refreshTimer = setInterval(loadData, REFRESH_MS);
 })();
 </script>
+<script src="indicator-tooltips.js"></script>
 </body>
 </html>

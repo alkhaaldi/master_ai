@@ -63,6 +63,7 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 .footer{text-align:center;font-family:var(--fm);font-size:.5rem;color:var(--text-4);padding:12px;border-top:1px solid var(--card-border);margin-top:20px}
 @media(max-width:500px){main{padding:12px 14px 90px}}
 </style>
+<link rel="stylesheet" href="indicator-tooltips.css">
 </head>
 <body>
 <div class="topbar">
@@ -111,6 +112,8 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
   <a class="nav-link" onclick="navTo('/trading/system')">&#x2699;&#xFE0F; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</a>
   <a class="nav-link" onclick="navTo('/trading/email')">&#x1F4E7; &#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F;</a>
   <a class="nav-link" onclick="navTo('/trading/news')">&#x1F4F0; &#x0627;&#x0644;&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</a>
+    <a href="decisions" class="nav-link">القرارات</a>
+    <a href="personality" class="nav-link">الشخصية</a>
 </div>
 </main>
 <div class="footer" id="footer">&#x0622;&#x062E;&#x0631; &#x062A;&#x062D;&#x062F;&#x064A;&#x062B;: --</div>
@@ -160,5 +163,6 @@ async function load(){
 load();setInterval(load,60000);
 })();
 </script>
+<script src="indicator-tooltips.js"></script>
 </body>
 </html>

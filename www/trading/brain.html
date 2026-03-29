@@ -280,7 +280,19 @@ a:hover{color:var(--gold-bright)}
   .topbar-title{font-size:.85rem}
   .page-header h1{font-size:1.1rem}
 }
+
+/* ===== REGIME HEATMAP ===== */
+.regime-table{width:100%;border-collapse:collapse}
+.regime-table th{font-size:.7rem;color:var(--text-3);font-weight:500;text-align:center;padding:.55rem .6rem;border-bottom:1px solid var(--card-border);background:var(--navy-800)}
+.regime-table th:first-child{text-align:right}
+.regime-table td{padding:.55rem .6rem;text-align:center;border-bottom:1px solid rgba(26,46,69,.4);font-family:var(--fm);font-size:.8rem}
+.regime-table tr:last-child td{border-bottom:none}
+.regime-table tr:hover td{background:var(--card-hover)}
+.regime-cell{display:inline-block;padding:3px 10px;border-radius:6px;font-weight:600;font-size:.78rem;min-width:52px}
+.backfill-badge{display:inline-flex;align-items:center;gap:.4rem;background:var(--cyan-bg);border:1px solid var(--cyan-br);color:var(--cyan);font-family:var(--fm);font-size:.72rem;padding:2px 10px;border-radius:10px}
+.learning-badge{display:inline-flex;align-items:center;gap:.4rem;background:var(--gold-bg);border:1px solid var(--gold-br);color:var(--gold);font-size:.72rem;padding:2px 10px;border-radius:10px}
 </style>
+<link rel="stylesheet" href="indicator-tooltips.css">
 </head>
 <body>
 
@@ -292,11 +304,12 @@ a:hover{color:var(--gold-bright)}
     <span class="topbar-tag">Master AI</span>
   </div>
   <nav class="nav-links">
-    <a href="radar.html" class="nav-link">الرادار</a>
-    <a href="signals.html" class="nav-link">الإشارات</a>
-    <a href="positions.html" class="nav-link">المراكز</a>
-    <a href="journal.html" class="nav-link">السجل</a>
-    <a href="brain.html" class="nav-link active">العقل</a>
+    <a href="decisions" class="nav-link">القرارات</a>
+    <a href="positions" class="nav-link">المراكز</a>
+    <a href="radar" class="nav-link">الرادار</a>
+    <a href="journal" class="nav-link">السجل</a>
+    <a href="strategies" class="nav-link">الاستراتيجيات</a>
+    <a href="brain" class="nav-link active">العقل</a>
   </nav>
   <div class="topbar-right">
     <span class="clock" id="clock"></span>
@@ -323,6 +336,8 @@ a:hover{color:var(--gold-bright)}
     <span class="brain-icon">&#129504;</span>
     <h1>عقل التداول</h1>
     <span class="subtitle">تعلم الإشارات وتحسين الأوزان</span>
+    <span class="backfill-badge" id="backfillBadge" style="display:none">&#128202; <span id="backfillCount"></span> backfill</span>
+    <span class="learning-badge" id="learningModeBadge" style="display:none">&#9889; <span id="learningModeText"></span></span>
   </div>
 
   <!-- ERROR -->
@@ -345,6 +360,47 @@ a:hover{color:var(--gold-bright)}
     <!-- PULSE BAR -->
     <div class="pulse-bar" id="pulseBar"></div>
 
+    <!-- BRAIN HEALTH + REGIME -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem" id="healthRegimeRow">
+      <div class="section" style="margin-bottom:0">
+        <div class="section-head">
+          <span class="section-title">&#9889; &#1589;&#1581;&#1577; &#1575;&#1604;&#1593;&#1602;&#1604;</span>
+        </div>
+        <div style="padding:1rem 1.15rem" id="brainHealthBox">
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+            <span id="healthIcon" style="font-size:1.8rem">&#8987;</span>
+            <div>
+              <div id="healthLabel" style="font-weight:600;font-size:.95rem"></div>
+              <div id="healthDetail" style="font-size:.8rem;color:var(--text-3)"></div>
+            </div>
+          </div>
+          <div style="background:var(--navy-700);border-radius:6px;height:8px;overflow:hidden;margin-top:.5rem">
+            <div id="healthBar" style="height:100%;border-radius:6px;transition:width .6s ease;width:0%"></div>
+          </div>
+          <div id="healthBarLabel" style="font-family:var(--fm);font-size:.7rem;color:var(--text-3);margin-top:.35rem;text-align:left;direction:ltr"></div>
+        </div>
+      </div>
+      <div class="section" style="margin-bottom:0">
+        <div class="section-head">
+          <span class="section-title">&#128202; &#1606;&#1592;&#1575;&#1605; &#1575;&#1604;&#1587;&#1608;&#1602;</span>
+          <span class="section-badge" id="regimeBadge"></span>
+        </div>
+        <div style="padding:1rem 1.15rem" id="regimeBox">
+          <div style="display:flex;gap:.5rem;margin-bottom:.75rem" id="regimeBars"></div>
+          <div id="regimeDetail" style="font-size:.8rem;color:var(--text-3);line-height:1.8"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRAIN DECISION THRESHOLDS -->
+    <div class="section" id="thresholdsSection" style="display:none">
+      <div class="section-head">
+        <span class="section-title">&#9881;&#65039; &#1581;&#1583;&#1608;&#1583; &#1575;&#1604;&#1602;&#1585;&#1575;&#1585; (Brain Thresholds)</span>
+        <span class="section-badge" id="thresholdSource"></span>
+      </div>
+      <div style="padding:1rem 1.15rem;display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;text-align:center" id="thresholdsGrid"></div>
+    </div>
+
     <!-- INDICATOR WEIGHTS -->
     <div class="section">
       <div class="section-head">
@@ -361,6 +417,23 @@ a:hover{color:var(--gold-bright)}
           </tr>
         </thead>
         <tbody id="weightsBody"></tbody>
+      </table>
+    </div>
+
+    <!-- REGIME HEATMAP -->
+    <div class="section" id="regimeHeatmapSection" style="display:none">
+      <div class="section-head">
+        <span class="section-title">&#127919; &#1582;&#1585;&#1610;&#1591;&#1577; &#1575;&#1604;&#1571;&#1583;&#1575;&#1569; &#1581;&#1587;&#1576; &#1606;&#1592;&#1575;&#1605; &#1575;&#1604;&#1587;&#1608;&#1602;</span>
+        <span class="section-badge" id="learningBadge"></span>
+      </div>
+      <table class="regime-table">
+        <thead><tr>
+          <th>&#1575;&#1604;&#1605;&#1572;&#1588;&#1585;</th>
+          <th>&#127994; &#1575;&#1578;&#1580;&#1575;&#1607;&#1610; (ADX&#8805;25)</th>
+          <th>&#128312; &#1575;&#1606;&#1578;&#1602;&#1575;&#1604;&#1610;</th>
+          <th>&#128308; &#1593;&#1585;&#1590;&#1610; (ADX&#8804;20)</th>
+        </tr></thead>
+        <tbody id="regimeHeatmapBody"></tbody>
       </table>
     </div>
 
@@ -467,7 +540,7 @@ a:hover{color:var(--gold-bright)}
 
   /* ===== RENDER WEIGHTS ===== */
   function renderWeights(indicators){
-    const entries=Object.entries(indicators).sort((a,b)=>b[1].weight-a[1].weight);
+    const entries=Object.entries(indicators).filter(([n])=>n!=='obv').sort((a,b)=>b[1].weight-a[1].weight);
     indCount.textContent=entries.length+' مؤشر';
     weightsBody.innerHTML=entries.map(([name,v])=>{
       const w=v.weight;
@@ -528,6 +601,119 @@ a:hover{color:var(--gold-bright)}
     }).join('');
   }
 
+  /* ===== RENDER BRAIN HEALTH ===== */
+  function renderBrainHealth(d){
+    const icon=document.getElementById('healthIcon');
+    const label=document.getElementById('healthLabel');
+    const detail=document.getElementById('healthDetail');
+    const bar=document.getElementById('healthBar');
+    const barLabel=document.getElementById('healthBarLabel');
+    const tracked=d.total_tracked||0, evaluated=d.total_evaluated||0, pending=d.pending_count||0, hr=d.overall_hit_rate||0;
+    const MIN=30;
+    let status,sColor,sIcon;
+    if(tracked>=MIN&&evaluated>=10){
+      if(hr>=0.55){status='\u062a\u0639\u0644\u0651\u0645 \u0646\u0634\u0637 \u2014 \u0623\u062f\u0627\u0621 \u062c\u064a\u062f';sColor='var(--green)';sIcon='\u{1F9E0}'}
+      else if(hr>=0.4){status='\u062a\u0639\u0644\u0651\u0645 \u0646\u0634\u0637 \u2014 \u0645\u062a\u0648\u0633\u0637';sColor='var(--amber)';sIcon='\u{1F9E0}'}
+      else{status='\u062a\u0639\u0644\u0651\u0645 \u064a\u062d\u062a\u0627\u062c \u062a\u062d\u0633\u064a\u0646';sColor='var(--red)';sIcon='\u26A0\uFE0F'}
+    }else if(tracked>0){
+      status='\u064a\u062c\u0645\u0639 \u0628\u064a\u0627\u0646\u0627\u062a\u2026 \u0628\u0627\u0642\u064a '+(MIN-tracked);sColor='var(--cyan)';sIcon='\u23F3';
+    }else{status='\u0644\u0645 \u064a\u0628\u062f\u0623';sColor='var(--text-3)';sIcon='\u{1F4A4}'}
+    icon.textContent=sIcon;
+    label.textContent=status;label.style.color=sColor;
+    const pPct=Math.min(100,Math.round((tracked/MIN)*100));
+    detail.textContent=tracked+'/'+MIN+' \u0625\u0634\u0627\u0631\u0629 \u00B7 '+evaluated+' \u0645\u064F\u0642\u064A\u0651\u0645\u0629 \u00B7 '+pending+' \u0645\u0646\u062A\u0638\u0631\u0629';
+    bar.style.width=pPct+'%';bar.style.background=tracked>=MIN?sColor:'var(--cyan)';
+    barLabel.textContent=pPct+'%';
+  }
+
+  /* ===== RENDER REGIME ===== */
+  async function renderRegime(){
+    const box=document.getElementById('regimeBars');
+    const detail=document.getElementById('regimeDetail');
+    const badge=document.getElementById('regimeBadge');
+    try{
+      const r=await fetch('/dashboard/regime');
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const d=await r.json();const s=d.summary||{};const total=s.total||1;
+      const tP=Math.round((s.trending||0)/total*100);
+      const rP=Math.round((s.ranging||0)/total*100);
+      const xP=100-tP-rP;
+      badge.textContent=total+' \u0633\u0647\u0645';
+      box.innerHTML=
+        '<div style="flex:'+Math.max(tP,3)+';background:var(--green);height:28px;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--navy-900)">'+tP+'%</div>'+
+        '<div style="flex:'+Math.max(xP,3)+';background:var(--amber);height:28px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--navy-900)">'+xP+'%</div>'+
+        '<div style="flex:'+Math.max(rP,3)+';background:var(--red);height:28px;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff">'+rP+'%</div>';
+      detail.innerHTML=
+        '\u{1F7E2} <span style="color:var(--green)">\u0627\u062a\u062c\u0627\u0647\u064a: '+(s.trending||0)+'</span> &middot; '+
+        '\u{1F7E1} <span style="color:var(--amber)">\u0627\u0646\u062a\u0642\u0627\u0644\u064a: '+(s.transition||0)+'</span> &middot; '+
+        '\u{1F534} <span style="color:var(--red)">\u0639\u0631\u0636\u064a: '+(s.ranging||0)+'</span>';
+    }catch(e){
+      box.innerHTML='';detail.innerHTML='<span style="color:var(--text-4)">\u062a\u0639\u0630\u0631 \u0627\u0644\u062a\u062d\u0645\u064a\u0644</span>';badge.textContent='\u2014';
+    }
+  }
+
+  /* ===== RENDER REGIME HEATMAP ===== */
+  function renderRegimeHeatmap(regimeStats){
+    const sec=document.getElementById('regimeHeatmapSection');
+    const body=document.getElementById('regimeHeatmapBody');
+    const badge=document.getElementById('learningBadge');
+    if(!regimeStats||!Object.keys(regimeStats).length){sec.style.display='none';return}
+    sec.style.display='';
+    const inds=Object.keys(regimeStats).sort();
+    badge.textContent=inds.length+' \u00D7 3 regimes';
+    function cellColor(rate){
+      if(rate>=0.55)return{bg:'var(--green-bg)',br:'var(--green-br)',c:'var(--green)'};
+      if(rate>=0.50)return{bg:'var(--cyan-bg)',br:'var(--cyan-br)',c:'var(--cyan)'};
+      if(rate>=0.45)return{bg:'var(--amber-bg)',br:'var(--amber-br)',c:'var(--amber)'};
+      return{bg:'var(--red-bg)',br:'var(--red-br)',c:'var(--red)'};
+    }
+    function regimeCell(data){
+      if(!data)return'<td>\u2014</td>';
+      const cc=cellColor(data.rate);
+      return'<td><span class="regime-cell" style="background:'+cc.bg+';border:1px solid '+cc.br+';color:'+cc.c+'">'+(data.rate*100).toFixed(1)+'%</span><div style="font-size:.65rem;color:var(--text-4);margin-top:2px">'+data.hits+'/'+data.total+'</div></td>';
+    }
+    body.innerHTML=inds.map(function(ind){
+      var t=regimeStats[ind]||{};
+      return'<tr><td style="text-align:right"><span class="ind-name">'+ind.toUpperCase()+'</span></td>'+regimeCell(t.trending)+regimeCell(t.transition)+regimeCell(t.ranging)+'</tr>';
+    }).join('');
+  }
+
+  /* ===== RENDER BACKFILL + LEARNING BADGES ===== */
+  function renderBadges(d){
+    var bf=document.getElementById('backfillBadge');
+    var bfCount=document.getElementById('backfillCount');
+    var lm=document.getElementById('learningModeBadge');
+    var lmText=document.getElementById('learningModeText');
+    if(d.backfill_count>0){bf.style.display='';bfCount.textContent=d.backfill_count.toLocaleString()}
+    else{bf.style.display='none'}
+    if(d.learning_mode){lm.style.display='';lmText.textContent=d.learning_mode.replace(/_/g,' ')}
+    else{lm.style.display='none'}
+  }
+
+  /* ===== RENDER THRESHOLDS ===== */
+  function renderThresholds(d){
+    var sec=document.getElementById('thresholdsSection');
+    var grid=document.getElementById('thresholdsGrid');
+    var badge=document.getElementById('thresholdSource');
+    var t=d.thresholds;
+    if(!t){sec.style.display='none';return}
+    sec.style.display='';
+    var src=t.source||'unknown';
+    badge.textContent=src==='brain_learned'?'\u{1F9E0} \u062A\u0639\u0644\u0651\u0645 \u0622\u0644\u064A ('+t.data_points+' \u0625\u0634\u0627\u0631\u0629)':'\u2699\uFE0F \u0627\u0641\u062A\u0631\u0627\u0636\u064A';
+    badge.style.background=src==='brain_learned'?'var(--gold-bg)':'var(--navy-700)';
+    badge.style.color=src==='brain_learned'?'var(--gold)':'var(--text-3)';
+    badge.style.border='1px solid '+(src==='brain_learned'?'var(--gold-br)':'var(--card-border)');
+    function thCard(label,value,color,desc){
+      return '<div style="background:var(--navy-800);border-radius:8px;padding:.75rem .5rem"><div style="font-size:.7rem;color:var(--text-3);margin-bottom:.35rem">'+label+'</div><div style="font-family:var(--fm);font-size:1.5rem;font-weight:700;color:'+color+'">'+value+'</div><div style="font-size:.65rem;color:var(--text-4);margin-top:.25rem">'+desc+'</div></div>';
+    }
+    grid.innerHTML=
+      thCard('\u062C\u0627\u0647\u0632 (Ready)',t.ready_min_score||60,'var(--green)','\u0634\u0631\u0627\u0621 \u0645\u0624\u0643\u062F')+
+      thCard('\u062A\u062D\u0636\u064A\u0631 (Setup)',t.setup_min_score||40,'var(--cyan)','\u0645\u0631\u0627\u0642\u0628\u0629')+
+      thCard('\u0645\u0631\u0627\u0642\u0628\u0629 (Watch)',t.watch_min_score||50,'var(--amber)','\u0645\u062A\u0627\u0628\u0639\u0629')+
+      thCard('\u062A\u062C\u0646\u0628 (Avoid)','\u003C'+(t.avoid_max_score||30),'var(--red)','\u0644\u0627 \u062A\u062F\u062E\u0644')+
+      thCard('Vol \u0623\u062F\u0646\u0649',t.ready_min_vol||1.2,'var(--text-2)','\u0644\u0644\u062C\u0627\u0647\u0632\u064A\u0629');
+  }
+
   /* ===== RENDER WEEKLY ===== */
   function renderWeekly(ws){
     if(!ws){weeklySection.style.display='none';return}
@@ -573,7 +759,12 @@ a:hover{color:var(--gold-bright)}
         emptyState.classList.remove('visible');
         dataContent.style.display='';
         renderPulse(d);
+        renderBrainHealth(d);
+        renderRegime();
         renderWeights(d.indicator_weights||{});
+        renderRegimeHeatmap(d.regime_stats||{});
+        renderBadges(d);
+        renderThresholds(d);
         renderEvals(d.recent_evaluations||[]);
         renderWeekly(d.weekly_summary);
       }
@@ -597,5 +788,6 @@ a:hover{color:var(--gold-bright)}
   /* Nav links are hidden on mobile via CSS; topbar brand remains */
 })();
 </script>
+<script src="indicator-tooltips.js"></script>
 </body>
 </html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>شخصية الأسهم — KSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#070D17;--navy-800:#0C1525;--navy-700:#111E32;
+  --navy-600:#162840;--navy-500:#1C334F;--navy-400:#24405F;
+  --gold:#C6974B;--gold-bright:#D4A95C;--gold-dim:#9E7A3D;
+  --gold-bg:rgba(198,151,75,.06);--gold-br:rgba(198,151,75,.25);
+  --green:#4CAF82;--green-bright:#5BC492;--green-bg:rgba(76,175,130,.08);--green-br:rgba(76,175,130,.3);
+  --red:#D94452;--red-bright:#E5606C;--red-bg:rgba(217,68,82,.08);--red-br:rgba(217,68,82,.3);
+  --amber:#E8A838;--amber-bg:rgba(232,168,56,.08);--amber-br:rgba(232,168,56,.3);
+  --cyan:#38BDF8;--cyan-bg:rgba(56,189,248,.08);--cyan-br:rgba(56,189,248,.3);
+  --text:#E8ECF0;--text-2:#A0ADBC;--text-3:#6B7D90;--text-4:#405060;
+  --card:#0E1929;--card-hover:#132137;--card-border:#1A2E45;
+  --f:'Tajawal','Noto Kufi Arabic',sans-serif;
+  --fd:'Noto Kufi Arabic','Tajawal',sans-serif;
+  --fm:'IBM Plex Mono','Consolas',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--f);background:var(--navy-900);color:var(--text);min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased}
+.ltr{direction:ltr;unicode-bidi:isolate}
+a{color:var(--gold);text-decoration:none}
+</style>
+<link rel="stylesheet" href="indicator-tooltips.css">
+</head>
+<body>
+<style>
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(7,13,23,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--card-border);padding:0 1.25rem;height:56px;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+.topbar-brand{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.brand-mark{background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:var(--navy-900);font-family:var(--fm);font-weight:700;font-size:.85rem;padding:.25rem .6rem;border-radius:4px}
+.topbar-title{font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--text)}
+.topbar-tag{font-size:.65rem;background:var(--navy-600);color:var(--text-3);padding:2px 8px;border-radius:10px}
+.nav-links{display:flex;gap:.15rem}
+.nav-link{font-size:.75rem;padding:.3rem .6rem;border-radius:6px;color:var(--text-3);transition:all .2s}
+.nav-link:hover{color:var(--text);background:var(--navy-700)}
+.nav-link.active{color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br)}
+.clock{font-family:var(--fm);font-size:.85rem;color:var(--gold);direction:ltr}
+/* MAIN */
+.main{padding:1.25rem;max-width:1200px;margin:0 auto}
+/* SEARCH BAR */
+.search-box{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem}
+.search-select{flex:1;max-width:400px;background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:.65rem 1rem;color:var(--text);font-family:var(--f);font-size:.9rem;outline:none;cursor:pointer}
+.search-select:focus{border-color:var(--gold-br)}
+.search-select option{background:var(--navy-800);color:var(--text)}
+.search-label{font-family:var(--fd);font-size:1rem;font-weight:600;color:var(--text-2)}
+/* SECTIONS */
+.section{background:var(--card);border:1px solid var(--card-border);border-radius:12px;margin-bottom:1.25rem;overflow:hidden}
+.section-head{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.15rem;border-bottom:1px solid var(--card-border)}
+.section-title{font-family:var(--fd);font-size:.95rem;font-weight:600}
+.section-badge{font-family:var(--fm);font-size:.7rem;padding:2px 8px;border-radius:10px;background:var(--navy-700);color:var(--text-3)}
+/* PERSONALITY HERO */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;padding:1.25rem}
+.hero-main{display:flex;flex-direction:column;gap:.75rem}
+.hero-name{font-family:var(--fd);font-size:1.4rem;font-weight:700;color:var(--gold)}
+.hero-tags{display:flex;flex-wrap:wrap;gap:.4rem}
+.hero-tag{font-size:.75rem;padding:3px 12px;border-radius:8px;font-weight:600}
+.hero-tag.gold{color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br)}
+.hero-tag.cyan{color:var(--cyan);background:var(--cyan-bg);border:1px solid var(--cyan-br)}
+.hero-tag.green{color:var(--green);background:var(--green-bg);border:1px solid var(--green-br)}
+.hero-stat{display:flex;align-items:baseline;gap:.5rem}
+.hero-stat-val{font-family:var(--fm);font-size:1.8rem;font-weight:700}
+.hero-stat-label{font-size:.8rem;color:var(--text-3)}
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;padding:1.25rem}
+.stat-card{background:var(--navy-800);border-radius:8px;padding:.75rem;text-align:center}
+.stat-card-val{font-family:var(--fm);font-size:1.3rem;font-weight:700;margin-bottom:.25rem}
+.stat-card-label{font-size:.7rem;color:var(--text-3)}
+/* LIFTS */
+.lifts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;padding:1.25rem}
+.lift-card{background:var(--navy-800);border-radius:10px;padding:.85rem;display:flex;flex-direction:column;gap:.4rem;border:1px solid transparent;transition:border-color .2s}
+.lift-card:hover{border-color:var(--gold-br)}
+.lift-name{font-family:var(--fm);font-size:.8rem;font-weight:600;color:var(--gold)}
+.lift-bar-wrap{height:6px;background:var(--navy-700);border-radius:4px;overflow:hidden}
+.lift-bar{height:100%;border-radius:4px;transition:width .5s ease}
+.lift-val{font-family:var(--fm);font-size:1.1rem;font-weight:700}
+.lift-sub{font-size:.68rem;color:var(--text-3)}
+/* PATTERNS TABLE */
+.pat-table{width:100%;border-collapse:collapse}
+.pat-table th{font-size:.7rem;color:var(--text-3);font-weight:500;text-align:right;padding:.6rem 1rem;border-bottom:1px solid var(--card-border);background:var(--navy-800)}
+.pat-table td{padding:.6rem 1rem;border-bottom:1px solid rgba(26,46,69,.4);font-size:.82rem}
+.pat-table tr:hover td{background:var(--card-hover)}
+.pat-table tr:last-child td{border-bottom:none}
+.pat-name{font-weight:600;color:var(--cyan);font-size:.8rem}
+.wr-badge{font-family:var(--fm);font-size:.75rem;padding:2px 8px;border-radius:6px;font-weight:600;display:inline-block}
+.wr-badge.high{color:var(--green);background:var(--green-bg);border:1px solid var(--green-br)}
+.wr-badge.mid{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-br)}
+.wr-badge.low{color:var(--red);background:var(--red-bg);border:1px solid var(--red-br)}
+/* NOTES */
+.notes-box{padding:1.25rem;font-size:.85rem;line-height:2;color:var(--text-2)}
+.notes-box .note-line{padding:.35rem 0;border-bottom:1px solid rgba(26,46,69,.3)}
+.notes-box .note-line:last-child{border-bottom:none}
+/* EMPTY / LOADING */
+.loading{display:flex;align-items:center;justify-content:center;padding:4rem;flex-direction:column;gap:1rem}
+.spinner{width:40px;height:40px;border:3px solid var(--navy-600);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-msg{text-align:center;padding:3rem;color:var(--text-3);font-size:.9rem}
+/* FOOTER */
+.footer{text-align:center;padding:1.5rem 1rem;border-top:1px solid var(--card-border);margin-top:2rem}
+.footer-text{font-size:.7rem;color:var(--text-4);line-height:1.8}
+/* RESPONSIVE */
+@media(max-width:768px){
+  .hero{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .lifts-grid{grid-template-columns:repeat(2,1fr)}
+  .topbar .nav-links,.topbar-tag{display:none}
+  .main{padding:.75rem}
+}
+</style>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-mark">KSE</span>
+    <span class="topbar-title">&#1605;&#1606;&#1589;&#1577; &#1575;&#1604;&#1578;&#1583;&#1575;&#1608;&#1604;</span>
+    <span class="topbar-tag">Master AI</span>
+  </div>
+  <nav class="nav-links">
+    <a href="radar" class="nav-link">&#1575;&#1604;&#1585;&#1575;&#1583;&#1575;&#1585;</a>
+    <a href="signals" class="nav-link">&#1575;&#1604;&#1573;&#1588;&#1575;&#1585;&#1575;&#1578;</a>
+    <a href="positions" class="nav-link">&#1575;&#1604;&#1605;&#1585;&#1575;&#1603;&#1586;</a>
+    <a href="brain" class="nav-link">&#1575;&#1604;&#1593;&#1602;&#1604;</a>
+    <a href="decisions" class="nav-link">&#1575;&#1604;&#1602;&#1585;&#1575;&#1585;&#1575;&#1578;</a>
+    <a href="personality" class="nav-link active">&#1575;&#1604;&#1588;&#1582;&#1589;&#1610;&#1577;</a>
+  </nav>
+  <div style="display:flex;align-items:center;gap:.75rem">
+    <span class="clock" id="clock"></span>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <!-- SEARCH -->
+  <div class="search-box">
+    <span class="search-label">&#128270; &#1575;&#1582;&#1578;&#1585; &#1587;&#1607;&#1605;:</span>
+    <select class="search-select" id="symbolSelect">
+      <option value="">-- &#1575;&#1582;&#1578;&#1585; &#1587;&#1607;&#1605; --</option>
+    </select>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loadingState" style="display:none">
+    <div class="spinner"></div>
+    <span style="color:var(--text-3);font-size:.85rem">&#1580;&#1575;&#1585;&#1610; &#1578;&#1581;&#1604;&#1610;&#1604; &#1575;&#1604;&#1588;&#1582;&#1589;&#1610;&#1577;...</span>
+  </div>
+
+  <!-- EMPTY -->
+  <div class="empty-msg" id="emptyState">&#128270; &#1575;&#1582;&#1578;&#1585; &#1587;&#1607;&#1605; &#1605;&#1606; &#1575;&#1604;&#1602;&#1575;&#1574;&#1605;&#1577; &#1604;&#1593;&#1585;&#1590; &#1588;&#1582;&#1589;&#1610;&#1578;&#1607; &#1608;&#1571;&#1606;&#1605;&#1575;&#1591;&#1607; &#1575;&#1604;&#1606;&#1575;&#1580;&#1581;&#1577;</div>
+
+  <!-- DATA CONTENT -->
+  <div id="dataContent" style="display:none">
+    <!-- HERO CARD -->
+    <div class="section" id="heroSection"></div>
+    <!-- STATS -->
+    <div class="section" id="statsSection"></div>
+    <!-- INDICATOR LIFTS -->
+    <div class="section" id="liftsSection"></div>
+    <!-- TOP PATTERNS -->
+    <div class="section" id="patternsSection"></div>
+    <!-- NOTES -->
+    <div class="section" id="notesSection"></div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="footer-text">&#1607;&#1584;&#1607; &#1575;&#1604;&#1605;&#1593;&#1604;&#1608;&#1605;&#1575;&#1578; &#1604;&#1604;&#1571;&#1594;&#1585;&#1575;&#1590; &#1575;&#1604;&#1578;&#1593;&#1604;&#1610;&#1605;&#1610;&#1577; &#1601;&#1602;&#1591; &#1608;&#1604;&#1575; &#1578;&#1605;&#1579;&#1604; &#1606;&#1589;&#1610;&#1581;&#1577; &#1575;&#1587;&#1578;&#1579;&#1605;&#1575;&#1585;&#1610;&#1577; &#8212; &#1576;&#1608;&#1585;&#1589;&#1577; &#1575;&#1604;&#1603;&#1608;&#1610;&#1578;</div>
+</footer>
+
+<script>
+(function(){
+/* Clock */
+const ck=document.getElementById('clock');
+function tick(){ck.textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+tick();setInterval(tick,1000);
+
+const sel=document.getElementById('symbolSelect');
+const loadEl=document.getElementById('loadingState');
+const emptyEl=document.getElementById('emptyState');
+const dataEl=document.getElementById('dataContent');
+const heroEl=document.getElementById('heroSection');
+const statsEl=document.getElementById('statsSection');
+const liftsEl=document.getElementById('liftsSection');
+const patsEl=document.getElementById('patternsSection');
+const notesEl=document.getElementById('notesSection');
+
+function ltr(v){return'<span class="ltr">'+v+'</span>'}
+function n(v,d){return v!=null?Number(v).toFixed(d||0):'\u2014'}
+function pct(v){return v!=null?(v*100).toFixed(1)+'%':'\u2014'}
+function wrClass(v){return v>=0.6?'high':v>=0.4?'mid':'low'}
+function liftColor(v){
+  if(!v||v===1)return'var(--text-3)';
+  return v>1.15?'var(--green)':v>1?'var(--cyan)':v>0.85?'var(--amber)':'var(--red)';
+}
+function liftLabel(v){
+  if(!v)return'\u2014';
+  if(v>=1.5)return'\u{1F525} \u0645\u0645\u062A\u0627\u0632';
+  if(v>=1.2)return'\u{1F7E2} \u0642\u0648\u064A';
+  if(v>=1.05)return'\u{1F7E1} \u0645\u0642\u0628\u0648\u0644';
+  if(v>=0.9)return'\u26AA \u0636\u0639\u064A\u0641';
+  return'\u{1F534} \u0633\u0644\u0628\u064A';
+}
+
+/* Load profiles list */
+async function loadProfiles(){
+  try{
+    const r=await fetch('/api/stocks/profiles');
+    if(!r.ok)return;
+    const d=await r.json();
+    const profiles=d.profiles||[];
+    profiles.forEach(function(p){
+      const opt=document.createElement('option');
+      opt.value=p.symbol;
+      opt.textContent=p.symbol+(p.personality_ar?' \u2014 '+p.personality_ar:'');
+      sel.appendChild(opt);
+    });
+  }catch(e){console.error('profiles load:',e)}
+}
+
+/* Load symbol personality */
+async function loadSymbol(sym){
+  if(!sym){emptyEl.style.display='';dataEl.style.display='none';loadEl.style.display='none';return}
+  emptyEl.style.display='none';dataEl.style.display='none';loadEl.style.display='flex';
+  try{
+    const r=await fetch('/api/stocks/symbol/'+encodeURIComponent(sym));
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    /* Fetch live price from Bridge via quote proxy */
+    try{
+      const qr=await fetch('/dashboard/portfolio');
+      if(qr.ok){
+        const qd=await qr.json();
+        /* Try to find price from open positions */
+        const pos=(qd.open_positions||[]).find(function(p){return p.symbol===sym});
+        if(pos&&pos.current_price) d._live_price=pos.current_price;
+      }
+    }catch(e){}
+    if(!d._live_price){
+      try{
+        const sr=await fetch('/dashboard/signals-30m');
+        if(sr.ok){
+          const sd=await sr.json();
+          const sig=(sd.signals||[]).find(function(s){return s.symbol===sym});
+          if(sig&&sig.price) d._live_price=sig.price;
+        }
+      }catch(e){}
+    }
+    if(!d._live_price){
+      try{
+        const rr=await fetch('/dashboard/radar');
+        if(rr.ok){
+          const rd=await rr.json();
+          const ctx=(rd.radar_daily_context||{})[sym];
+          if(ctx&&ctx.close) d._live_price=ctx.close;
+        }
+      }catch(e){}
+    }
+    /* Fetch live indicators for atom matching — use preferred timeframe */
+    var liveData = null;
+    var preferredTF = (d.profile && d.profile.better_timeframe) || '30m';
+    
+    if(preferredTF === '1D' || preferredTF === 'D' || preferredTF === '1d') {
+      /* Daily: fetch from radar daily context */
+      try{
+        var lr=await fetch('/dashboard/radar');
+        if(lr.ok){
+          var ld=await lr.json();
+          var ctx=ld.radar_daily_context||[];
+          if(Array.isArray(ctx)){
+            liveData=ctx.find(function(s){return s.symbol===sym})||null;
+          } else if(typeof ctx==='object'){
+            liveData=ctx[sym]||null;
+          }
+          if(liveData) liveData._tf='1D';
+        }
+      }catch(e){}
+    }
+    
+    if(!liveData) {
+      /* 30m: fetch from signals-30m (default or fallback) */
+      try{
+        var lr2=await fetch('/dashboard/signals-30m');
+        if(lr2.ok){
+          var ld2=await lr2.json();
+          var sigs2=ld2.signals||[];
+          liveData=sigs2.find(function(s){return s.symbol===sym})||null;
+          if(liveData) liveData._tf='30m';
+        }
+      }catch(e){}
+    }
+    
+    /* Normalize field names between endpoints */
+    if(liveData){
+      if(!liveData.rsi_14 && liveData.rsi) liveData.rsi_14=liveData.rsi;
+      if(!liveData.stoch_k && liveData.stoch) liveData.stoch_k=liveData.stoch;
+      if(!liveData.confluence_score && liveData.confluence) liveData.confluence_score=liveData.confluence;
+      if(!liveData.bb_squeeze && liveData.bb_squeeze===undefined && liveData.squeeze!==undefined) liveData.bb_squeeze=liveData.squeeze;
+    }
+    d._live = liveData;
+    d._live_tf = liveData ? (liveData._tf||preferredTF) : null;
+    renderAll(d);
+    loadEl.style.display='none';dataEl.style.display='';
+  }catch(e){
+    loadEl.style.display='none';emptyEl.style.display='';
+    emptyEl.textContent='\u274C \u062E\u0637\u0623: '+e.message;
+  }
+}
+
+/* Render all sections */
+function checkAtom(atom, live) {
+  if(!live) return null;
+  var rsi=live.rsi_14||live.rsi||0;
+  var adx=live.adx||0;
+  var stoch=live.stoch_k||0;
+  var cs=live.confluence_score||0;
+  var vol=live.vol_ratio||0;
+  var sq=live.bb_squeeze;
+  var macd_m=live.macd_momentum||'';
+  var ema_s=live.ema_state||'';
+  var a=atom.trim();
+  if(a==='rsi_gt_70') return rsi>70;
+  if(a==='rsi_lt_30') return rsi<30;
+  if(a==='rsi_50_70') return rsi>=50&&rsi<=70;
+  if(a==='rsi_30_50') return rsi>=30&&rsi<=50;
+  if(a==='adx_ge_25') return adx>=25;
+  if(a==='adx_lt_25') return adx<25;
+  if(a==='stoch_gt_80') return stoch>80;
+  if(a==='stoch_lt_20') return stoch<20;
+  if(a==='stoch_20_80') return stoch>=20&&stoch<=80;
+  if(a==='confluence_ge_70') return cs>=70;
+  if(a==='confluence_ge_50') return cs>=50;
+  if(a==='confluence_lt_30') return cs<30;
+  if(a==='vol_gt_1_5') return vol>1.5;
+  if(a==='vol_gt_2') return vol>2;
+  if(a==='vol_lt_0_5') return vol<0.5;
+  if(a==='bb_squeeze') return sq===true;
+  if(a==='bb_no_squeeze') return sq===false;
+  if(a==='macd_bullish'||a==='macd_bull') return macd_m.indexOf('bullish')>=0;
+  if(a==='macd_bearish'||a==='macd_bear') return macd_m.indexOf('bearish')>=0;
+  if(a==='ema_bullish'||a==='ema_bull') return ema_s==='bullish';
+  if(a==='ema_bearish'||a==='ema_bear') return ema_s==='bearish';
+  if(a==='near_support') return live.support&&live.price&&((live.price-live.support)/live.price*100)<3;
+  if(a==='near_resistance') return live.resistance&&live.price&&((live.resistance-live.price)/live.price*100)<3;
+  if(a==='breakout') return false;
+  if(a==='breakdown') return false;
+  if(a==='high_atr') return true;
+  if(a==='low_atr') return false;
+  return null;
+}
+function checkPattern(atoms_str, live) {
+  if(!live||!atoms_str) return {matched:0,total:0,results:[]};
+  var atoms=atoms_str.split(',');
+  var results=[];
+  atoms.forEach(function(a){
+    var r=checkAtom(a,live);
+    results.push({atom:a,ok:r});
+  });
+  var matched=results.filter(function(r){return r.ok===true}).length;
+  return {matched:matched,total:atoms.length,results:results};
+}
+function renderAll(d){
+  var p=d.profile||{};
+  var pats=d.top_patterns||[];
+  var notes=d.notes||'';
+
+  /* HERO */
+  var tagsHtml=(p.personality_ar||'').split('|').map(function(t){
+    return'<span class="hero-tag gold">'+t.trim()+'</span>';
+  }).join('');
+  var btf=p.better_timeframe;
+  if(btf)tagsHtml+='<span class="hero-tag cyan">\u23F0 '+(btf==='30m'?'30 \u062F\u0642\u064A\u0642\u0629':'\u064A\u0648\u0645\u064A')+'</span>';
+
+  heroEl.innerHTML=
+    '<div class="section-head"><span class="section-title">\u{1F3AF} '+ltr(d.symbol)+' \u2014 \u0634\u062E\u0635\u064A\u0629 \u0627\u0644\u0633\u0647\u0645</span>'
+    +'<span class="section-badge">'+ltr(p.signals_count||0)+' \u0625\u0634\u0627\u0631\u0629</span></div>'
+    +'<div class="hero"><div class="hero-main">'
+    +'<div class="hero-name">'+ltr(d.symbol)+'</div>'
+    +(d._live_price?'<div style="font-family:var(--fm);font-size:1.6rem;font-weight:700;color:var(--gold);margin:.25rem 0">'+ltr(n(d._live_price,3))+'<span style="font-size:.75rem;color:var(--text-3);margin-right:.5rem"> KWF</span></div>':'')
+    +'<div class="hero-tags">'+tagsHtml+'</div>'
+    +'<div style="margin-top:.5rem">'
+    +'<div class="hero-stat"><span class="hero-stat-val" style="color:var(--gold)">'+ltr(n(p.baseline_win_rate*100,1))+'%</span><span class="hero-stat-label">\u0646\u0633\u0628\u0629 \u0627\u0644\u0646\u062C\u0627\u062D</span></div>'
+    +'<div class="hero-stat" style="margin-top:.35rem"><span class="hero-stat-val" style="color:var(--green);font-size:1.3rem">'+ltr(n(p.reward_risk_ratio,1))+'x</span><span class="hero-stat-label">\u0639\u0627\u0626\u062F / \u0645\u062E\u0627\u0637\u0631\u0629</span></div>'
+    +'</div></div>'
+    +'<div style="display:flex;flex-direction:column;gap:.5rem;justify-content:center">'
+    +'<div style="font-size:.8rem;color:var(--text-3)">\u0623\u0642\u0648\u0649 \u0645\u0624\u0634\u0631</div>'
+    +'<div style="font-family:var(--fm);font-size:1.4rem;font-weight:700;color:var(--cyan)">'+ltr(p.dominant_driver||'\u2014')+'</div>'
+    +'<div style="font-size:.8rem;color:var(--text-3);margin-top:.25rem">\u062B\u0627\u0646\u064A \u0623\u0641\u0636\u0644</div>'
+    +'<div style="font-family:var(--fm);font-size:1rem;font-weight:600;color:var(--text-2)">'+ltr(p.secondary_driver||'\u2014')+'</div>'
+    +'</div></div>';
+
+  /* STATS */
+  statsEl.innerHTML=
+    '<div class="section-head"><span class="section-title">\u{1F4CA} \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0623\u062F\u0627\u0621</span></div>'
+    +'<div class="stats-grid">'
+    +statCard('+'+n(p.avg_max_gain_pct,1)+'%','var(--green)','\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0631\u0628\u062D')
+    +statCard(n(p.avg_max_loss_pct,1)+'%','var(--red)','\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u062E\u0633\u0627\u0631\u0629')
+    +statCard(ltr(p.hits||0)+'/'+ltr(p.signals_count||0),'var(--cyan)','\u0646\u062C\u0627\u062D / \u0625\u062C\u0645\u0627\u0644\u064A')
+    +statCard('+'+n(p.avg_outcome_pct,1)+'%','var(--amber)','\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0646\u062A\u064A\u062C\u0629')
+    +'</div>';
+  if(p.key_support||p.key_resistance||p.tf_1d_signals||p.tf_30m_signals){
+    statsEl.innerHTML+='<div class="stats-grid" style="border-top:1px solid var(--card-border)">'
+    +statCard(p.key_support?ltr(n(p.key_support,0)):'\u2014','var(--green)','\u{1F4CD} \u062F\u0639\u0645 \u0631\u0626\u064A\u0633\u064A')
+    +statCard(p.key_resistance?ltr(n(p.key_resistance,0)):'\u2014','var(--red)','\u{1F4CD} \u0645\u0642\u0627\u0648\u0645\u0629 \u0631\u0626\u064A\u0633\u064A\u0629')
+    +statCard(ltr(p.tf_30m_signals||0),'var(--cyan)','\u0625\u0634\u0627\u0631\u0627\u062A 30m')
+    +statCard(ltr(p.tf_1d_signals||0),'var(--gold)','\u0625\u0634\u0627\u0631\u0627\u062A 1D')
+    +'</div>';
+  }
+
+  /* LIFTS */
+  var LIFT_TIPS = {
+    'Volume': {t:'Volume Ratio', d:'\u0646\u0633\u0628\u0629 \u0627\u0644\u062D\u062C\u0645 \u2014 \u062D\u062C\u0645 \u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0627\u0644\u0645\u062A\u0648\u0633\u0637. \u0627\u0644\u062D\u062C\u0645 \u064A\u0624\u0643\u062F \u0627\u0644\u062D\u0631\u0643\u0629.', v:'< 0.5x = \u0636\u0639\u064A\u0641 | 1x = \u0637\u0628\u064A\u0639\u064A | > 1.5x = \u0645\u062A\u0632\u0627\u064A\u062F | > 2x = \u0642\u0648\u064A (\u062A\u0623\u0643\u064A\u062F)'},
+    'MACD': {t:'MACD (12/26/9)', d:'\u0645\u0624\u0634\u0631 \u0627\u0644\u062A\u0642\u0627\u0631\u0628 \u0648\u0627\u0644\u062A\u0628\u0627\u0639\u062F \u2014 \u064A\u0642\u064A\u0633 \u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u062E\u0645 \u0648\u0642\u0648\u062A\u0647.', v:'\u0635\u0627\u0639\u062F = \u0627\u0644\u0632\u062E\u0645 \u064A\u062A\u062D\u0633\u0646 | \u0647\u0627\u0628\u0637 = \u0627\u0644\u0632\u062E\u0645 \u064A\u0636\u0639\u0641 | \u062A\u0642\u0627\u0637\u0639 = \u0625\u0634\u0627\u0631\u0629'},
+    'EMA': {t:'EMA (9/20/50/200)', d:'\u0627\u0644\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0645\u062A\u062D\u0631\u0643 \u0627\u0644\u0623\u0633\u064A \u2014 \u064A\u062A\u0628\u0639 \u0627\u0644\u0627\u062A\u062C\u0627\u0647. \u0644\u0645\u0627 \u0645\u0631\u062A\u0628\u0629 (9>20>50) = \u0627\u062A\u062C\u0627\u0647 \u0635\u0627\u0639\u062F \u0642\u0648\u064A.', v:'\u062A\u0642\u0627\u0637\u0639 \u0630\u0647\u0628\u064A = \u0635\u0627\u0639\u062F | \u062A\u0642\u0627\u0637\u0639 \u0627\u0644\u0645\u0648\u062A = \u0647\u0627\u0628\u0637'},
+    'RSI': {t:'RSI (14)', d:'\u0645\u0624\u0634\u0631 \u0627\u0644\u0642\u0648\u0629 \u0627\u0644\u0646\u0633\u0628\u064A\u0629 \u2014 \u064A\u0642\u064A\u0633 \u0633\u0631\u0639\u0629 \u062A\u063A\u064A\u0631\u0627\u062A \u0627\u0644\u0633\u0639\u0631.', v:'< 30 = \u062A\u0634\u0628\u0639 \u0628\u064A\u0639\u064A (\u0641\u0631\u0635\u0629) | > 70 = \u062A\u0634\u0628\u0639 \u0634\u0631\u0627\u0626\u064A (\u062D\u0630\u0631) | 40-60 = \u0645\u062D\u0627\u064A\u062F'},
+    'ADX': {t:'ADX (14) \u2014 \u0642\u0648\u0629 \u0627\u0644\u0627\u062A\u062C\u0627\u0647', d:'\u064A\u0642\u064A\u0633 \u0642\u0648\u0629 \u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u062D\u0627\u0644\u064A (\u0635\u0627\u0639\u062F \u0623\u0648 \u0647\u0627\u0628\u0637). \u0644\u0627 \u064A\u062D\u062F\u062F \u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u2014 \u0641\u0642\u0637 \u0642\u0648\u062A\u0647. \u0645\u0647\u0645 \u0644\u062A\u062D\u062F\u064A\u062F \u0646\u0638\u0627\u0645 \u0627\u0644\u0633\u0648\u0642.', v:'0-15 = \u0633\u0648\u0642 \u0646\u0627\u0626\u0645 (\u0644\u0627 \u062A\u062F\u062E\u0644) | 15-20 = \u0627\u062A\u062C\u0627\u0647 \u0636\u0639\u064A\u0641 \u062C\u062F\u0627\u064B | 20-25 = \u064A\u062A\u0634\u0643\u0651\u0644 (\u0627\u0633\u062A\u0639\u062F) | 25-35 = \u0642\u0648\u064A \u2705 (\u0627\u062F\u062E\u0644) | 35-50 = \u0642\u0648\u064A \u062C\u062F\u0627\u064B | > 50 = \u0645\u062A\u0637\u0631\u0641 (\u062A\u0648\u0642\u0639 \u0627\u0646\u0639\u0643\u0627\u0633) | \u26A1 ADX \u2265 25 \u2192 \u0627\u062A\u062C\u0627\u0647\u064A (\u064A\u062E\u0641\u0641 \u0634\u0631\u0648\u0637 \u0627\u0644\u062F\u062E\u0648\u0644) | ADX < 20 \u2192 \u0639\u0631\u0636\u064A (\u064A\u0634\u062F\u062F +10)'},
+    'Stochastic': {t:'Stochastic K/D \u2014 \u0627\u0644\u062A\u0634\u0628\u0639 \u0627\u0644\u0633\u0631\u064A\u0639', d:'\u064A\u0642\u0627\u0631\u0646 \u0633\u0639\u0631 \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0628\u0623\u0639\u0644\u0649 \u0648\u0623\u062F\u0646\u0649 \u0633\u0639\u0631 \u062E\u0644\u0627\u0644 14 \u0641\u062A\u0631\u0629. \u0623\u0633\u0631\u0639 \u0645\u0646 RSI. K = \u0627\u0644\u062E\u0637 \u0627\u0644\u0633\u0631\u064A\u0639\u060C D = \u0627\u0644\u0628\u0637\u064A\u0621.', v:'0-20 = \u062A\u0634\u0628\u0639 \u0628\u064A\u0639\u064A \u0634\u062F\u064A\u062F \u2705 (\u0641\u0631\u0635\u0629 \u0627\u0631\u062A\u062F\u0627\u062F) | 20-30 = \u062A\u0634\u0628\u0639 \u0628\u064A\u0639\u064A | 30-70 = \u0645\u062D\u0627\u064A\u062F | 70-80 = \u062A\u0634\u0628\u0639 \u0634\u0631\u0627\u0626\u064A | 80-100 = \u062A\u0634\u0628\u0639 \u0634\u062F\u064A\u062F \u26A0\uFE0F | \u26A1 \u0625\u0634\u0627\u0631\u0629 \u0634\u0631\u0627\u0621: K \u064A\u0639\u0628\u0631 \u0641\u0648\u0642 D \u062A\u062D\u062A 20 | \U0001F3C6 \u0645\u0646 \u0623\u0642\u0648\u0649 \u0627\u0644\u0623\u0646\u0645\u0627\u0637 \u0628\u0628\u0648\u0631\u0635\u0629 \u0627\u0644\u0643\u0648\u064A\u062A'},
+    'BB Squeeze': {t:'Bollinger Squeeze \u2014 \u0627\u0644\u0636\u063A\u0637 \u0648\u0627\u0644\u0627\u0646\u0641\u062C\u0627\u0631', d:'\u0623\u0634\u0631\u0637\u0629 \u0628\u0648\u0644\u064A\u0646\u062C\u0631 \u062A\u0642\u064A\u0633 \u0627\u0644\u062A\u0630\u0628\u0630\u0628. \u0644\u0645\u0627 \u062A\u0636\u064A\u0642 (Squeeze) = \u0627\u0644\u0633\u0647\u0645 \u0647\u0627\u062F\u0626 \u0648\u064A\u0633\u062A\u0639\u062F \u0644\u062D\u0631\u0643\u0629 \u0643\u0628\u064A\u0631\u0629.', v:'Squeeze = TRUE \u2705 \u2192 \u0627\u0646\u0641\u062C\u0627\u0631 \u0633\u0639\u0631\u064A \u0642\u0627\u062F\u0645! | Bandwidth < 5% = \u0636\u063A\u0637 \u0634\u062F\u064A\u062F | 5-15% = \u0637\u0628\u064A\u0639\u064A | > 20% = \u062A\u0630\u0628\u0630\u0628 \u0639\u0627\u0644\u064A | \u26A1 Squeeze + Volume \u0639\u0627\u0644\u064A = \u0627\u062E\u062A\u0631\u0627\u0642 \u062D\u0642\u064A\u0642\u064A | \u26A0\uFE0F Squeeze \u0628\u062F\u0648\u0646 \u062D\u062C\u0645 = \u0643\u0627\u0630\u0628 \u0645\u062D\u062A\u0645\u0644 | \U0001F3C6 \u0628\u0627\u0644\u0643\u0648\u064A\u062A: \u0623\u0633\u0647\u0645 \u0643\u062B\u064A\u0631\u0629 \u062A\u0636\u063A\u0637 \u0623\u0633\u0627\u0628\u064A\u0639 \u062B\u0645 \u062A\u0646\u0641\u062C\u0631'},
+    '\u062F\u0639\u0645': {t:'Support', d:'\u0627\u0644\u062F\u0639\u0645 \u2014 \u0645\u0633\u062A\u0648\u0649 \u0633\u0639\u0631\u064A \u0627\u0631\u062A\u062F \u0645\u0646\u0647 \u0627\u0644\u0633\u0647\u0645 \u0639\u062F\u0629 \u0645\u0631\u0627\u062A. \u0643\u0644 \u0645\u0627 \u0632\u0627\u062F\u062A \u0627\u0644\u0644\u0645\u0633\u0627\u062A = \u0623\u0642\u0648\u0649.', v:'Lift > 1.15 = \u0627\u0644\u0633\u0647\u0645 \u064A\u0631\u062A\u062F \u062C\u064A\u062F\u0627\u064B \u0645\u0646 \u0627\u0644\u062F\u0639\u0645 | < 0.9 = \u0627\u0644\u062F\u0639\u0645 \u0636\u0639\u064A\u0641'},
+    '\u0645\u0642\u0627\u0648\u0645\u0629': {t:'Resistance', d:'\u0627\u0644\u0645\u0642\u0627\u0648\u0645\u0629 \u2014 \u0633\u0642\u0641 \u0633\u0639\u0631\u064A \u0644\u0645 \u064A\u062A\u062C\u0627\u0648\u0632\u0647 \u0627\u0644\u0633\u0647\u0645.', v:'Lift > 1.15 = \u0625\u0634\u0627\u0631\u0627\u062A \u0642\u0631\u0628 \u0627\u0644\u0645\u0642\u0627\u0648\u0645\u0629 \u0646\u0627\u062C\u062D\u0629 | < 0.9 = \u0627\u0644\u0645\u0642\u0627\u0648\u0645\u0629 \u0635\u0639\u0628\u0629'},
+    '\u0627\u062E\u062A\u0631\u0627\u0642': {t:'Breakout', d:'\u0627\u062E\u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0642\u0627\u0648\u0645\u0629 \u2014 \u0647\u0644 \u0627\u0644\u0627\u062E\u062A\u0631\u0627\u0642\u0627\u062A \u062D\u0642\u064A\u0642\u064A\u0629 \u0623\u0648 \u0643\u0627\u0630\u0628\u0629\u061F', v:'Lift > 1.2 = \u0627\u062E\u062A\u0631\u0627\u0642\u0627\u062A \u0646\u0627\u062C\u062D\u0629 \u062A\u0627\u0631\u064A\u062E\u064A\u0627\u064B | < 0.85 = \u0627\u062E\u062A\u0631\u0627\u0642\u0627\u062A \u0643\u0627\u0630\u0628\u0629 \u063A\u0627\u0644\u0628\u0627\u064B'},
+    '\u0643\u0633\u0631 \u062F\u0639\u0645': {t:'Breakdown', d:'\u0643\u0633\u0631 \u0627\u0644\u062F\u0639\u0645 \u2014 \u0647\u0644 \u0643\u0633\u0631 \u0627\u0644\u062F\u0639\u0645 \u064A\u0624\u062F\u064A \u0644\u0647\u0628\u0648\u0637 \u062D\u0642\u064A\u0642\u064A\u061F', v:'Lift > 1.15 = \u0643\u0633\u0631 \u0627\u0644\u062F\u0639\u0645 \u062E\u0637\u064A\u0631 \u0641\u0639\u0644\u0627\u064B | < 0.9 = \u063A\u0627\u0644\u0628\u0627\u064B \u064A\u0631\u062A\u062F'},
+    'ATR \u0639\u0627\u0644\u064A': {t:'ATR (14)', d:'\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0645\u062F\u0649 \u0627\u0644\u062D\u0642\u064A\u0642\u064A \u2014 \u064A\u0642\u064A\u0633 \u062A\u0630\u0628\u0630\u0628 \u0627\u0644\u0633\u0647\u0645.', v:'ATR \u0639\u0627\u0644\u064A = \u062A\u062D\u0631\u0643 \u0643\u0628\u064A\u0631 (\u0645\u062E\u0627\u0637\u0631\u0629 + \u0641\u0631\u0635\u0629) | ATR \u0645\u0646\u062E\u0641\u0636 = \u0647\u062F\u0648\u0621 (\u0636\u063A\u0637 \u0642\u0628\u0644 \u0627\u0646\u0641\u062C\u0627\u0631)'},
+  };
+  var LIFT_EXPLAIN = '\u0631\u0642\u0645 \u0627\u0644\u0640 Lift \u064A\u0639\u0646\u064A: \u0643\u0645 \u0645\u0631\u0629 \u064A\u062A\u062D\u0633\u0646 \u0627\u0644\u0623\u062F\u0627\u0621 \u0644\u0645\u0627 \u0647\u0627\u0644\u0645\u0624\u0634\u0631 \u064A\u0643\u0648\u0646 \u0641\u0639\u0651\u0627\u0644. \u0645\u062B\u0627\u0644: 1.5x = \u0627\u0644\u0646\u062C\u0627\u062D \u064A\u0632\u064A\u062F 50% \u0644\u0645\u0627 \u0647\u0627\u0644\u0645\u0624\u0634\u0631 \u0645\u0648\u062C\u0648\u062F.';
+  var allLifts=[
+    {name:'Volume',lift:p.vol_lift,n:p.vol_samples},
+    {name:'MACD',lift:p.macd_lift,n:p.macd_samples},
+    {name:'EMA',lift:p.ema_lift,n:p.ema_samples},
+    {name:'RSI',lift:p.rsi_lift,n:p.rsi_samples},
+    {name:'ADX',lift:p.adx_lift,n:p.adx_samples},
+    {name:'Stochastic',lift:p.stoch_lift,n:p.stoch_samples},
+    {name:'BB Squeeze',lift:p.squeeze_lift,n:p.squeeze_samples},
+    {name:'\u062F\u0639\u0645',lift:p.support_lift,n:p.support_samples},
+    {name:'\u0645\u0642\u0627\u0648\u0645\u0629',lift:p.resistance_lift,n:p.resistance_samples},
+    {name:'\u0627\u062E\u062A\u0631\u0627\u0642',lift:p.breakout_lift,n:p.breakout_samples},
+    {name:'\u0643\u0633\u0631 \u062F\u0639\u0645',lift:p.breakdown_lift,n:p.breakdown_samples},
+    {name:'ATR \u0639\u0627\u0644\u064A',lift:p.high_atr_lift,n:p.high_atr_samples},
+  ].filter(function(l){return l.lift!=null&&l.n>0}).sort(function(a,b){return(b.lift||0)-(a.lift||0)});
+
+  liftsEl.innerHTML='<div class="section-head"><span class="section-title">\u{1F4CA} \u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A (Lift)</span>'
+    +'<span class="section-badge">1.0x = \u0645\u062D\u0627\u064A\u062F \u2022 >1.15 = \u0625\u064A\u062C\u0627\u0628\u064A</span></div>'
+    +'<div class="lifts-grid">'
+    +allLifts.map(function(l){
+      var barW=Math.min(Math.max((l.lift/2.5)*100,5),100);
+      var c=liftColor(l.lift);
+      var tip=LIFT_TIPS[l.name];
+      var tipHtml='';
+      if(tip){
+        tipHtml='<div class="lift-tip" style="display:none;position:absolute;bottom:calc(100% + 8px);right:0;background:#0C1525;border:1px solid rgba(198,151,75,.35);border-radius:10px;padding:10px 14px;min-width:280px;max-width:340px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none;text-align:right">'
+          +'<div style="font-weight:700;color:#C6974B;font-size:.8rem;font-family:var(--fm);direction:ltr;margin-bottom:4px">'+tip.t+'</div>'
+          +'<div style="font-size:.75rem;color:#A0ADBC;line-height:1.7;margin-bottom:6px">'+tip.d+'</div>'
+          +'<div style="font-size:.7rem;color:#6B7D90;border-top:1px solid rgba(26,46,69,.5);padding-top:6px;line-height:1.7">'+tip.v.replace(/\|/g,'<br>')+'</div>'
+          +'<div style="font-size:.65rem;color:#405060;border-top:1px solid rgba(26,46,69,.3);padding-top:4px;margin-top:4px">\u2139\uFE0F '+LIFT_EXPLAIN+'</div>'
+          +'</div>';
+      }
+      return'<div class="lift-card" style="position:relative;cursor:help" onmouseenter="this.querySelector(\'.lift-tip\')&&(this.querySelector(\'.lift-tip\').style.display=\'block\')" onmouseleave="this.querySelector(\'.lift-tip\')&&(this.querySelector(\'.lift-tip\').style.display=\'none\')"><div class="lift-name">'+ltr(l.name)+'</div>'
+        +tipHtml
+        +'<div class="lift-bar-wrap"><div class="lift-bar" style="width:'+barW+'%;background:'+c+'"></div></div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
+        +'<span class="lift-val" style="color:'+c+'">'+ltr(n(l.lift,2))+'x</span>'
+        +'<span class="lift-sub">'+liftLabel(l.lift)+' ('+ltr(l.n)+' \u0639\u064A\u0646\u0629)</span>'
+        +'</div></div>';
+    }).join('')+'</div>';
+
+  /* PATTERNS */
+  var topPats=pats.slice(0,10);
+  patsEl.innerHTML='<div class="section-head"><span class="section-title">\u{1F3C6} \u0623\u0641\u0636\u0644 \u0627\u0644\u0623\u0646\u0645\u0627\u0637 \u0627\u0644\u0646\u0627\u062C\u062D\u0629</span>'
+    +'<span class="section-badge">'+ltr(pats.length)+' \u0646\u0645\u0637</span>'
+    +(d._live_tf?'<span class="section-badge" style="background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.3);color:#38BDF8">\u0628\u064A\u0627\u0646\u0627\u062A \u062D\u064A\u0629: '+d._live_tf+'</span>':'')
+    +'</div>';
+  if(!topPats.length){
+    patsEl.innerHTML+='<div class="empty-msg">\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0646\u0645\u0627\u0637 \u0643\u0627\u0641\u064A\u0629</div>';
+  }else{
+    var thtml='<table class="pat-table"><thead><tr><th>#</th><th>\u0627\u0644\u0646\u0645\u0637</th><th>\u0627\u0644\u062D\u0627\u0644\u0629</th><th>\u0627\u0644\u062A\u0643\u0631\u0627\u0631</th><th>\u0627\u0644\u0646\u062C\u0627\u062D</th><th>Win%</th><th>\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0631\u0628\u062D</th><th>Score</th></tr></thead><tbody>';
+    topPats.forEach(function(pt,i){
+      var wc=wrClass(pt.win_rate);
+      var chk=checkPattern(pt.pattern_atoms, d._live);
+      var statusHtml='';
+      if(!d._live){
+        statusHtml='<span style="color:var(--text-3);font-size:.75rem">\u2014</span>';
+      }else if(chk.matched===chk.total){
+        statusHtml='<span style="background:rgba(76,175,130,.15);color:#4CAF82;padding:2px 8px;border-radius:6px;font-size:.75rem;font-weight:700">\u2705 \u0645\u062A\u062D\u0642\u0642</span>';
+      }else if(chk.matched>0){
+        statusHtml='<span style="background:rgba(232,168,56,.12);color:#E8A838;padding:2px 8px;border-radius:6px;font-size:.75rem;font-weight:600">\u26A0 '+chk.matched+'/'+chk.total+'</span>';
+      }else{
+        statusHtml='<span style="color:var(--text-3);font-size:.75rem">\u274C 0/'+chk.total+'</span>';
+      }
+      thtml+='<tr'+(chk.matched===chk.total?' style="background:rgba(76,175,130,.06)"':'')+'><td style="color:var(--text-3)">'+ltr(i+1)+'</td>'
+        +'<td><span class="pat-name">'+pt.pattern_ar+'</span></td>'
+        +'<td style="text-align:center">'+statusHtml+'</td>'
+        +'<td class="ltr" style="font-family:var(--fm)">'+ltr(pt.occurrences)+'</td>'
+        +'<td class="ltr" style="font-family:var(--fm)">'+ltr(pt.hits)+'/'+ltr(pt.occurrences)+'</td>'
+        +'<td><span class="wr-badge '+wc+'">'+ltr(n(pt.win_rate*100,1))+'%</span></td>'
+        +'<td class="ltr" style="font-family:var(--fm);color:var(--green)">+'+ltr(n(pt.avg_gain_pct,1))+'%</td>'
+        +'<td class="ltr" style="font-family:var(--fm);color:var(--gold)">'+ltr(n(pt.pattern_score,0))+'</td></tr>';
+    });
+    thtml+='</tbody></table>';
+    patsEl.innerHTML+=thtml;
+  }
+
+  /* NOTES */
+  var noteLines=(notes||'').split('|').map(function(n){return n.trim()}).filter(function(n){return n.length>0});
+  notesEl.innerHTML='<div class="section-head"><span class="section-title">\u{1F4DD} \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0630\u0643\u064A\u0629</span></div>'
+    +'<div class="notes-box">'+noteLines.map(function(l){return'<div class="note-line">'+l+'</div>'}).join('')+'</div>';
+}
+
+function statCard(val,color,label){
+  return'<div class="stat-card"><div class="stat-card-val" style="color:'+color+'">'+val+'</div><div class="stat-card-label">'+label+'</div></div>';
+}
+
+/* Init */
+sel.addEventListener('change',function(){loadSymbol(sel.value)});
+loadProfiles();
+
+/* URL parameter support: ?symbol=CLEANING */
+var urlSym=new URLSearchParams(window.location.search).get('symbol');
+if(urlSym){
+  sel.value=urlSym.toUpperCase();
+  loadSymbol(urlSym.toUpperCase());
+}
+})();
+</script>
+<script src="indicator-tooltips.js"></script>
+</body>
+</html>
