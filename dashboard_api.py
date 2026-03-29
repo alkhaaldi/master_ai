@@ -1648,6 +1648,335 @@ async def dashboard_brain():
         return {"brain_active": False, "error": str(e)}
 
 
+# ═══════════════════════════════════════════════════
+# /dashboard/brain-insights — Phase 5: Trading Learnings
+# ═══════════════════════════════════════════════════
+
+def _bi_conn():
+    db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
+    c = sqlite3.connect(db_path, timeout=5)
+    c.row_factory = sqlite3.Row
+    return c
+
+
+def _rows_to_list(rows):
+    return [dict(r) for r in rows] if rows else []
+
+
+def _build_key_learnings(c):
+    """4 cards: best timeframe, top pattern, top indicator proxy, best regime."""
+    # 1. Timeframe comparison (from signal_snapshots)
+    timeframe_stats = c.execute("""
+        SELECT
+            source as timeframe,
+            COUNT(*) as samples,
+            ROUND(100.0 * SUM(CASE WHEN outcome='hit' THEN 1 ELSE 0 END) / COUNT(*), 1) as win_rate,
+            ROUND(AVG(CASE WHEN outcome='hit' THEN max_gain_pct ELSE -max_loss_pct END), 2) as avg_return
+        FROM signal_snapshots
+        WHERE outcome IN ('hit','miss')
+        GROUP BY source
+        ORDER BY avg_return DESC
+    """).fetchall()
+
+    # 2. Top pattern (from mined_strategies)
+    top_pattern = c.execute("""
+        SELECT
+            pattern_atoms, pattern_ar, timeframe, regime,
+            ROUND(profitable_rate * 100, 1) as win_pct,
+            ROUND(ev, 2) as ev,
+            sample_size as samples,
+            ROUND(profit_factor, 2) as pf
+        FROM mined_strategies
+        WHERE sample_size >= 30
+        ORDER BY ev DESC
+        LIMIT 1
+    """).fetchone()
+
+    # 3. Best indicator proxy — which single-atom patterns have highest EV
+    best_indicator = c.execute("""
+        SELECT
+            pattern_atoms as indicator,
+            COUNT(*) as strategy_count,
+            ROUND(AVG(ev), 2) as avg_ev,
+            ROUND(AVG(profitable_rate) * 100, 1) as avg_win_pct
+        FROM mined_strategies
+        WHERE sample_size >= 30 AND ev > 0
+          AND pattern_atoms NOT LIKE '%,%'
+        GROUP BY pattern_atoms
+        HAVING COUNT(*) >= 2
+        ORDER BY avg_ev DESC
+        LIMIT 1
+    """).fetchone()
+
+    # 4. Best regime context (from signal_outcomes)
+    best_context = c.execute("""
+        SELECT
+            regime_calc as regime,
+            regime_dir as direction,
+            COUNT(*) as samples,
+            ROUND(100.0 * SUM(CASE WHEN outcome_pct > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) as win_rate,
+            ROUND(AVG(outcome_pct), 2) as avg_return
+        FROM signal_outcomes
+        WHERE regime_calc IS NOT NULL
+        GROUP BY regime_calc, regime_dir
+        HAVING COUNT(*) >= 50
+        ORDER BY avg_return DESC
+        LIMIT 1
+    """).fetchone()
+
+    return {
+        "timeframe_comparison": _rows_to_list(timeframe_stats),
+        "top_pattern": dict(top_pattern) if top_pattern else None,
+        "best_indicator": dict(best_indicator) if best_indicator else None,
+        "best_context": dict(best_context) if best_context else None,
+    }
+
+
+def _build_edge_map(c):
+    """Performance map: timeframe × regime × direction."""
+    # By timeframe
+    by_timeframe = c.execute("""
+        SELECT
+            timeframe,
+            COUNT(*) as samples,
+            ROUND(100.0 * SUM(CASE WHEN outcome_pct > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) as win_rate,
+            ROUND(AVG(outcome_pct), 2) as avg_return
+        FROM signal_outcomes
+        GROUP BY timeframe
+    """).fetchall()
+
+    # Top 5 contexts
+    top_contexts = c.execute("""
+        SELECT
+            timeframe,
+            regime_calc as regime,
+            regime_dir as direction,
+            COUNT(*) as samples,
+            ROUND(100.0 * SUM(CASE WHEN outcome_pct > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) as win_rate,
+            ROUND(AVG(outcome_pct), 2) as avg_return
+        FROM signal_outcomes
+        WHERE regime_calc IS NOT NULL
+        GROUP BY timeframe, regime_calc, regime_dir
+        HAVING COUNT(*) >= 30
+        ORDER BY avg_return DESC
+        LIMIT 5
+    """).fetchall()
+
+    # Worst 5 contexts
+    worst_contexts = c.execute("""
+        SELECT
+            timeframe,
+            regime_calc as regime,
+            regime_dir as direction,
+            COUNT(*) as samples,
+            ROUND(100.0 * SUM(CASE WHEN outcome_pct > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) as win_rate,
+            ROUND(AVG(outcome_pct), 2) as avg_return
+        FROM signal_outcomes
+        WHERE regime_calc IS NOT NULL
+        GROUP BY timeframe, regime_calc, regime_dir
+        HAVING COUNT(*) >= 30
+        ORDER BY avg_return ASC
+        LIMIT 5
+    """).fetchall()
+
+    return {
+        "by_timeframe": _rows_to_list(by_timeframe),
+        "top_contexts": _rows_to_list(top_contexts),
+        "worst_contexts": _rows_to_list(worst_contexts),
+    }
+
+
+def _build_top_strategies(c):
+    """Best/worst 5 strategies + helpful patterns."""
+    best = c.execute("""
+        SELECT
+            strategy_id, pattern_ar, timeframe, regime,
+            sample_size as samples,
+            ROUND(profitable_rate * 100, 1) as win_pct,
+            ROUND(ev, 2) as ev,
+            ROUND(profit_factor, 2) as pf,
+            ROUND(stability, 2) as stability
+        FROM mined_strategies
+        WHERE sample_size >= 30
+        ORDER BY ev DESC
+        LIMIT 5
+    """).fetchall()
+
+    worst = c.execute("""
+        SELECT
+            strategy_id, pattern_ar, timeframe, regime,
+            sample_size as samples,
+            ROUND(profitable_rate * 100, 1) as win_pct,
+            ROUND(ev, 2) as ev,
+            ROUND(profit_factor, 2) as pf,
+            ROUND(stability, 2) as stability
+        FROM mined_strategies
+        WHERE sample_size >= 30
+        ORDER BY ev ASC
+        LIMIT 5
+    """).fetchall()
+
+    # Helpful patterns: multi-atom patterns with high EV
+    helpful = c.execute("""
+        SELECT
+            pattern_atoms, pattern_ar,
+            COUNT(*) as strategy_count,
+            ROUND(AVG(ev), 2) as avg_ev,
+            ROUND(AVG(profitable_rate) * 100, 1) as avg_win_pct
+        FROM mined_strategies
+        WHERE ev > 3 AND sample_size >= 30
+        GROUP BY pattern_atoms
+        ORDER BY avg_ev DESC
+        LIMIT 10
+    """).fetchall()
+
+    return {
+        "best_5": _rows_to_list(best),
+        "worst_5": _rows_to_list(worst),
+        "helpful_patterns": _rows_to_list(helpful),
+    }
+
+
+def _build_decision_scorecard(c):
+    """Decision audit performance."""
+    # Check if table has data
+    cnt = c.execute("SELECT COUNT(*) FROM decision_audit").fetchone()[0]
+    if cnt == 0:
+        return {"message": "لا توجد بيانات بعد", "total_decisions": 0}
+
+    total = c.execute("""
+        SELECT smart_decision, COUNT(*) as count
+        FROM decision_audit
+        GROUP BY smart_decision
+    """).fetchall()
+
+    by_confidence = c.execute("""
+        SELECT
+            CASE
+                WHEN confidence >= 90 THEN '90+'
+                WHEN confidence >= 80 THEN '80-89'
+                WHEN confidence >= 70 THEN '70-79'
+                ELSE '<70'
+            END as bucket,
+            COUNT(*) as count,
+            ROUND(AVG(confidence), 1) as avg_conf,
+            ROUND(AVG(data_quality), 1) as avg_quality
+        FROM decision_audit
+        WHERE smart_decision = 'ENTER'
+        GROUP BY bucket
+        ORDER BY bucket DESC
+    """).fetchall()
+
+    by_quality = c.execute("""
+        SELECT
+            CASE
+                WHEN data_quality >= 80 THEN 'عالية'
+                WHEN data_quality >= 60 THEN 'متوسطة'
+                ELSE 'ضعيفة'
+            END as quality_ar,
+            COUNT(*) as count,
+            ROUND(AVG(rr_ratio), 2) as avg_rr
+        FROM decision_audit
+        WHERE smart_decision = 'ENTER'
+        GROUP BY quality_ar
+    """).fetchall()
+
+    top_used = c.execute("""
+        SELECT
+            strategy_id,
+            COUNT(*) as used_count,
+            ROUND(AVG(rr_ratio), 2) as avg_rr,
+            ROUND(AVG(confidence), 1) as avg_conf
+        FROM decision_audit
+        WHERE smart_decision = 'ENTER' AND strategy_id IS NOT NULL AND strategy_id != ''
+        GROUP BY strategy_id
+        ORDER BY used_count DESC
+        LIMIT 5
+    """).fetchall()
+
+    # Recent ENTER decisions (last 7 days)
+    recent = c.execute("""
+        SELECT symbol, market_date, confidence, data_quality, rr_ratio, sector,
+               chosen_plan_source, outcome
+        FROM decision_audit
+        WHERE smart_decision = 'ENTER'
+        ORDER BY decision_time DESC
+        LIMIT 10
+    """).fetchall()
+
+    return {
+        "total_decisions": cnt,
+        "total_by_decision": _rows_to_list(total),
+        "enter_by_confidence": _rows_to_list(by_confidence),
+        "enter_by_quality": _rows_to_list(by_quality),
+        "top_used_strategies": _rows_to_list(top_used),
+        "recent_enters": _rows_to_list(recent),
+    }
+
+
+def _build_action_panel(c):
+    """3 lists: do more / avoid / system stats."""
+    do_more = c.execute("""
+        SELECT timeframe, regime_calc as regime, regime_dir as direction,
+            COUNT(*) as samples,
+            ROUND(AVG(outcome_pct), 2) as avg_return
+        FROM signal_outcomes
+        WHERE regime_calc IS NOT NULL
+        GROUP BY timeframe, regime_calc, regime_dir
+        HAVING COUNT(*) >= 50 AND AVG(outcome_pct) > 2
+        ORDER BY avg_return DESC
+        LIMIT 3
+    """).fetchall()
+
+    avoid = c.execute("""
+        SELECT timeframe, regime_calc as regime, regime_dir as direction,
+            COUNT(*) as samples,
+            ROUND(AVG(outcome_pct), 2) as avg_return
+        FROM signal_outcomes
+        WHERE regime_calc IS NOT NULL
+        GROUP BY timeframe, regime_calc, regime_dir
+        HAVING COUNT(*) >= 50 AND AVG(outcome_pct) < 0
+        ORDER BY avg_return ASC
+        LIMIT 3
+    """).fetchall()
+
+    stats = c.execute("""
+        SELECT
+            (SELECT COUNT(*) FROM mined_strategies) as total_strategies,
+            (SELECT COUNT(*) FROM signal_outcomes) as total_signals,
+            (SELECT COUNT(DISTINCT symbol) FROM signal_outcomes) as unique_stocks,
+            (SELECT COUNT(*) FROM decision_audit) as total_decisions,
+            (SELECT COUNT(*) FROM decision_audit WHERE smart_decision='ENTER') as total_enters,
+            (SELECT ROUND(AVG(ev), 2) FROM mined_strategies WHERE sample_size >= 30) as avg_strategy_ev
+    """).fetchone()
+
+    return {
+        "do_more": _rows_to_list(do_more),
+        "avoid": _rows_to_list(avoid),
+        "system_stats": dict(stats) if stats else {},
+    }
+
+
+@router.get("/dashboard/brain-insights")
+async def dashboard_brain_insights():
+    """Phase 5: Trading learnings — what the system learned, what works, what doesn't."""
+    try:
+        c = _bi_conn()
+        result = {
+            "generated_at": datetime.now().isoformat(),
+            "key_learnings": _build_key_learnings(c),
+            "edge_map": _build_edge_map(c),
+            "top_strategies": _build_top_strategies(c),
+            "decision_scorecard": _build_decision_scorecard(c),
+            "action_panel": _build_action_panel(c),
+        }
+        c.close()
+        return result
+    except Exception as e:
+        logger.error("brain-insights error: %s", e, exc_info=True)
+        return {"error": str(e)}
+
+
 @router.get("/dashboard/strategies")
 async def dashboard_strategies():
     """Mined strategies from FP-Growth engine — ranked by final_score."""
