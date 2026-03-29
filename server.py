@@ -2599,6 +2599,13 @@ async def lifespan(app):
         if LEARNING_OK: asyncio.create_task(brain_nightly_learning())
         if FEEDBACK_OK: asyncio.create_task(feedback_learning_loop())
         if PLAN_OK: asyncio.create_task(plan_check_loop())
+        # Phase 4 V10: Daily data collection + position monitor at 2 PM
+        try:
+            from kse_data_collector import daily_collection_scheduler
+            asyncio.create_task(daily_collection_scheduler())
+            logger.info("Daily collection scheduler started (2 PM)")
+        except Exception as _e:
+            logger.warning("Daily collection scheduler not loaded: %s", _e)
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
     if TG_ALERTS_OK:

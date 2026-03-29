@@ -939,6 +939,15 @@ def scan_opportunities(live_data: list) -> dict:
                     alerts_sent += 1
     alert_conn.close()
 
+    # ── Phase 4 V10: Decision Audit — log ENTER decisions ─────
+    try:
+        from kse_data_collector import log_decision
+        for opp in all_opportunities:
+            if opp.get("smart_decision") == "ENTER":
+                log_decision(opp)
+    except Exception as e:
+        logger.warning("Decision audit logging failed: %s", e)
+
     enter_list = [o for o in all_opportunities if o.get("smart_decision") == "ENTER"]
     wait_list  = [o for o in all_opportunities if o.get("smart_decision") == "WAIT"]
     skip_list  = [o for o in all_opportunities if o.get("smart_decision") == "SKIP"]

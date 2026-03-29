@@ -1786,6 +1786,33 @@ async def api_trade_update(data: dict = Body(...)):
 
 
 # ═══════════════════════════════════════════════════
+# /api/data-health — Data collection health status
+# ═══════════════════════════════════════════════════
+
+@router.get("/api/data-health")
+async def api_data_health():
+    """Data health: last collection, freshness, coverage."""
+    try:
+        from kse_data_collector import get_data_health
+        return get_data_health()
+    except Exception as e:
+        logger.error("data-health error: %s", e, exc_info=True)
+        return {"error": str(e)}
+
+
+@router.post("/api/collect-now")
+async def api_collect_now():
+    """Trigger manual data collection (on-demand)."""
+    try:
+        from kse_data_collector import collect_and_refresh
+        result = collect_and_refresh()
+        return {"success": True, "result": result}
+    except Exception as e:
+        logger.error("collect-now error: %s", e, exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+# ═══════════════════════════════════════════════════
 # /api/portfolio-status — Position Engine Summary + Alerts
 # ═══════════════════════════════════════════════════
 
