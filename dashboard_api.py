@@ -4,6 +4,7 @@ Extracted from server.py v8.3.0
 """
 import os
 import time
+import json
 import asyncio
 import logging
 import sqlite3
@@ -1780,6 +1781,68 @@ async def api_trade_update(data: dict = Body(...)):
         if result is None:
             return {"success": False, "error": "Trade not found or not open"}
         return {"success": True, "message": "Trade updated"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ═══════════════════════════════════════════════════
+# /api/portfolio-status — Position Engine Summary + Alerts
+# ═══════════════════════════════════════════════════
+
+@router.get("/api/portfolio-status")
+async def api_portfolio_status():
+    """Portfolio status with position monitoring alerts."""
+    try:
+        from position_engine import PositionEngine, init_position_schema
+        init_position_schema()
+        engine = PositionEngine()
+
+        summary = engine.get_portfolio_summary()
+        active_alerts = engine.get_active_alerts(days=7)
+        last_monitored = engine.get_last_monitor_time()
+
+        # Parse alert_data JSON for each alert
+        for a in active_alerts:
+            if a.get("alert_data"):
+                try:
+                    a["alert_data"] = json.loads(a["alert_data"])
+                except Exception:
+                    pass
+
+        return {
+            "portfolio": summary,
+            "active_alerts": active_alerts,
+            "last_monitored": last_monitored,
+        }
+    except Exception as e:
+        logger.error("portfolio-status error: %s", e, exc_info=True)
+        return {"error": str(e), "portfolio": None, "active_alerts": []}
+
+
+@router.post("/api/portfolio-monitor")
+async def api_portfolio_monitor():
+    """Trigger daily position monitoring scan (on-demand)."""
+    try:
+        from position_engine import run_daily_monitor
+        result = run_daily_monitor()
+        return {"success": True, "result": result}
+    except Exception as e:
+        logger.error("portfolio-monitor error: %s", e, exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/api/portfolio-alert-ack")
+async def api_portfolio_alert_ack(request: Request):
+    """Acknowledge a position alert."""
+    try:
+        body = await request.json()
+        alert_id = body.get("alert_id")
+        if not alert_id:
+            return {"success": False, "error": "alert_id required"}
+        from position_engine import PositionEngine
+        engine = PositionEngine()
+        engine.acknowledge_alert(int(alert_id))
+        return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

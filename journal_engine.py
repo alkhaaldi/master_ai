@@ -62,6 +62,13 @@ def init_schema():
             c.execute("ALTER TABLE trades ADD COLUMN take_profit REAL")
     logger.info("journal schema initialized")
 
+    # Phase 2: Position engine schema (new columns + position_alerts table)
+    try:
+        from position_engine import init_position_schema
+        init_position_schema()
+    except Exception as e:
+        logger.warning("position_engine schema init skipped: %s", e)
+
 
 def _row_to_dict(row):
     if row is None:
@@ -214,40 +221,6 @@ def get_trade(trade_id):
     return dict(row) if row else None
 
 
-def suggest_trailing_stop(trade_id, atr_multiplier=2.0):
-    """Suggest trailing stop based on ATR from daily snapshot."""
-    trade = get_trade(trade_id)
-    if not trade or trade["status"] != "open":
-        return None
-    sym = trade["symbol"]
-    try:
-        conn = sqlite3.connect(DB_PATH, timeout=3)
-        conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            "SELECT atr, price FROM stock_radar_daily WHERE symbol=?", (sym,)
-        ).fetchone()
-        conn.close()
-    except Exception:
-        return None
-    if not row or not row["atr"]:
-        return None
-    atr = float(row["atr"])
-    current_price = float(row["price"])
-    if trade.get("direction") == "short":
-        trailing_stop = round(current_price + (atr * atr_multiplier), 3)
-    else:
-        trailing_stop = round(current_price - (atr * atr_multiplier), 3)
-    return {
-        "trade_id": trade_id,
-        "symbol": sym,
-        "current_price": current_price,
-        "atr": round(atr, 3),
-        "multiplier": atr_multiplier,
-        "suggested_stop": trailing_stop,
-        "distance_pct": round(abs(current_price - trailing_stop) / current_price * 100, 2),
-    }
-
-
 def update_trade_notes(trade_id, notes):
     """Add/update notes on a trade."""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -296,6 +269,17 @@ def get_fresh_price(symbol):
                 price = data.get("price")
                 if price:
                     return {"price": price, "source": "bridge", "stale": age > 300}
+    except Exception:
+        pass
+    # 1b. Direct Bridge HTTP quote (live)
+    try:
+        import urllib.request as _urlreq, json as _json
+        _quote_url = f"http://192.168.111.158:8059/quote?symbol={symbol.upper()}"
+        with _urlreq.urlopen(_quote_url, timeout=5) as _resp:
+            _qdata = _json.loads(_resp.read().decode())
+        _qprice = _qdata.get("price")
+        if _qprice:
+            return {"price": float(_qprice), "source": "bridge_live", "stale": False}
     except Exception:
         pass
     # 2. Fallback: stock_radar_daily
