@@ -182,7 +182,7 @@ def _is_market_open():
     now = datetime.utcnow() + timedelta(hours=3)
     if now.weekday() in (4, 5):
         return False
-    return now.replace(hour=9,minute=0,second=0) <= now <= now.replace(hour=12,minute=40,second=0)
+    return now.replace(hour=9,minute=0,second=0) <= now <= now.replace(hour=13,minute=0,second=0)
 
 def _cache_ttl():
     return 60 if _is_market_open() else 900

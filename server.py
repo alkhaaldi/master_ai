@@ -2726,8 +2726,8 @@ async def lifespan(app):
                         if _kwt.weekday() in (4, 5):  # Fri=4, Sat=5
                             await asyncio.sleep(3600)
                             continue
-                        # Run at ~13:00 KWT (after market close 12:40)
-                        if _kwt.hour == 13 and 0 <= _kwt.minute <= 10:
+                        # Run at ~13:15 KWT (after market close at 13:00)
+                        if _kwt.hour == 13 and 10 <= _kwt.minute <= 20:
                             _cid = ADMIN_TELEGRAM_ID or "669769765"
                             _today = _kwt.strftime("%Y-%m-%d")
                             lines = [f"*\U0001f4ca \u0645\u0644\u062e\u0635 \u0627\u0644\u062a\u062f\u0627\u0648\u0644 \u2014 {_today}*\n"]
@@ -7852,13 +7852,13 @@ async def weekly_trading_report_scheduler():
 
 
 async def confluence_scan_loop():
-    """Run confluence scan every 30 min during KSE market hours (Sun-Thu 9:00-12:40 KWT)."""
+    """Run confluence scan every 30 min during KSE market hours (Sun-Thu 9:00-13:00 KWT)."""
     logger.info("Confluence scan loop started")
     while True:
         try:
             now = datetime.now()
-            # KSE: Sun(6) Mon(0) Tue(1) Wed(2) Thu(3), 9:00-12:40
-            if now.weekday() in (6, 0, 1, 2, 3) and 9 <= now.hour <= 12:
+            # KSE: Sun(6) Mon(0) Tue(1) Wed(2) Thu(3), 9:00-13:00 KWT = 6:00-10:00 UTC
+            if now.weekday() in (6, 0, 1, 2, 3) and 6 <= now.hour <= 10:
                 if CONFLUENCE_OK:
                     actionable = run_confluence_scan()
                     if actionable:

@@ -457,14 +457,22 @@ async def daily_collection_scheduler():
     while True:
         try:
             now = datetime.now()
-            # Target: 2:00 PM today (Kuwait = UTC+3, server may be UTC)
-            target = now.replace(hour=14, minute=0, second=0, microsecond=0)
+            # Target: 1:30 PM KWT (after market close at 1:00 PM)
+            # Pi runs in UTC, 1:30 PM KWT = 10:30 UTC
+            target = now.replace(hour=10, minute=30, second=0, microsecond=0)
             if now >= target:
                 target += timedelta(days=1)
 
             wait_secs = (target - now).total_seconds()
             _log.info("Next daily collection in %.1f hours", wait_secs / 3600)
             await asyncio.sleep(wait_secs)
+
+            # Skip Fri(4) and Sat(5) — KSE closed
+            kwt_now = datetime.utcnow() + timedelta(hours=3)
+            if kwt_now.weekday() in (4, 5):
+                _log.info("Weekend (KSE closed) — skipping collection")
+                await asyncio.sleep(3600)
+                continue
 
             _log.info("Starting daily collection...")
 

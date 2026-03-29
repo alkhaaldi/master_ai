@@ -1343,7 +1343,7 @@ def _daily_snapshot_is_fresh():
         kwt_now = datetime.utcnow() + timedelta(hours=3)
         kwt_last = last + timedelta(hours=3)
         # Fresh if updated today after market close
-        if kwt_last.date() == kwt_now.date() and (kwt_last.hour > 12 or (kwt_last.hour == 12 and kwt_last.minute >= 40)):
+        if kwt_last.date() == kwt_now.date() and kwt_last.hour >= 13:
             return True
         # Also fresh within 4 hours (manual refresh fallback)
         if (datetime.utcnow() - last).total_seconds() < 4 * 3600:
