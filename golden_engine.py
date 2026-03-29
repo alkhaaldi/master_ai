@@ -156,6 +156,201 @@ def suggest_stop(live: dict) -> dict:
 
 
 # ═══════════════════════════════════
+# SMART TRADE DECISION (Phase 9)
+# ═══════════════════════════════════
+
+def recalc_rr(entry, stop, target):
+    """Calculate real R/R from raw prices."""
+    if not entry or not stop or not target:
+        return None
+    if entry <= 0 or stop <= 0 or target <= 0:
+        return None
+    if entry <= stop:    # stop above entry = error
+        return None
+    if target <= entry:  # target below entry = error
+        return None
+    risk = entry - stop
+    reward = target - entry
+    if risk <= 0:
+        return None
+    return round(reward / risk, 2)
+
+
+def choose_best_plan(opp):
+    """
+    Compare Golden Engine plan vs Strategy Mining plan.
+    Returns the best one with: entry, stop, target1, target2, rr, source.
+    """
+    tp = opp.get("trade_plan") or {}
+    sm = opp.get("strategy_match") or {}
+    price = float(opp.get("price", 0))
+
+    # --- Golden Engine plan ---
+    g_entry = tp.get("entry_mid") or price
+    g_stop = tp.get("stop_loss", 0)
+    g_t1 = tp.get("target_1", 0)
+    g_t2 = tp.get("target_2")
+    g_rr = recalc_rr(g_entry, g_stop, g_t1)
+    g_stop_pct = ((g_entry - g_stop) / g_entry * 100) if g_entry > 0 and g_stop > 0 else 99
+
+    # --- Strategy Mining plan ---
+    s_entry = sm.get("entry_price") or price
+    s_stop = sm.get("stop_price", 0) or 0
+    s_t1 = sm.get("target_1_price", 0) or 0
+    s_t2 = sm.get("target_2_price")
+    s_rr = recalc_rr(s_entry, s_stop, s_t1) if s_stop > 0 and s_t1 > 0 else None
+    s_stop_pct = ((s_entry - s_stop) / s_entry * 100) if s_entry > 0 and s_stop > 0 else 99
+
+    # --- Scoring ---
+    g_score = 0.0
+    s_score = 0.0
+
+    # R/R (most important)
+    if g_rr and g_rr > 0:
+        g_score += min(g_rr, 5) * 25
+    if s_rr and s_rr > 0:
+        s_score += min(s_rr, 5) * 25
+
+    # Stop distance (1-6% ideal, penalize far stops)
+    if 1.0 <= g_stop_pct <= 6.0:
+        g_score += 15
+    elif g_stop_pct > 6.0:
+        g_score -= (g_stop_pct - 6) * 3
+
+    if s_stop_pct and 1.0 <= s_stop_pct <= 6.0:
+        s_score += 15
+    elif s_stop_pct and s_stop_pct > 6.0:
+        s_score -= (s_stop_pct - 6) * 3
+
+    # Strategy win rate + EV
+    s_wr = sm.get("profitable_rate", 0)
+    s_ev = sm.get("ev", 0)
+    if s_wr > 0.55:
+        s_score += (s_wr - 0.5) * 100
+    if s_ev > 3:
+        s_score += min(s_ev, 15) * 3
+
+    # Sample size
+    s_n = sm.get("sample_size", 0)
+    if s_n >= 50:
+        s_score += 10
+    elif s_n >= 20:
+        s_score += 5
+
+    # --- Pick best ---
+    if s_score > g_score and s_rr and s_rr > 0 and s_stop > 0:
+        return {
+            "source": "strategy",
+            "entry": round(s_entry, 3),
+            "stop": round(s_stop, 3),
+            "target1": round(s_t1, 3),
+            "target2": round(s_t2, 3) if s_t2 else None,
+            "rr": s_rr,
+            "stop_pct": round(s_stop_pct, 1),
+        }
+    elif g_rr and g_rr > 0 and g_stop > 0:
+        return {
+            "source": "golden",
+            "entry": round(g_entry, 3),
+            "stop": round(g_stop, 3),
+            "target1": round(g_t1, 3),
+            "target2": round(g_t2, 3) if g_t2 else None,
+            "rr": g_rr,
+            "stop_pct": round(g_stop_pct, 1),
+        }
+    else:
+        return None
+
+
+def final_trade_decision(opp):
+    """
+    Single ENTER / WAIT / SKIP decision per stock,
+    using all available data.
+    """
+    plan = choose_best_plan(opp)
+    price = float(opp.get("price", 0))
+    sm = opp.get("strategy_match") or {}
+
+    if plan is None:
+        return {
+            "action": "SKIP",
+            "action_ar": "\u23ed\ufe0f \u062a\u062c\u0627\u0648\u0632",
+            "reason_ar": "\u0643\u0644\u0627 \u0627\u0644\u062e\u0637\u062a\u064a\u0646 \u0641\u064a\u0647\u0645 \u0645\u0634\u0627\u0643\u0644",
+            "chosen_plan": None,
+        }
+
+    rr = plan["rr"]
+    stop_pct = plan["stop_pct"]
+
+    win_rate = sm.get("profitable_rate", 0)
+    ev = sm.get("ev", 0)
+    pattern_confidence = opp.get("confidence", 0)
+
+    # Is price in entry zone? (within 0.3%)
+    in_zone = price > 0 and (plan["entry"] * 0.997 <= price <= plan["entry"] * 1.003)
+
+    # === Decision rules ===
+
+    # ENTER: strong R/R + in zone
+    if (rr >= 1.5
+            and stop_pct <= 6.0
+            and (win_rate >= 0.55 or ev >= 3.0 or pattern_confidence >= 85)
+            and in_zone):
+        return {
+            "action": "ENTER",
+            "action_ar": "\U0001f7e2 \u0627\u062f\u062e\u0644",
+            "reason_ar": f"\u0627\u0644\u0639\u0627\u0626\u062f/\u0627\u0644\u0645\u062e\u0627\u0637\u0631\u0629 {rr:.1f}x \u0645\u0645\u062a\u0627\u0632\u060c \u0627\u0644\u0633\u0639\u0631 \u0628\u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062f\u062e\u0648\u0644",
+            "chosen_plan": plan,
+        }
+
+    # ENTER cautious: high WR compensates moderate R/R
+    if (rr >= 1.3
+            and stop_pct <= 6.0
+            and win_rate >= 0.60
+            and ev >= 5.0
+            and in_zone):
+        return {
+            "action": "ENTER",
+            "action_ar": "\U0001f7e2 \u0627\u062f\u062e\u0644 \u0628\u062d\u0630\u0631",
+            "reason_ar": f"\u0646\u0633\u0628\u0629 \u0627\u0644\u0646\u062c\u0627\u062d \u0639\u0627\u0644\u064a\u0629 ({win_rate:.0%}) \u062a\u0639\u0648\u0636 \u0627\u0644\u0639\u0627\u0626\u062f/\u0627\u0644\u0645\u062e\u0627\u0637\u0631\u0629 ({rr:.1f}x)",
+            "chosen_plan": plan,
+        }
+
+    # WAIT: good plan but price not there yet
+    if (rr >= 1.3
+            and (win_rate >= 0.55 or ev >= 3.0)
+            and not in_zone):
+        trigger = round(plan["entry"], 3)
+        return {
+            "action": "WAIT",
+            "action_ar": "\u23f3 \u0627\u0646\u062a\u0638\u0631",
+            "reason_ar": f"\u0627\u0644\u0646\u0645\u0637 \u062d\u0644\u0648 \u2014 \u0627\u0646\u062a\u0638\u0631 \u0627\u0644\u0633\u0639\u0631 \u064a\u0648\u0635\u0644 {trigger}",
+            "chosen_plan": plan,
+        }
+
+    # WAIT: acceptable R/R, needs confirmation
+    if (rr >= 1.2
+            and (win_rate >= 0.55 or ev >= 3.0)):
+        return {
+            "action": "WAIT",
+            "action_ar": "\u23f3 \u0627\u0646\u062a\u0638\u0631 \u062a\u0623\u0643\u064a\u062f",
+            "reason_ar": f"\u0627\u0644\u0646\u0645\u0637 \u062c\u064a\u062f \u0628\u0633 \u0627\u0644\u0639\u0627\u0626\u062f/\u0627\u0644\u0645\u062e\u0627\u0637\u0631\u0629 {rr:.1f}x \u064a\u062d\u062a\u0627\u062c \u062a\u0623\u0643\u064a\u062f",
+            "chosen_plan": plan,
+        }
+
+    # SKIP: weak everything
+    reason = f"\u0627\u0644\u0639\u0627\u0626\u062f/\u0627\u0644\u0645\u062e\u0627\u0637\u0631\u0629 {rr:.1f}x \u0636\u0639\u064a\u0641"
+    if stop_pct > 6:
+        reason += f" \u0648\u0627\u0644\u0633\u062a\u0648\u0628 \u0628\u0639\u064a\u062f ({stop_pct:.0f}%)"
+    return {
+        "action": "SKIP",
+        "action_ar": "\u23ed\ufe0f \u062a\u062c\u0627\u0648\u0632",
+        "reason_ar": reason,
+        "chosen_plan": plan,
+    }
+
+
+# ═══════════════════════════════════
 # ARABIC LABELS
 # ═══════════════════════════════════
 
@@ -631,9 +826,40 @@ def scan_opportunities(live_data: list) -> dict:
                 logger.warning("Strategy match error for %s: %s", sym, e)
                 best_opp["strategy_match"] = None
 
+            # ── Phase 9: Smart Trade Decision ────────────────
+            try:
+                ftd = final_trade_decision(best_opp)
+                best_opp["smart_decision"]    = ftd["action"]
+                best_opp["smart_decision_ar"] = ftd["action_ar"]
+                best_opp["smart_reason_ar"]   = ftd["reason_ar"]
+                best_opp["chosen_plan"]       = ftd["chosen_plan"]
+
+                # Override opportunity_type with smart decision
+                if ftd["action"] == "ENTER":
+                    best_opp["opportunity_type"] = "\U0001f7e2 \u0627\u062f\u062e\u0644"
+                elif ftd["action"] == "WAIT":
+                    best_opp["opportunity_type"] = "\u23f3 \u0627\u0646\u062a\u0638\u0631"
+                elif ftd["action"] == "SKIP":
+                    best_opp["opportunity_type"] = "\u23ed\ufe0f \u062a\u062c\u0627\u0648\u0632"
+
+                # Cap confidence based on decision quality
+                if ftd["action"] == "SKIP":
+                    best_opp["confidence"] = min(best_opp["confidence"], 60)
+                elif ftd["action"] == "WAIT":
+                    best_opp["confidence"] = min(best_opp["confidence"], 80)
+            except Exception as e:
+                logger.warning("Smart decision error for %s: %s", sym, e)
+
             all_opportunities.append(best_opp)
 
-    all_opportunities.sort(key=lambda x: x["confidence"], reverse=True)
+    # Sort: ENTER first, then WAIT, then SKIP; within each group by confidence
+    action_priority = {"ENTER": 0, "WAIT": 1, "SKIP": 2}
+    all_opportunities.sort(
+        key=lambda x: (
+            action_priority.get(x.get("smart_decision", "SKIP"), 2),
+            -x.get("confidence", 0),
+        )
+    )
     for i, opp in enumerate(all_opportunities):
         opp["rank"] = i + 1
 
@@ -649,18 +875,22 @@ def scan_opportunities(live_data: list) -> dict:
                     alerts_sent += 1
     alert_conn.close()
 
-    golden     = [o for o in all_opportunities if o["confidence"] >= 80]
-    candidates = [o for o in all_opportunities if 70 <= o["confidence"] < 80]
-    watch      = [o for o in all_opportunities if o["confidence"] < 70]
+    enter_list = [o for o in all_opportunities if o.get("smart_decision") == "ENTER"]
+    wait_list  = [o for o in all_opportunities if o.get("smart_decision") == "WAIT"]
+    skip_list  = [o for o in all_opportunities if o.get("smart_decision") == "SKIP"]
 
     return {
         "generated_at":        datetime.utcnow().isoformat(),
         "total_scanned":       len(live_data),
         "total_opportunities": len(all_opportunities),
-        "golden_count":        len(golden),
-        "candidate_count":     len(candidates),
-        "watch_count":         len(watch),
+        "enter_count":         len(enter_list),
+        "wait_count":          len(wait_list),
+        "skip_count":          len(skip_list),
         "alerts_sent":         alerts_sent,
+        # backward compatible
+        "golden_count":        len(enter_list),
+        "candidate_count":     len(wait_list),
+        "watch_count":         len(skip_list),
         "top_10":              all_opportunities[:10],
         "all_opportunities":   all_opportunities,
     }
