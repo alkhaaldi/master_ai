@@ -1313,10 +1313,12 @@ def get_daily_snapshot(top_n=15, min_score=0):
             updated = datetime.fromisoformat(d["updated_at"])
             age_hours = (datetime.utcnow() - updated).total_seconds() / 3600
             d["data_age_hours"] = round(age_hours, 1)
-            d["is_stale"] = age_hours > 24
+            d["is_stale"] = age_hours > 18
+            d["freshness"] = "fresh" if age_hours < 6 else "aging" if age_hours < 18 else "stale"
         except Exception:
             d["data_age_hours"] = 999
             d["is_stale"] = True
+            d["freshness"] = "stale"
         results.append(d)
     if top_n:
         results = results[:top_n]

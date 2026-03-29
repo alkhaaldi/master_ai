@@ -531,6 +531,7 @@ async def ha_dashboard_radar():
                 "updated_at": d.get("updated_at", ""),
                 "data_age_hours": d.get("data_age_hours", 999),
                 "is_stale": d.get("is_stale", True),
+                "freshness": d.get("freshness", "stale"),
                 "source_timeframe": d.get("source_timeframe", "1D"),
                 "action": _action,
                 "action_ar": _action_ar,
@@ -2126,6 +2127,85 @@ async def api_data_health():
         return get_data_health()
     except Exception as e:
         logger.error("data-health error: %s", e, exc_info=True)
+        return {"error": str(e)}
+
+
+@router.get("/api/data-freshness")
+async def api_data_freshness():
+    """Data freshness: last update, age, bridge status, per-stock staleness."""
+    try:
+        db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
+        conn = sqlite3.connect(db_path, timeout=5)
+        conn.row_factory = sqlite3.Row
+
+        # Last radar update
+        row = conn.execute(
+            "SELECT MAX(updated_at) as last_update FROM stock_radar_daily"
+        ).fetchone()
+        last_update = row["last_update"] if row else None
+
+        age_hours = 999
+        is_stale = True
+        freshness = "stale"
+        if last_update:
+            try:
+                from datetime import datetime as _dt
+                updated = _dt.fromisoformat(last_update)
+                age_hours = round((_dt.utcnow() - updated).total_seconds() / 3600, 1)
+                is_stale = age_hours > 18
+                freshness = "fresh" if age_hours < 6 else "aging" if age_hours < 18 else "stale"
+            except Exception:
+                pass
+
+        # Total and stale counts
+        total_row = conn.execute("SELECT COUNT(*) as cnt FROM stock_radar_daily").fetchone()
+        total = total_row["cnt"] if total_row else 0
+
+        stale_count = 0
+        fresh_count = 0
+        aging_count = 0
+        rows = conn.execute("SELECT updated_at FROM stock_radar_daily").fetchall()
+        for r in rows:
+            if r["updated_at"]:
+                try:
+                    from datetime import datetime as _dt
+                    u = _dt.fromisoformat(r["updated_at"])
+                    h = (_dt.utcnow() - u).total_seconds() / 3600
+                    if h < 6:
+                        fresh_count += 1
+                    elif h < 18:
+                        aging_count += 1
+                    else:
+                        stale_count += 1
+                except Exception:
+                    stale_count += 1
+            else:
+                stale_count += 1
+        conn.close()
+
+        # Bridge connectivity
+        bridge_online = False
+        try:
+            import urllib.request as _ur
+            with _ur.urlopen("http://192.168.111.158:8059/health", timeout=3) as resp:
+                if resp.status == 200:
+                    bridge_online = True
+        except Exception:
+            pass
+
+        return {
+            "last_radar_update": last_update,
+            "age_hours": age_hours,
+            "is_stale": is_stale,
+            "freshness": freshness,
+            "bridge_online": bridge_online,
+            "total_stocks": total,
+            "fresh_count": fresh_count,
+            "aging_count": aging_count,
+            "stale_count": stale_count,
+        }
+    except Exception as e:
+        logger.error("data-freshness error: %s", e)
         return {"error": str(e)}
 
 
