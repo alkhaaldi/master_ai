@@ -697,6 +697,32 @@ async def ha_dashboard_portfolio():
                     t["pnl_fils"] = 0
                     t["pnl_kwd"] = 0
 
+                # ── S/R from Bridge analysis (if not already set from radar_daily) ──
+                if _cur and not t.get("support"):
+                    try:
+                        import urllib.request as _urlreq, json as _json
+                        _aurl = f"http://192.168.111.158:8059/analysis?symbol={sym}&interval=1D"
+                        with _urlreq.urlopen(_aurl, timeout=5) as _aresp:
+                            _adata = _json.loads(_aresp.read().decode())
+                        _abars = _adata.get("bars", [])
+                        if _abars and len(_abars) >= 20:
+                            from sr_engine import compute_sr
+                            _sr = compute_sr(sym, _abars, _cur)
+                            if _sr.get("key_support"):
+                                t["support"] = _sr["key_support"]
+                            if _sr.get("key_resistance"):
+                                t["resistance"] = _sr["key_resistance"]
+                    except Exception:
+                        pass
+
+                # ── Suggested stop loss (if user hasn't set one) ──
+                if not t.get("stop_loss") and _entry:
+                    _sup = t.get("support")
+                    if _sup and _sup < _entry:
+                        t["suggested_stop"] = _sup
+                    else:
+                        t["suggested_stop"] = round(_entry * 0.95, 1)
+
             if _rdb:
                 try:
                     _rdb.close()
@@ -1619,6 +1645,76 @@ async def dashboard_brain():
         return result
     except Exception as e:
         return {"brain_active": False, "error": str(e)}
+
+
+@router.get("/dashboard/strategies")
+async def dashboard_strategies():
+    """Mined strategies from FP-Growth engine — ranked by final_score."""
+    import json as _json
+    db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
+    try:
+        conn = sqlite3.connect(db_path, timeout=5)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Total count
+        total = cursor.execute("SELECT COUNT(*) FROM mined_strategies").fetchone()[0]
+
+        # Top 30 strategies
+        rows = cursor.execute("""
+            SELECT strategy_id, pattern_atoms, pattern_ar,
+                   timeframe, regime, sample_size, unique_stocks, unique_months,
+                   profitable_rate, hit_rate_3pct, hit_rate_5pct,
+                   baseline_profitable, uplift, ev, speed_score,
+                   profit_factor, rr_proxy,
+                   avg_max_gain, avg_max_loss, avg_outcome, median_outcome,
+                   entry_discount_pct, entry_method, target_1_pct, target_2_pct,
+                   stop_pct, rr_ratio, est_hold_days,
+                   p_value, stability, walk_forward,
+                   final_score, rank, status
+            FROM mined_strategies
+            WHERE status IN ('production', 'candidate')
+            ORDER BY final_score DESC
+            LIMIT 30
+        """).fetchall()
+
+        strategies = []
+        for r in rows:
+            s = dict(r)
+            # Parse JSON fields for frontend
+            if s.get("pattern_atoms"):
+                try:
+                    s["pattern_atoms_list"] = _json.loads(s["pattern_atoms"])
+                except Exception:
+                    s["pattern_atoms_list"] = []
+            if s.get("walk_forward"):
+                try:
+                    s["walk_forward_parsed"] = _json.loads(s["walk_forward"])
+                except Exception:
+                    s["walk_forward_parsed"] = []
+            strategies.append(s)
+
+        # Summary by segment
+        segments = cursor.execute("""
+            SELECT timeframe, regime, COUNT(*) as cnt,
+                   ROUND(AVG(ev), 2) as avg_ev,
+                   ROUND(AVG(profitable_rate), 3) as avg_wr
+            FROM mined_strategies
+            WHERE status IN ('production', 'candidate')
+            GROUP BY timeframe, regime
+            ORDER BY AVG(ev) DESC
+        """).fetchall()
+
+        conn.close()
+
+        return {
+            "total": total,
+            "showing": len(strategies),
+            "segments": [dict(s) for s in segments],
+            "strategies": strategies,
+        }
+    except Exception as e:
+        return {"total": 0, "error": str(e), "strategies": []}
 
 
 # ═══════════════════════════════════════════════════

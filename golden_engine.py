@@ -177,6 +177,204 @@ def atoms_to_ar(atoms_str: str) -> str:
 
 
 # ═══════════════════════════════════
+# STRATEGY MINING — LIVE MATCHING
+# ═══════════════════════════════════
+
+def build_mining_atoms(live: dict) -> set:
+    """
+    Build atoms using the SAME discretisation as Phase 2 mining.
+    These atoms must match the ones stored in mined_strategies.pattern_atoms.
+    """
+    atoms = set()
+
+    # RSI (5 bins — matches mining)
+    rsi = live.get("rsi_14") or live.get("rsi")
+    if rsi is not None:
+        rsi = float(rsi)
+        if rsi < 30:      atoms.add("rsi_lt_30")
+        elif rsi < 45:    atoms.add("rsi_30_45")
+        elif rsi < 55:    atoms.add("rsi_45_55")
+        elif rsi < 70:    atoms.add("rsi_55_70")
+        else:             atoms.add("rsi_gt_70")
+
+    # MACD state
+    macd_state = str(live.get("macd_state") or live.get("macd_cross") or "").lower()
+    if "bullish" in macd_state:  atoms.add("macd_bullish")
+    elif "bearish" in macd_state: atoms.add("macd_bearish")
+
+    # MACD momentum
+    macd_mom = str(live.get("macd_momentum") or "").lower()
+    if "accel" in macd_mom:   atoms.add("macd_accel")
+    elif "decel" in macd_mom: atoms.add("macd_decel")
+
+    # EMA state
+    ema_state = str(live.get("ema_state") or live.get("daily_ema_cross") or "").lower()
+    if "bullish" in ema_state:  atoms.add("ema_bullish")
+    elif "bearish" in ema_state: atoms.add("ema_bearish")
+
+    # ADX (5 bins)
+    adx = live.get("adx")
+    if adx is not None:
+        adx = float(adx)
+        if adx < 15:      atoms.add("adx_lt_15")
+        elif adx < 20:    atoms.add("adx_15_20")
+        elif adx < 25:    atoms.add("adx_20_25")
+        elif adx <= 35:   atoms.add("adx_25_35")
+        else:             atoms.add("adx_gt_35")
+
+    # Stochastic (5 bins)
+    stoch = live.get("stoch_k")
+    if stoch is not None:
+        stoch = float(stoch)
+        if stoch < 20:    atoms.add("stoch_lt_20")
+        elif stoch < 40:  atoms.add("stoch_20_40")
+        elif stoch < 60:  atoms.add("stoch_40_60")
+        elif stoch < 80:  atoms.add("stoch_60_80")
+        else:             atoms.add("stoch_gt_80")
+
+    # Volume ratio (4 bins)
+    vol = live.get("vol_ratio")
+    if vol is not None:
+        vol = float(vol)
+        if vol < 0.8:     atoms.add("vol_lt_0_8")
+        elif vol < 1.2:   atoms.add("vol_0_8_1_2")
+        elif vol < 2.0:   atoms.add("vol_1_2_2_0")
+        else:             atoms.add("vol_ge_2")
+
+    # ATR % (3 bins)
+    atr = live.get("atr_14") or live.get("atr")
+    price = live.get("price")
+    if atr and price:
+        atr, price = float(atr), float(price)
+        if price > 0:
+            atr_pct = atr / price * 100
+            if atr_pct < 1.5:   atoms.add("low_atr")
+            elif atr_pct < 3.0: atoms.add("medium_atr")
+            else:               atoms.add("high_atr")
+
+    # BB Squeeze
+    if live.get("bb_squeeze"):
+        atoms.add("bb_squeeze")
+
+    # Trend direction (from regime classifier)
+    # ADX + directional votes → trend_up / trend_down
+    adx_val = float(live.get("adx") or 0)
+    bull_votes = sum([
+        1 if "bullish" in str(live.get("ema_state") or live.get("daily_ema_cross") or "").lower() else 0,
+        1 if "bullish" in str(live.get("macd_state") or live.get("macd_cross") or "").lower() else 0,
+        1 if "accel" in str(live.get("macd_momentum") or "").lower() else 0,
+    ])
+    bear_votes = sum([
+        1 if "bearish" in str(live.get("ema_state") or live.get("daily_ema_cross") or "").lower() else 0,
+        1 if "bearish" in str(live.get("macd_state") or live.get("macd_cross") or "").lower() else 0,
+        1 if "decel" in str(live.get("macd_momentum") or "").lower() else 0,
+    ])
+    if adx_val >= 23:
+        if bull_votes >= 2:   atoms.add("trend_up")
+        elif bear_votes >= 2: atoms.add("trend_down")
+
+    return atoms
+
+
+def classify_live_regime(live: dict) -> str:
+    """Classify regime from live data — same logic as Phase 2.5."""
+    adx = float(live.get("adx") or 0)
+    if adx >= 23:
+        return "trending"
+    elif adx <= 18:
+        return "ranging"
+    else:
+        return "transition"
+
+
+def match_strategies(live: dict, timeframe: str = "1D", top_n: int = 5) -> list:
+    """
+    Match live signal against mined strategies.
+
+    Args:
+        live: dict with keys rsi_14/rsi, adx, stoch_k, vol_ratio, atr_14/atr,
+              macd_state, macd_momentum, ema_state, bb_squeeze, price
+        timeframe: '1D' or '30m'
+        top_n: max strategies to return
+
+    Returns:
+        list of matched strategies sorted by final_score, each with:
+        - strategy_id, pattern_ar, ev, target, stop, rr, confidence info
+    """
+    live_atoms = build_mining_atoms(live)
+    regime = classify_live_regime(live)
+
+    if not live_atoms:
+        return []
+
+    conn = _conn()
+    try:
+        rows = conn.execute("""
+            SELECT * FROM mined_strategies
+            WHERE timeframe = ? AND regime = ?
+              AND status IN ('production', 'candidate')
+            ORDER BY final_score DESC
+        """, (timeframe, regime)).fetchall()
+    except Exception as e:
+        logger.warning("match_strategies query failed: %s", e)
+        return []
+    finally:
+        conn.close()
+
+    matches = []
+    for row in rows:
+        try:
+            pattern_atoms = set(json.loads(row["pattern_atoms"]))
+        except Exception:
+            continue
+
+        if not pattern_atoms.issubset(live_atoms):
+            continue
+
+        price = float(live.get("price") or 0)
+        entry_disc = float(row["entry_discount_pct"] or 0)
+        target_1 = float(row["target_1_pct"] or 3)
+        target_2 = float(row["target_2_pct"] or 5)
+        stop_val = float(row["stop_pct"] or -3)
+
+        entry_price = round(price * (1 + entry_disc / 100), 3) if price > 0 else None
+        target_1_price = round(price * (1 + target_1 / 100), 3) if price > 0 else None
+        target_2_price = round(price * (1 + target_2 / 100), 3) if price > 0 else None
+        stop_price = round(price * (1 + stop_val / 100), 3) if price > 0 else None
+
+        matches.append({
+            "strategy_id": row["strategy_id"],
+            "pattern_ar": row["pattern_ar"],
+            "pattern_atoms": row["pattern_atoms"],
+            "timeframe": timeframe,
+            "regime": regime,
+            "final_score": float(row["final_score"] or 0),
+            "ev": float(row["ev"] or 0),
+            "profitable_rate": float(row["profitable_rate"] or 0),
+            "profit_factor": float(row["profit_factor"] or 0),
+            "sample_size": int(row["sample_size"] or 0),
+            "stability": float(row["stability"] or 0),
+            "p_value": float(row["p_value"] or 1),
+            # Trade plan — percentages
+            "entry_method": row["entry_method"],
+            "target_1_pct": target_1,
+            "target_2_pct": target_2,
+            "stop_pct": stop_val,
+            "rr_ratio": float(row["rr_ratio"] or 0),
+            "est_hold_days": float(row["est_hold_days"] or 3),
+            # Trade plan — absolute prices
+            "entry_price": entry_price,
+            "target_1_price": target_1_price,
+            "target_2_price": target_2_price,
+            "stop_price": stop_price,
+            "current_price": price,
+        })
+
+    matches.sort(key=lambda x: x["final_score"], reverse=True)
+    return matches[:top_n]
+
+
+# ═══════════════════════════════════
 # TELEGRAM ALERTS
 # ═══════════════════════════════════
 
