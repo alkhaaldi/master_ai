@@ -3617,7 +3617,7 @@ async def dashboard_ema_live():
     try:
         client = BridgeClient(BRIDGE_BASE_URL)
         try:
-            data = await client.get_multi_analysis_30m(symbols)
+            data = await client.get_multi_analysis_30m_bulk(symbols)
         finally:
             await client.close()
     except Exception as e:

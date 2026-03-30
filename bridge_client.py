@@ -244,6 +244,51 @@ class BridgeClient:
             "timeframe": "30m",
         }
 
+    async def get_multi_analysis_30m_bulk(self, symbols: list[str], exchange: str = DEFAULT_EXCHANGE, batch_size: int = 25, delay: float = 1.0) -> dict:
+        """Get 30m analysis for many symbols via Bridge /multi-analysis (single WebSocket per batch).
+
+        Unlike get_multi_analysis_30m which opens one HTTP request per symbol,
+        this uses /multi-analysis which fetches all symbols in a batch over a
+        single TradingView WebSocket — avoids HTTP 429 rate limits.
+        """
+        results = {}
+        errors = []
+
+        for i in range(0, len(symbols), batch_size):
+            batch = symbols[i:i + batch_size]
+            syms_param = ",".join(batch)
+            data = await self._request("/multi-analysis", {
+                "symbols": syms_param, "exchange": exchange,
+                "interval": "30", "bars": 60,
+            })
+            if data is None:
+                errors.extend(batch)
+                continue
+
+            for item in data.get("results", []):
+                raw_sym = item.get("symbol", "")
+                sym = raw_sym.split(":")[-1] if ":" in raw_sym else raw_sym
+                normalized = self._normalize_analysis(item)
+                normalized["timeframe"] = "30m"
+                self._cache_set(f"analysis_30m:{exchange}:{sym}", normalized)
+                results[sym] = {**normalized, "source": "live", "stale": False}
+
+            for err in data.get("errors", []):
+                err_sym = err.get("symbol", "")
+                errors.append(err_sym.split(":")[-1] if ":" in err_sym else err_sym)
+
+            # Delay between batches to be gentle on TradingView
+            if i + batch_size < len(symbols):
+                await asyncio.sleep(delay)
+
+        return {
+            "bridge_online": self._online,
+            "symbols_count": len(results),
+            "symbols": results,
+            "errors": errors,
+            "timeframe": "30m",
+        }
+
     def get_status(self) -> dict:
         return {
             "online": self._online,
