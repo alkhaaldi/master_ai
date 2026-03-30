@@ -240,6 +240,12 @@ except Exception as _e:
     LIFE_WORK_OK = False
     logging.getLogger("master_ai").warning("life_work not loaded: %s", _e)
 
+try:
+    from signal_review import review_signals, review_scheduler, init_review_schema, get_reviews_for_dashboard
+    REVIEW_OK = True
+except Exception as _e:
+    REVIEW_OK = False
+    logging.getLogger("master_ai").warning("signal_review not loaded: %s", _e)
 
 
 # Suggestion rate limit: {user_id: last_suggest_timestamp}
@@ -2606,6 +2612,16 @@ async def lifespan(app):
             logger.info("Daily collection scheduler started (2 PM)")
         except Exception as _e:
             logger.warning("Daily collection scheduler not loaded: %s", _e)
+        try:
+            from kse_data_collector import market_hours_scanner
+            asyncio.create_task(market_hours_scanner())
+            logger.info("Market hours scanner started (every 15 min)")
+        except Exception as _e:
+            logger.warning("Market hours scanner not loaded: %s", _e)
+        # Phase 5: Signal review scheduler (2:00 PM KWT, 30min after data collection)
+        if REVIEW_OK:
+            asyncio.create_task(review_scheduler())
+            logger.info("Signal review scheduler started (2 PM KWT)")
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
     if TG_ALERTS_OK:
@@ -2914,7 +2930,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
+    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -3369,6 +3385,133 @@ async def get_all_stock_profiles():
     """Get summary of all stock profiles."""
     from stock_personality_engine import get_all_profiles_summary
     return {"profiles": get_all_profiles_summary()}
+
+
+@app.get("/dashboard/reviews")
+async def dashboard_reviews(date: str = None):
+    """Signal review results for dashboard."""
+    if not REVIEW_OK:
+        return {"error": "signal_review not loaded"}
+    return get_reviews_for_dashboard(date)
+
+@app.post("/api/review-now")
+async def manual_review(date: str = None, all: bool = False):
+    """Manually trigger signal review. Use ?all=true to review all pending days."""
+    if not REVIEW_OK:
+        return {"error": "signal_review not loaded"}
+    if all:
+        from signal_review import review_all_pending
+        return {"results": review_all_pending()}
+    return review_signals(date)
+
+# ── EMA 9/21 Scalper Endpoints ──────────
+
+@app.get("/dashboard/ema-crosses")
+async def dashboard_ema_crosses(hours: int = 4, signal_type: str = "all"):
+    """Recent EMA 9/21 cross events for scalper page."""
+    import sqlite3
+    from datetime import datetime, timedelta
+
+    conn = sqlite3.connect(os.path.join(BASE_DIR, "data", "life.db"))
+    conn.row_factory = sqlite3.Row
+
+    cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+
+    where_signal = ""
+    if signal_type == "bullish":
+        where_signal = "AND signal_type = 'bullish_cross'"
+    elif signal_type == "bearish":
+        where_signal = "AND signal_type = 'bearish_cross'"
+
+    rows = conn.execute(f"""
+        SELECT symbol, signal_type, price, candle_time, ema_fast, ema_slow,
+               rsi, volume, score, score_class, verdict, support, resistance,
+               vol_ratio, created_at
+        FROM stock_radar_events
+        WHERE created_at >= ? {where_signal}
+        ORDER BY created_at DESC
+        LIMIT 100
+    """, (cutoff,)).fetchall()
+    conn.close()
+
+    from tv_data import KSE_STOCKS
+
+    events = []
+    for r in rows:
+        events.append({
+            "symbol": r["symbol"],
+            "name_ar": KSE_STOCKS.get(r["symbol"], r["symbol"]),
+            "signal": r["signal_type"],
+            "price": r["price"],
+            "candle_time": r["candle_time"],
+            "ema9": r["ema_fast"],
+            "ema21": r["ema_slow"],
+            "rsi": r["rsi"],
+            "volume": r["volume"],
+            "score": r["score"],
+            "score_class": r["score_class"],
+            "verdict": r["verdict"],
+            "support": r["support"],
+            "resistance": r["resistance"],
+            "vol_ratio": r["vol_ratio"],
+            "time": r["created_at"],
+        })
+
+    bull = sum(1 for e in events if e["signal"] == "bullish_cross")
+    bear = sum(1 for e in events if e["signal"] == "bearish_cross")
+
+    return {
+        "total": len(events),
+        "bullish_count": bull,
+        "bearish_count": bear,
+        "hours": hours,
+        "events": events,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@app.get("/dashboard/ema-proximity")
+async def dashboard_ema_proximity(threshold_pct: float = 1.5):
+    """Stocks where EMA9 and EMA21 are close — about to cross."""
+    import sqlite3
+
+    conn = sqlite3.connect(os.path.join(BASE_DIR, "data", "life.db"))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT symbol, prev_ema_fast, prev_ema_slow, updated_at
+        FROM stock_radar_state
+        WHERE timeframe = '30m' AND prev_ema_fast > 0 AND prev_ema_slow > 0
+    """).fetchall()
+    conn.close()
+
+    from tv_data import KSE_STOCKS
+
+    approaching = []
+    for r in rows:
+        fast = r["prev_ema_fast"]
+        slow = r["prev_ema_slow"]
+        if not slow:
+            continue
+        gap_pct = abs(fast - slow) / slow * 100
+        if gap_pct <= threshold_pct:
+            direction = "bullish_approach" if fast > slow else "bearish_approach"
+            approaching.append({
+                "symbol": r["symbol"],
+                "name_ar": KSE_STOCKS.get(r["symbol"], r["symbol"]),
+                "ema9": round(fast, 3),
+                "ema21": round(slow, 3),
+                "gap_pct": round(gap_pct, 3),
+                "direction": direction,
+                "updated_at": r["updated_at"],
+            })
+
+    approaching.sort(key=lambda x: x["gap_pct"])
+
+    return {
+        "threshold_pct": threshold_pct,
+        "count": len(approaching),
+        "stocks": approaching,
+    }
 
 
 @app.get("/health")
@@ -5690,6 +5833,49 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         if not snap:
             return f"❌ ما لقيت '{name}'"
         return format_person_tg(snap)
+    if cmd == "/فرص" or cmd == "/decisions":
+        try:
+            from golden_engine import scan_opportunities
+            result = scan_opportunities()
+            opps = result.get("all_opportunities", [])
+            enters = [o for o in opps if o.get("smart_decision") == "ENTER"]
+            if not enters:
+                return "⚪ لا توجد فرص ادخل حالياً"
+            lines = [f"🟢 <b>{len(enters)} فرصة ادخل الآن</b>\n"]
+            for o in enters[:5]:
+                cp = o.get("chosen_plan", {})
+                lines.append(
+                    f"<b>{o['symbol']}</b> — {o.get('price', 0)}\n"
+                    f"  🎯 دخول: {cp.get('entry', '-')} | هدف: {cp.get('target1', '-')} | ستوب: {cp.get('stop', '-')}\n"
+                    f"  📊 R/R: {cp.get('rr', 0):.1f}x | ثقة: {o.get('confidence', 0):.0f}%\n"
+                )
+            return "\n".join(lines)
+        except Exception as e:
+            return f"❌ خطأ: {e}"
+    if cmd == "/تقييم" or cmd == "/review":
+        try:
+            from signal_review import get_reviews_for_dashboard
+            d = get_reviews_for_dashboard()
+            if not d.get("reviews"):
+                return "⚪ لا توجد تقييمات بعد"
+            res = d.get("results", {})
+            lines = [
+                f"📊 <b>تقييم إشارات {d['date']}</b>\n",
+                f"✅ نجاح: {res.get('success', 0)} | ⚠️ جزئي: {res.get('partial', 0)} | ❌ فشل: {res.get('fail', 0)} | ⏳ مستمر: {res.get('ongoing', 0)}",
+                f"📈 نسبة النجاح: {d.get('success_rate', 0)}%\n",
+            ]
+            for r in d["reviews"]:
+                if r["result"] in ("no_data", "pending"):
+                    continue
+                emoji = {"success": "✅", "partial": "⚠️", "fail": "❌", "ongoing": "⏳"}.get(r["result"], "❓")
+                pnl = r.get("pnl_pct")
+                pnl_str = f"{pnl:+.1f}%" if pnl is not None else "--"
+                lines.append(f"{emoji} <b>{r['symbol']}</b> {pnl_str} — {r.get('reason_ar', '')}")
+                if r.get("lesson_ar"):
+                    lines.append(f"   💡 {r['lesson_ar']}")
+            return "\n".join(lines)
+        except Exception as e:
+            return f"❌ خطأ: {e}"
     if cmd == "/stocks":
         if not TG_STOCKS_OK:
             return "❌ stocks module not loaded"

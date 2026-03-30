@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>&#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0631;&#x0628; — EMA 9/21</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#070D17;--navy-800:#0C1525;--navy-700:#111E32;
+  --navy-600:#162840;--navy-500:#1C334F;--navy-400:#24405F;
+  --gold:#C6974B;--gold-bright:#D4A95C;--gold-dim:#9E7A3D;
+  --gold-bg:rgba(198,151,75,.06);--gold-br:rgba(198,151,75,.25);
+  --green:#4CAF82;--green-bright:#5BC492;--green-bg:rgba(76,175,130,.08);--green-br:rgba(76,175,130,.3);
+  --red:#D94452;--red-bright:#E5606C;--red-bg:rgba(217,68,82,.08);--red-br:rgba(217,68,82,.3);
+  --amber:#E8A838;--amber-bg:rgba(232,168,56,.08);--amber-br:rgba(232,168,56,.3);
+  --cyan:#38BDF8;--cyan-bg:rgba(56,189,248,.08);--cyan-br:rgba(56,189,248,.3);
+  --text:#E8ECF0;--text-2:#A0ADBC;--text-3:#6B7D90;--text-4:#405060;
+  --card:#0E1929;--card-hover:#132137;--card-border:#1A2E45;
+  --f:'Tajawal','Noto Kufi Arabic',sans-serif;
+  --fd:'Noto Kufi Arabic','Tajawal',sans-serif;
+  --fm:'IBM Plex Mono','Consolas',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--f);font-variant-numeric:tabular-nums;
+  background:var(--navy-900);color:var(--text);
+  min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.ltr{direction:ltr;unicode-bidi:isolate}
+</style>
+</head>
+<body>
+<style>
+/* ===== TOPBAR ===== */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,13,23,.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--card-border);
+  padding:0 1.25rem;height:56px;
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+}
+.topbar-brand{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.brand-mark{
+  background:linear-gradient(135deg,var(--gold),var(--gold-dim));
+  color:var(--navy-900);font-family:var(--fm);font-weight:700;
+  font-size:.85rem;padding:.25rem .6rem;border-radius:4px;letter-spacing:.5px;
+}
+.topbar-title{font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--text)}
+.topbar-center{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.status-chip{
+  display:flex;align-items:center;gap:.35rem;
+  font-size:.75rem;padding:.25rem .65rem;border-radius:20px;
+  border:1px solid var(--card-border);background:var(--navy-800);color:var(--text-2);
+}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-red{background:var(--red);box-shadow:0 0 6px var(--red)}
+.dot-amber{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+
+/* ===== PULSE HERO ===== */
+.pulse-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;
+  padding:1.25rem 1.25rem .75rem;
+}
+.pulse-card{
+  background:var(--card);border:1px solid var(--card-border);
+  border-radius:12px;padding:1rem 1.25rem;text-align:center;
+  transition:border-color .2s;
+}
+.pulse-card:hover{border-color:var(--gold-br)}
+.pulse-num{font-family:var(--fm);font-size:2.2rem;font-weight:700;line-height:1.1}
+.pulse-label{font-size:.8rem;color:var(--text-3);margin-top:.25rem}
+.num-green{color:var(--green-bright)}
+.num-red{color:var(--red-bright)}
+.num-gold{color:var(--gold-bright)}
+
+/* ===== APPROACHING BANNER ===== */
+.approaching-banner{
+  margin:0 1.25rem .75rem;padding:.75rem 1rem;
+  background:var(--amber-bg);border:1px solid var(--amber-br);
+  border-radius:10px;display:flex;align-items:center;gap:.75rem;
+  font-size:.85rem;
+}
+.approaching-banner .icon{font-size:1.2rem;flex-shrink:0}
+.approaching-list{display:flex;flex-wrap:wrap;gap:.4rem}
+.approaching-chip{
+  font-family:var(--fm);font-size:.72rem;
+  padding:2px 8px;border-radius:6px;
+  background:var(--navy-700);border:1px solid var(--amber-br);color:var(--amber);
+}
+
+/* ===== FILTER TABS ===== */
+.filter-bar{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.5rem 1.25rem;border-bottom:1px solid var(--card-border);
+}
+.filter-btn{
+  font-family:var(--f);font-size:.8rem;
+  padding:.35rem .85rem;border-radius:20px;
+  border:1px solid var(--card-border);background:transparent;
+  color:var(--text-3);cursor:pointer;transition:all .2s;
+}
+.filter-btn:hover{border-color:var(--gold-br);color:var(--text-2)}
+.filter-btn.active{background:var(--gold-bg);border-color:var(--gold-br);color:var(--gold)}
+.filter-spacer{flex:1}
+.refresh-info{font-size:.7rem;color:var(--text-4);font-family:var(--fm)}
+.hours-select{
+  font-family:var(--fm);font-size:.75rem;
+  background:var(--navy-700);color:var(--text-2);border:1px solid var(--card-border);
+  padding:4px 8px;border-radius:6px;cursor:pointer;
+}
+</style>
+<style>
+/* ===== TABLE ===== */
+.events-table{width:100%;border-collapse:collapse}
+.events-table th{
+  position:sticky;top:56px;z-index:10;
+  background:var(--navy-800);
+  font-family:var(--fd);font-weight:600;font-size:.75rem;
+  color:var(--text-3);text-transform:uppercase;letter-spacing:.3px;
+  padding:.65rem .75rem;border-bottom:1px solid var(--card-border);
+  text-align:right;white-space:nowrap;
+}
+.events-table td{
+  padding:.6rem .75rem;border-bottom:1px solid rgba(26,46,69,.4);
+  font-size:.82rem;white-space:nowrap;
+}
+.events-table tr{transition:background .15s}
+.events-table tr:hover{background:var(--card-hover)}
+.events-table tr.new-flash{animation:flash .8s ease}
+@keyframes flash{
+  0%,100%{background:transparent}
+  30%{background:rgba(198,151,75,.12)}
+}
+
+.sig-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:6px;font-size:.75rem;font-weight:600;
+}
+.sig-bull{background:var(--green-bg);border:1px solid var(--green-br);color:var(--green-bright)}
+.sig-bear{background:var(--red-bg);border:1px solid var(--red-br);color:var(--red-bright)}
+
+.score-bar{
+  display:inline-flex;align-items:center;gap:4px;
+  font-family:var(--fm);font-size:.75rem;
+}
+.score-fill{
+  width:40px;height:6px;border-radius:3px;background:var(--navy-600);overflow:hidden;
+}
+.score-fill-inner{height:100%;border-radius:3px;transition:width .3s}
+
+.sym-name{font-weight:600;color:var(--text)}
+.sym-code{font-family:var(--fm);font-size:.7rem;color:var(--text-3)}
+.mono{font-family:var(--fm);font-size:.78rem}
+.txt2{color:var(--text-2)}
+.txt3{color:var(--text-3)}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{
+  text-align:center;padding:4rem 2rem;color:var(--text-3);
+}
+.empty-state .icon{font-size:3rem;margin-bottom:1rem;opacity:.4}
+.empty-state .title{font-size:1.1rem;color:var(--text-2);margin-bottom:.5rem}
+
+/* ===== AUDIO TOGGLE ===== */
+.sound-toggle{
+  display:flex;align-items:center;gap:.4rem;
+  font-size:.75rem;color:var(--text-3);cursor:pointer;
+  padding:.3rem .6rem;border-radius:8px;border:1px solid var(--card-border);
+  background:transparent;transition:all .2s;
+}
+.sound-toggle:hover{border-color:var(--gold-br)}
+.sound-toggle.active{color:var(--gold);border-color:var(--gold-br);background:var(--gold-bg)}
+
+/* ===== NAV ===== */
+.nav-strip{
+  display:flex;gap:.3rem;overflow-x:auto;padding:.5rem 1.25rem;
+  border-bottom:1px solid var(--card-border);background:var(--navy-800);
+}
+.nav-link{
+  font-size:.72rem;padding:.3rem .7rem;border-radius:6px;
+  color:var(--text-3);text-decoration:none;white-space:nowrap;
+  transition:all .15s;
+}
+.nav-link:hover{color:var(--text);background:var(--navy-600)}
+.nav-link.active{color:var(--gold);background:var(--gold-bg);font-weight:600}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  .pulse-row{grid-template-columns:1fr 1fr 1fr;gap:.5rem;padding:.75rem}
+  .pulse-num{font-size:1.5rem}
+  .topbar{padding:0 .75rem;height:48px}
+  .events-table th,.events-table td{padding:.5rem .4rem;font-size:.72rem}
+  .approaching-banner{flex-direction:column;align-items:flex-start;gap:.5rem}
+  .hide-mobile{display:none}
+}
+</style>
+<!-- ===== TOPBAR ===== -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-mark">KSE</span>
+    <span class="topbar-title">&#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0631;&#x0628;</span>
+  </div>
+  <div class="topbar-center">
+    <span class="status-chip"><span class="status-dot" id="bridgeDot"></span><span id="bridgeStatus">...</span></span>
+    <span class="status-chip">EMA 9/21 &bull; 30m</span>
+  </div>
+  <button class="sound-toggle" id="soundBtn" onclick="toggleSound()">
+    &#x1F50A; &#x0635;&#x0648;&#x062A;
+  </button>
+</header>
+
+<!-- ===== NAV ===== -->
+<nav class="nav-strip">
+  <a href="decisions" class="nav-link">&#x0627;&#x0644;&#x0642;&#x0631;&#x0627;&#x0631;&#x0627;&#x062A;</a>
+  <a href="positions" class="nav-link">&#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x0643;&#x0632;</a>
+  <a href="radar" class="nav-link">&#x0627;&#x0644;&#x0631;&#x0627;&#x062F;&#x0627;&#x0631;</a>
+  <a href="signals" class="nav-link">&#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0627;&#x062A;</a>
+  <a href="scalper" class="nav-link active">&#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0631;&#x0628;</a>
+  <a href="journal" class="nav-link">&#x0627;&#x0644;&#x0633;&#x062C;&#x0644;</a>
+  <a href="strategies" class="nav-link">&#x0627;&#x0644;&#x0627;&#x0633;&#x062A;&#x0631;&#x0627;&#x062A;&#x064A;&#x062C;&#x064A;&#x0627;&#x062A;</a>
+  <a href="brain" class="nav-link">&#x0627;&#x0644;&#x0639;&#x0642;&#x0644;</a>
+  <a href="home" class="nav-link">&#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;</a>
+</nav>
+
+<!-- ===== PULSE HERO ===== -->
+<div class="pulse-row">
+  <div class="pulse-card">
+    <div class="pulse-num num-green" id="bullCount">-</div>
+    <div class="pulse-label">&#x062A;&#x0642;&#x0627;&#x0637;&#x0639; &#x0635;&#x0627;&#x0639;&#x062F; &#x2191;</div>
+  </div>
+  <div class="pulse-card">
+    <div class="pulse-num num-red" id="bearCount">-</div>
+    <div class="pulse-label">&#x062A;&#x0642;&#x0627;&#x0637;&#x0639; &#x0647;&#x0627;&#x0628;&#x0637; &#x2193;</div>
+  </div>
+  <div class="pulse-card">
+    <div class="pulse-num num-gold" id="totalCount">-</div>
+    <div class="pulse-label">&#x0625;&#x062C;&#x0645;&#x0627;&#x0644;&#x064A;</div>
+  </div>
+</div>
+
+<!-- ===== APPROACHING BANNER ===== -->
+<div class="approaching-banner" id="approachBanner" style="display:none">
+  <span class="icon">&#x26A1;</span>
+  <div>
+    <strong>&#x0642;&#x0631;&#x064A;&#x0628;&#x0629; &#x0645;&#x0646; &#x0627;&#x0644;&#x062A;&#x0642;&#x0627;&#x0637;&#x0639;:</strong>
+    <div class="approaching-list" id="approachList"></div>
+  </div>
+</div>
+
+<!-- ===== FILTERS ===== -->
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">&#x0627;&#x0644;&#x0643;&#x0644;</button>
+  <button class="filter-btn" data-filter="bullish" onclick="setFilter('bullish',this)">&#x0635;&#x0627;&#x0639;&#x062F; &#x2191;</button>
+  <button class="filter-btn" data-filter="bearish" onclick="setFilter('bearish',this)">&#x0647;&#x0627;&#x0628;&#x0637; &#x2193;</button>
+  <div class="filter-spacer"></div>
+  <select class="hours-select" id="hoursSelect" onchange="loadData()">
+    <option value="2">&#x0622;&#x062E;&#x0631; &#x0633;&#x0627;&#x0639;&#x062A;&#x064A;&#x0646;</option>
+    <option value="4" selected>&#x0622;&#x062E;&#x0631; 4 &#x0633;&#x0627;&#x0639;&#x0627;&#x062A;</option>
+    <option value="8">&#x0622;&#x062E;&#x0631; 8 &#x0633;&#x0627;&#x0639;&#x0627;&#x062A;</option>
+    <option value="24">&#x0622;&#x062E;&#x0631; 24 &#x0633;&#x0627;&#x0639;&#x0629;</option>
+    <option value="72">&#x0622;&#x062E;&#x0631; 3 &#x0623;&#x064A;&#x0627;&#x0645;</option>
+  </select>
+  <span class="refresh-info" id="refreshInfo">...</span>
+</div>
+<!-- ===== TABLE ===== -->
+<div style="overflow-x:auto">
+<table class="events-table">
+<thead>
+<tr>
+  <th>#</th>
+  <th>&#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0629;</th>
+  <th>&#x0627;&#x0644;&#x0633;&#x0647;&#x0645;</th>
+  <th>&#x0627;&#x0644;&#x0633;&#x0639;&#x0631;</th>
+  <th>EMA 9</th>
+  <th>EMA 21</th>
+  <th>RSI</th>
+  <th>&#x0627;&#x0644;&#x062D;&#x062C;&#x0645;</th>
+  <th class="hide-mobile">&#x0627;&#x0644;&#x062F;&#x0639;&#x0645;</th>
+  <th class="hide-mobile">&#x0627;&#x0644;&#x0645;&#x0642;&#x0627;&#x0648;&#x0645;&#x0629;</th>
+  <th>Score</th>
+  <th>&#x0627;&#x0644;&#x062D;&#x0643;&#x0645;</th>
+  <th>&#x0627;&#x0644;&#x0648;&#x0642;&#x062A;</th>
+</tr>
+</thead>
+<tbody id="eventsBody">
+<tr><td colspan="13" class="empty-state">
+  <div class="icon">&#x1F4E1;</div>
+  <div class="title">&#x062C;&#x0627;&#x0631;&#x064A; &#x0627;&#x0644;&#x062A;&#x062D;&#x0645;&#x064A;&#x0644;...</div>
+</td></tr>
+</tbody>
+</table>
+</div>
+<script>
+const BASE = location.hostname === 'localhost' ? '' : '';
+let currentFilter = 'all';
+let soundEnabled = false;
+let lastEventCount = 0;
+let allEvents = [];
+
+// Sound
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep(type){
+  if(!soundEnabled) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = 'sine';
+  osc.frequency.value = type === 'bullish_cross' ? 880 : 440;
+  gain.gain.value = 0.15;
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+  osc.stop(audioCtx.currentTime + 0.5);
+}
+
+function toggleSound(){
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('soundBtn');
+  btn.classList.toggle('active', soundEnabled);
+  btn.innerHTML = soundEnabled ? '\uD83D\uDD0A \u0635\u0648\u062A \u2714' : '\uD83D\uDD07 \u0635\u0648\u062A';
+  if(soundEnabled) audioCtx.resume();
+}
+
+function setFilter(f, btn){
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderEvents();
+}
+
+function scoreColor(s){
+  if(s >= 70) return 'var(--green-bright)';
+  if(s >= 50) return 'var(--gold)';
+  if(s >= 30) return 'var(--amber)';
+  return 'var(--red-bright)';
+}
+
+function fmtTime(t){
+  if(!t) return '-';
+  try{
+    const d = new Date(t+'Z');
+    const h = d.getHours().toString().padStart(2,'0');
+    const m = d.getMinutes().toString().padStart(2,'0');
+    const dd = d.getDate();
+    const mm = (d.getMonth()+1);
+    return `<span class="mono txt2">${h}:${m}</span> <span class="txt3">${dd}/${mm}</span>`;
+  }catch(e){ return t; }
+}
+
+function fmtNum(v, dec){
+  if(v == null || v === '') return '-';
+  return Number(v).toFixed(dec || 0);
+}
+
+function fmtVol(v){
+  if(!v) return '-';
+  v = Number(v);
+  if(v >= 1e6) return (v/1e6).toFixed(1)+'M';
+  if(v >= 1e3) return (v/1e3).toFixed(0)+'K';
+  return v.toLocaleString();
+}
+</script>
+<script>
+function renderEvents(){
+  const filtered = currentFilter === 'all' ? allEvents 
+    : allEvents.filter(e => currentFilter === 'bullish' ? e.signal === 'bullish_cross' : e.signal === 'bearish_cross');
+  
+  const tbody = document.getElementById('eventsBody');
+  
+  if(!filtered.length){
+    tbody.innerHTML = `<tr><td colspan="13" class="empty-state">
+      <div class="icon">\uD83D\uDCE1</div>
+      <div class="title">\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0642\u0627\u0637\u0639\u0627\u062A \u0641\u064A \u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629</div>
+      <div>\u062C\u0631\u0628 \u0632\u064A\u0627\u062F\u0629 \u0627\u0644\u0641\u062A\u0631\u0629 \u0623\u0648 \u0627\u0646\u062A\u0638\u0631 \u0648\u0642\u062A \u0627\u0644\u0633\u0648\u0642</div>
+    </td></tr>`;
+    return;
+  }
+  
+  let html = '';
+  filtered.forEach((e, i) => {
+    const isBull = e.signal === 'bullish_cross';
+    const sigClass = isBull ? 'sig-bull' : 'sig-bear';
+    const sigText = isBull ? '\u2191 \u0635\u0627\u0639\u062F' : '\u2193 \u0647\u0627\u0628\u0637';
+    const sc = e.score || 0;
+    const scCol = scoreColor(sc);
+    const rsiVal = e.rsi ? Number(e.rsi) : null;
+    let rsiClass = 'txt2';
+    if(rsiVal && rsiVal >= 70) rsiClass = 'num-red';
+    else if(rsiVal && rsiVal <= 30) rsiClass = 'num-green';
+    
+    const volRatio = e.vol_ratio ? Number(e.vol_ratio) : 0;
+    let volIcon = '';
+    if(volRatio >= 2.0) volIcon = ' \uD83D\uDD25';
+    else if(volRatio >= 1.5) volIcon = ' \u26A1';
+    
+    html += `<tr class="${i < 3 && lastEventCount > 0 ? 'new-flash' : ''}">
+      <td class="mono txt3">${i+1}</td>
+      <td><span class="sig-badge ${sigClass}">${sigText}</span></td>
+      <td><span class="sym-name">${e.name_ar || e.symbol}</span><br><span class="sym-code ltr">${e.symbol}</span></td>
+      <td class="mono">${fmtNum(e.price, 0)}</td>
+      <td class="mono txt2">${fmtNum(e.ema9 || e.ema_fast, 1)}</td>
+      <td class="mono txt2">${fmtNum(e.ema21 || e.ema_slow, 1)}</td>
+      <td class="mono ${rsiClass}">${rsiVal ? rsiVal.toFixed(1) : '-'}</td>
+      <td class="mono txt2">${fmtVol(e.volume)}${volIcon}<br><span class="txt3">x${volRatio.toFixed(1)}</span></td>
+      <td class="mono txt2 hide-mobile">${fmtNum(e.support, 0)}</td>
+      <td class="mono txt2 hide-mobile">${fmtNum(e.resistance, 0)}</td>
+      <td><div class="score-bar">
+        <div class="score-fill"><div class="score-fill-inner" style="width:${sc}%;background:${scCol}"></div></div>
+        <span class="mono" style="color:${scCol}">${sc}</span>
+      </div></td>
+      <td style="font-size:.78rem">${e.verdict || '-'}</td>
+      <td>${fmtTime(e.time || e.candle_time)}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+</script>
+<script>
+async function loadData(){
+  const hours = document.getElementById('hoursSelect').value;
+  try {
+    const resp = await fetch(`/dashboard/ema-crosses?hours=${hours}`);
+    if(!resp.ok) throw new Error(resp.status);
+    const data = await resp.json();
+    
+    // Update pulse
+    document.getElementById('bullCount').textContent = data.bullish_count;
+    document.getElementById('bearCount').textContent = data.bearish_count;
+    document.getElementById('totalCount').textContent = data.total;
+    
+    // Bridge status
+    const dot = document.getElementById('bridgeDot');
+    const st = document.getElementById('bridgeStatus');
+    dot.className = 'status-dot dot-green';
+    st.textContent = data.total + ' &#x062A;&#x0642;&#x0627;&#x0637;&#x0639;';
+    
+    // Check for new events (sound)
+    if(lastEventCount > 0 && data.events.length > lastEventCount){
+      const newest = data.events[0];
+      if(newest) playBeep(newest.signal);
+    }
+    lastEventCount = data.events.length;
+    allEvents = data.events;
+    renderEvents();
+    
+    // Timestamp
+    const now = new Date();
+    document.getElementById('refreshInfo').textContent = 
+      now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+  } catch(err) {
+    console.error('Load error:', err);
+    document.getElementById('bridgeDot').className = 'status-dot dot-red';
+    document.getElementById('bridgeStatus').textContent = '&#x062E;&#x0637;&#x0623;';
+  }
+}
+
+async function loadApproaching(){
+  try {
+    const resp = await fetch('/dashboard/ema-proximity?threshold_pct=2');
+    if(!resp.ok) return;
+    const data = await resp.json();
+    const banner = document.getElementById('approachBanner');
+    const list = document.getElementById('approachList');
+    
+    if(data.count === 0){
+      banner.style.display = 'none';
+      return;
+    }
+    
+    banner.style.display = 'flex';
+    list.innerHTML = data.stocks.map(s => {
+      const arrow = s.direction === 'bullish_approach' ? '&#x2191;' : '&#x2193;';
+      return `<span class="approaching-chip">${s.name_ar || s.symbol} ${arrow} ${s.gap_pct}%</span>`;
+    }).join('');
+  } catch(err) {
+    console.error('Proximity error:', err);
+  }
+}
+</script>
+<script>
+// Auto-refresh
+let refreshTimer = null;
+
+function startAutoRefresh(){
+  loadData();
+  loadApproaching();
+  refreshTimer = setInterval(() => {
+    loadData();
+    loadApproaching();
+  }, 90000); // 90 seconds
+}
+
+// Init
+startAutoRefresh();
+</script>
+
+</body>
+</html>

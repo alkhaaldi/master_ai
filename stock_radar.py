@@ -699,7 +699,7 @@ def check_symbol(symbol, fast=9, slow=21):
         vwap       = ind.get("vwap") or price
 
         ema_f = float(ind.get("ema_9") or ind.get("ema9") or 0)
-        ema_s = float(ind.get("ema_20") or ind.get("ema21") or 0)
+        ema_s = float(ind.get("ema_21") or ind.get("ema_20") or 0)
 
         # EMA cross: compare current vs previous (stored from last poll cycle)
         prev_f, prev_s = _prev_ema.get(ticker, (None, None))
@@ -1144,7 +1144,7 @@ def refresh_daily_snapshot(symbols=None):
                 vol_ratio  = round(float(ind.get("vol_ratio") or 0), 2)
 
                 ema9  = ind.get("ema_9") or ind.get("ema9") or 0
-                ema21 = ind.get("ema_20") or ind.get("ema21") or 0
+                ema21 = ind.get("ema_21") or ind.get("ema_20") or 0
 
                 # === EMA Direction (always set) ===
                 if ema9 and ema21:

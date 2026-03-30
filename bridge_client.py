@@ -284,14 +284,14 @@ class BridgeClient:
 
         price = raw.get("price") or q.get("price", 0)
         ema9 = ind.get("ema_9", 0)
-        ema20 = ind.get("ema_20", 0)
+        ema21 = ind.get("ema_21") or ind.get("ema_20") or 0
         ema50 = ind.get("ema_50", 0)
         ema200 = ind.get("ema_200", 0)
 
         # Determine EMA stack
-        if ema9 > ema20 > ema50 > ema200:
+        if ema9 > ema21 > ema50 > ema200:
             ema_stack = "bullish"
-        elif ema9 < ema20 < ema50 < ema200:
+        elif ema9 < ema21 < ema50 < ema200:
             ema_stack = "bearish"
         else:
             ema_stack = "mixed"
@@ -334,11 +334,13 @@ class BridgeClient:
             },
             "ema": {
                 "ema9": round(ema9, 2),
-                "ema20": round(ema20, 2),
+                "ema21": round(ema21, 2),
+                "ema20": round(ema21, 2),  # backward compat
                 "ema50": round(ema50, 2),
                 "ema200": round(ema200, 2),
                 "stack": ema_stack,
-                "above_ema20": price > ema20 if ema20 else None,
+                "above_ema21": price > ema21 if ema21 else None,
+                "above_ema20": price > ema21 if ema21 else None,  # backward compat
                 "above_ema50": price > ema50 if ema50 else None,
                 "above_ema200": price > ema200 if ema200 else None,
             },
