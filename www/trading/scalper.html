@@ -206,7 +206,8 @@ body{
   </div>
   <div class="topbar-center">
     <span class="status-chip"><span class="status-dot" id="bridgeDot"></span><span id="bridgeStatus">...</span></span>
-    <span class="status-chip">EMA 9/21 &bull; 30m</span>
+    <span class="status-chip" style="background:var(--gold-bg);border-color:var(--gold-br);color:var(--gold)">&#x23F0; 30m</span>
+    <span class="status-chip">EMA 9/21</span>
   </div>
   <button class="sound-toggle" id="soundBtn" onclick="toggleSound()">
     &#x1F50A; &#x0635;&#x0648;&#x062A;
@@ -267,6 +268,10 @@ body{
   <span class="refresh-info" id="refreshInfo">...</span>
 </div>
 <!-- ===== TABLE ===== -->
+<div style="padding:.4rem 1.25rem 0;display:flex;align-items:center;gap:.5rem">
+  <span style="font-size:.7rem;color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br);padding:2px 10px;border-radius:6px;font-family:var(--fm)">&#x23F0; 30m &#x2014; &#x0646;&#x0635; &#x0633;&#x0627;&#x0639;&#x0629;</span>
+  <span style="font-size:.7rem;color:var(--text-3)">&#x0645;&#x0635;&#x062F;&#x0631; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;: Bridge API &#x2192; Stock Radar &#x2192; 128 &#x0633;&#x0647;&#x0645; &#x0643;&#x0648;&#x064A;&#x062A;&#x064A;</span>
+</div>
 <div style="overflow-x:auto">
 <table class="events-table">
 <thead>
@@ -284,10 +289,11 @@ body{
   <th>Score</th>
   <th>&#x0627;&#x0644;&#x062D;&#x0643;&#x0645;</th>
   <th>&#x0627;&#x0644;&#x0648;&#x0642;&#x062A;</th>
+  <th>&#x0627;&#x0644;&#x0641;&#x0631;&#x064A;&#x0645;</th>
 </tr>
 </thead>
 <tbody id="eventsBody">
-<tr><td colspan="13" class="empty-state">
+<tr><td colspan="14" class="empty-state">
   <div class="icon">&#x1F4E1;</div>
   <div class="title">&#x062C;&#x0627;&#x0631;&#x064A; &#x0627;&#x0644;&#x062A;&#x062D;&#x0645;&#x064A;&#x0644;...</div>
 </td></tr>
@@ -372,7 +378,7 @@ function renderEvents(){
   const tbody = document.getElementById('eventsBody');
   
   if(!filtered.length){
-    tbody.innerHTML = `<tr><td colspan="13" class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="14" class="empty-state">
       <div class="icon">\uD83D\uDCE1</div>
       <div class="title">\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0642\u0627\u0637\u0639\u0627\u062A \u0641\u064A \u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629</div>
       <div>\u062C\u0631\u0628 \u0632\u064A\u0627\u062F\u0629 \u0627\u0644\u0641\u062A\u0631\u0629 \u0623\u0648 \u0627\u0646\u062A\u0638\u0631 \u0648\u0642\u062A \u0627\u0644\u0633\u0648\u0642</div>
@@ -414,6 +420,7 @@ function renderEvents(){
       </div></td>
       <td style="font-size:.78rem">${e.verdict || '-'}</td>
       <td>${fmtTime(e.time || e.candle_time)}</td>
+      <td><span class="mono" style="color:var(--gold);font-size:.7rem">30m</span></td>
     </tr>`;
   });
   tbody.innerHTML = html;
