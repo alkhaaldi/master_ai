@@ -231,7 +231,7 @@ body{
 <div class="pulse-row">
   <div class="pulse-card">
     <div class="pulse-num num-green" id="bullCount">-</div>
-    <div class="pulse-label">&#x062A;&#x0642;&#x0627;&#x0637;&#x0639; &#x0635;&#x0627;&#x0639;&#x062F; &#x2191;</div>
+    <div class="pulse-label">&#x2B50; &#x0635;&#x0627;&#x0639;&#x062F;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B;</div>
   </div>
   <div class="pulse-card">
     <div class="pulse-num num-red" id="bearCount">-</div>
@@ -254,16 +254,18 @@ body{
 
 <!-- ===== FILTERS ===== -->
 <div class="filter-bar">
-  <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">&#x0627;&#x0644;&#x0643;&#x0644;</button>
+  <button class="filter-btn active" data-filter="active_bull" onclick="setFilter('active_bull',this)" style="background:var(--green-bg);border-color:var(--green-br);color:var(--green)">&#x2B50; &#x0635;&#x0627;&#x0639;&#x062F;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B;</button>
+  <button class="filter-btn" data-filter="all" onclick="setFilter('all',this)">&#x0627;&#x0644;&#x0643;&#x0644;</button>
   <button class="filter-btn" data-filter="bullish" onclick="setFilter('bullish',this)">&#x0635;&#x0627;&#x0639;&#x062F; &#x2191;</button>
   <button class="filter-btn" data-filter="bearish" onclick="setFilter('bearish',this)">&#x0647;&#x0627;&#x0628;&#x0637; &#x2193;</button>
   <div class="filter-spacer"></div>
   <select class="hours-select" id="hoursSelect" onchange="loadData()">
     <option value="2">&#x0622;&#x062E;&#x0631; &#x0633;&#x0627;&#x0639;&#x062A;&#x064A;&#x0646;</option>
-    <option value="4" selected>&#x0622;&#x062E;&#x0631; 4 &#x0633;&#x0627;&#x0639;&#x0627;&#x062A;</option>
+    <option value="4">&#x0622;&#x062E;&#x0631; 4 &#x0633;&#x0627;&#x0639;&#x0627;&#x062A;</option>
     <option value="8">&#x0622;&#x062E;&#x0631; 8 &#x0633;&#x0627;&#x0639;&#x0627;&#x062A;</option>
     <option value="24">&#x0622;&#x062E;&#x0631; 24 &#x0633;&#x0627;&#x0639;&#x0629;</option>
-    <option value="72">&#x0622;&#x062E;&#x0631; 3 &#x0623;&#x064A;&#x0627;&#x0645;</option>
+    <option value="72" selected>&#x0622;&#x062E;&#x0631; 3 &#x0623;&#x064A;&#x0627;&#x0645;</option>
+    <option value="168">&#x0622;&#x062E;&#x0631; &#x0623;&#x0633;&#x0628;&#x0648;&#x0639;</option>
   </select>
   <span class="refresh-info" id="refreshInfo">...</span>
 </div>
@@ -302,7 +304,7 @@ body{
 </div>
 <script>
 const BASE = location.hostname === 'localhost' ? '' : '';
-let currentFilter = 'all';
+let currentFilter = 'active_bull';
 let soundEnabled = false;
 let lastEventCount = 0;
 let allEvents = [];
@@ -371,9 +373,27 @@ function fmtVol(v){
 }
 </script>
 <script>
+function getActiveBulls(events){
+  // Group by symbol, keep latest signal per symbol
+  const latest = {};
+  events.forEach(e => {
+    if(!latest[e.symbol] || (e.time||e.candle_time) > (latest[e.symbol].time||latest[e.symbol].candle_time)){
+      latest[e.symbol] = e;
+    }
+  });
+  // Return only those whose LATEST signal is bullish
+  return Object.values(latest).filter(e => e.signal === 'bullish_cross');
+}
+
 function renderEvents(){
-  const filtered = currentFilter === 'all' ? allEvents 
-    : allEvents.filter(e => currentFilter === 'bullish' ? e.signal === 'bullish_cross' : e.signal === 'bearish_cross');
+  let filtered;
+  if(currentFilter === 'active_bull'){
+    filtered = getActiveBulls(allEvents);
+  } else if(currentFilter === 'all'){
+    filtered = allEvents;
+  } else {
+    filtered = allEvents.filter(e => currentFilter === 'bullish' ? e.signal === 'bullish_cross' : e.signal === 'bearish_cross');
+  }
   
   const tbody = document.getElementById('eventsBody');
   
@@ -435,7 +455,8 @@ async function loadData(){
     const data = await resp.json();
     
     // Update pulse
-    document.getElementById('bullCount').textContent = data.bullish_count;
+    const activeBulls = getActiveBulls(data.events);
+    document.getElementById('bullCount').textContent = activeBulls.length;
     document.getElementById('bearCount').textContent = data.bearish_count;
     document.getElementById('totalCount').textContent = data.total;
     
