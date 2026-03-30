@@ -319,6 +319,7 @@ let currentFilter = 'active_bull';
 let soundEnabled = false;
 let lastEventCount = 0;
 let allEvents = [];
+let activeData = null;
 
 // Sound
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -424,7 +425,8 @@ function crossAge(timeStr){
 function renderEvents(){
   let filtered;
   if(currentFilter === 'active_bull'){
-    filtered = getActiveBulls(allEvents);
+    // Use server-side active data (reliable, covers ALL history)
+    filtered = activeData ? activeData.bullish : getActiveBulls(allEvents);
   } else if(currentFilter === 'all'){
     filtered = allEvents;
   } else {
@@ -444,7 +446,8 @@ function renderEvents(){
   
   let html = '';
   filtered.forEach((e, i) => {
-    const isBull = e.signal === 'bullish_cross';
+    const sig = e.signal || e.last_signal || '';
+    const isBull = sig.indexOf('bullish') >= 0;
     const sigClass = isBull ? 'sig-bull' : 'sig-bear';
     const sigText = isBull ? '\u2191 \u0635\u0627\u0639\u062F' : '\u2193 \u0647\u0627\u0628\u0637';
     const sc = e.score || 0;
@@ -460,7 +463,8 @@ function renderEvents(){
     else if(volRatio >= 1.5) volIcon = ' \u26A1';
     
     // Age badge
-    const age = crossAge(e.time || e.candle_time);
+    const eventTime = e.time || e.signal_time || e.candle_time;
+    const age = crossAge(eventTime);
     const ageCls = isBull ? ('age-' + age.cls) : 'age-reversed';
     const ageLabel = isBull ? age.label : '\u26D4 \u0627\u0646\u0639\u0643\u0633';
     
@@ -480,7 +484,7 @@ function renderEvents(){
         <span class="mono" style="color:${scCol}">${sc}</span>
       </div></td>
       <td style="font-size:.78rem">${e.verdict || '-'}</td>
-      <td>${fmtTime(e.time || e.candle_time)}</td>
+      <td>${fmtTime(eventTime)}</td>
       <td><span class="mono" style="color:var(--gold);font-size:.7rem">30m</span></td>
     </tr>`;
   });
@@ -491,29 +495,38 @@ function renderEvents(){
 async function loadData(){
   const hours = document.getElementById('hoursSelect').value;
   try {
-    const resp = await fetch(`/dashboard/ema-crosses?hours=${hours}`);
-    if(!resp.ok) throw new Error(resp.status);
-    const data = await resp.json();
+    // Load BOTH endpoints: ema-active (current state) + ema-crosses (history)
+    const [activeResp, crossResp] = await Promise.all([
+      fetch('/dashboard/ema-active').then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/dashboard/ema-crosses?hours=' + hours).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]);
     
-    // Update pulse
-    const activeBulls = getActiveBulls(data.events);
-    document.getElementById('bullCount').textContent = activeBulls.length;
-    document.getElementById('bearCount').textContent = data.bearish_count;
-    document.getElementById('totalCount').textContent = data.total;
+    // Active data (current state per symbol)
+    if(activeResp){
+      activeData = activeResp;
+      document.getElementById('bullCount').textContent = activeResp.bullish_count;
+      document.getElementById('bearCount').textContent = activeResp.bearish_count;
+    }
+    
+    // Crosses data (event history)
+    if(crossResp){
+      document.getElementById('totalCount').textContent = crossResp.total;
+      
+      // Check for new events (sound)
+      if(lastEventCount > 0 && crossResp.events.length > lastEventCount){
+        const newest = crossResp.events[0];
+        if(newest) playBeep(newest.signal);
+      }
+      lastEventCount = crossResp.events.length;
+      allEvents = crossResp.events;
+    }
     
     // Bridge status
     const dot = document.getElementById('bridgeDot');
     const st = document.getElementById('bridgeStatus');
     dot.className = 'status-dot dot-green';
-    st.textContent = data.total + ' &#x062A;&#x0642;&#x0627;&#x0637;&#x0639;';
+    st.textContent = (activeResp ? activeResp.total : 0) + ' \u0633\u0647\u0645';
     
-    // Check for new events (sound)
-    if(lastEventCount > 0 && data.events.length > lastEventCount){
-      const newest = data.events[0];
-      if(newest) playBeep(newest.signal);
-    }
-    lastEventCount = data.events.length;
-    allEvents = data.events;
     renderEvents();
     
     // Timestamp
@@ -523,7 +536,7 @@ async function loadData(){
   } catch(err) {
     console.error('Load error:', err);
     document.getElementById('bridgeDot').className = 'status-dot dot-red';
-    document.getElementById('bridgeStatus').textContent = '&#x062E;&#x0637;&#x0623;';
+    document.getElementById('bridgeStatus').textContent = '\u062E\u0637\u0623';
   }
 }
 
