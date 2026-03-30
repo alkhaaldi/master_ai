@@ -143,6 +143,17 @@ body{
 .sig-bull{background:var(--green-bg);border:1px solid var(--green-br);color:var(--green-bright)}
 .sig-bear{background:var(--red-bg);border:1px solid var(--red-br);color:var(--red-bright)}
 
+.age-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 8px;border-radius:5px;font-size:.68rem;font-weight:600;
+}
+.age-fresh{background:var(--green-bg);border:1px solid var(--green-br);color:var(--green-bright);animation:pulse-glow 2s infinite}
+.age-today{background:var(--green-bg);border:1px solid rgba(76,175,130,.15);color:var(--green)}
+.age-recent{background:var(--gold-bg);border:1px solid var(--gold-br);color:var(--gold)}
+.age-old{background:var(--navy-700);border:1px solid var(--card-border);color:var(--text-3)}
+.age-reversed{background:var(--red-bg);border:1px solid var(--red-br);color:var(--red-bright)}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 rgba(76,175,130,0)}50%{box-shadow:0 0 8px 2px rgba(76,175,130,.3)}}
+
 .score-bar{
   display:inline-flex;align-items:center;gap:4px;
   font-family:var(--fm);font-size:.75rem;
@@ -279,7 +290,7 @@ body{
 <thead>
 <tr>
   <th>#</th>
-  <th>&#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0629;</th>
+  <th>&#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0629; / &#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629;</th>
   <th>&#x0627;&#x0644;&#x0633;&#x0647;&#x0645;</th>
   <th>&#x0627;&#x0644;&#x0633;&#x0639;&#x0631;</th>
   <th>EMA 9</th>
@@ -382,7 +393,32 @@ function getActiveBulls(events){
     }
   });
   // Return only those whose LATEST signal is bullish
-  return Object.values(latest).filter(e => e.signal === 'bullish_cross');
+  return Object.values(latest).filter(e => e.signal === 'bullish_cross')
+    .sort((a,b) => (b.time||b.candle_time||'').localeCompare(a.time||a.candle_time||''));
+}
+
+function getLatestPerSymbol(events){
+  const latest = {};
+  events.forEach(e => {
+    if(!latest[e.symbol] || (e.time||e.candle_time) > (latest[e.symbol].time||latest[e.symbol].candle_time)){
+      latest[e.symbol] = e;
+    }
+  });
+  return Object.values(latest)
+    .sort((a,b) => (b.time||b.candle_time||'').localeCompare(a.time||a.candle_time||''));
+}
+
+function crossAge(timeStr){
+  if(!timeStr) return {hours:999, label:'-', cls:'old'};
+  try{
+    const t = new Date(timeStr+'Z');
+    const now = new Date();
+    const diffH = (now - t) / 3600000;
+    if(diffH < 2) return {hours:diffH, label:'\u2B50 \u062A\u0648\u0647', cls:'fresh'};
+    if(diffH < 6) return {hours:diffH, label:'\u0627\u0644\u064A\u0648\u0645', cls:'today'};
+    if(diffH < 24) return {hours:diffH, label:Math.floor(diffH)+' \u0633\u0627\u0639\u0629', cls:'recent'};
+    return {hours:diffH, label:Math.floor(diffH/24)+' \u064A\u0648\u0645', cls:'old'};
+  }catch(e){return {hours:999, label:'-', cls:'old'};}
 }
 
 function renderEvents(){
@@ -423,9 +459,14 @@ function renderEvents(){
     if(volRatio >= 2.0) volIcon = ' \uD83D\uDD25';
     else if(volRatio >= 1.5) volIcon = ' \u26A1';
     
-    html += `<tr class="${i < 3 && lastEventCount > 0 ? 'new-flash' : ''}">
+    // Age badge
+    const age = crossAge(e.time || e.candle_time);
+    const ageCls = isBull ? ('age-' + age.cls) : 'age-reversed';
+    const ageLabel = isBull ? age.label : '\u26D4 \u0627\u0646\u0639\u0643\u0633';
+    
+    html += `<tr class="${i < 3 && lastEventCount > 0 ? 'new-flash' : ''}" style="${age.cls==='fresh' && isBull ? 'background:rgba(76,175,130,.04)' : ''}">
       <td class="mono txt3">${i+1}</td>
-      <td><span class="sig-badge ${sigClass}">${sigText}</span></td>
+      <td><span class="sig-badge ${sigClass}">${sigText}</span><br><span class="age-badge ${ageCls}">${ageLabel}</span></td>
       <td><span class="sym-name">${e.name_ar || e.symbol}</span><br><span class="sym-code ltr">${e.symbol}</span></td>
       <td class="mono">${fmtNum(e.price, 0)}</td>
       <td class="mono txt2">${fmtNum(e.ema9 || e.ema_fast, 1)}</td>
