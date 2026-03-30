@@ -320,6 +320,7 @@ let soundEnabled = false;
 let lastEventCount = 0;
 let allEvents = [];
 let activeData = null;
+let liveData = null;
 
 // Sound
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -425,8 +426,14 @@ function crossAge(timeStr){
 function renderEvents(){
   let filtered;
   if(currentFilter === 'active_bull'){
-    // Use server-side active data (reliable, covers ALL history)
-    filtered = activeData ? activeData.bullish : getActiveBulls(allEvents);
+    // Priority: live Bridge data > DB active > calculated from events
+    if(liveData && liveData.bullish && liveData.bullish.length > 0){
+      filtered = liveData.bullish;
+    } else if(activeData && activeData.bullish){
+      filtered = activeData.bullish;
+    } else {
+      filtered = getActiveBulls(allEvents);
+    }
   } else if(currentFilter === 'all'){
     filtered = allEvents;
   } else {
@@ -446,8 +453,8 @@ function renderEvents(){
   
   let html = '';
   filtered.forEach((e, i) => {
-    const sig = e.signal || e.last_signal || '';
-    const isBull = sig.indexOf('bullish') >= 0;
+    const sig = e.signal || e.last_signal || e.status || '';
+    const isBull = sig.indexOf('bullish') >= 0 || sig === 'above';
     const sigClass = isBull ? 'sig-bull' : 'sig-bear';
     const sigText = isBull ? '\u2191 \u0635\u0627\u0639\u062F' : '\u2193 \u0647\u0627\u0628\u0637';
     const sc = e.score || 0;
@@ -462,13 +469,23 @@ function renderEvents(){
     if(volRatio >= 2.0) volIcon = ' \uD83D\uDD25';
     else if(volRatio >= 1.5) volIcon = ' \u26A1';
     
-    // Age badge
+    // Age badge — live data shows gap%, historical shows age
     const eventTime = e.time || e.signal_time || e.candle_time;
-    const age = crossAge(eventTime);
-    const ageCls = isBull ? ('age-' + age.cls) : 'age-reversed';
-    const ageLabel = isBull ? age.label : '\u26D4 \u0627\u0646\u0639\u0643\u0633';
+    const isLiveEntry = (e.status === 'above' || e.status === 'below' || e.status === 'touching');
+    let ageCls, ageLabel, ageFresh;
+    if(isLiveEntry){
+      ageFresh = true;
+      ageCls = isBull ? 'age-fresh' : 'age-reversed';
+      ageLabel = '\uD83D\uDFE2 \u062D\u064A';
+      if(e.gap_pct !== undefined) ageLabel += ' ' + e.gap_pct.toFixed(1) + '%';
+    } else {
+      const age = crossAge(eventTime);
+      ageFresh = (age.cls === 'fresh');
+      ageCls = isBull ? ('age-' + age.cls) : 'age-reversed';
+      ageLabel = isBull ? age.label : '\u26D4 \u0627\u0646\u0639\u0643\u0633';
+    }
     
-    html += `<tr class="${i < 3 && lastEventCount > 0 ? 'new-flash' : ''}" style="${age.cls==='fresh' && isBull ? 'background:rgba(76,175,130,.04)' : ''}">
+    html += `<tr class="${i < 3 && lastEventCount > 0 ? 'new-flash' : ''}" style="${ageFresh && isBull ? 'background:rgba(76,175,130,.04)' : ''}">
       <td class="mono txt3">${i+1}</td>
       <td><span class="sig-badge ${sigClass}">${sigText}</span><br><span class="age-badge ${ageCls}">${ageLabel}</span></td>
       <td><span class="sym-name">${e.name_ar || e.symbol}</span><br><span class="sym-code ltr">${e.symbol}</span></td>
@@ -495,24 +512,40 @@ function renderEvents(){
 async function loadData(){
   const hours = document.getElementById('hoursSelect').value;
   try {
-    // Load BOTH endpoints: ema-active (current state) + ema-crosses (history)
-    const [activeResp, crossResp] = await Promise.all([
+    // Load ALL 3 endpoints
+    const [liveResp, activeResp, crossResp] = await Promise.all([
+      fetch('/dashboard/ema-live').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/dashboard/ema-active').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/dashboard/ema-crosses?hours=' + hours).then(r => r.ok ? r.json() : null).catch(() => null),
     ]);
     
-    // Active data (current state per symbol)
-    if(activeResp){
-      activeData = activeResp;
+    // Live data (real-time from Bridge) — primary source
+    if(liveResp && liveResp.bridge_online && liveResp.total_checked > 0){
+      liveData = liveResp;
+      document.getElementById('bullCount').textContent = liveResp.bullish_count;
+      document.getElementById('bearCount').textContent = liveResp.bearish_count;
+      const dot = document.getElementById('bridgeDot');
+      const st = document.getElementById('bridgeStatus');
+      dot.className = 'status-dot dot-green';
+      st.textContent = liveResp.total_checked + ' \u0633\u0647\u0645 \u062D\u064A';
+    } else if(activeResp){
+      // Fallback to DB state
+      liveData = null;
       document.getElementById('bullCount').textContent = activeResp.bullish_count;
       document.getElementById('bearCount').textContent = activeResp.bearish_count;
+      const dot = document.getElementById('bridgeDot');
+      const st = document.getElementById('bridgeStatus');
+      dot.className = 'status-dot dot-amber';
+      st.textContent = 'DB \u0641\u0642\u0637';
+    } else {
+      liveData = null;
+      document.getElementById('bridgeDot').className = 'status-dot dot-red';
+      document.getElementById('bridgeStatus').textContent = '\u063A\u064A\u0631 \u0645\u062A\u0635\u0644';
     }
     
     // Crosses data (event history)
     if(crossResp){
       document.getElementById('totalCount').textContent = crossResp.total;
-      
-      // Check for new events (sound)
       if(lastEventCount > 0 && crossResp.events.length > lastEventCount){
         const newest = crossResp.events[0];
         if(newest) playBeep(newest.signal);
@@ -521,15 +554,10 @@ async function loadData(){
       allEvents = crossResp.events;
     }
     
-    // Bridge status
-    const dot = document.getElementById('bridgeDot');
-    const st = document.getElementById('bridgeStatus');
-    dot.className = 'status-dot dot-green';
-    st.textContent = (activeResp ? activeResp.total : 0) + ' \u0633\u0647\u0645';
+    if(activeResp) activeData = activeResp;
     
     renderEvents();
     
-    // Timestamp
     const now = new Date();
     document.getElementById('refreshInfo').textContent = 
       now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
