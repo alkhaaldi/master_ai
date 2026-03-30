@@ -2930,7 +2930,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dashboard/ema-active", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
+    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dashboard/ema-active", "/dashboard/ema-live", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -3590,6 +3590,105 @@ async def dashboard_ema_active():
         "bearish": bearish,
         "timestamp": datetime.utcnow().isoformat(),
     }
+
+
+# ── EMA Live: Real-Time EMA 9/21 State from Bridge API ──────────
+
+_ema_live_cache = {"data": None, "ts": 0}
+_EMA_LIVE_TTL = 180  # 3 minutes cache
+
+@app.get("/dashboard/ema-live")
+async def dashboard_ema_live():
+    """Live EMA 9/21 state for ALL 128 KSE stocks from Bridge API (cached 3 min)."""
+    import time as _t
+    from datetime import datetime
+
+    # Serve from cache if fresh
+    if _ema_live_cache["data"] and (_t.time() - _ema_live_cache["ts"]) < _EMA_LIVE_TTL:
+        return _ema_live_cache["data"]
+
+    from bridge_client import BridgeClient, BRIDGE_BASE_URL
+    from stock_radar import get_watchlist
+    from tv_data import KSE_STOCKS
+
+    watchlist = get_watchlist()
+    symbols = [w["symbol"] for w in watchlist]
+
+    try:
+        client = BridgeClient(BRIDGE_BASE_URL)
+        try:
+            data = await client.get_multi_analysis_30m(symbols)
+        finally:
+            await client.close()
+    except Exception as e:
+        # Return stale cache if available
+        if _ema_live_cache["data"]:
+            stale = _ema_live_cache["data"].copy()
+            stale["stale"] = True
+            return stale
+        return {"error": str(e), "bridge_online": False}
+
+    bridge_symbols = data.get("symbols", {})
+
+    bullish = []
+    bearish = []
+    touching = []
+
+    for sym, bd in bridge_symbols.items():
+        if not isinstance(bd, dict):
+            continue
+        ema_data = bd.get("ema", {})
+        ema9 = float(ema_data.get("ema9") or 0)
+        ema21 = float(ema_data.get("ema21") or ema_data.get("ema20") or 0)
+        price = float(bd.get("price") or 0)
+        rsi = bd.get("rsi_14")
+        vol_ratio = bd.get("vol_ratio")
+
+        if not ema9 or not ema21:
+            continue
+
+        gap_pct = abs(ema9 - ema21) / ema21 * 100
+
+        entry = {
+            "symbol": sym,
+            "name_ar": KSE_STOCKS.get(sym, sym),
+            "price": price,
+            "ema9": round(ema9, 3),
+            "ema21": round(ema21, 3),
+            "gap_pct": round(gap_pct, 3),
+            "rsi": rsi,
+            "vol_ratio": vol_ratio,
+        }
+
+        if gap_pct < 0.1:
+            entry["status"] = "touching"
+            touching.append(entry)
+        elif ema9 > ema21:
+            entry["status"] = "above"
+            bullish.append(entry)
+        else:
+            entry["status"] = "below"
+            bearish.append(entry)
+
+    # Sort by gap_pct (closest to cross first)
+    bullish.sort(key=lambda x: x["gap_pct"])
+    bearish.sort(key=lambda x: x["gap_pct"])
+    touching.sort(key=lambda x: x["gap_pct"])
+
+    result = {
+        "bridge_online": data.get("bridge_online", False),
+        "total_checked": len(bridge_symbols),
+        "bullish_count": len(bullish),
+        "bearish_count": len(bearish),
+        "touching_count": len(touching),
+        "bullish": bullish,
+        "bearish": bearish,
+        "touching": touching,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+    _ema_live_cache["data"] = result
+    _ema_live_cache["ts"] = _t.time()
+    return result
 
 @app.get("/health")
 async def health():
