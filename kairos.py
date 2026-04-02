@@ -42,18 +42,18 @@ class TelegramQueue:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id INTEGER NOT NULL,
                 message TEXT NOT NULL,
-                parse_mode TEXT DEFAULT 'Markdown',
+                parse_mode TEXT DEFAULT '',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 sent INTEGER DEFAULT 0,
                 sent_at TEXT
             )""")
             c.commit()
 
-    def enqueue(self, chat_id: int, message: str, parse_mode: str = "Markdown"):
+    def enqueue(self, chat_id: int, message: str, parse_mode: str = ""):
         with self._conn() as c:
             c.execute(
                 "INSERT INTO telegram_queue (chat_id, message, parse_mode) VALUES (?, ?, ?)",
-                (chat_id, message, parse_mode),
+                (chat_id, message, parse_mode or ""),
             )
             c.commit()
         logger.info("TG message queued for chat_id=%s (%d chars)", chat_id, len(message))
@@ -298,15 +298,16 @@ class KairosAgent:
         except Exception:
             admin_id = "669769765"
         try:
-            ok = await self._tg_send(int(admin_id), msg, parse_mode="Markdown")
+            # No parse_mode — alerts contain service names with underscores
+            ok = await self._tg_send(int(admin_id), msg)
             if ok:
                 self._alerts_sent += 1
             elif self._ff.is_enabled("telegram_queue"):
-                self._tg_queue.enqueue(int(admin_id), msg)
+                self._tg_queue.enqueue(int(admin_id), msg, parse_mode="")
         except Exception as e:
             logger.error("KAIROS alert send error: %s", e)
             if self._ff.is_enabled("telegram_queue"):
-                self._tg_queue.enqueue(int(admin_id or 669769765), msg)
+                self._tg_queue.enqueue(int(admin_id or 669769765), msg, parse_mode="")
 
     async def _flush_tg_queue(self):
         pending = self._tg_queue.get_pending(limit=20)
@@ -316,7 +317,8 @@ class KairosAgent:
         flushed = 0
         for msg in pending:
             try:
-                ok = await self._tg_send(msg["chat_id"], msg["message"], parse_mode=msg["parse_mode"])
+                _pm = msg["parse_mode"] if msg["parse_mode"] else None
+                ok = await self._tg_send(msg["chat_id"], msg["message"], parse_mode=_pm)
                 if ok:
                     self._tg_queue.mark_sent(msg["id"])
                     flushed += 1
@@ -365,18 +367,20 @@ class KairosAgent:
         ]
 
     def format_tg_status(self) -> str:
+        """Plain text — no Markdown (service names contain underscores)."""
         s = self.get_status()
         if not s["enabled"]:
-            return "🤖 KAIROS: معطّل\nشغّله: /api/flags/kairos/toggle"
+            return "🤖 KAIROS: معطّل\nشغّله من الداشبورد أو API"
         lines = [
-            "🤖 *KAIROS Agent*",
+            "🤖 KAIROS Agent",
             f"📊 Checks: {s['total_checks']}",
             f"🔔 Alerts: {s['alerts_sent']}",
             f"🔧 Auto-fixes: {s['auto_fixes']}",
             f"📬 Queue: {s['tg_queue_pending']} pending",
         ]
         if s["current_down"]:
-            lines.append(f"🔴 Down: {', '.join(s['current_down'])}")
+            down = ", ".join(d.replace("_", " ") for d in s["current_down"])
+            lines.append(f"🔴 Down: {down}")
         else:
             lines.append("🟢 All services OK")
         if s["last_check"]:

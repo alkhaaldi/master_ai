@@ -4985,7 +4985,7 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
     if not _cb_tg.is_available():
         logger.warning(f"TG circuit open, dropping message to {chat_id}")
         if kairos_agent and hasattr(kairos_agent, 'tg_queue') and ff.is_enabled("telegram_queue"):
-            kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "Markdown")
+            kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "")
         return False
 
     global _tg_client
@@ -5002,14 +5002,14 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
                 _cb_tg.record_failure()
                 logger.error(f"TG send fail: {resp.text[:200]}")
                 if kairos_agent and hasattr(kairos_agent, 'tg_queue') and ff.is_enabled("telegram_queue"):
-                    kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "Markdown")
+                    kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "")
                 return False
             _cb_tg.record_success()
         except Exception as e:
             _cb_tg.record_failure()
             logger.error(f"TG send error: {e}")
             if kairos_agent and hasattr(kairos_agent, 'tg_queue') and ff.is_enabled("telegram_queue"):
-                kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "Markdown")
+                kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "")
             return False
     return True
 
