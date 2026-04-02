@@ -17,15 +17,26 @@ logger = logging.getLogger("tool_registry")
 
 
 class ToolEntry:
-    __slots__ = ("name", "fn", "category", "description", "requires", "call_count", "last_called", "avg_ms")
+    """Tool with 3-layer validation: validateInput -> checkPermission -> execute (Tier1 #5)."""
+    __slots__ = (
+        "name", "fn", "category", "description", "requires",
+        "call_count", "last_called", "avg_ms",
+        "validate_fn", "permission_fn", "is_read_only", "is_destructive",
+    )
 
     def __init__(self, name: str, fn: Callable, category: str = "general",
-                 description: str = "", requires: list[str] = None):
+                 description: str = "", requires: list[str] = None,
+                 validate_fn: Callable = None, permission_fn: Callable = None,
+                 is_read_only: bool = False, is_destructive: bool = False):
         self.name = name
         self.fn = fn
         self.category = category
         self.description = description
-        self.requires = requires or []  # e.g. ["home_assistant", "bridge"]
+        self.requires = requires or []
+        self.validate_fn = validate_fn       # Layer 1: input validation
+        self.permission_fn = permission_fn   # Layer 2: permission check
+        self.is_read_only = is_read_only
+        self.is_destructive = is_destructive
         self.call_count = 0
         self.last_called = None
         self.avg_ms = 0.0
@@ -59,9 +70,15 @@ class ToolRegistry:
         return True
 
     def register(self, name: str, fn: Callable, category: str = "general",
-                 description: str = "", requires: list[str] = None):
-        """Register a tool."""
-        self._tools[name] = ToolEntry(name, fn, category, description, requires)
+                 description: str = "", requires: list[str] = None,
+                 validate_fn: Callable = None, permission_fn: Callable = None,
+                 is_read_only: bool = False, is_destructive: bool = False):
+        """Register a tool with optional validation and permission layers."""
+        self._tools[name] = ToolEntry(
+            name, fn, category, description, requires,
+            validate_fn=validate_fn, permission_fn=permission_fn,
+            is_read_only=is_read_only, is_destructive=is_destructive,
+        )
         logger.debug("Tool registered: %s [%s]", name, category)
 
     def get(self, name: str) -> Optional[ToolEntry]:
@@ -89,18 +106,33 @@ class ToolRegistry:
         return all(self._health.is_up(dep) for dep in tool.requires)
 
     async def call(self, name: str, **kwargs) -> Any:
-        """Call a tool by name. Tracks stats, fires hooks, checks health."""
+        """Call a tool with 3-layer validation (Tier1 #5):
+        Layer 1: validateInput (structural checks)
+        Layer 2: checkPermission (authorization + health)
+        Layer 3: execute (actual call)
+        """
         if not self._is_enabled():
             raise RuntimeError("tool_registry disabled")
         tool = self._tools.get(name)
         if not tool:
             raise KeyError(f"Unknown tool: {name}")
 
-        # Health check
+        # ── Layer 1: Validate Input ──
+        if tool.validate_fn:
+            err = tool.validate_fn(**kwargs)
+            if err:
+                raise ValueError(f"Tool '{name}' input validation failed: {err}")
+
+        # ── Layer 2: Check Permission (health + custom) ──
         if not self.is_available(name):
             unavail = [d for d in tool.requires if self._health and not self._health.is_up(d)]
             raise RuntimeError(f"Tool '{name}' unavailable — deps down: {unavail}")
+        if tool.permission_fn:
+            allowed = tool.permission_fn(**kwargs)
+            if not allowed:
+                raise PermissionError(f"Tool '{name}' permission denied")
 
+        # ── Layer 3: Execute ──
         t0 = time.time()
         try:
             if asyncio.iscoroutinefunction(tool.fn):
