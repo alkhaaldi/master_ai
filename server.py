@@ -612,6 +612,8 @@ HA_TOKEN = os.getenv("HA_TOKEN", "")
 from feature_flags import FeatureFlags
 from service_health import ServiceHealthHub
 from kairos import KairosAgent
+from hooks import HookRegistry
+from tool_registry import ToolRegistry
 _db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
 ff = FeatureFlags(_db_path)
 FEATURE_CIRCUIT_BREAKERS = ff.is_enabled("circuit_breakers")
@@ -620,6 +622,8 @@ FEATURE_SPEED_TEMPLATES = ff.is_enabled("speed_templates")
 FEATURE_SMART_ROUTER_V2 = ff.is_enabled("smart_router_v2")
 FEATURE_ENTITY_HEALTH = ff.is_enabled("entity_health")
 health_hub = ServiceHealthHub(_db_path)
+hook_registry = HookRegistry(_db_path, ff=ff)
+tool_reg = ToolRegistry(ff=ff, health_hub=health_hub, hooks=hook_registry)
 kairos_agent = None  # initialized in lifespan with tg_send
 EXTERNAL_TIMEOUT = 8  # seconds max for external calls
 AGENT_SECRET = os.getenv("AGENT_SECRET", "")
@@ -2907,6 +2911,29 @@ async def lifespan(app):
     )
     asyncio.create_task(kairos_agent.start())
     logger.info("KAIROS agent scheduled (gated by feature flag)")
+    health_hub.set_hooks(hook_registry)
+    logger.info("Hooks wired into health_hub")
+    # Phase 6: Register tools in catalog
+    tool_reg.register("ha_get_state", _exec_ha_get_state, category="home",
+                      description="Get Home Assistant entity state", requires=["home_assistant"])
+    tool_reg.register("ha_call_service", _exec_ha_call_service, category="home",
+                      description="Call Home Assistant service", requires=["home_assistant"])
+    tool_reg.register("ssh_run", _exec_ssh_run, category="system",
+                      description="Run shell command on RPi")
+    try:
+        from bridge_client import BridgeClient, BRIDGE_BASE_URL
+        tool_reg.register("bridge_status", lambda: BridgeClient(BRIDGE_BASE_URL).get_status(),
+                          category="trading", description="TradingView Bridge status", requires=["bridge"])
+    except Exception:
+        pass
+    try:
+        from stock_radar import get_radar_snapshot
+        tool_reg.register("radar_snapshot", get_radar_snapshot, category="trading",
+                          description="Stock radar daily snapshot")
+    except Exception:
+        pass
+    logger.info(f"Tool registry: {len(tool_reg.list_tools())} tools registered")
+
     yield
     logger.info("Master AI shutting down")
 
@@ -7616,6 +7643,7 @@ async def toggle_feature_flag(name: str):
     FEATURE_SMART_ROUTER_V2 = ff.is_enabled("smart_router_v2")
     FEATURE_ENTITY_HEALTH = ff.is_enabled("entity_health")
     logger.info(f"Feature flag '{name}' toggled to {new_val}")
+    hook_registry.fire_sync("flag_toggled", name=name, enabled=new_val)
     return {"name": name, "enabled": new_val}
 
 # ── Service Health Hub API ────────────────────────────────
@@ -7653,6 +7681,31 @@ async def get_kairos_log(limit: int = 50):
     if kairos_agent is None:
         return {"error": "kairos not initialized"}
     return {"log": kairos_agent.get_log(limit)}
+
+# ── Hooks + Tool Registry API (Phase 6) ──────────────────
+@app.get("/api/hooks/stats")
+async def get_hooks_stats():
+    return hook_registry.get_stats()
+
+@app.get("/api/hooks/log")
+async def get_hooks_log(limit: int = 50, event: str = None):
+    return {"log": hook_registry.get_log(limit, event)}
+
+@app.get("/api/tools")
+async def get_tools(category: str = None, q: str = None):
+    if q:
+        return {"tools": tool_reg.find(q)}
+    return tool_reg.get_stats()
+
+@app.get("/api/tools/{name}")
+async def get_tool_detail(name: str):
+    tool = tool_reg.get(name)
+    if not tool:
+        return {"error": f"Tool '{name}' not found"}
+    d = tool.to_dict()
+    d["available"] = tool_reg.is_available(name)
+    return d
+
 
 
 

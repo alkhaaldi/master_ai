@@ -58,11 +58,16 @@ class ServiceHealthHub:
         "daily_snapshot",
     ]
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str = None, hooks=None):
         self._services: dict[str, ServiceStatus] = {}
         self._db_path = db_path
+        self._hooks = hooks
         for name in self.SERVICE_NAMES:
             self._services[name] = ServiceStatus(name)
+
+    def set_hooks(self, hooks):
+        """Wire hooks after construction (avoids circular init)."""
+        self._hooks = hooks
 
     # ── Passive marks (called by existing code) ──────────
     def mark_up(self, name: str, details: dict = None):
@@ -70,14 +75,20 @@ class ServiceHealthHub:
         if not svc:
             svc = ServiceStatus(name)
             self._services[name] = svc
+        was_down = not svc.is_available
         svc.mark_up(details)
+        if was_down and self._hooks:
+            self._hooks.fire_sync("service_up", name=name)
 
     def mark_down(self, name: str, reason: str, details: dict = None):
         svc = self._services.get(name)
         if not svc:
             svc = ServiceStatus(name)
             self._services[name] = svc
+        was_up = svc.is_available
         svc.mark_down(reason, details)
+        if was_up and self._hooks:
+            self._hooks.fire_sync("service_down", name=name, reason=reason)
 
     def is_up(self, name: str) -> bool:
         svc = self._services.get(name)
