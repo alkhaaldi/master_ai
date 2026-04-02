@@ -610,6 +610,7 @@ HA_URL = os.getenv("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.getenv("HA_TOKEN", "")
 # Feature Flags v2: DB-backed with env var override
 from feature_flags import FeatureFlags
+from service_health import ServiceHealthHub
 _db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
 ff = FeatureFlags(_db_path)
 FEATURE_CIRCUIT_BREAKERS = ff.is_enabled("circuit_breakers")
@@ -617,6 +618,7 @@ FEATURE_TIMEOUTS = ff.is_enabled("timeouts")
 FEATURE_SPEED_TEMPLATES = ff.is_enabled("speed_templates")
 FEATURE_SMART_ROUTER_V2 = ff.is_enabled("smart_router_v2")
 FEATURE_ENTITY_HEALTH = ff.is_enabled("entity_health")
+health_hub = ServiceHealthHub(_db_path)
 EXTERNAL_TIMEOUT = 8  # seconds max for external calls
 AGENT_SECRET = os.getenv("AGENT_SECRET", "")
 MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
@@ -7592,6 +7594,30 @@ async def toggle_feature_flag(name: str):
     FEATURE_ENTITY_HEALTH = ff.is_enabled("entity_health")
     logger.info(f"Feature flag '{name}' toggled to {new_val}")
     return {"name": name, "enabled": new_val}
+
+# ── Service Health Hub API ────────────────────────────────
+@app.get("/api/service-health")
+async def get_service_health():
+    """Central health status — reads from existing circuit breakers + timestamps."""
+    bridge_st = None
+    try:
+        from bridge_client import BridgeClient, BRIDGE_BASE_URL
+        client = BridgeClient(BRIDGE_BASE_URL)
+        bridge_st = client.get_status()
+    except Exception:
+        pass
+    last_b, last_g = None, None
+    try:
+        from news_engine import last_boursa_refresh, last_gemini_refresh
+        last_b, last_g = last_boursa_refresh, last_gemini_refresh
+    except Exception:
+        pass
+    return health_hub.check_all(
+        cb_ha=_cb_ha, cb_llm=_cb_llm, cb_tg=_cb_tg,
+        bridge_status=bridge_st,
+        last_boursa=last_b, last_gemini=last_g,
+    )
+
 
 
 
