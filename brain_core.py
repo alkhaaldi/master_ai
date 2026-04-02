@@ -10,9 +10,64 @@ import logging
 import sqlite3
 import asyncio
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger("brain")
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# MEMORY AGE UTILITIES  (Pattern 1+2 from Claude Code Source Analysis)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def memory_age(ts_str: str) -> str:
+    """Human-readable age from an ISO/SQL timestamp string.
+    Returns: 'today', 'yesterday', '3 days ago', '2 weeks ago', etc."""
+    if not ts_str:
+        return "unknown"
+    try:
+        ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=None)
+        now = datetime.now(ts.tzinfo) if ts.tzinfo else datetime.now()
+        delta = now - ts
+        days = delta.days
+        if days <= 0:
+            return "today"
+        if days == 1:
+            return "yesterday"
+        if days < 7:
+            return f"{days} days ago"
+        if days < 30:
+            weeks = days // 7
+            return f"{weeks} week{'s' if weeks > 1 else ''} ago"
+        months = days // 30
+        return f"{months} month{'s' if months > 1 else ''} ago"
+    except Exception:
+        return "unknown"
+
+
+def memory_age_days(ts_str: str) -> int:
+    """Return integer days since timestamp. -1 on error."""
+    if not ts_str:
+        return -1
+    try:
+        ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=None)
+        now = datetime.now(ts.tzinfo) if ts.tzinfo else datetime.now()
+        return (now - ts).days
+    except Exception:
+        return -1
+
+
+def memory_freshness_warning(ts_str: str) -> str:
+    """Return staleness warning for memories older than 1 day. Empty string if fresh."""
+    days = memory_age_days(ts_str)
+    if days <= 0:
+        return ""
+    age = memory_age(ts_str)
+    return f"⚠️ {age} — verify before acting"
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # PATHS & STATE
@@ -644,7 +699,8 @@ def get_relevant_memories(query: str, limit: int = 5) -> str:
         with sqlite3.connect(_AUDIT_DB, timeout=5) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                "SELECT id, category, type, content, confidence "
+                "SELECT id, category, type, content, confidence, "
+                "COALESCE(updated_at, created_at) AS ts "
                 "FROM memory WHERE active=1 ORDER BY confidence DESC LIMIT 50"
             ).fetchall()
         if not rows:
@@ -692,7 +748,12 @@ def get_relevant_memories(query: str, limit: int = 5) -> str:
 
         lines = []
         for _, r in top:
-            lines.append("[" + r["category"] + "/" + r["type"] + "] " + r["content"])
+            prefix = "[" + r["category"] + "/" + r["type"] + "] "
+            warning = memory_freshness_warning(r["ts"]) if r["ts"] else ""
+            if warning:
+                lines.append(prefix + r["content"] + "  " + warning)
+            else:
+                lines.append(prefix + r["content"])
         return chr(10).join(lines)
     except Exception as e:
         return "(memory error: " + str(e) + ")"
