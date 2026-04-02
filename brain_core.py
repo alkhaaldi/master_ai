@@ -778,29 +778,31 @@ def save_conversation(role: str, content: str, channel: str = "telegram"):
 # OBSERVATION MANIFEST — Lightweight Index (Tier2 #9)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-def get_observation_manifest(category: str = None, max_items: int = 200) -> list:
+def get_observation_manifest(category: str = None, scope: str = None, max_items: int = 200) -> list:
     """Return lightweight memory headers for LLM ranking.
     Each item: {id, category, type, summary (first 100 chars), age_str, timestamp}.
     Sorted newest-first, capped at max_items."""
     try:
         conn = sqlite3.connect(_AUDIT_DB, timeout=5)
         conn.row_factory = sqlite3.Row
+        where_parts = ["active=1"]
+        params = []
         if category:
-            rows = conn.execute(
-                "SELECT id, category, type, SUBSTR(content, 1, 100) AS summary, "
-                "COALESCE(updated_at, created_at) AS ts "
-                "FROM memory WHERE active=1 AND category=? "
-                "ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?",
-                (category, max_items)
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT id, category, type, SUBSTR(content, 1, 100) AS summary, "
-                "COALESCE(updated_at, created_at) AS ts "
-                "FROM memory WHERE active=1 "
-                "ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?",
-                (max_items,)
-            ).fetchall()
+            where_parts.append("category=?")
+            params.append(category)
+        if scope:
+            where_parts.append("scope=?")
+            params.append(scope)
+        where_clause = " AND ".join(where_parts)
+        params.append(max_items)
+        rows = conn.execute(
+            f"SELECT id, category, type, SUBSTR(content, 1, 100) AS summary, "
+            f"COALESCE(updated_at, created_at) AS ts, "
+            f"COALESCE(scope, 'global') AS scope "
+            f"FROM memory WHERE {where_clause} "
+            f"ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?",
+            params
+        ).fetchall()
         conn.close()
         return [
             {
@@ -810,6 +812,7 @@ def get_observation_manifest(category: str = None, max_items: int = 200) -> list
                 "summary": r["summary"],
                 "age_str": memory_age(r["ts"]),
                 "timestamp": r["ts"],
+                "scope": r["scope"] if "scope" in r.keys() else "global",
             }
             for r in rows
         ]
