@@ -611,6 +611,7 @@ HA_TOKEN = os.getenv("HA_TOKEN", "")
 # Feature Flags v2: DB-backed with env var override
 from feature_flags import FeatureFlags
 from service_health import ServiceHealthHub
+from kairos import KairosAgent
 _db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
 ff = FeatureFlags(_db_path)
 FEATURE_CIRCUIT_BREAKERS = ff.is_enabled("circuit_breakers")
@@ -619,6 +620,7 @@ FEATURE_SPEED_TEMPLATES = ff.is_enabled("speed_templates")
 FEATURE_SMART_ROUTER_V2 = ff.is_enabled("smart_router_v2")
 FEATURE_ENTITY_HEALTH = ff.is_enabled("entity_health")
 health_hub = ServiceHealthHub(_db_path)
+kairos_agent = None  # initialized in lifespan with tg_send
 EXTERNAL_TIMEOUT = 8  # seconds max for external calls
 AGENT_SECRET = os.getenv("AGENT_SECRET", "")
 MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
@@ -2897,6 +2899,14 @@ async def lifespan(app):
                     _log.error(f"Brain scheduler error: {_e}")
                 await _aio.sleep(600)  # check every 10 minutes
         asyncio.create_task(_brain_scheduler())
+    # Phase 3: KAIROS background agent
+    global kairos_agent
+    kairos_agent = KairosAgent(
+        health_hub=health_hub, ff=ff, tg_send_fn=tg_send, db_path=_db_path,
+        cb_ha=_cb_ha, cb_llm=_cb_llm, cb_tg=_cb_tg,
+    )
+    asyncio.create_task(kairos_agent.start())
+    logger.info("KAIROS agent scheduled (gated by feature flag)")
     yield
     logger.info("Master AI shutting down")
 
@@ -4947,6 +4957,8 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
     # Phase 1: CB check for Telegram
     if not _cb_tg.is_available():
         logger.warning(f"TG circuit open, dropping message to {chat_id}")
+        if kairos_agent and hasattr(kairos_agent, 'tg_queue') and ff.is_enabled("telegram_queue"):
+            kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "Markdown")
         return False
 
     global _tg_client
@@ -4962,11 +4974,15 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
             if resp.status_code != 200:
                 _cb_tg.record_failure()
                 logger.error(f"TG send fail: {resp.text[:200]}")
+                if kairos_agent and hasattr(kairos_agent, 'tg_queue') and ff.is_enabled("telegram_queue"):
+                    kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "Markdown")
                 return False
             _cb_tg.record_success()
         except Exception as e:
             _cb_tg.record_failure()
             logger.error(f"TG send error: {e}")
+            if kairos_agent and hasattr(kairos_agent, 'tg_queue') and ff.is_enabled("telegram_queue"):
+                kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "Markdown")
             return False
     return True
 
@@ -4996,6 +5012,11 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
 
     if cmd == "/start":
         return "\U0001f3e0 Master AI Bot\n\u0623\u0631\u0633\u0644 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \u0623\u0648 \u0623\u0645\u0631.\n\n/status \u2014 \u062d\u0627\u0644\u0629 \u0627\u0644\u0646\u0638\u0627\u0645\n/lights \u2014 \u0627\u0644\u0623\u0636\u0648\u0627\u0621 \u0627\u0644\u0645\u0634\u063a\u0644\u0629\n/temp \u2014 \u062d\u0631\u0627\u0631\u0629 \u0627\u0644\u0645\u0643\u064a\u0641\u0627\u062a"
+
+    if cmd == "/kairos":
+        if kairos_agent:
+            return kairos_agent.format_tg_status()
+        return "🤖 KAIROS: not initialized"
 
     if cmd == "/report" or cmd == "/morning":
         try:
@@ -7617,6 +7638,20 @@ async def get_service_health():
         bridge_status=bridge_st,
         last_boursa=last_b, last_gemini=last_g,
     )
+
+# ── KAIROS Agent API ──────────────────────────────────────
+@app.get("/api/kairos/status")
+async def get_kairos_status():
+    if kairos_agent is None:
+        return {"error": "kairos not initialized"}
+    return kairos_agent.get_status()
+
+@app.get("/api/kairos/log")
+async def get_kairos_log(limit: int = 50):
+    if kairos_agent is None:
+        return {"error": "kairos not initialized"}
+    return {"log": kairos_agent.get_log(limit)}
+
 
 
 
