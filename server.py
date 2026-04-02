@@ -70,7 +70,7 @@ except Exception as _e:
     logging.getLogger("master_ai").warning("tg_home not loaded: %s", _e)
 
 try:
-    from tg_session import tg_session_get, tg_session_upsert, tg_session_append_context, tg_session_reset, detect_followup
+    from tg_session import tg_session_get, tg_session_upsert, tg_session_append_context, tg_session_reset, detect_followup, tg_session_get_compacted
     from tg_session_resolver import resolve_followup_action
     pass  # logger not ready yet
     TG_SESSION_OK = True
@@ -7407,9 +7407,11 @@ async def _tg_handle_message_core(chat_id, text: str, user: dict):
     # Inject session context into short-term memory
     if TG_SESSION_OK:
         try:
-            _sess = tg_session_get(str(chat_id))
-            if _sess and _sess.get("context_window"):
-                for _cm in _sess["context_window"][-4:]:  # last 4 context items
+            _ctx_msgs = tg_session_get_compacted(str(chat_id), last_message=text)
+            for _cm in _ctx_msgs[-6:]:
+                if _cm.get("_compacted"):
+                    memory_add_short_term("system", _cm.get("text", ""))
+                else:
                     memory_add_short_term(_cm.get("role","user"), _cm.get("text",""))
         except Exception:
             pass

@@ -6,7 +6,7 @@ logger = logging.getLogger("tg_session")
 
 AUDIT_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audit.db")
 SESSION_TTL_MIN = 45
-MAX_CONTEXT = 5
+MAX_CONTEXT = 20  # expanded for compaction (Phase 5)
 
 # --- Schema ---
 _CREATE_TABLE = """
@@ -115,6 +115,34 @@ def tg_session_append_context(user_id: str, role: str, text: str):
         tg_session_upsert(user_id, context_window=ctx)
     except Exception as e:
         logger.error(f"session_append error: {e}")
+
+
+def tg_session_get_compacted(user_id: str, last_message: str = "") -> list:
+    """Get context window, compacted if >12 messages. Returns list of dicts."""
+    try:
+        from feature_flags import FeatureFlags
+        import os
+        _db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "life.db")
+        _ff = FeatureFlags(_db)
+        if not _ff.is_enabled("chat_compaction"):
+            sess = tg_session_get(user_id)
+            return sess["context_window"] if sess else []
+        sess = tg_session_get(user_id)
+        ctx = sess["context_window"] if sess else []
+        if len(ctx) <= 12:
+            return ctx
+        # Compact
+        try:
+            from context_compactor import ContextCompactor
+            compactor = ContextCompactor(_db)
+            return compactor.compact(ctx, last_message=last_message, conversation_id=user_id)
+        except Exception as e:
+            logger.warning(f"Compaction failed, fallback to last 10: {e}")
+            return ctx[-10:]
+    except Exception as e:
+        logger.error(f"get_compacted error: {e}")
+        sess = tg_session_get(user_id)
+        return (sess["context_window"] if sess else [])[-10:]
 
 
 def tg_session_reset(user_id: str):
