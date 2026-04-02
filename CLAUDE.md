@@ -245,3 +245,45 @@ After completing any task, always report:
 2. Validation results (quick_check, smoke_test output)
 3. Final outcome (success/partial/failed)
 4. Any follow-up needed
+
+
+## Claude Code Source Analysis Modules (Added 2026-04-03)
+20 patterns extracted from Claude Code source, implemented in 3 tiers.
+These modules are NEW — use them instead of reinventing solutions.
+
+### Available Modules (import and use):
+| Module | What It Does | Usage |
+|--------|-------------|-------|
+| circuit_breaker.py | Stop retrying after N failures | `from circuit_breaker import CircuitBreaker` |
+| processing_cursor.py | Track incremental processing position | `from processing_cursor import ProcessingCursor` |
+| task_manager.py | Track background ops (PENDING→RUNNING→DONE) | `TaskManager.instance().create_task(TaskType.X)` |
+| memory_recall.py | Haiku selects relevant Brain observations | `await find_relevant_memories(query)` |
+| master_ai_tool.py | Tool definitions with autonomy flags | `MasterAITool(name=..., requires_bridge=True)` |
+| coalesced_executor.py | Prevent overlapping operations | `await executor.run(func)` |
+| session_memory.py | Track conversation summaries | `SessionTracker().add_message(role, content)` |
+| memory_prefetch.py | Start Brain lookup before intent completes | `MemoryPrefetcher(query)` |
+| auto_memory_extractor.py | Auto-extract observations from conversations | `extractor.record_message(role, text)` |
+| parallel_coordinator.py | Run independent tasks concurrently | `coord.add_worker(name, func); await coord.run()` |
+| context_manager.py | 4-layer context compaction | `messages = await manage_context(messages)` |
+| intent_state_machine.py | State machine for intent routing | `IntentContext(message_id, text)` |
+
+### Key brain_core.py Additions:
+- `get_observation_manifest()` — lightweight headers for LLM ranking
+- `format_observation_manifest()` — one-liner per observation
+- `get_full_observations(ids)` — load full text for selected IDs only
+- Observations now have `scope` column: global/stock/device
+- Staleness warnings: `format_staleness_warning(timestamp)`
+
+### Dashboard Updates:
+- system.html: Live Tasks Panel (/api/tasks), Circuit Breaker status
+- home.html: Health Pulse Bar (Bridge/Radar/News/Tasks)
+
+### DB Changes:
+- brain_observations: `scope` column + index
+- session_summaries: new table
+- intent_audit: state machine logs
+
+### Full Plans:
+- `_tools/CLAUDE_CODE_SOURCE_ANALYSIS_PLAN.md` — status overview
+- `_tools/CLAUDE_CODE_SOURCE_ANALYSIS_P1_P2.md` — full analysis (1584 lines)
+- `_tools/TIER3_ARCHITECTURE_PLAN.md` — Tier 3 details

@@ -1,384 +1,170 @@
 # CLAUDE_CONTEXT.md — Master AI v9.0.0
-# Last Updated: 2026-04-02
+# Last Updated: 2026-04-03
 # مصدر الحقيقة الأول: GET /system/context
 
 ## Quick Reference
 - **Version:** v9.0.0 | **Schema:** 3.4.0
 - **Port:** 9000 | **Tunnel:** https://ai.salem-home.com
-- **Git:** main | **~630 commits**
-- **DB:** data/life.db | **~45 tables** (5 new from Claude Code Patterns project)
+- **Git:** main | **~650 commits**
+- **DB:** data/life.db | **~48 tables** (session_summaries added)
 - **Autonomy:** Level 3 | Policy: auto ≤30, approval ≤60, block ≥61
-- **Plugins:** 9 | **Schedulers:** 12+
-- **Feature Flags:** 15 (10 infrastructure + 5 trading, DB-backed, API-toggleable)
-- **New Files (Apr 2):** feature_flags.py, service_health.py, kairos.py, context_compactor.py, hooks.py, tool_registry.py
+- **Feature Flags:** 15 (10 infrastructure + 5 trading, DB-backed)
+- **New Modules (Apr 2-3):** 14 new files from Claude Code Source Analysis
 
 ## Architecture
 RPi5 + FastAPI (server.py) + systemd service.
 Bridge API on Windows PC (192.168.111.158:8059) — TradingView WebSocket data.
-Dashboard: 9 HTML iframe pages in HA via Cloudflare tunnel (7 core + 2 utility).
-**HTML live path:** `share/master_ai/www/trading/` (served by FastAPI). `config/www/trading/` was DELETED — do NOT recreate it.
+Dashboard: 9 HTML iframe pages in HA via Cloudflare tunnel.
+**HTML live path:** `share/master_ai/www/trading/` (served by FastAPI). `config/www/trading/` was DELETED.
+
+---
+
+## Claude Code Source Analysis — 20 Patterns (Apr 2-3, 2026)
+
+Extracted 21 architectural patterns from Claude Code leaked source (~10K lines, 16 files).
+20 implemented across 3 tiers. 14 new Python modules + dashboard updates.
+Full analysis: `_tools/CLAUDE_CODE_SOURCE_ANALYSIS_P1_P2.md` (1584 lines).
+Plans: `_tools/TIER2_STRUCTURED_IMPROVEMENTS_PLAN.md`, `_tools/TIER3_ARCHITECTURE_PLAN.md`
+
+### New Modules Created (14 files):
+| Module | Purpose |
+|--------|---------|
+| circuit_breaker.py | Stop retrying after N failures (reusable) |
+| processing_cursor.py | Incremental processing with cursor tracking |
+| tool_registry.py | 3-layer validation (validate→permission→execute) |
+| task_manager.py | TaskManager singleton for background ops tracking |
+| memory_recall.py | Haiku-powered observation selection from manifest |
+| master_ai_tool.py | Tool definitions with autonomy flags + pre-flight |
+| coalesced_executor.py | Prevents overlapping background operations |
+| session_memory.py | Conversation-level summaries after exchanges |
+| memory_prefetch.py | Parallel Brain lookup before intent routing |
+| auto_memory_extractor.py | Auto-extract observations from conversations |
+| parallel_coordinator.py | Run independent analyses concurrently |
+| context_manager.py | 4-layer context compaction (trim→compress→summarize→emergency) |
+| intent_state_machine.py | State machine for intent routing with audit |
+
+### Modified Existing Files:
+- brain_core.py: staleness warnings, memory manifest, observation scope
+- server.py: progress indicators, cleanup blocks, cron routing
+- stock_radar.py: finally blocks, coalesced execution
+- news_engine.py: per-source circuit breakers
+- dashboard_api.py: /api/tasks endpoint
+- system.html: Live Tasks Panel + Circuit Breaker status
+- home.html: Health Pulse Bar (Bridge/Radar/News/Tasks)
+
+### Key Patterns Explained:
+1. **Circuit Breaker** — stops retrying failing operations after 3 failures, cooldown period, auto-reset on success
+2. **Memory Staleness** — observations >1 day old get warning: "⚠️ N days ago — verify before acting"
+3. **Task Manager** — PENDING→RUNNING→COMPLETED/FAILED lifecycle, /api/tasks endpoint
+4. **LLM-Ranked Recall** — Haiku selects top 5 relevant Brain observations per query
+5. **Background Memory Extraction** — auto-extracts observations from conversations (fire-and-forget)
+6. **Context Manager** — 4-layer compaction prevents token overflow in long conversations
+7. **3-Level Memory Scoping** — observations tagged: global/stock/device
+8. **Coalesced Executor** — if operation running, stash new request, run trailing after
+
+### DB Changes:
+- brain_observations: added `scope` column (global/stock/device) + index
+- session_summaries: new table for conversation tracking
+- intent_audit: state machine audit trail
+
+---
 
 ## Claude Code Patterns — Infrastructure (Added 2026-04-02)
-Inspired by Claude Code source leak analysis. 6 phases, 7 new files, 5 new DB tables, ~15 new endpoints.
+6 phases, 7 files, 5 DB tables, ~15 endpoints. All feature-flagged.
 
-### Phase 1: Feature Flags v2 (`feature_flags.py`)
-- **15 flags** in `feature_flags` table (life.db), DB-backed, thread-safe, 60s cache
-- Env vars (`FEATURE_*`) still override DB values for backward compatibility
-- **Endpoints:** GET `/api/flags`, POST `/api/flags/{name}/toggle`
-- Toggle any feature without restart
-- Commits: `07b68b5`
+### Phase 1-6 Summary:
+- **Phase 1:** Feature Flags v2 (feature_flags.py, 15 flags, DB-backed)
+- **Phase 2:** Service Health Hub (service_health.py, 7 services)
+- **Phase 3:** KAIROS Background Agent (kairos.py, 5min checks, Telegram alerts)
+- **Phase 4:** Telegram Queue (offline buffer, auto-flush on recovery)
+- **Phase 5:** Chat Context Compaction (context_compactor.py, 4-stage pipeline)
+- **Phase 6:** Hooks + Tool Registry (hooks.py 13 events, tool_registry.py 12 tools)
 
-### Phase 2: Service Health Hub (`service_health.py`)
-- Central health monitoring for 7 services: bridge, home_assistant, telegram, llm_anthropic, daily_snapshot, news_boursa, news_gemini
-- Reads existing circuit breakers (bridge_client, gemini_scanner, server.py LLM)
-- Traffic light status: up/down per service
-- **Endpoint:** GET `/api/service-health`
-- Commit: `2668bcc`
+### Trading Integration Layers 1-4:
+- **Layer 1:** Degraded mode — Bridge status → dashboard degraded banners
+- **Layer 2:** Signal hooks — after_signal, before_trade_alert, after_daily_refresh
+- **Layer 3:** Trading tools — bridge_status, open_trades, trade_stats, news tools
+- **Layer 4:** Trading flags — radar_enabled, momentum_alerts, golden_engine, etc.
 
-### Phase 3: KAIROS Background Agent (`kairos.py`)
-- Proactive health monitor — checks every 5 minutes
-- Auto-detects service failures, sends Telegram alerts (deduped per hour)
-- Sends recovery notifications when services come back
-- Daily summary at 11PM
-- Gated by `ff.is_enabled("kairos")`
-- **Tables:** `kairos_alerts`, `kairos_log`
-- **Endpoints:** GET `/api/kairos/status`, GET `/api/kairos/log`
-- **Telegram:** `/kairos` command
-- Commit: `21f3a1c`
+### Feature Flags (15):
+circuit_breakers, timeouts, smart_router_v2, entity_health, kairos, telegram_queue, chat_compaction, hooks, tool_registry, speed_templates(OFF), radar_enabled, momentum_alerts, golden_engine, position_monitor, daily_refresh
 
-### Phase 4: Telegram Queue (in `kairos.py`)
-- Offline message buffer — stores messages in DB when Telegram is down
-- Flushes queue on recovery (oldest first, max 20 per cycle)
-- **Table:** `telegram_queue`
-- tg_send fallback patched in 3 locations in server.py
-- Gated by `ff.is_enabled("telegram_queue")`
-- Commit: `21f3a1c`
+---
 
-### Phase 5: Chat Context Compaction (`context_compactor.py`)
-- 4-stage pipeline (collect → compress → rank → inject) for Telegram conversations
-- Triggers when messages > 12
-- Caches chunk summaries in `context_cache` table
-- Fallback: if compaction fails → last 10 messages only
-- Gated by `ff.is_enabled("chat_compaction")`
-- Commit: `3f88fd8`
-
-### Phase 6: Hooks + Tool Registry (`hooks.py` + `tool_registry.py`)
-- **Hooks:** 13 event types (10 infrastructure + 3 trading: after_signal, before_trade_alert, after_daily_refresh)
-- Async handlers, DB-logged in `hook_log` table
-- **Tool Registry:** 12 tools registered across 4 categories (home, system, trading, news)
-- Service health check before execution
-- **Endpoints:** GET `/api/hooks/stats`, GET `/api/hooks/log`, GET `/api/tools`, GET `/api/tools/{name}`
-- Gated by `ff.is_enabled("hooks")` and `ff.is_enabled("tool_registry")`
-- Commit: `c34876b`
-
-### Trading Engines Integration (Layers 1-4, 2026-04-02)
-Connected the trading pipeline to the 6 infrastructure modules.
-
-**Layer 1: Degraded Mode (commit 182bd75)**
-- bridge_client.py reports to service_health on every request (mark_up/mark_down)
-- dashboard_api.py returns `degraded: true` + `degraded_reason` when Bridge is down
-- stock_radar.py radar_loop skips cycles (300s sleep) when Bridge is down
-- Frontend degraded banners on home.html, radar.html, positions.html
-
-**Layer 2: Signal Hooks (commit f8980a3)**
-- stock_radar fires `after_signal` after every new EMA cross signal
-- stock_radar fires `before_trade_alert` before Telegram alerts — handlers can return `{skip: true}` to block
-- stock_radar fires `after_daily_refresh` after daily snapshot completes
-- Default handler: `_hook_check_market_hours` blocks alerts outside KSE hours
-
-**Layer 3: Trading Tools (commit 8bc3e6c)**
-- 3 trading tools: bridge_status, open_trades, trade_stats
-- 2 news tools: news_feed, news_counts
-- Total registry: 12 tools in 4 categories, health-aware execution
-
-**Layer 4: Trading Feature Flags (commit f8980a3)**
-- 5 new flags: radar_enabled, momentum_alerts, golden_engine, position_monitor, daily_refresh
-- radar_loop checks `radar_enabled` before each cycle (no restart needed to disable)
-- radar_loop checks `daily_refresh` before daily snapshot refresh
-- Total: 15 feature flags (10 infra + 5 trading)
-
-### Dashboard Cleanup (2026-04-02)
-- **Duplicate HTML path eliminated:** `config/www/trading/` was a stale copy — DELETED. Only `share/master_ai/www/trading/` exists now (served by FastAPI via Cloudflare tunnel).
-- **Nav bars unified:** All 9 active pages now have complete 9-link nav (home, radar, analysis, positions, journal, news, home-control, email, system). Zero links to archived pages.
-- **Degraded banners:** home.html, radar.html, positions.html show amber warning banner when Bridge is offline. positions.html also shows stale badge on stale prices.
-- **home.html navTo MAP cleaned:** Removed 7 dead routes to archived pages, added sub-analysis and sub-system.
-- **10 archived pages documented:** scalper, decisions, personality, brain, signals, assistant, calendar, reviews, strategies, fractal_report — files on disk, zero nav links.
-
-### Feature Flags Reference
-| Flag | Default | Description |
-|------|---------|-------------|
-| circuit_breakers | ON | Circuit breakers for external calls |
-| timeouts | ON | Request timeouts |
-| smart_router_v2 | ON | Smart intent router v2 |
-| entity_health | ON | Entity health monitoring |
-| kairos | ON | Background health agent |
-| telegram_queue | ON | Offline message buffer |
-| chat_compaction | ON | Chat context compression |
-| hooks | ON | Event hook system |
-| tool_registry | ON | Central tool catalog |
-| speed_templates | OFF (env) | Speed engine templates (env override) |
-| radar_enabled | ON | Stock radar 128-stock monitoring |
-| momentum_alerts | ON | Strong-moving stock alerts |
-| golden_engine | ON | Golden opportunities matching |
-| position_monitor | ON | Position auto-monitoring |
-| daily_refresh | ON | Daily snapshot auto-refresh |
-
-### Dashboard: system.html Updated
-- Added: Service Health traffic lights (7 services)
-- Added: KAIROS status + action log
-- Added: Feature Flags toggle switches (15 flags)
-- Auto-refresh: health 30s, KAIROS 60s, flags 60s
-
-### Master Plan Reference
-Full plan: `_tools/CLAUDE_CODE_PATTERNS_MASTERPLAN.md`
-
-## TradingView Bridge API — IMPORTANT DETAILS
-- **Location:** C:\Users\MS1\tradingview-bridge
-- **Python:** .venv313\Scripts\python.exe | uvicorn app.main:app --host 0.0.0.0 --port 8059
-- **Auth:** JWT token in tv_cookies.json (list format: [{name, value, domain, ...}])
-- **Token renewal:** TokenWatchdog background thread — auto-renews every 5 min check
-  - Reads auth_token from Chrome CDP (port 9222) via HTML scan
-  - Chrome MUST be open with: --remote-debugging-port=9222 --remote-allow-origins=* --user-data-dir=C:\Users\MS1\ChromeDebug
-  - Startup script: C:\Users\MS1\tradingview-bridge\start_bridge.bat
-- **Endpoints:**
-  - GET /health — bridge status
-  - GET /token-status — JWT expiry info
-  - POST /refresh-token — force token renewal now
-  - GET /analysis?symbol=X&interval=30 — indicators including EMA 9/21
-  - GET /quote?symbol=X — live price
-  - GET /multi-analysis?symbols=A,B,C — bulk (batches of 25, 1s delay)
-- **Indicators returned:** rsi_14, macd, ema_9, ema_21, ema_20(=ema_21), ema_50, ema_200, atr_14, bb_*, obv, vol_ratio, adx, stoch_k/d
-- **models.py fix (2026-03-31):** Added ema_21 to IndicatorBar + IndicatorsSnapshot
+## TradingView Bridge API
+- **Location:** C:\Users\MS1\tradingview-bridge | Port 8059
+- **Auth:** JWT via Chrome CDP (port 9222), TokenWatchdog auto-renews
+- **Startup:** `start_bridge.bat` (Chrome debug + Bridge + watchdog)
+- **Key Endpoints:** /analysis, /quote, /multi-analysis, /health, /token-status
+- **Indicators:** rsi_14, macd, ema_9, ema_21, ema_50, ema_200, atr_14, bb, obv, vol_ratio, adx, stoch
 
 ## Core Files
 | File | Role |
 |------|------|
-| server.py | Main FastAPI server + all endpoints |
-| dashboard_api.py | Dashboard data endpoints |
-| signal_engine.py | Signal generation (30m + 1D) with Brain weights |
-| stock_radar.py | 128 KSE stock monitoring every 90s |
-| trading_brain.py | Learning engine — Bayesian + regime-aware + decay |
-| bridge_client.py | Bridge API client (async, cache, circuit breaker) |
-| journal_engine.py | Trade journal + P&L + ATR trailing stop |
-| stock_personality_engine.py | Per-stock profiles, patterns, auto-notes |
-| golden_engine.py | Golden opportunities — pattern matching + confidence |
-| trading_decision_engine.py | Entry timing + trade plan (zone/stop/target/R:R) |
-| sr_engine.py | Support/Resistance from swing pivots + clustering |
-| brain_backfill.py | Historical backfill (1D + 30m) from Bridge |
-| priority_engine.py | Cross-domain priority ranking |
-| data_integrity.py | Data quality gate (freshness + S/R + ATR fallback) |
-| position_engine.py | Position monitoring + 5 alert types + auto breakeven |
-| risk_engine.py | Max 2/sector, max 8 positions, low liquidity downgrade |
-| sector_map.py | 130 stocks in 10 sectors |
-| kse_data_collector.py | Daily data collector from Bridge (128 stocks, scheduler 1:30PM KWT) |
-| feature_flags.py | DB-backed feature flags with API toggle (Phase 1) |
-| service_health.py | Central health monitoring for 7 services (Phase 2) |
-| kairos.py | Background health agent + Telegram queue (Phase 3+4) |
-| context_compactor.py | Chat context compression pipeline (Phase 5) |
-| hooks.py | Event hook system with 13 event types (Phase 6 + Layer 2) |
-| tool_registry.py | Central tool catalog with 12 tools (Phase 6) |
+| server.py (~462K) | Main FastAPI + all endpoints |
+| dashboard_api.py (~101K) | Dashboard data |
+| chat_v7.py (~61K) | Direct LLM + Tool Use |
+| stock_radar.py (~60K) | 128 KSE stock monitoring |
+| tg_intent_router.py (~50K) | Telegram intent routing |
+| quick_query.py (~50K) | Speed engine handlers |
+| priority_engine.py (~50K) | Cross-domain ranking |
+| brain_core.py (~34K) | Brain observations + manifest + staleness |
+| golden_engine.py (~41K) | Golden opportunities matching |
+| signal_review.py (~27K) | Daily signal review |
+| bridge_client.py (~18K) | Bridge API client |
+| news_engine.py (~18K) | Boursa RSS + Gemini news |
+| journal_engine.py | Trade journal + P&L |
+| position_engine.py | Position monitoring + alerts |
+| stock_personality_engine.py | Per-stock profiles (128 profiles, 6400 patterns) |
 
+## Trading Brain
+- 66,937 signals, 63,620 evaluated, 22.1% hit rate
+- Learning mode: bayesian_regime_aware
+- Best indicator: Volume (1.15 weight, 65% hit)
+- Worst: RSI (0.75, 25%)
 
-## Trading Brain — Learning System
-- **Total signals:** 66,937 (16,147 1D backfill + ~50,790 30m backfill)
-- **Evaluated:** 63,620
-- **Overall hit rate:** 22.1%
-- **Learning mode:** bayesian_regime_aware
-- **Indicator weights (learned):**
-  - Volume: 1.15 (best — 65% hit rate)
-  - ADX: 1.13 (63%)
-  - Stochastic: 1.05 (55%)
-  - MACD: 0.87 (37%)
-  - EMA: 0.85 (35%)
-  - RSI: 0.75 (worst — 25%)
-- **Thresholds:** brain_learned from 40,966 data points
-  - Ready: score ≥ 60, vol > 1.2
-  - Setup: score ≥ 40
-  - Watch: score ≥ 50
-  - Avoid: score < 105
-- **Regime stats:** 3 regimes (trending/transition/ranging) × 6 indicators
+## Dashboard (9 active + 10 archived)
+**Core:** home, radar, analysis, positions, journal, news, system
+**Utility:** home-control, email
+**Archived:** scalper, decisions, personality, brain, signals, assistant, calendar, reviews, strategies, fractal_report
 
-## Stock Personality Engine
-- **128 profiles** with per-stock indicator lifts
-- **6,400 patterns** (1-3 atom combinations, min 3 occurrences)
-- **128 auto-notes** in Arabic
-- **21 pattern atoms:** RSI, MACD, EMA, ADX, Volume, Stoch, BB, S/R proximity, ATR, breakout/breakdown
-- **Endpoints:** GET /api/stocks/symbol/{symbol}, GET /api/stocks/profiles
-- **Tables:** stock_profiles, symbol_patterns, symbol_notes
+### Dashboard Updates (Apr 3):
+- system.html: Live Tasks Panel (/api/tasks), Circuit Breaker status in service health, bug fix (is_available→status)
+- home.html: Health Pulse Bar (Bridge 🟢/🔴 | Radar ✅/⚠️ | News | Tasks)
 
-## Golden Opportunities Engine
-- Matches live data against historical winning patterns
-- **Confidence score:** 6 components (match 35% + win_rate 20% + sample 15% + pattern 10% + gain 10% + alignment 10%)
-- **Quality filters:** occurrences ≥ 8, win_rate ≥ 55%, match_ratio ≥ 75%
-- **Endpoint:** GET /api/decisions-now
-
-## Trading Decision Engine V2
-- **Entry Status:** 5 states — enter_now / wait_pullback / watch / missed / avoid
-- **Trade Plan:** entry zone (low-high) + stop loss (S/R + ATR) + target 1 & 2 + R/R ratio
-- **S/R Engine:** swing pivot detection + level clustering from daily bars
-- **Telegram Alerts:** dedup + send on enter_now with confidence ≥ 80
-- **Table:** alert_history (dedup_key unique)
-
-## Strategy Mining Engine
-- **Signal snapshots:** 66,937 signals, 40,966 clean with outcomes
-- **signal_outcomes table:** 40,966 rows with ~7.9 atoms per signal
-- **Regime classification:** trending 54%, ranging 28%, transition 18%
-- **FP-Growth mining:** 4,227 raw → 1,552 validated → stored in mined_strategies
-- **Top pattern:** RSI>70 + MACD decel + high ATR + low vol = 70% win, EV 19.4
-- **Endpoints:** GET /dashboard/strategies
-- **Tables:** signal_outcomes, mined_strategies
-
-## 4-Phase Trading Infrastructure
-
-### Phase 1: Data Integrity Gate
-- **data_integrity.py** — DataIntegrityGate class
-- check_freshness, check_sr_quality, get_quality_score (0-100), gate_decision
-- Fallback S/R from ATR when support/resistance is NULL
-
-### Phase 2: Position Management Engine
-- **position_engine.py** — 5 alert types, auto breakeven, Telegram alerts
-- New table: position_alerts
-- Endpoints: GET /api/portfolio-status, POST /api/portfolio-monitor
-
-### Phase 3: Risk Gate + Sector Classification
-- **sector_map.py** — 130 stocks in 10 sectors
-- **risk_engine.py** — Max 2/sector ENTER, max 8 positions, low liquidity downgrade
-
-### Phase 4: Signal Review Engine
-- **signal_review.py** — daily review of yesterday's signals
-- **reviews.html** — dashboard with Arabic trade reports
-- **Scheduler:** 2:00PM KWT daily
-- **Telegram commands:** /فرص (current opportunities), /تقييم (yesterday review), /موجة (momentum alerts)
-- **Momentum alerts:** strong-moving stocks regardless of pattern win rate
-
-## EMA 9/21 Scalper Dashboard
-- **scalper.html** — 128 KSE stocks EMA 9/21 crossover on 30m timeframe
-- **Pulse cards** with age badges (fresh/today/recent/old/reversed)
-- **Filter tabs** including "صاعدة حالياً" (currently bullish)
-- **Auto-refresh** every 90 seconds + sound alerts
-- **Archived** — file kept on disk, removed from nav
-- **Backend endpoints:**
-  - GET /dashboard/ema-crosses — historical crossover events
-  - GET /dashboard/ema-proximity — stocks near crossing
-  - GET /dashboard/ema-active — last known signal per stock
-  - GET /dashboard/ema-live — real-time EMA9/EMA21 from Bridge (batched, cached 3min)
-- **Data source:** bridge_client.py → Bridge API → TradingView WebSocket
-
-## Bridge JWT Token System (FIXED 2026-03-31)
-### Problem History
-- JWT token expired 2026-03-25
-- Chrome HttpOnly cookie prevented JS access
-- CDP via --remote-debugging-port=9222 required cmd.exe (not PowerShell)
-
-### Solution Implemented
-1. Chrome launched via: `start_bridge.bat` (cmd only, not PowerShell)
-   - Path: C:\Progra~1\Google\Chrome\Application\chrome.exe
-   - Flags: --remote-debugging-port=9222 --remote-allow-origins=* --user-data-dir=C:\Users\MS1\ChromeDebug
-2. Token extracted from HTML via CDP Runtime.evaluate (Page.loadEventFired)
-3. Saved as LIST format in tv_cookies.json: [{name, value, domain, httpOnly, ...}]
-4. **TokenWatchdog** (app/token_watchdog.py) — background thread in Bridge
-   - Checks every 5 min, renews 30 min before expiry
-   - Uses CDP to grab fresh token from Chrome automatically
-   - Endpoints: GET /token-status, POST /refresh-token
-5. models.py fix: added ema_21 to IndicatorBar + IndicatorsSnapshot (was missing, Pydantic filtered it out)
-
-### Current Status (2026-03-31 20:47)
-- Bridge: running PID 35120, port 8059
-- Token: valid, ~4h expiry
-- EMA9 + EMA21: both returning correctly
-- TokenWatchdog: active, auto-renews when Chrome is open
-
-### Startup Procedure
-Run once after PC restart:
-`C:\Users\MS1\tradingview-bridge\start_bridge.bat`
-This opens Chrome (debug mode) + starts Bridge + TokenWatchdog handles the rest.
-
-## Dashboard Pages (7 core + 2 utility)
-All served as iframes in Home Assistant via Cloudflare tunnel.
-
-### Core Trading Pages:
-1. home.html — Command center, workflow launcher
-2. radar.html — 128-stock surveillance, market-wide monitoring
-3. analysis.html — Gemini 2.5 Pro deep technical analysis (click any stock)
-4. positions.html — Portfolio monitoring, P&L, active trade management
-5. journal.html — Trade journal, performance review
-6. news.html — Boursa RSS + Gemini news (economy/world/tech)
-7. system.html — System health monitoring
-
-### Utility (accessible but outside main nav):
-- home-control.html — Smart home controls
-- email.html — Email management
-
-### Archived (files kept on disk, removed from nav):
-- scalper.html — EMA 9/21 crossover scalper (128 stocks)
-- decisions.html — Scanner decision engine
-- personality.html — Stock personality profiles
-- brain.html — Trading brain insights
-- signals.html — Composite signal matrix (30m + 1D)
-- assistant.html — AI assistant surface
-- calendar.html — Calendar + tasks + shift schedule
-- reviews.html — Signal Review Engine dashboard
-- strategies.html — FP-Growth mined strategies
-- fractal_report.html — Static backtest report (Fractal v3)
-
-### Workflow: Discover (radar) → Analyze (analysis/news) → Execute (positions) → Review (journal)
+## News Engine
+- Boursa RSS (5m) + Gemini Search (30m)
+- 7 Boursa sub-categories, priority 1-5
+- Priority 5 → Telegram notification
 
 ## Telegram Commands
-- /report — morning report (weather + shift + HA status)
-- /فرص — current golden opportunities
-- /تقييم — yesterday signal review
-- /موجة — momentum alerts (strong-moving stocks)
-- /brain — trading brain status
-- /أخبار — news (بورصة/اقتصاد/عالمي/تقنية)
-- /تحليل SYMBOL — Gemini deep technical analysis
+/report /فرص /تقييم /موجة /brain /أخبار /تحليل /kairos /chatgpt
 
 ## Shift Schedule
-AABBCCDD rotation, epoch 2024-01-04
-A=morning, B=afternoon, C=night, D=off
-Unit 114 Hydrocracker, MAB Area 8, KNPC
+AABBCCDD rotation, epoch 2024-01-04. Unit 114 Hydrocracker, KNPC.
 
-## AI Consultant Tools
-| Tool | Model | Script | Role | NOT for |
-|------|-------|--------|------|---------|
-| ChatGPT | GPT-5.4 + gpt-4o fallback | C:\Users\MS1\Temp\ask_chatgpt.py | HA + Bluesound + Network + Architecture | — |
-| Gemini | 2.5 Flash + Pro fallback | C:\Users\MS1\Temp\ask_gemini.py | Research, news, docs, code review | Trading (hallucination risk) |
+## AI Consultants
+| Tool | Model | Script | Best For |
+|------|-------|--------|----------|
+| ChatGPT | GPT-5.4 | ask_chatgpt.py --ha | HA + Network + Architecture |
+| Gemini | 2.5 Flash/Pro | ask_gemini.py --ha/--pro/--news | Research, code, news (NOT trading) |
 
-Both support: `--ha` (live HA states), `--file prompt.md`, `--context "text"` flags.
-Gemini extra flags: `--pro` (force 2.5 Pro for complex questions), `--news` (Google Search grounding)
-Logs: `~/chatgpt_logs/conversations.md`, `~/gemini_logs/conversations.md`
-Telegram: `/chatgpt` (active), `/جيمني` (pending — plan in `_tools/ADD_GEMINI_CONSULTANT.md`)
+## Key Credentials
+~/.ha_token, ~/.master_ai_key, ~/.openai_key (PC), ~/.gemini_key (PC)
+Bridge: 192.168.111.158:8059 | RPi SSH: pi@192.168.109.123
 
-## News Engine (news_engine.py)
-**2 data sources, 5 sections, 7 Boursa sub-categories:**
-- **Boursa Kuwait RSS** (every 5m, FREE): 3 feeds parsed → 7 sub-categories
-  - نتائج مالية (T=9), توزيعات (T=4,5,20), مجلس إدارة (T=7,8,10-15), جمعيات (T=1-3,19,21,22), إفصاحات جوهرية (T=23-25,34-36), مطلعين (T=6), أخرى
-- **Gemini + Google Search** (every 30m): economy, world, tech/AI news
-- **Priority scoring 1-5:** Financial results/material info=5(urgent), dividends/board results=4, AGM=3, date changes=2, other=1
-- **DB:** `news_items` table in `data/life.db` with dedup by headline hash
-- **Endpoints:** GET `/api/news`, POST `/api/news/refresh-boursa`, POST `/api/news/refresh-gemini`
-- **Schedulers:** Boursa 5m, Gemini 30m, cleanup daily midnight (7-day retention)
-- **Telegram:** Priority 5 items trigger notification
-- **Dashboard:** `www/trading/news.html` — 5 main tabs + 7 Boursa sub-tabs, priority-based card styling
+## DC read_file Bug (Known Issue)
+Desktop Commander v0.2.38 has a bug: `read_file` fails with EPERM on some UNC path files.
+**Workaround:** `ssh -T pi@192.168.109.123 cat /path/to/file > C:\Users\MS1\Temp\file` then read from Temp.
+`DC:write_file` works on UNC paths. After writing: `ssh chown -R pi:pi` on the files.
 
-## Key Credentials Location
-- HA token: ~/.ha_token
-- Master AI key: ~/.master_ai_key
-- OpenAI key: ~/.openai_key (on PC)
-- Gemini key: ~/.gemini_key (on PC, pending RPi)
-- Bridge runs on PC 192.168.111.158:8059
-- RPi SSH: pi@192.168.109.123
-- Master AI tunnel: https://ai.salem-home.com
-
-
-## Live Status (Updated 2026-04-02)
-- Feature Flags: 15 (10 infra + 5 trading), all enabled except speed_templates
-- KAIROS: running, checks every 5min
-- Service Health: 7 services monitored
-- Telegram Queue: active
-- Context Compaction: active (triggers at 12+ messages)
-- Hooks: 13 event types, 4 handlers (service_down, service_up, flag_toggled, before_trade_alert)
-- Tool Registry: 12 tools in 4 categories (home, system, trading, news)
-- Trading Integration: Layers 1-4 complete (degraded + hooks + tools + flags)
-- Plugins: 9
-- Dashboard: system.html updated with health + KAIROS + flags sections
-- Errors fixed: Gmail OAuth renewed, TG parse mode switched to plain text
+## Live Status (Updated 2026-04-03)
+- 20/21 Claude Code patterns implemented (Tier1+2+3)
+- 14 new Python modules + dashboard updates
+- KAIROS running, 15 feature flags, 7 services monitored
+- Trading: Layers 1-4 complete
+- Circuit Breakers: active on Bridge, News RSS, LLM calls
+- Auto Memory Extraction: active (learns from conversations)
+- Context Manager: 4-layer compaction active
+- Task Manager: /api/tasks endpoint live
+- Session Memory: tracking conversation summaries
