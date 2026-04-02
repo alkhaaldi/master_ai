@@ -5099,6 +5099,15 @@ async def _notify_approval(approval_id, action_desc, risk):
     except Exception as e:
         logger.error(f"Approval notify error: {e}")
 
+async def _send_progress_after_delay(chat_id, delay: float = 2.0):
+    """Send progress indicator if LLM takes > delay seconds (Tier1 #4)."""
+    await asyncio.sleep(delay)
+    try:
+        await tg_send(chat_id, "⏳ جاري التحليل...")
+    except Exception:
+        pass
+
+
 async def tg_handle_command(chat_id, text: str) -> str | None:
     """Handle quick commands. Returns response or None to pass to engine."""
     cmd = text.strip().lower()
@@ -7276,7 +7285,7 @@ async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
     except Exception:
         pass
 
-    # ── Stage 4: LLM primary (chat_v7) ──
+    # ── Stage 4: LLM primary (chat_v7) — with progress (Tier1 #4) ──
     from chat_v7 import choose_model as _cm
     _model_tier = _cm(text)
     logger.info(f"TG_V2 -> LLM ({_model_tier}): {text[:50]}")
@@ -7290,10 +7299,14 @@ async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
                 "ha_call_service": lambda d,s,sd: _exec_ha_call_service(d, s, sd),
                 "ssh_run": _exec_ssh_run,
             }
-            response = await asyncio.wait_for(
-                handle_chat_v7(text, _sys7, anthropic_client, _executors, user_id=str(chat_id)),
-                timeout=180
-            )
+            _progress_task = asyncio.create_task(_send_progress_after_delay(chat_id, 2.0))
+            try:
+                response = await asyncio.wait_for(
+                    handle_chat_v7(text, _sys7, anthropic_client, _executors, user_id=str(chat_id)),
+                    timeout=180
+                )
+            finally:
+                _progress_task.cancel()
             if not response or not response.strip():
                 # Escalation: if model was Sonnet, retry with Opus
                 from chat_v7 import choose_model
