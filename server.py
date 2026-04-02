@@ -523,7 +523,13 @@ try:
         init_schema as news_init_schema,
         generate_digest as news_generate_digest, get_latest_digest, get_today_digests,
         format_digest_tg, format_sources_tg,
-        get_morning_news_text, handle_news_latest
+        get_morning_news_text, handle_news_latest,
+        refresh_boursa as news_refresh_boursa,
+        refresh_gemini as news_refresh_gemini,
+        get_news as news_get_news,
+        get_counts as news_get_counts,
+        get_urgent_items as news_get_urgent,
+        cleanup_old as news_cleanup_old,
     )
     news_init_schema()
     NEWS_ENGINE_OK = True
@@ -7705,6 +7711,36 @@ async def get_tool_detail(name: str):
     d = tool.to_dict()
     d["available"] = tool_reg.is_available(name)
     return d
+
+# ── News API ──────────────────────────────────────────────
+@app.get("/api/news")
+async def api_news(category: str = None, sub: str = None,
+                   limit: int = 50, min_priority: int = 1):
+    if not NEWS_ENGINE_OK:
+        return {"items": [], "counts": {}, "error": "news_engine not loaded"}
+    items = news_get_news(category, sub, limit, min_priority)
+    counts = news_get_counts()
+    try:
+        from news_engine import last_boursa_refresh, last_gemini_refresh
+        lb, lg = last_boursa_refresh, last_gemini_refresh
+    except Exception:
+        lb, lg = None, None
+    return {"items": items, "counts": counts, "last_boursa_refresh": lb, "last_gemini_refresh": lg}
+
+@app.post("/api/news/refresh-boursa")
+async def api_news_refresh_boursa():
+    if not NEWS_ENGINE_OK:
+        return {"ok": False, "error": "news_engine not loaded"}
+    result = await asyncio.to_thread(news_refresh_boursa)
+    return result
+
+@app.post("/api/news/refresh-gemini")
+async def api_news_refresh_gemini():
+    if not NEWS_ENGINE_OK:
+        return {"ok": False, "error": "news_engine not loaded"}
+    result = await asyncio.to_thread(news_refresh_gemini)
+    return result
+
 
 
 
