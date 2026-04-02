@@ -779,12 +779,29 @@ async def radar_loop(send_fn):
     await asyncio.sleep(60)  # wait for system startup
     while True:
         try:
+            # Feature flag check (DB-backed, no restart needed)
+            try:
+                from feature_flags import FeatureFlags
+                _ff = FeatureFlags("data/life.db")
+                if not _ff.is_enabled("radar_enabled"):
+                    logger.info("Radar disabled by feature flag")
+                    await asyncio.sleep(300)
+                    continue
+            except Exception:
+                pass
             cfg = _get_config()
             if not cfg.get("enabled", True):
                 await asyncio.sleep(300)
                 continue
             # Daily Context Layer: refresh once per session
-            if not _daily_snapshot_is_fresh():
+            _do_daily = True
+            try:
+                from feature_flags import FeatureFlags
+                _ff2 = FeatureFlags("data/life.db")
+                _do_daily = _ff2.is_enabled("daily_refresh")
+            except Exception:
+                pass
+            if _do_daily and not _daily_snapshot_is_fresh():
                 try:
                     logger.info("Refreshing daily snapshot (stale or missing)...")
                     loop = asyncio.get_event_loop()
@@ -840,6 +857,20 @@ async def radar_loop(send_fn):
                         _record_signal(sym, signal, result["candle_time"],
                                        result["price"], result["ema_fast"], result["ema_slow"],
                                        enriched=result)
+                        # Fire after_signal hook (non-blocking)
+                        try:
+                            from service_health import get_health_hub
+                            _hub = get_health_hub()
+                            if _hub:
+                                _hk = getattr(_hub, '_hooks', None)
+                                if _hk:
+                                    _hk.fire_sync("after_signal",
+                                        symbol=sym, signal_type=signal,
+                                        price=result["price"],
+                                        score=result.get("score", 0),
+                                        timeframe="30m")
+                        except Exception:
+                            pass
                         msg = _format_alert(sym, signal, result["price"],
                                             result["ema_fast"], result["ema_slow"],
                                             result["candle_time"], enriched=result)
@@ -853,6 +884,26 @@ async def radar_loop(send_fn):
                                 "vol_ratio": result.get("vol_ratio", 0),
                                 "source": "radar",
                             }
+                            # before_trade_alert hook — can block the alert
+                            _skip_alert = False
+                            try:
+                                from service_health import get_health_hub
+                                _hub2 = get_health_hub()
+                                if _hub2:
+                                    _hk2 = getattr(_hub2, '_hooks', None)
+                                    if _hk2:
+                                        _hr = await _hk2.fire("before_trade_alert",
+                                            symbol=sym, action=signal,
+                                            confidence=result.get("score", 0))
+                                        for _r in (_hr or []):
+                                            if isinstance(_r, dict) and _r.get("skip"):
+                                                _skip_alert = True
+                                                logger.info("Hook blocked alert for %s: %s", sym, _r.get("reason", ""))
+                                                break
+                            except Exception:
+                                pass
+                            if _skip_alert:
+                                continue
                             await send_fn(msg, _sig_meta)
                             logger.info(f"Radar alert sent: {sym} {signal}")
                         except Exception as se:
@@ -1302,6 +1353,17 @@ def refresh_daily_snapshot(symbols=None):
         except Exception as e:
             logger.warning(f"S/R refresh failed (non-critical): {e}")
 
+        # Fire after_daily_refresh hook
+        try:
+            from service_health import get_health_hub
+            _hub = get_health_hub()
+            if _hub:
+                _hk = getattr(_hub, '_hooks', None)
+                if _hk:
+                    _hk.fire_sync("after_daily_refresh",
+                        ok_count=ok_count, err_count=err_count)
+        except Exception:
+            pass
         return {"ok": ok_count, "errors": err_count}
     finally:
         _daily_refresh_lock = False

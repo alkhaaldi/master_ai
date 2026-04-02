@@ -21,6 +21,12 @@ _SEED_FLAGS = [
     ("chat_compaction", 0, "Chat context compression (Phase 5)"),
     ("hooks", 0, "Event hook system (Phase 6)"),
     ("tool_registry", 0, "Central tool catalog (Phase 6)"),
+    # Trading feature flags (Layer 4)
+    ("radar_enabled", 1, "Stock radar 128-stock monitoring"),
+    ("momentum_alerts", 1, "Strong-moving stock alerts"),
+    ("golden_engine", 1, "Golden opportunities matching"),
+    ("position_monitor", 1, "Position auto-monitoring"),
+    ("daily_refresh", 1, "Daily snapshot auto-refresh"),
 ]
 
 # Map flag name → env var name (for backward compat)

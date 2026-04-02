@@ -2982,6 +2982,22 @@ async def lifespan(app):
     hook_registry.on("service_down", _hook_log_service_down)
     hook_registry.on("service_up", _hook_log_service_up)
     hook_registry.on("flag_toggled", _hook_log_flag_toggle)
+
+    # Trading hook: block alerts outside market hours
+    async def _hook_check_market_hours(**kwargs):
+        try:
+            from datetime import datetime, timezone, timedelta
+            _kwt = timezone(timedelta(hours=3))
+            now = datetime.now(_kwt)
+            if now.weekday() not in {6, 0, 1, 2, 3}:  # Sun-Thu
+                return {"skip": True, "reason": "Market closed (weekend)"}
+            t = now.hour * 60 + now.minute
+            if not (9 * 60 <= t <= 13 * 60 + 30):
+                return {"skip": True, "reason": "Market closed (off-hours)"}
+        except Exception:
+            pass
+        return {}
+    hook_registry.on("before_trade_alert", _hook_check_market_hours)
     logger.info(f"Hooks: {hook_registry.get_stats()['total_handlers']} handlers registered")
 
     yield

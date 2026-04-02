@@ -31,6 +31,10 @@ class HookRegistry:
         "llm_call_end",      # LLM call finished (model, duration, tokens)
         "tool_executed",     # Tool was called (name, args, result_len)
         "daily_summary",     # Daily summary generated
+        # Trading events (Layer 2)
+        "after_signal",      # Radar detected a new signal (symbol, signal_type, price, score)
+        "before_trade_alert",# Before sending trade alert to TG (symbol, action, confidence)
+        "after_daily_refresh",# Daily snapshot refreshed (ok_count, err_count)
     ]
 
     def __init__(self, db_path: str = None, ff=None):
