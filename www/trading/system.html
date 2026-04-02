@@ -14,6 +14,7 @@
   --red:#F87171;--red-bg:rgba(248,113,113,.07);--red-br:rgba(248,113,113,.3);
   --amber:#FBBF24;--amber-bg:rgba(251,191,36,.07);--amber-br:rgba(251,191,36,.3);
   --cyan:#22D3EE;--cyan-bg:rgba(34,211,238,.07);--cyan-br:rgba(34,211,238,.3);
+  --purple:#A78BFA;--purple-bg:rgba(167,139,250,.07);--purple-br:rgba(167,139,250,.3);
   --text:#E8EAED;--text-2:#9CA3AF;--text-3:#6B7280;--text-4:#4B5563;
   --card:rgba(12,20,34,.85);--card-border:rgba(198,151,75,.1);
   --fd:'Tajawal','Noto Kufi Arabic',sans-serif;--fm:'IBM Plex Mono',monospace;
@@ -22,8 +23,7 @@
 body{background:var(--navy-900);color:var(--text);font-family:var(--fd);min-height:100vh;overflow-x:hidden}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:var(--navy-800);border-bottom:1px solid var(--card-border);position:sticky;top:0;z-index:50}
 .topbar-brand{font-size:.85rem;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px}
-.topbar-brand .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
-.topbar-meta{display:flex;align-items:center;gap:12px;font-family:var(--fm);font-size:.65rem;color:var(--text-3)}
+.topbar-brand .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}.topbar-meta{display:flex;align-items:center;gap:12px;font-family:var(--fm);font-size:.65rem;color:var(--text-3)}
 .topbar-clock{color:var(--gold-dim);font-weight:600}
 main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 .page-title{text-align:center;font-size:1.3rem;font-weight:800;color:var(--text);padding:20px 0 6px}
@@ -42,8 +42,9 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 .svc-list{display:flex;flex-direction:column;gap:6px}
 .svc-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--navy-700);border-radius:8px}
 .svc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.svc-dot.on{background:var(--green);box-shadow:0 0 4px var(--green)}
-.svc-dot.off{background:var(--red);box-shadow:0 0 4px var(--red)}
+.svc-dot.up{background:var(--green);box-shadow:0 0 4px var(--green)}
+.svc-dot.down{background:var(--red);box-shadow:0 0 4px var(--red)}
+.svc-dot.degraded{background:var(--amber);box-shadow:0 0 4px var(--amber)}
 .svc-name{font-size:.72rem;font-weight:600;color:var(--text);flex:1}
 .svc-info{font-family:var(--fm);font-size:.58rem;color:var(--text-3)}
 .load-bar{display:flex;gap:6px;align-items:center;padding:4px 0}
@@ -53,11 +54,58 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 .nav-link{font-size:.62rem;padding:5px 10px;border-radius:6px;color:var(--text-3);background:var(--navy-700);border:1px solid var(--card-border);cursor:pointer;transition:.2s;text-decoration:none}
 .nav-link:hover,.nav-link.active{color:var(--gold);border-color:var(--gold-br);background:var(--gold-bg)}
 .footer{text-align:center;font-family:var(--fm);font-size:.5rem;color:var(--text-4);padding:12px;border-top:1px solid var(--card-border);margin-top:20px}
-@media(max-width:500px){main{padding:12px 14px 90px}.gauge-grid{grid-template-columns:repeat(2,1fr)}}
+.kairos-badge{display:inline-flex;align-items:center;gap:4px;font-size:.55rem;font-family:var(--fm);padding:2px 8px;border-radius:10px;font-weight:600}
+.kairos-badge.running{color:var(--green);background:var(--green-bg);border:1px solid var(--green-br)}
+.kairos-badge.stopped{color:var(--red);background:var(--red-bg);border:1px solid var(--red-br)}
+.kairos-stat{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--navy-600)}
+.kairos-stat:last-child{border-bottom:none}
+.kairos-stat .ks-label{font-size:.65rem;color:var(--text-3)}
+.kairos-stat .ks-val{font-size:.65rem;font-family:var(--fm);color:var(--text)}
+.flag-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--navy-600)}
+.flag-row:last-child{border-bottom:none}
+.flag-name{font-size:.65rem;font-weight:600;color:var(--text)}
+.flag-desc{font-size:.55rem;color:var(--text-3)}
+.flag-toggle{position:relative;width:36px;height:20px;cursor:pointer}
+.flag-toggle input{display:none}
+.flag-slider{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--navy-600);border-radius:10px;transition:.2s}
+.flag-slider:before{content:'';position:absolute;width:16px;height:16px;left:2px;top:2px;background:var(--text-3);border-radius:50%;transition:.2s}
+.flag-toggle input:checked+.flag-slider{background:var(--green)}
+.flag-toggle input:checked+.flag-slider:before{transform:translateX(16px);background:#fff}
+.flag-env{font-size:.5rem;color:var(--amber);font-family:var(--fm)}
+.task-running{animation:taskPulse 2s ease-in-out infinite}
+@keyframes taskPulse{0%,100%{opacity:1}50%{opacity:.7}}
+.task-progress{font-family:var(--fm);font-size:.5rem;color:var(--cyan)}
+.cb-info{font-size:.5rem;font-family:var(--fm);color:var(--amber)}
+/* Tier 3 new styles */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-box{background:var(--navy-700);border-radius:8px;padding:10px;text-align:center}
+.stat-box .sb-val{font-size:1.1rem;font-weight:800;font-family:var(--fm);direction:ltr}
+.stat-box .sb-label{font-size:.52rem;color:var(--text-3);margin-top:2px}
+.scope-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:6px;gap:1px}
+.scope-seg{height:100%;transition:width .3s}
+.intent-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--navy-600);font-size:.6rem}
+.intent-row:last-child{border-bottom:none}
+.intent-time{font-family:var(--fm);color:var(--text-4);min-width:36px;font-size:.5rem}
+.intent-name{font-weight:600;color:var(--text);flex:1}
+.intent-dur{font-family:var(--fm);color:var(--text-3);font-size:.5rem}
+.intent-badge{font-size:.45rem;font-family:var(--fm);padding:1px 5px;border-radius:4px;font-weight:600}
+.intent-badge.ok{color:var(--green);background:var(--green-bg)}
+.intent-badge.fail{color:var(--red);background:var(--red-bg)}
+.intent-badge.slow{color:var(--amber);background:var(--amber-bg)}
+.layer-dots{display:flex;gap:6px;align-items:center;margin-top:6px}
+.layer-dot{width:10px;height:10px;border-radius:50%;border:1px solid var(--text-4)}
+.layer-dot.idle{background:var(--green);border-color:var(--green)}
+.layer-dot.active{background:var(--amber);border-color:var(--amber);animation:taskPulse 1s infinite}
+.layer-dot.fired{background:var(--cyan);border-color:var(--cyan)}
+.layer-dot.never{background:var(--navy-600);border-color:var(--text-4)}
+.layer-label{font-size:.45rem;color:var(--text-4);font-family:var(--fm)}
+.topic-badge{display:inline-block;font-size:.5rem;font-family:var(--fm);padding:1px 6px;border-radius:4px;margin:2px;background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-br)}
+.latency-bar{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:6px 0;gap:1px}
+.lat-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:.4rem;font-family:var(--fm);color:#fff;min-width:20px}
+@media(max-width:500px){main{padding:12px 14px 90px}.gauge-grid{grid-template-columns:repeat(2,1fr)}.stat-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 <link rel="stylesheet" href="indicator-tooltips.css">
-</head>
-<body>
+</head><body>
 <div class="topbar">
   <div class="topbar-brand"><span class="dot" id="dot"></span>Master AI</div>
   <div class="topbar-meta"><span class="topbar-clock" id="clock">--:--</span></div>
@@ -65,6 +113,8 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 <main>
 <div class="page-title">&#x2699;&#xFE0F; <span>&#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</span></div>
 <div class="page-sub" id="page-sub">--</div>
+
+<!-- System Gauges -->
 <div class="section">
   <div class="gauge-grid">
     <div class="gauge"><div class="g-icon">&#x1F9E0;</div><div class="g-val" id="g-cpu">--%</div><div class="g-label">CPU</div><div class="g-bar"><div class="g-fill" id="gf-cpu" style="width:0%;background:var(--green)"></div></div></div>
@@ -73,14 +123,68 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
     <div class="gauge"><div class="g-icon">&#x1F4BF;</div><div class="g-val" id="g-disk">--%</div><div class="g-label">&#x0627;&#x0644;&#x0642;&#x0631;&#x0635;</div><div class="g-bar"><div class="g-fill" id="gf-disk" style="width:0%;background:var(--gold)"></div></div></div>
   </div>
 </div>
+
+<!-- Service Health -->
 <div class="section">
-  <div class="section-hdr">&#x1F50C; &#x0627;&#x0644;&#x062E;&#x062F;&#x0645;&#x0627;&#x062A;</div>
-  <div class="svc-list">
-    <div class="svc-item"><div class="svc-dot on" id="svc-mai"></div><div class="svc-name">Master AI</div><div class="svc-info" id="svc-mai-info">--</div></div>
-    <div class="svc-item"><div class="svc-dot on"></div><div class="svc-name">Home Assistant</div><div class="svc-info">RPi 5</div></div>
-    <div class="svc-item"><div class="svc-dot" id="svc-radar-dot"></div><div class="svc-name">&#x0627;&#x0644;&#x0631;&#x0627;&#x062F;&#x0627;&#x0631;</div><div class="svc-info" id="svc-radar-info">--</div></div>
+  <div class="section-hdr">&#x1F6A6; &#x0635;&#x062D;&#x0629; &#x0627;&#x0644;&#x062E;&#x062F;&#x0645;&#x0627;&#x062A;</div>
+  <div class="svc-list" id="health-list"><div class="svc-item"><div class="svc-dot degraded"></div><div class="svc-name">&#x062C;&#x0627;&#x0631;&#x064A;...</div><div class="svc-info"></div></div></div>
+</div>
+
+<!-- Live Tasks -->
+<div class="section">
+  <div class="section-hdr">&#x26A1; &#x0627;&#x0644;&#x0645;&#x0647;&#x0627;&#x0645;</div>
+  <div class="card" id="tasks-panel"><div style="font-size:.6rem;color:var(--text-3)">&#x062C;&#x0627;&#x0631;&#x064A;...</div></div>
+</div>
+
+<!-- NEW: Auto-Learning (Tier 3 #16) -->
+<div class="section">
+  <div class="section-hdr">&#x1F9E0; &#x0627;&#x0644;&#x062A;&#x0639;&#x0644;&#x0645; &#x0627;&#x0644;&#x062A;&#x0644;&#x0642;&#x0627;&#x0626;&#x064A;</div>
+  <div class="card" id="learning-panel"><div style="font-size:.6rem;color:var(--text-3)">&#x062C;&#x0627;&#x0631;&#x064A;...</div></div>
+</div>
+
+<!-- NEW: Intent Analytics (Tier 3 #17) -->
+<div class="section">
+  <div class="section-hdr">&#x1F4CA; &#x062A;&#x062D;&#x0644;&#x064A;&#x0644; &#x0627;&#x0644;&#x0623;&#x0648;&#x0627;&#x0645;&#x0631;</div>
+  <div class="card" id="intent-panel"><div style="font-size:.6rem;color:var(--text-3)">&#x062C;&#x0627;&#x0631;&#x064A;...</div></div>
+</div>
+
+<!-- NEW: Brain Stats (Tier 3 #19) -->
+<div class="section">
+  <div class="section-hdr">&#x1F4DA; &#x0627;&#x0644;&#x0639;&#x0642;&#x0644;</div>
+  <div class="card" id="brain-panel"><div style="font-size:.6rem;color:var(--text-3)">&#x062C;&#x0627;&#x0631;&#x064A;...</div></div>
+</div>
+
+<!-- NEW: Context Health (Tier 3 #15) -->
+<div class="section">
+  <div class="section-hdr">&#x1F4AC; &#x0627;&#x0644;&#x0633;&#x064A;&#x0627;&#x0642;</div>
+  <div class="card" id="context-panel"><div style="font-size:.6rem;color:var(--text-3)">&#x062C;&#x0627;&#x0631;&#x064A;...</div></div>
+</div>
+
+<!-- NEW: Response Latency (Tier 3 #21) -->
+<div class="section">
+  <div class="section-hdr">&#x26A1; &#x0627;&#x0644;&#x0627;&#x0633;&#x062A;&#x062C;&#x0627;&#x0628;&#x0629;</div>
+  <div class="card" id="latency-panel"><div style="font-size:.6rem;color:var(--text-3)">&#x062C;&#x0627;&#x0631;&#x064A;...</div></div>
+</div>
+
+<!-- KAIROS -->
+<div class="section">
+  <div class="section-hdr">&#x1F916; KAIROS <span class="kairos-badge stopped" id="kairos-badge">&#x0645;&#x062A;&#x0648;&#x0642;&#x0641;</span></div>
+  <div class="card">
+    <div class="kairos-stat"><span class="ks-label">&#x0622;&#x062E;&#x0631; &#x0641;&#x062D;&#x0635;</span><span class="ks-val" id="k-last">--</span></div>
+    <div class="kairos-stat"><span class="ks-label">&#x0641;&#x062D;&#x0648;&#x0635;&#x0627;&#x062A; &#x0627;&#x0644;&#x064A;&#x0648;&#x0645;</span><span class="ks-val" id="k-checks">0</span></div>
+    <div class="kairos-stat"><span class="ks-label">&#x0645;&#x0634;&#x0627;&#x0643;&#x0644;</span><span class="ks-val" id="k-issues">0</span></div>
+    <div class="kairos-stat"><span class="ks-label">&#x062A;&#x0645; &#x062D;&#x0644;&#x0647;&#x0627;</span><span class="ks-val" id="k-resolved">0</span></div>
+    <div class="kairos-stat"><span class="ks-label">&#x062A;&#x0646;&#x0628;&#x064A;&#x0647;&#x0627;&#x062A;</span><span class="ks-val" id="k-alerts">0</span></div>
   </div>
 </div>
+
+<!-- Feature Flags -->
+<div class="section">
+  <div class="section-hdr">&#x1F6A9; &#x0627;&#x0644;&#x0645;&#x064A;&#x0632;&#x0627;&#x062A;</div>
+  <div class="card" id="flags-list"><div style="font-size:.6rem;color:var(--text-3)">&#x062C;&#x0627;&#x0631;&#x064A;...</div></div>
+</div>
+
+<!-- Details -->
 <div class="section">
   <div class="section-hdr">&#x1F4CB; &#x062A;&#x0641;&#x0627;&#x0635;&#x064A;&#x0644;</div>
   <div class="card">
@@ -93,17 +197,15 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
   </div>
 </div>
 <div class="nav-bar">
-  <a class="nav-link" onclick="navTo('/trading/home')">&#x1F3E0; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;</a>
-  <a class="nav-link" onclick="navTo('/trading/radar')">&#x1F4C8; &#x0627;&#x0644;&#x062A;&#x062F;&#x0627;&#x0648;&#x0644;</a>
-  <a class="nav-link" onclick="navTo('/trading/signals')">&#x1F4E1; &#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0627;&#x062A;</a>
-  <a class="nav-link" onclick="navTo('/trading/calendar')">&#x1F4C5; &#x0627;&#x0644;&#x0645;&#x0648;&#x0627;&#x0639;&#x064A;&#x062F;</a>
-  <a class="nav-link" onclick="navTo('/trading/home-control')">&#x1F3E0; &#x0627;&#x0644;&#x0628;&#x064A;&#x062A;</a>
-  <a class="nav-link" onclick="navTo('/trading/assistant')">&#x1F916; &#x0627;&#x0644;&#x0645;&#x0633;&#x0627;&#x0639;&#x062F;</a>
+  <a class="nav-link" href="home">&#x1F3E0; &#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;</a>
+  <a class="nav-link" href="radar">&#x1F4E1; &#x0627;&#x0644;&#x0631;&#x0627;&#x062F;&#x0627;&#x0631;</a>
+  <a class="nav-link" href="analysis">&#x1F50D; &#x0627;&#x0644;&#x062A;&#x062D;&#x0644;&#x064A;&#x0644;</a>
+  <a class="nav-link" href="positions">&#x1F4BC; &#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x0643;&#x0632;</a>
+  <a class="nav-link" href="journal">&#x1F4D3; &#x0627;&#x0644;&#x064A;&#x0648;&#x0645;&#x064A;&#x0629;</a>
+  <a class="nav-link" href="news">&#x1F4F0; &#x0627;&#x0644;&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</a>
+  <a class="nav-link" href="home-control">&#x1F3E0; &#x0627;&#x0644;&#x0628;&#x064A;&#x062A;</a>
+  <a class="nav-link" href="email">&#x1F4E7; &#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F;</a>
   <a class="nav-link active">&#x2699;&#xFE0F; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</a>
-  <a class="nav-link" onclick="navTo('/trading/email')">&#x1F4E7; &#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F;</a>
-  <a class="nav-link" onclick="navTo('/trading/news')">&#x1F4F0; &#x0627;&#x0644;&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</a>
-    <a href="decisions" class="nav-link">القرارات</a>
-    <a href="personality" class="nav-link">الشخصية</a>
 </div>
 </main>
 <div class="footer" id="footer">&#x0622;&#x062E;&#x0631; &#x062A;&#x062D;&#x062F;&#x064A;&#x062B;: --</div>
@@ -111,16 +213,220 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
-function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
-function navTo(p){window.location.href=p}
-window.navTo=navTo;
+const SVC_NAMES={bridge:'\u0627\u0644\u0628\u0631\u064A\u062F\u062C',home_assistant:'Home Assistant',telegram:'\u062A\u0644\u064A\u062C\u0631\u0627\u0645',llm_anthropic:'Claude AI',daily_snapshot:'\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629',news_boursa:'\u0623\u062E\u0628\u0627\u0631 \u0627\u0644\u0628\u0648\u0631\u0635\u0629',news_gemini:'\u0623\u062E\u0628\u0627\u0631 Gemini'};
+const SVC_ICONS={bridge:'\uD83C\uDF10',home_assistant:'\uD83C\uDFE0',telegram:'\uD83D\uDCE8',llm_anthropic:'\uD83E\uDDE0',daily_snapshot:'\uD83D\uDCC8',news_boursa:'\uD83D\uDCF0',news_gemini:'\u2728'};
+
 function tickClock(){const now=new Date();const kwt=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kuwait'}));$('clock').textContent=kwt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 setInterval(tickClock,1000);tickClock();
 function gColor(v,t){if(v>=t[1])return'var(--red)';if(v>=t[0])return'var(--amber)';return'var(--green)'}
 function fmtUp(s){if(!s||s<0)return'--';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);if(h>=24)return Math.floor(h/24)+'d '+h%24+'h';return h+'h '+m+'m'}
+function fmtAge(iso){if(!iso)return'--';const d=new Date(iso),now=new Date();const m=Math.floor((now-d)/60000);if(m<1)return'\u0627\u0644\u0622\u0646';if(m<60)return m+'\u062F';const h=Math.floor(m/60);if(h<24)return h+'\u0633';return Math.floor(h/24)+'\u064A'}
+function fmtDur(ms){if(!ms)return'';const s=Math.round(ms/1000);if(s<60)return s+'s';return Math.floor(s/60)+'m'+s%60+'s'}
+function fmtTime(iso){if(!iso)return'--';const d=new Date(iso);return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuwait'})}
+
+// --- Service Health ---
+async function loadHealth(){
+  try{
+    const r=await fetch('/api/service-health');if(!r.ok)return;
+    const d=await r.json();const svcs=d.services||{};
+    let html='';
+    for(const[k,v]of Object.entries(svcs)){
+      const isUp=v.status==='up'||(v.is_available===true);
+      let cls=isUp?'up':'down';
+      const name=SVC_NAMES[k]||k;const icon=SVC_ICONS[k]||'\uD83D\uDD0C';
+      let info=isUp?'\u0634\u063A\u0627\u0644':'';
+      if(!isUp&&(v.reason||v.failure_reason))info=v.reason||v.failure_reason;
+      const cb=v.circuit_breaker||v.details;
+      let cbHtml='';
+      if(cb&&(cb.state==='open'||cb.circuit_open===true)){
+        cls='degraded';
+        const fails=cb.failure_count||cb.failures||0;
+        cbHtml=`<span class="cb-info">circuit open (${fails})</span> `;
+      }
+      if(v.last_checked)info+=(info?' \u00B7 ':'')+fmtAge(v.last_checked);
+      html+=`<div class="svc-item"><div class="svc-dot ${cls}"></div><div class="svc-name">${icon} ${name}</div><div class="svc-info">${cbHtml}${info}</div></div>`;
+    }
+    $('health-list').innerHTML=html||'<div style="font-size:.6rem;color:var(--text-3)">\u0644\u0627 \u0628\u064A\u0627\u0646\u0627\u062A</div>';
+  }catch(e){console.error('health',e)}
+}
+
+// --- Live Tasks ---
+async function loadTasks(){
+  try{
+    const r=await fetch('/api/tasks');if(!r.ok){$('tasks-panel').innerHTML='<div style="font-size:.6rem;color:var(--text-3)">\u063A\u064A\u0631 \u0645\u062A\u0627\u062D</div>';return}
+    const d=await r.json();const running=d.running||[];const recent=d.recent||[];
+    if(!running.length&&!recent.length){$('tasks-panel').innerHTML='<div style="font-size:.6rem;color:var(--text-3)">\u0644\u0627 \u0645\u0647\u0627\u0645</div>';return}
+    let html='<div class="svc-list">';
+    for(const t of running){
+      html+=`<div class="svc-item task-running"><div class="svc-dot up"></div><div class="svc-name">\uD83D\uDFE2 ${t.task_type||'task'}</div><div class="svc-info">${t.progress||t.status||''}${t.duration_ms?' \u00B7 '+fmtDur(t.duration_ms):''}</div></div>`;
+    }
+    let n=0;for(const t of recent){if(t.status==='running'||t.status==='pending')continue;if(n++>=3)break;
+      html+=`<div class="svc-item" style="opacity:.5"><div class="svc-dot ${t.status==='completed'?'up':'down'}"></div><div class="svc-name">${t.status==='completed'?'\u2705':'\uD83D\uDD34'} ${t.task_type||'task'}</div><div class="svc-info">${(t.result||t.error||'').substring(0,60)}${t.duration_ms?' \u00B7 '+fmtDur(t.duration_ms):''}</div></div>`;
+    }
+    html+='</div>';$('tasks-panel').innerHTML=html;
+  }catch(e){console.error('tasks',e)}
+}
+
+// --- Auto-Learning (NEW) ---
+async function loadLearning(){
+  try{
+    const r=await fetch('/api/memory-extraction/stats');if(!r.ok){$('learning-panel').innerHTML='<div style="font-size:.6rem;color:var(--text-3)">\u063A\u064A\u0631 \u0645\u062A\u0627\u062D</div>';return}
+    const d=await r.json();
+    const topics=(d.last_topics||[]).map(t=>`<span class="topic-badge">${t}</span>`).join('');
+    const byScope=d.by_scope||{};
+    const total=d.total_observations||0;
+    const gS=byScope.global||0,sS=byScope.stock||0,dS=byScope.device||0;
+    const gP=total?Math.round(gS/total*100):33,sP=total?Math.round(sS/total*100):33,dP=100-gP-sP;
+    $('learning-panel').innerHTML=`
+      <div class="stat-grid">
+        <div class="stat-box"><div class="sb-val" style="color:var(--green)">${d.today_extracted||0}</div><div class="sb-label">\u0627\u0644\u064A\u0648\u0645</div></div>
+        <div class="stat-box"><div class="sb-val" style="color:var(--cyan)">${d.week_extracted||0}</div><div class="sb-label">\u0647\u0627\u0644\u0623\u0633\u0628\u0648\u0639</div></div>
+        <div class="stat-box"><div class="sb-val" style="color:var(--gold)">${total}</div><div class="sb-label">\u0625\u062C\u0645\u0627\u0644\u064A</div></div>
+      </div>
+      <div style="font-size:.55rem;color:var(--text-3);margin-top:8px">\u0622\u062E\u0631 \u0627\u0633\u062A\u062E\u0631\u0627\u062C: ${fmtAge(d.last_extraction_at)}</div>
+      ${topics?'<div style="margin-top:6px">'+topics+'</div>':''}
+      <div class="scope-bar">
+        <div class="scope-seg" style="width:${gP}%;background:var(--gold)" title="global ${gS}"></div>
+        <div class="scope-seg" style="width:${sP}%;background:var(--cyan)" title="stock ${sS}"></div>
+        <div class="scope-seg" style="width:${dP}%;background:var(--green)" title="device ${dS}"></div>
+      </div>
+      <div style="display:flex;gap:12px;font-size:.45rem;color:var(--text-4);margin-top:3px"><span>\uD83C\uDF10 \u0639\u0627\u0645 ${gS}</span><span>\uD83D\uDCC8 \u0623\u0633\u0647\u0645 ${sS}</span><span>\uD83C\uDFE0 \u0623\u062C\u0647\u0632\u0629 ${dS}</span></div>`;
+  }catch(e){console.error('learning',e)}
+}
+
+// --- Intent Analytics (NEW) ---
+async function loadIntents(){
+  try{
+    const r=await fetch('/api/intent-analytics');if(!r.ok){$('intent-panel').innerHTML='<div style="font-size:.6rem;color:var(--text-3)">\u063A\u064A\u0631 \u0645\u062A\u0627\u062D</div>';return}
+    const d=await r.json();
+    const total=d.today_total||0,ok=d.today_success||0,fail=d.today_failed||0,avg=d.avg_duration_ms||0;
+    let html=`<div class="stat-grid"><div class="stat-box"><div class="sb-val">${total}</div><div class="sb-label">\u0625\u062C\u0645\u0627\u0644\u064A</div></div><div class="stat-box"><div class="sb-val" style="color:var(--green)">${ok}</div><div class="sb-label">\u0646\u062C\u062D</div></div><div class="stat-box"><div class="sb-val" style="color:${fail?'var(--red)':'var(--text-3)'}">${fail}</div><div class="sb-label">\u0641\u0634\u0644</div></div></div>`;
+    html+=`<div style="font-size:.55rem;color:var(--text-3);margin-top:6px">\u0645\u062A\u0648\u0633\u0637: ${Math.round(avg)}ms</div>`;
+    // Top intents
+    const tops=d.top_intents||[];
+    if(tops.length){
+      const maxC=tops[0]?.count||1;
+      html+='<div style="margin-top:8px">';
+      for(const t of tops.slice(0,5)){
+        const pct=Math.round(t.count/maxC*100);
+        html+=`<div style="display:flex;align-items:center;gap:6px;margin:3px 0"><span style="font-size:.55rem;min-width:40px;text-align:left;color:var(--text-2)">${t.intent}</span><div style="flex:1;height:4px;background:var(--navy-600);border-radius:2px"><div style="width:${pct}%;height:100%;background:var(--gold);border-radius:2px"></div></div><span style="font-size:.5rem;font-family:var(--fm);color:var(--text-3)">${t.count}</span></div>`;
+      }
+      html+='</div>';
+    }
+    // Recent
+    const recent=d.recent||[];
+    if(recent.length){
+      html+='<div style="margin-top:8px">';
+      for(const r of recent.slice(0,5)){
+        const dur=r.duration_ms||0;
+        const badge=r.state==='responded'?(dur>3000?'slow':'ok'):'fail';
+        const badgeText=badge==='ok'?'\u2705':badge==='slow'?'\u23F3':'\u274C';
+        html+=`<div class="intent-row"><span class="intent-time">${fmtTime(r.timestamp)}</span><span class="intent-name">${r.intent||'?'}</span><span class="intent-dur">${fmtDur(dur)}</span><span class="intent-badge ${badge}">${badgeText}</span></div>`;
+      }
+      html+='</div>';
+    }
+    $('intent-panel').innerHTML=html;
+  }catch(e){console.error('intents',e)}
+}
+
+// --- Brain Stats (NEW) ---
+async function loadBrain(){
+  try{
+    const r=await fetch('/api/brain/stats');if(!r.ok){$('brain-panel').innerHTML='<div style="font-size:.6rem;color:var(--text-3)">\u063A\u064A\u0631 \u0645\u062A\u0627\u062D</div>';return}
+    const d=await r.json();
+    const total=d.total_observations||0;const bs=d.by_scope||{};
+    const st=d.staleness_distribution||{};
+    const fresh=st.fresh||0,recent=st.recent||0,old=st.old||0;
+    const fP=total?Math.round(fresh/total*100):0,rP=total?Math.round(recent/total*100):0;
+    $('brain-panel').innerHTML=`
+      <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:1.4rem;font-weight:800;font-family:var(--fm);color:var(--gold)">${total}</span><span style="font-size:.6rem;color:var(--text-3)">\u0645\u0644\u0627\u062D\u0638\u0629</span></div>
+      <div class="scope-bar" style="margin-top:8px">
+        <div class="scope-seg" style="width:${fP}%;background:var(--green)" title="fresh ${fresh}"></div>
+        <div class="scope-seg" style="width:${rP}%;background:var(--amber)" title="recent ${recent}"></div>
+        <div class="scope-seg" style="width:${100-fP-rP}%;background:var(--red)" title="old ${old}"></div>
+      </div>
+      <div style="display:flex;gap:10px;font-size:.45rem;color:var(--text-4);margin-top:3px"><span style="color:var(--green)">\u25CF \u062C\u062F\u064A\u062F ${fresh}</span><span style="color:var(--amber)">\u25CF \u0645\u0624\u062E\u0631 ${recent}</span><span style="color:var(--red)">\u25CF \u0642\u062F\u064A\u0645 ${old}</span></div>
+      <div style="font-size:.5rem;color:var(--text-4);margin-top:6px">\u0622\u062E\u0631 24 \u0633\u0627\u0639\u0629: ${d.recent_24h||0} | \u0623\u0642\u062F\u0645 \u0645\u0644\u0627\u062D\u0638\u0629: ${d.oldest_observation_days||0} \u064A\u0648\u0645</div>`;
+  }catch(e){console.error('brain',e)}
+}
+
+// --- Context Health (NEW) ---
+async function loadContext(){
+  try{
+    const r=await fetch('/api/context-health');if(!r.ok){$('context-panel').innerHTML='<div style="font-size:.6rem;color:var(--text-3)">\u063A\u064A\u0631 \u0645\u062A\u0627\u062D</div>';return}
+    const d=await r.json();
+    const cur=d.current_tokens_estimate||0,max=d.max_tokens||180000;
+    const pct=Math.round(cur/max*100);
+    const col=pct>90?'var(--red)':pct>70?'var(--amber)':'var(--green)';
+    const ls=d.layer_stats||{};
+    function dotCls(l){if(!ls[l])return'never';if(ls[l].fires>0)return'fired';return'idle'}
+    $('context-panel').innerHTML=`
+      <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:1.1rem;font-weight:800;font-family:var(--fm);color:${col}">${Math.round(cur/1000)}K</span><span style="font-size:.55rem;color:var(--text-3)">/ ${Math.round(max/1000)}K tokens (${pct}%)</span></div>
+      <div class="g-bar" style="margin-top:6px"><div class="g-fill" style="width:${Math.min(pct,100)}%;background:${col}"></div></div>
+      <div class="layer-dots" style="margin-top:8px">
+        <div class="layer-dot ${dotCls('trim')}"></div><span class="layer-label">Trim ${ls.trim?.fires||0}</span>
+        <div class="layer-dot ${dotCls('compress')}"></div><span class="layer-label">Compress ${ls.compress?.fires||0}</span>
+        <div class="layer-dot ${dotCls('summarize')}"></div><span class="layer-label">Summarize ${ls.summarize?.fires||0}</span>
+        <div class="layer-dot ${dotCls('emergency')}"></div><span class="layer-label">Emergency ${ls.emergency?.fires||0}</span>
+      </div>
+      <div style="font-size:.5rem;color:var(--text-4);margin-top:4px">\u0636\u063A\u0637 \u0627\u0644\u064A\u0648\u0645: ${d.compactions_today||0} \u0645\u0631\u0629</div>`;
+  }catch(e){console.error('context',e)}
+}
+
+// --- Latency (NEW) ---
+async function loadLatency(){
+  try{
+    const r=await fetch('/api/latency-stats');if(!r.ok){$('latency-panel').innerHTML='<div style="font-size:.6rem;color:var(--text-3)">\u063A\u064A\u0631 \u0645\u062A\u0627\u062D</div>';return}
+    const d=await r.json();
+    const total=d.avg_total_ms||0,intent=d.avg_intent_ms||0,mem=d.avg_memory_ms||0,llm=d.avg_llm_ms||0;
+    const saved=d.prefetch_savings_ms||0;
+    const iP=total?Math.round(intent/total*100):10,mP=total?Math.round(mem/total*100):15;
+    $('latency-panel').innerHTML=`
+      <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:1.1rem;font-weight:800;font-family:var(--fm)">${Math.round(total)}ms</span><span style="font-size:.55rem;color:var(--text-3)">\u0645\u062A\u0648\u0633\u0637 (${d.samples||0} \u0639\u064A\u0646\u0629)</span></div>
+      <div class="latency-bar">
+        <div class="lat-seg" style="width:${iP}%;background:var(--green)">${intent}ms</div>
+        <div class="lat-seg" style="width:${mP}%;background:var(--cyan)">${mem}ms</div>
+        <div class="lat-seg" style="width:${100-iP-mP}%;background:var(--gold)">${llm}ms</div>
+      </div>
+      <div style="display:flex;gap:10px;font-size:.45rem;color:var(--text-4)"><span style="color:var(--green)">\u25CF Intent</span><span style="color:var(--cyan)">\u25CF Memory</span><span style="color:var(--gold)">\u25CF LLM</span></div>
+      ${saved>0?'<div style="font-size:.5rem;color:var(--cyan);margin-top:4px">\u26A1 Prefetch \u0648\u0641\u0631 ~'+saved+'ms</div>':''}`;
+  }catch(e){console.error('latency',e)}
+}
+
+// --- KAIROS ---
+async function loadKairos(){
+  try{
+    const r=await fetch('/api/kairos/status');if(!r.ok){$('kairos-badge').className='kairos-badge stopped';$('kairos-badge').textContent='\u063A\u064A\u0631 \u0645\u062A\u0627\u062D';return}
+    const d=await r.json();
+    $('kairos-badge').className='kairos-badge '+(d.running?'running':'stopped');
+    $('kairos-badge').textContent=d.running?'\u0634\u063A\u0627\u0644':'\u0645\u062A\u0648\u0642\u0641';
+    $('k-last').textContent=fmtAge(d.last_check)||'--';
+    $('k-checks').textContent=d.checks_today||0;
+    $('k-issues').textContent=d.issues_detected||0;
+    $('k-resolved').textContent=d.issues_resolved||0;
+    $('k-alerts').textContent=d.alerts_sent||0;
+  }catch(e){console.error('kairos',e)}
+}
+
+// --- Flags ---
+async function loadFlags(){
+  try{
+    const r=await fetch('/api/flags');if(!r.ok)return;
+    const d=await r.json();const flags=d.flags||d;let html='';
+    for(const[name,info]of Object.entries(flags)){
+      const en=info.enabled||false;const desc=info.description||'';
+      const envOv=info.env_override!==undefined&&info.env_override!==null;
+      html+=`<div class="flag-row"><div><div class="flag-name">${name}</div><div class="flag-desc">${desc}${envOv?' <span class="flag-env">ENV</span>':''}</div></div><label class="flag-toggle"><input type="checkbox" ${en?'checked':''} onchange="toggleFlag('${name}',this.checked)"><span class="flag-slider"></span></label></div>`;
+    }
+    $('flags-list').innerHTML=html||'<div style="font-size:.6rem;color:var(--text-3)">\u0644\u0627 \u0645\u064A\u0632\u0627\u062A</div>';
+  }catch(e){console.error('flags',e)}
+}
+window.toggleFlag=async function(n,v){try{await fetch('/api/flags/'+n+'/toggle',{method:'POST'});setTimeout(loadFlags,300)}catch(e){}};
+
+// --- Main Dashboard ---
 async function load(){
   let dash=null,ext=null;
-  try{const [r1,r2]=await Promise.all([fetch('/dashboard').then(r=>r.ok?r.json():null).catch(()=>null),fetch('/dashboard/extended').then(r=>r.ok?r.json():null).catch(()=>null)]);dash=r1;ext=r2}catch(e){}
+  try{const[r1,r2]=await Promise.all([fetch('/dashboard').then(r=>r.ok?r.json():null).catch(()=>null),fetch('/dashboard/extended').then(r=>r.ok?r.json():null).catch(()=>null)]);dash=r1;ext=r2}catch(e){}
   const online=dash&&dash.api_online!==false;
   $('dot').style.background=online?'var(--green)':'var(--red)';
   if(dash){$('page-sub').textContent='v'+(dash.version||'--')+' \u00b7 '+fmtUp(dash.uptime)+' \u00b7 '+(dash.degraded_mode||'normal')}
@@ -129,22 +435,24 @@ async function load(){
   $('g-ram').textContent=Math.round(ram)+'%';$('gf-ram').style.width=Math.min(ram,100)+'%';$('gf-ram').style.background=gColor(ram,[70,90]);
   $('g-temp').textContent=temp+'\u00b0C';$('gf-temp').style.width=Math.min(temp/85*100,100)+'%';$('gf-temp').style.background=gColor(temp,[65,80]);
   $('g-disk').textContent=Math.round(disk)+'%';$('gf-disk').style.width=Math.min(disk,100)+'%';$('gf-disk').style.background=gColor(disk,[70,90]);
-  $('svc-mai').className='svc-dot '+(online?'on':'off');
-  $('svc-mai-info').textContent='v'+(dash?dash.version:'--')+' \u00b7 '+fmtUp(dash?dash.uptime:0);
-  const rOn=dash&&dash.radar_enabled;
-  $('svc-radar-dot').className='svc-dot '+(rOn?'on':'off');
-  $('svc-radar-info').textContent=rOn?'\u0645\u0641\u0639\u0651\u0644 \u2014 '+(dash.radar_watch_count||0)+' \u0633\u0647\u0645':'\u0645\u0639\u0637\u0651\u0644';
-  if(ext){
-    $('d-ram').textContent=(ext.memory_used_mb||0)+'MB / '+(ext.memory_total_mb||0)+'MB';
-    $('d-disk').textContent=(ext.disk_used_gb||0).toFixed(1)+'GB / '+(ext.disk_total_gb||0).toFixed(1)+'GB';
-    $('d-load').textContent=(ext.load_avg||[]).map(l=>l.toFixed(2)).join(' \u00b7 ');
-    $('d-uptime').textContent=(ext.uptime_hours||0).toFixed(1)+'h';
-  }
+  if(ext){$('d-ram').textContent=(ext.memory_used_mb||0)+'MB / '+(ext.memory_total_mb||0)+'MB';$('d-disk').textContent=(ext.disk_used_gb||0).toFixed(1)+'GB / '+(ext.disk_total_gb||0).toFixed(1)+'GB';$('d-load').textContent=(ext.load_avg||[]).map(l=>l.toFixed(2)).join(' \u00b7 ');$('d-uptime').textContent=(ext.uptime_hours||0).toFixed(1)+'h'}
   if(dash){$('d-tasks').textContent=(dash.background_tasks||0)+' background';$('d-mode').textContent=dash.degraded_mode||'normal'}
   const now=new Date();const kwt=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kuwait'}));
   $('footer').textContent='\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: '+kwt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
-load();setInterval(load,30000);
+
+// Init + intervals
+load();loadHealth();loadTasks();loadLearning();loadIntents();loadBrain();loadContext();loadLatency();loadKairos();loadFlags();
+setInterval(load,30000);
+setInterval(loadHealth,30000);
+setInterval(loadTasks,10000);
+setInterval(loadLearning,60000);
+setInterval(loadIntents,30000);
+setInterval(loadBrain,60000);
+setInterval(loadContext,30000);
+setInterval(loadLatency,60000);
+setInterval(loadKairos,60000);
+setInterval(loadFlags,60000);
 })();
 </script>
 <script src="indicator-tooltips.js"></script>
