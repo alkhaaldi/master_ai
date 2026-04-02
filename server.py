@@ -608,12 +608,15 @@ api_key = os.getenv("OPENAI_API_KEY", "")
 anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
 HA_URL = os.getenv("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.getenv("HA_TOKEN", "")
-# Phase 1 feature flags
-FEATURE_CIRCUIT_BREAKERS = os.getenv("FEATURE_CIRCUIT_BREAKERS", "1") == "1"
-FEATURE_TIMEOUTS = os.getenv("FEATURE_TIMEOUTS", "1") == "1"
-FEATURE_SPEED_TEMPLATES = os.getenv("FEATURE_SPEED_TEMPLATES", "1") == "1"
-FEATURE_SMART_ROUTER_V2 = os.getenv("FEATURE_SMART_ROUTER_V2", "1") == "1"
-FEATURE_ENTITY_HEALTH = os.getenv("FEATURE_ENTITY_HEALTH", "1") == "1"
+# Feature Flags v2: DB-backed with env var override
+from feature_flags import FeatureFlags
+_db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
+ff = FeatureFlags(_db_path)
+FEATURE_CIRCUIT_BREAKERS = ff.is_enabled("circuit_breakers")
+FEATURE_TIMEOUTS = ff.is_enabled("timeouts")
+FEATURE_SPEED_TEMPLATES = ff.is_enabled("speed_templates")
+FEATURE_SMART_ROUTER_V2 = ff.is_enabled("smart_router_v2")
+FEATURE_ENTITY_HEALTH = ff.is_enabled("entity_health")
 EXTERNAL_TIMEOUT = 8  # seconds max for external calls
 AGENT_SECRET = os.getenv("AGENT_SECRET", "")
 MASTER_API_KEY = os.getenv("MASTER_AI_API_KEY", "")
@@ -7563,17 +7566,32 @@ async def health_external():
         "ha": _fmt(_cb_ha),
         "telegram": _fmt(_cb_tg),
         "llm": _fmt(_cb_llm),
-        "feature_flags": {
-            "circuit_breakers": FEATURE_CIRCUIT_BREAKERS,
-            "timeouts": FEATURE_TIMEOUTS,
-            "speed_templates": FEATURE_SPEED_TEMPLATES,
-            "smart_router_v2": FEATURE_SMART_ROUTER_V2,
-            "entity_health": FEATURE_ENTITY_HEALTH,
+        "feature_flags": {f["name"]: f["enabled"] for f in ff.get_all()},
+        "feature_flags_extra": {
             "home_brain": BRAIN_OK,
             "ha_doctor": DOCTOR_OK,
             "external_timeout_seconds": EXTERNAL_TIMEOUT,
         }
     }
+
+
+# ── Feature Flags v2 API ──────────────────────────────────
+@app.get("/api/flags")
+async def get_feature_flags():
+    return {"flags": ff.get_all()}
+
+@app.post("/api/flags/{name}/toggle")
+async def toggle_feature_flag(name: str):
+    new_val = ff.toggle(name)
+    # Update module-level vars for existing code paths
+    global FEATURE_CIRCUIT_BREAKERS, FEATURE_TIMEOUTS, FEATURE_SPEED_TEMPLATES, FEATURE_SMART_ROUTER_V2, FEATURE_ENTITY_HEALTH
+    FEATURE_CIRCUIT_BREAKERS = ff.is_enabled("circuit_breakers")
+    FEATURE_TIMEOUTS = ff.is_enabled("timeouts")
+    FEATURE_SPEED_TEMPLATES = ff.is_enabled("speed_templates")
+    FEATURE_SMART_ROUTER_V2 = ff.is_enabled("smart_router_v2")
+    FEATURE_ENTITY_HEALTH = ff.is_enabled("entity_health")
+    logger.info(f"Feature flag '{name}' toggled to {new_val}")
+    return {"name": name, "enabled": new_val}
 
 
 
