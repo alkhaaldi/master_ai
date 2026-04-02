@@ -5099,6 +5099,51 @@ async def _notify_approval(approval_id, action_desc, risk):
     except Exception as e:
         logger.error(f"Approval notify error: {e}")
 
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# CRON HANDLER ROUTING + ORPHAN CLEANUP (Tier2 #13)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+_SCHEDULED_HANDLERS = {}
+_cron_breakers = {}
+
+
+def register_scheduled_handler(task_name: str, handler):
+    """Register a handler for a scheduled task name."""
+    _SCHEDULED_HANDLERS[task_name] = handler
+    logger.info("Registered scheduled handler: %s", task_name)
+
+
+async def fire_scheduled_task(task_name: str, **kwargs):
+    """Route a scheduled task fire to its handler.
+    If handler missing or fails 3 times consecutively, skip."""
+    handler = _SCHEDULED_HANDLERS.get(task_name)
+    if handler is None:
+        logger.warning("Orphaned scheduled task: %s — no handler registered", task_name)
+        return
+
+    from circuit_breaker import CircuitBreaker
+    if task_name not in _cron_breakers:
+        _cron_breakers[task_name] = CircuitBreaker(
+            name=f"cron_{task_name}", failure_threshold=3, cooldown_seconds=300
+        )
+    breaker = _cron_breakers[task_name]
+
+    if not breaker.allow_request():
+        logger.warning("Cron %s circuit open — skipping", task_name)
+        return
+
+    try:
+        if asyncio.iscoroutinefunction(handler):
+            await handler(**kwargs)
+        else:
+            handler(**kwargs)
+        breaker.record_success()
+    except Exception as e:
+        breaker.record_failure()
+        logger.error("Cron %s failed: %s", task_name, e)
+
+
 async def _send_progress_after_delay(chat_id, delay: float = 2.0):
     """Send progress indicator if LLM takes > delay seconds (Tier1 #4)."""
     await asyncio.sleep(delay)
