@@ -9,7 +9,7 @@
 - **DB:** data/life.db | **~45 tables** (5 new from Claude Code Patterns project)
 - **Autonomy:** Level 3 | Policy: auto ≤30, approval ≤60, block ≥61
 - **Plugins:** 9 | **Schedulers:** 12+
-- **Feature Flags:** 10 (DB-backed, API-toggleable, no restart needed)
+- **Feature Flags:** 15 (10 infrastructure + 5 trading, DB-backed, API-toggleable)
 - **New Files (Apr 2):** feature_flags.py, service_health.py, kairos.py, context_compactor.py, hooks.py, tool_registry.py
 
 ## Architecture
@@ -62,7 +62,7 @@ Inspired by Claude Code source leak analysis. 6 phases, 7 new files, 5 new DB ta
 - Commit: `3f88fd8`
 
 ### Phase 6: Hooks + Tool Registry (`hooks.py` + `tool_registry.py`)
-- **Hooks:** 10 event types (service_down, service_up, alert_sent, flag_toggled, etc.)
+- **Hooks:** 13 event types (10 infrastructure + 3 trading: after_signal, before_trade_alert, after_daily_refresh)
 - Async handlers, DB-logged in `hook_log` table
 - **Tool Registry:** 12 tools registered across 4 categories (home, system, trading, news)
 - Service health check before execution
@@ -70,27 +70,31 @@ Inspired by Claude Code source leak analysis. 6 phases, 7 new files, 5 new DB ta
 - Gated by `ff.is_enabled("hooks")` and `ff.is_enabled("tool_registry")`
 - Commit: `c34876b`
 
-### Trading Engines Integration (Partial — 2026-04-02)
-Connecting trading pipeline to the 6 infrastructure modules. Work in progress.
+### Trading Engines Integration (Layers 1-4, 2026-04-02)
+Connected the trading pipeline to the 6 infrastructure modules.
 
-**Layer 1: Degraded Mode (DONE — commit 182bd75)**
+**Layer 1: Degraded Mode (commit 182bd75)**
 - bridge_client.py reports to service_health on every request (mark_up/mark_down)
 - dashboard_api.py returns `degraded: true` + `degraded_reason` when Bridge is down
-- stock_radar.py skips radar cycles (300s sleep) when Bridge is down
-- Frontend degraded banners on home.html, radar.html, positions.html (amber warning)
+- stock_radar.py radar_loop skips cycles (300s sleep) when Bridge is down
+- Frontend degraded banners on home.html, radar.html, positions.html
 
-**Layer 2: Signal Hooks (PENDING)**
-- Plan ready: _tools/LAYER2_3_4_HOOKS_TOOLS_FLAGS.md
-- Will add: after_signal, before_trade_alert, after_daily_refresh events
-- Will add: market hours check handler to block off-hours alerts
+**Layer 2: Signal Hooks (commit f8980a3)**
+- stock_radar fires `after_signal` after every new EMA cross signal
+- stock_radar fires `before_trade_alert` before Telegram alerts — handlers can return `{skip: true}` to block
+- stock_radar fires `after_daily_refresh` after daily snapshot completes
+- Default handler: `_hook_check_market_hours` blocks alerts outside KSE hours
 
-**Layer 3: Trading Tools (PARTIAL — commit 8bc3e6c)**
-- 3 trading tools registered: bridge_status, open_trades, trade_stats
-- Total registry: 12 tools in 4 categories
+**Layer 3: Trading Tools (commit 8bc3e6c)**
+- 3 trading tools: bridge_status, open_trades, trade_stats
+- 2 news tools: news_feed, news_counts
+- Total registry: 12 tools in 4 categories, health-aware execution
 
-**Layer 4: Trading Feature Flags (PENDING)**
-- Plan ready: _tools/LAYER2_3_4_HOOKS_TOOLS_FLAGS.md
-- Will add: radar_enabled, momentum_alerts, golden_engine, position_monitor, daily_refresh
+**Layer 4: Trading Feature Flags (commit f8980a3)**
+- 5 new flags: radar_enabled, momentum_alerts, golden_engine, position_monitor, daily_refresh
+- radar_loop checks `radar_enabled` before each cycle (no restart needed to disable)
+- radar_loop checks `daily_refresh` before daily snapshot refresh
+- Total: 15 feature flags (10 infra + 5 trading)
 
 ### Feature Flags Reference
 | Flag | Default | Description |
@@ -105,6 +109,11 @@ Connecting trading pipeline to the 6 infrastructure modules. Work in progress.
 | hooks | ON | Event hook system |
 | tool_registry | ON | Central tool catalog |
 | speed_templates | OFF (env) | Speed engine templates (env override) |
+| radar_enabled | ON | Stock radar 128-stock monitoring |
+| momentum_alerts | ON | Strong-moving stock alerts |
+| golden_engine | ON | Golden opportunities matching |
+| position_monitor | ON | Position auto-monitoring |
+| daily_refresh | ON | Daily snapshot auto-refresh |
 
 ### Dashboard: system.html Updated
 - Added: Service Health traffic lights (7 services)
@@ -354,14 +363,14 @@ Telegram: `/chatgpt` (active), `/جيمني` (pending — plan in `_tools/ADD_GE
 
 
 ## Live Status (Updated 2026-04-02)
-- Feature Flags: 10 (9 enabled, 1 env override)
+- Feature Flags: 15 (10 infra + 5 trading), all enabled except speed_templates
 - KAIROS: running, checks every 5min
 - Service Health: 7 services monitored
 - Telegram Queue: active
 - Context Compaction: active (triggers at 12+ messages)
-- Hooks: 10 event types registered, 3 handlers (service_down, service_up, flag_toggled)
+- Hooks: 13 event types, 4 handlers (service_down, service_up, flag_toggled, before_trade_alert)
 - Tool Registry: 12 tools in 4 categories (home, system, trading, news)
-- Trading Integration: Layer 1 complete (degraded mode), Layers 2+4 pending
+- Trading Integration: Layers 1-4 complete (degraded + hooks + tools + flags)
 - Plugins: 9
 - Dashboard: system.html updated with health + KAIROS + flags sections
 - Errors fixed: Gmail OAuth renewed, TG parse mode switched to plain text
