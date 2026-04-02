@@ -773,6 +773,88 @@ def save_conversation(role: str, content: str, channel: str = "telegram"):
         pass
 
 
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OBSERVATION MANIFEST — Lightweight Index (Tier2 #9)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def get_observation_manifest(category: str = None, max_items: int = 200) -> list:
+    """Return lightweight memory headers for LLM ranking.
+    Each item: {id, category, type, summary (first 100 chars), age_str, timestamp}.
+    Sorted newest-first, capped at max_items."""
+    try:
+        conn = sqlite3.connect(_AUDIT_DB, timeout=5)
+        conn.row_factory = sqlite3.Row
+        if category:
+            rows = conn.execute(
+                "SELECT id, category, type, SUBSTR(content, 1, 100) AS summary, "
+                "COALESCE(updated_at, created_at) AS ts "
+                "FROM memory WHERE active=1 AND category=? "
+                "ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?",
+                (category, max_items)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, category, type, SUBSTR(content, 1, 100) AS summary, "
+                "COALESCE(updated_at, created_at) AS ts "
+                "FROM memory WHERE active=1 "
+                "ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?",
+                (max_items,)
+            ).fetchall()
+        conn.close()
+        return [
+            {
+                "id": r["id"],
+                "category": r["category"],
+                "type": r["type"] or "fact",
+                "summary": r["summary"],
+                "age_str": memory_age(r["ts"]),
+                "timestamp": r["ts"],
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        logger.warning("get_observation_manifest error: %s", e)
+        return []
+
+
+def format_observation_manifest(observations: list) -> str:
+    """Format observations as text manifest for LLM ranking.
+    One line per observation: - [category/type] (age): summary..."""
+    lines = []
+    for obs in observations:
+        line = f"- [{obs['category']}/{obs['type']}] ({obs['age_str']}): {obs['summary']}"
+        lines.append(line)
+    return chr(10).join(lines)
+
+
+def get_full_observations(observation_ids: list) -> list:
+    """Load full observation text for selected IDs only.
+    Called AFTER LLM selects relevant items from the manifest."""
+    if not observation_ids:
+        return []
+    try:
+        conn = sqlite3.connect(_AUDIT_DB, timeout=5)
+        conn.row_factory = sqlite3.Row
+        placeholders = ",".join("?" * len(observation_ids))
+        rows = conn.execute(
+            f"SELECT id, category, type, content, context, confidence, "
+            f"COALESCE(updated_at, created_at) AS ts "
+            f"FROM memory WHERE id IN ({placeholders})",
+            observation_ids,
+        ).fetchall()
+        conn.close()
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["staleness_warning"] = memory_freshness_warning(r["ts"])
+            result.append(d)
+        return result
+    except Exception as e:
+        logger.warning("get_full_observations error: %s", e)
+        return []
+
+
 def auto_learn(query: str, response: str, actions: list = None):
     """DEPRECATED: Placeholder only. Real learning via corrections_loop + structured_memory."""
     """Extract and save learnings from a completed interaction.
