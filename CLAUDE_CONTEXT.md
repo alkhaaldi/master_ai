@@ -16,12 +16,13 @@
 RPi5 + FastAPI (server.py) + systemd service.
 Bridge API on Windows PC (192.168.111.158:8059) — TradingView WebSocket data.
 Dashboard: 9 HTML iframe pages in HA via Cloudflare tunnel (7 core + 2 utility).
+**HTML live path:** `share/master_ai/www/trading/` (served by FastAPI). `config/www/trading/` was DELETED — do NOT recreate it.
 
 ## Claude Code Patterns — Infrastructure (Added 2026-04-02)
 Inspired by Claude Code source leak analysis. 6 phases, 7 new files, 5 new DB tables, ~15 new endpoints.
 
 ### Phase 1: Feature Flags v2 (`feature_flags.py`)
-- **10 flags** in `feature_flags` table (life.db), DB-backed, thread-safe, 60s cache
+- **15 flags** in `feature_flags` table (life.db), DB-backed, thread-safe, 60s cache
 - Env vars (`FEATURE_*`) still override DB values for backward compatibility
 - **Endpoints:** GET `/api/flags`, POST `/api/flags/{name}/toggle`
 - Toggle any feature without restart
@@ -96,6 +97,13 @@ Connected the trading pipeline to the 6 infrastructure modules.
 - radar_loop checks `daily_refresh` before daily snapshot refresh
 - Total: 15 feature flags (10 infra + 5 trading)
 
+### Dashboard Cleanup (2026-04-02)
+- **Duplicate HTML path eliminated:** `config/www/trading/` was a stale copy — DELETED. Only `share/master_ai/www/trading/` exists now (served by FastAPI via Cloudflare tunnel).
+- **Nav bars unified:** All 9 active pages now have complete 9-link nav (home, radar, analysis, positions, journal, news, home-control, email, system). Zero links to archived pages.
+- **Degraded banners:** home.html, radar.html, positions.html show amber warning banner when Bridge is offline. positions.html also shows stale badge on stale prices.
+- **home.html navTo MAP cleaned:** Removed 7 dead routes to archived pages, added sub-analysis and sub-system.
+- **10 archived pages documented:** scalper, decisions, personality, brain, signals, assistant, calendar, reviews, strategies, fractal_report — files on disk, zero nav links.
+
 ### Feature Flags Reference
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -118,7 +126,7 @@ Connected the trading pipeline to the 6 infrastructure modules.
 ### Dashboard: system.html Updated
 - Added: Service Health traffic lights (7 services)
 - Added: KAIROS status + action log
-- Added: Feature Flags toggle switches (10 flags)
+- Added: Feature Flags toggle switches (15 flags)
 - Auto-refresh: health 30s, KAIROS 60s, flags 60s
 
 ### Master Plan Reference
@@ -167,7 +175,7 @@ Full plan: `_tools/CLAUDE_CODE_PATTERNS_MASTERPLAN.md`
 | service_health.py | Central health monitoring for 7 services (Phase 2) |
 | kairos.py | Background health agent + Telegram queue (Phase 3+4) |
 | context_compactor.py | Chat context compression pipeline (Phase 5) |
-| hooks.py | Event hook system with 10 event types (Phase 6) |
+| hooks.py | Event hook system with 13 event types (Phase 6 + Layer 2) |
 | tool_registry.py | Central tool catalog with 12 tools (Phase 6) |
 
 
@@ -248,7 +256,7 @@ Full plan: `_tools/CLAUDE_CODE_PATTERNS_MASTERPLAN.md`
 - **Pulse cards** with age badges (fresh/today/recent/old/reversed)
 - **Filter tabs** including "صاعدة حالياً" (currently bullish)
 - **Auto-refresh** every 90 seconds + sound alerts
-- **Linked from home.html** as most important page
+- **Archived** — file kept on disk, removed from nav
 - **Backend endpoints:**
   - GET /dashboard/ema-crosses — historical crossover events
   - GET /dashboard/ema-proximity — stocks near crossing
