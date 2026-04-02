@@ -8510,7 +8510,8 @@ async def telegram_polling_loop():
     logger.info("Telegram polling started")
 
     consecutive_errors = 0
-    while _tg_running:
+    try:
+      while _tg_running:
         try:
             resp = await _tg_client.get(
                 f"{TG_BASE}/getUpdates",
@@ -8546,7 +8547,15 @@ async def telegram_polling_loop():
             logger.error(f"TG poll error ({consecutive_errors}): {e}")
             await asyncio.sleep(wait)
 
-    logger.info("Telegram polling stopped")
+    finally:
+        _tg_running = False
+        if _tg_client:
+            try:
+                await _tg_client.aclose()
+            except Exception:
+                pass
+            _tg_client = None
+        logger.info("Telegram polling stopped (cleanup done)")
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

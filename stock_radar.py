@@ -771,14 +771,21 @@ def check_symbol(symbol, fast=9, slow=21):
 
 # ═══ Background Radar Loop ═══
 
+# Cleanup state tracking (Tier1 #6)
+_radar_running = False
+_radar_cycle_count = 0
+
 async def radar_loop(send_fn):
     """Main radar loop. send_fn(text) sends Telegram message."""
     init_radar_db()
     _load_prev_ema()
+    global _radar_running, _radar_cycle_count
+    _radar_running = True
     logger.info("Stock radar loop started")
     await asyncio.sleep(60)  # wait for system startup
-    while True:
-        try:
+    try:
+        while True:
+            try:
             # Feature flag check (DB-backed, no restart needed)
             try:
                 from feature_flags import FeatureFlags
@@ -914,9 +921,13 @@ async def radar_loop(send_fn):
                     continue
             poll = cfg.get("poll_seconds", 90)
             await asyncio.sleep(poll)
-        except Exception as e:
-            logger.error(f"Radar loop error (non-fatal): {e}")
-            await asyncio.sleep(120)
+            _radar_cycle_count += 1
+            except Exception as e:
+                logger.error(f"Radar loop error (non-fatal): {e}")
+                await asyncio.sleep(120)
+    finally:
+        _radar_running = False
+        logger.info("Radar loop stopped after %d cycles", _radar_cycle_count)
 
 
 # ═══ Telegram Command Handlers ═══
