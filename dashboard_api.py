@@ -114,6 +114,23 @@ def _build_rooms_summary(states):
 # /dashboard — Single call for all sensors
 # ═══════════════════════════════════════════════════
 
+def _check_bridge_health():
+    """Check if Bridge is available via service_health."""
+    try:
+        from service_health import get_health_hub
+        hub = get_health_hub()
+        if hub and not hub.is_up("bridge"):
+            svc = hub._services.get("bridge")
+            return False, {
+                "degraded": True,
+                "degraded_reason": f"Bridge offline: {svc.reason if svc else 'unknown'}",
+                "data_source": "cache",
+            }
+    except Exception:
+        pass
+    return True, {}
+
+
 @router.get("/dashboard")
 async def ha_dashboard():
     """Returns all data needed for HA Master AI dashboard page."""
@@ -133,7 +150,12 @@ async def ha_dashboard():
     except Exception:
         data["cpu"] = 0; data["memory"] = 0; data["disk"] = 0; data["temperature"] = 0
     data["background_tasks"] = 22
-    data["degraded_mode"] = "normal"
+    bridge_up, bridge_degraded = _check_bridge_health()
+    if not bridge_up:
+        data["degraded_mode"] = "bridge_offline"
+        data["degraded_info"] = bridge_degraded
+    else:
+        data["degraded_mode"] = "normal"
     try:
         from life_work import get_shift
         from datetime import date as _d
@@ -349,6 +371,9 @@ async def ha_dashboard_radar():
     import sqlite3
     from datetime import date as _d
     data = {}
+    bridge_up, bridge_degraded = _check_bridge_health()
+    if bridge_degraded:
+        data.update(bridge_degraded)
     try:
         from stock_radar import get_watchlist, get_recent_events, _get_config, get_daily_snapshot
         from tv_data import KSE_STOCKS
@@ -629,6 +654,9 @@ async def ha_dashboard_radar():
 async def ha_dashboard_portfolio():
     """Portfolio data for HA dashboard — open positions, closed trades, stats."""
     data = {}
+    bridge_up, bridge_degraded = _check_bridge_health()
+    if bridge_degraded:
+        data.update(bridge_degraded)
 
     # Open positions with live P&L in KWD + broker fees
     try:

@@ -801,6 +801,17 @@ async def radar_loop(send_fn):
             if kwt_now.hour == 9 and kwt_now.minute < 15:
                 await asyncio.sleep(60)
                 continue
+            # Service health: skip cycle if Bridge is down
+            try:
+                from service_health import get_health_hub
+                _hub = get_health_hub()
+                if _hub and not _hub.is_up("bridge"):
+                    logger.warning("Bridge down (service_health), skipping radar cycle — waiting 300s")
+                    await asyncio.sleep(300)
+                    continue
+            except Exception:
+                pass
+
             watchlist = get_watchlist()
             if not watchlist:
                 # Fallback to config symbols — "ALL" means all KSE stocks

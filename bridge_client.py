@@ -25,7 +25,7 @@ COOLDOWN_SECONDS = 60
 
 
 class BridgeClient:
-    def __init__(self, base_url: str = BRIDGE_BASE_URL):
+    def __init__(self, base_url: str = BRIDGE_BASE_URL, health_hub=None):
         self.base_url = base_url.rstrip("/")
         self._cache: dict[str, dict] = {}  # key -> {data, ts}
         self._failure_count = 0
@@ -33,6 +33,7 @@ class BridgeClient:
         self._online = False
         self._last_success = None
         self._client: Optional[httpx.AsyncClient] = None
+        self._health_hub = health_hub
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -65,6 +66,8 @@ class BridgeClient:
                 return True
             # Cooldown expired, allow retry
             self._failure_count = 0
+            if self._health_hub:
+                self._health_hub.mark_up("bridge", details={"circuit_reset": True})
         return False
 
     async def _request(self, path: str, params: dict = None) -> Optional[dict]:
@@ -80,6 +83,8 @@ class BridgeClient:
             self._failure_count = 0
             self._online = True
             self._last_success = time.time()
+            if self._health_hub:
+                self._health_hub.mark_up("bridge", details={"cached_symbols": len(self._cache)})
             return data
         except Exception as e:
             self._failure_count += 1
@@ -87,6 +92,8 @@ class BridgeClient:
             if self._failure_count == MAX_FAILURES:
                 self._online = False
                 logger.warning("Bridge offline after %d failures: %s", MAX_FAILURES, e)
+                if self._health_hub:
+                    self._health_hub.mark_down("bridge", reason=f"offline after {MAX_FAILURES} failures: {e}")
             else:
                 logger.debug("Bridge request failed (%d/%d): %s", self._failure_count, MAX_FAILURES, e)
             return None
@@ -415,16 +422,18 @@ class BridgeClient:
 _bridge_client: Optional[BridgeClient] = None
 
 
-def get_bridge_client() -> BridgeClient:
+def get_bridge_client(health_hub=None) -> BridgeClient:
     global _bridge_client
     if _bridge_client is None:
-        _bridge_client = BridgeClient()
+        _bridge_client = BridgeClient(health_hub=health_hub)
+    elif health_hub and not _bridge_client._health_hub:
+        _bridge_client._health_hub = health_hub
     return _bridge_client
 
 
-async def init_bridge_client():
+async def init_bridge_client(health_hub=None):
     """Called during server lifespan startup."""
-    client = get_bridge_client()
+    client = get_bridge_client(health_hub=health_hub)
     status = await client.health()
     logger.info("Bridge client initialized: %s", status.get("status", "unknown"))
     return client

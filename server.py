@@ -628,6 +628,8 @@ FEATURE_SPEED_TEMPLATES = ff.is_enabled("speed_templates")
 FEATURE_SMART_ROUTER_V2 = ff.is_enabled("smart_router_v2")
 FEATURE_ENTITY_HEALTH = ff.is_enabled("entity_health")
 health_hub = ServiceHealthHub(_db_path)
+from service_health import set_health_hub
+set_health_hub(health_hub)
 hook_registry = HookRegistry(_db_path, ff=ff)
 tool_reg = ToolRegistry(ff=ff, health_hub=health_hub, hooks=hook_registry)
 kairos_agent = None  # initialized in lifespan with tg_send
@@ -2853,7 +2855,7 @@ async def lifespan(app):
     # Bridge API client (TradingView enrichment from Windows PC)
     try:
         from bridge_client import init_bridge_client
-        await init_bridge_client()
+        await init_bridge_client(health_hub=health_hub)
         logger.info("Bridge client ready")
     except Exception as e:
         logger.warning(f"Bridge client init failed (non-fatal): {e}")

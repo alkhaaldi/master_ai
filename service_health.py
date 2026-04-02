@@ -199,3 +199,14 @@ class ServiceHealthHub:
             },
             "checked_at": datetime.now(timezone.utc).isoformat(),
         }
+
+
+# Singleton accessor
+_health_hub_instance: ServiceHealthHub = None
+
+def get_health_hub() -> ServiceHealthHub:
+    return _health_hub_instance
+
+def set_health_hub(hub: ServiceHealthHub):
+    global _health_hub_instance
+    _health_hub_instance = hub
