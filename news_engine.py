@@ -13,9 +13,14 @@ import httpx
 from datetime import datetime, date, timedelta
 from xml.etree import ElementTree
 
+from circuit_breaker import CircuitBreaker
+
 logger = logging.getLogger("news")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "life.db")
+
+# Per-source circuit breakers: stop hitting a source after 3 consecutive failures
+_source_breakers: dict[str, CircuitBreaker] = {}
 
 # ═══════════════════════════════════════════════════
 # NEWS SOURCES (hardcoded, curated)
@@ -111,13 +116,25 @@ def _strip_html(text):
     return re.sub(r'<[^>]+>', '', text or '').strip()
 
 
+def _get_source_breaker(url: str) -> CircuitBreaker:
+    """Get or create a circuit breaker for an RSS source URL."""
+    if url not in _source_breakers:
+        _source_breakers[url] = CircuitBreaker(name=url[:40], failure_threshold=3, cooldown_seconds=300)
+    return _source_breakers[url]
+
+
 async def fetch_rss(url, max_items=10, timeout=15):
     """Fetch RSS feed and return list of {title, link, published, summary}."""
+    cb = _get_source_breaker(url)
+    if not cb.allow_request():
+        logger.debug(f"RSS circuit breaker open for {url[:40]}, skipping")
+        return []
     items = []
     try:
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             r = await client.get(url)
             if r.status_code != 200:
+                cb.record_failure()
                 logger.warning(f"RSS {url}: status {r.status_code}")
                 return items
             root = ElementTree.fromstring(r.text)
@@ -140,7 +157,9 @@ async def fetch_rss(url, max_items=10, timeout=15):
                     desc = _strip_html(entry.findtext('atom:summary', '', ns))
                     if title:
                         items.append({"title": title, "link": link, "published": pub, "summary": desc[:300]})
+        cb.record_success()
     except Exception as e:
+        cb.record_failure()
         logger.warning(f"RSS fetch error {url}: {e}")
     return items
 
