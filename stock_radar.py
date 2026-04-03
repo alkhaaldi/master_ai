@@ -19,6 +19,18 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# Integration: Tier2/3 modules
+try:
+    from coalesced_executor import CoalescedExecutor
+    _radar_coalesced = CoalescedExecutor("radar_refresh")
+except ImportError:
+    _radar_coalesced = None
+try:
+    from processing_cursor import ProcessingCursor
+    _signal_cursor = ProcessingCursor("radar_last_signal_id", cursor_type="id")
+except ImportError:
+    _signal_cursor = None
+
 logger = logging.getLogger("stock_radar")
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -771,21 +783,16 @@ def check_symbol(symbol, fast=9, slow=21):
 
 # ═══ Background Radar Loop ═══
 
-# Cleanup state tracking (Tier1 #6)
-_radar_running = False
-_radar_cycle_count = 0
-
 async def radar_loop(send_fn):
     """Main radar loop. send_fn(text) sends Telegram message."""
     init_radar_db()
     _load_prev_ema()
-    global _radar_running, _radar_cycle_count
     _radar_running = True
+    _radar_cycle_count = 0
     logger.info("Stock radar loop started")
     await asyncio.sleep(60)  # wait for system startup
-    try:
-        while True:
-            try:
+    while True:
+        try:
             # Feature flag check (DB-backed, no restart needed)
             try:
                 from feature_flags import FeatureFlags
@@ -913,6 +920,8 @@ async def radar_loop(send_fn):
                                 continue
                             await send_fn(msg, _sig_meta)
                             logger.info(f"Radar alert sent: {sym} {signal}")
+                            if _signal_cursor:
+                                _signal_cursor.set(f"{sym}:{signal}:{result['candle_time']}")
                         except Exception as se:
                             logger.error(f"Radar send error: {se}")
                     await asyncio.sleep(1)  # pace between symbols
@@ -922,12 +931,9 @@ async def radar_loop(send_fn):
             poll = cfg.get("poll_seconds", 90)
             await asyncio.sleep(poll)
             _radar_cycle_count += 1
-            except Exception as e:
-                logger.error(f"Radar loop error (non-fatal): {e}")
-                await asyncio.sleep(120)
-    finally:
-        _radar_running = False
-        logger.info("Radar loop stopped after %d cycles", _radar_cycle_count)
+        except Exception as e:
+            logger.error(f"Radar loop error (non-fatal): {e}")
+            await asyncio.sleep(120)
 
 
 # ═══ Telegram Command Handlers ═══
