@@ -7926,15 +7926,44 @@ async def api_news(category: str = None, sub: str = None,
 async def api_news_refresh_boursa():
     if not NEWS_ENGINE_OK:
         return {"ok": False, "error": "news_engine not loaded"}
-    result = await asyncio.to_thread(news_refresh_boursa)
-    return result
+    # Task tracking (Integration 7)
+    try:
+        from task_manager import TaskManager, TaskType
+        _tm = TaskManager.instance()
+        _task = _tm.create_task(TaskType.NEWS_FETCH, {"source": "boursa"})
+        _tm.start_task(_task.task_id)
+    except Exception:
+        _tm, _task = None, None
+    try:
+        result = await asyncio.to_thread(news_refresh_boursa)
+        if _tm and _task:
+            _tm.complete_task(_task.task_id, result=str(result.get("count", 0)) + " items")
+        return result
+    except Exception as e:
+        if _tm and _task:
+            _tm.fail_task(_task.task_id, error=str(e)[:100])
+        return {"ok": False, "error": str(e)}
 
 @app.post("/api/news/refresh-gemini")
 async def api_news_refresh_gemini():
     if not NEWS_ENGINE_OK:
         return {"ok": False, "error": "news_engine not loaded"}
-    result = await asyncio.to_thread(news_refresh_gemini)
-    return result
+    try:
+        from task_manager import TaskManager, TaskType
+        _tm = TaskManager.instance()
+        _task = _tm.create_task(TaskType.NEWS_FETCH, {"source": "gemini"})
+        _tm.start_task(_task.task_id)
+    except Exception:
+        _tm, _task = None, None
+    try:
+        result = await asyncio.to_thread(news_refresh_gemini)
+        if _tm and _task:
+            _tm.complete_task(_task.task_id, result=str(result.get("count", 0)) + " items")
+        return result
+    except Exception as e:
+        if _tm and _task:
+            _tm.fail_task(_task.task_id, error=str(e)[:100])
+        return {"ok": False, "error": str(e)}
 
 
 
