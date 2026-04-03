@@ -211,3 +211,34 @@ Node.js fs.realpathSync works fine — it's a DC-specific bug.
 - Session Memory: tracking conversation summaries
 - Task Manager: /api/tasks endpoint live
 - Skill System: 3 skills loaded from skills/ directory
+
+
+## Round 2 — 3 New Modules (Apr 3, 2026)
+Source: Claude Code services/autoDream, tips, toolUseSummary analysis.
+Full analysis: _tools/CLAUDE_CODE_SOURCE_ANALYSIS_ROUND2.md
+
+### dream_consolidator.py (190 lines)
+- Nightly Brain cleanup at 3 AM KWT
+- Gate chain: min count > exact duplicates > stale archives
+- Archives before deleting, keeps 2+ per category
+- TG: /dream (status), /dream run (manual)
+- API: GET /dream/status, POST /dream/run
+
+### tips_engine.py (140 lines)
+- 11 context-aware Arabic tips, max 1 per session
+- Selection: relevant > cooldown > least-recently-shown
+- Context-aware: bridge offline warning, message count
+- API: GET /tips
+
+### tool_summary.py (80 lines)
+- Gemini Flash summary for long responses (>500 chars)
+- Prepends summary before long TG response
+
+### Round 2 Fixes Applied:
+- TG 400 Bad Request: tg_send() catches HTTP 400, strips HTML, retries plain text
+- news_engine: 6 missing functions added, /api/news returns 50 items
+- /api/analyze endpoint: added routing to stock_analyzer
+
+### Audit: 67/68 = 99% (full_audit.py)
+- Module Imports 14/14, Integration Wiring 14/14, API Endpoints 13/14
+- Database Tables 12/12, Skills 2/2, Dashboard HTML 12/12
