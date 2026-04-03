@@ -6,6 +6,13 @@ import json, time, logging
 from collections import defaultdict, deque
 logger = logging.getLogger("chat_v7")
 
+# Integration: context management (Tier3 #15)
+try:
+    from context_manager import manage_context as _manage_ctx
+    _CTX_MGR_OK = True
+except ImportError:
+    _CTX_MGR_OK = False
+
 # Structured Memory
 try:
     import structured_memory as smem
@@ -726,6 +733,12 @@ async def handle_chat_v7(user_text, system_prompt, client, executors, model=None
         history = _conversations[user_id]
     history.append({"role": "user", "content": _enriched})
     messages = list(history)  # copy for this request
+    # Context management: trim/compress if too large (Tier3 #15)
+    if _CTX_MGR_OK and len(messages) > 12:
+        try:
+            messages = await _manage_ctx(messages, anthropic_client=client)
+        except Exception:
+            pass
     tools_used = []
     tool_results = []
 
