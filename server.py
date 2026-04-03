@@ -7794,6 +7794,23 @@ async def get_service_health():
     )
 
 
+
+# ── Stock Analysis API (Gemini 2.5 Pro via stock_analyzer.py) ──
+@app.get("/api/analyze")
+async def api_analyze(symbol: str = ""):
+    """Full technical analysis for a stock using Gemini 2.5 Pro + Bridge data."""
+    if not symbol:
+        return {"error": "symbol parameter required"}
+    symbol = symbol.upper().strip()
+    try:
+        from stock_analyzer import analyze_stock
+        result = await asyncio.to_thread(analyze_stock, symbol)
+        return result
+    except Exception as e:
+        logger.error("analyze error for %s: %s", symbol, e)
+        return {"error": str(e)}
+
+
 # ── Task Manager API (Tier2 #8 integration) ──────────────
 @app.get("/api/tasks")
 async def get_tasks():
