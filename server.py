@@ -7273,6 +7273,19 @@ def _correction_name(eid):
 # V2 TG Pipeline — LLM-first, no silent drops
 # ════════════════════════════════════════════════════════════════
 
+# Integration: session tracking + auto memory extraction (Tier3)
+try:
+    from session_memory import SessionTracker
+    _session_tracker = SessionTracker()
+except ImportError:
+    _session_tracker = None
+try:
+    from auto_memory_extractor import AutoMemoryExtractor
+    _memory_extractor = AutoMemoryExtractor()
+except ImportError:
+    _memory_extractor = None
+
+
 async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
     """V2: command -> fast_path(whitelist) -> LLM. Never silent drop."""
     import time as _t
@@ -7285,6 +7298,11 @@ async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
         user_profile = detect_user(source="telegram", telegram_user_id=tg_user_id)
     except Exception:
         user_profile = {"user_id": "bu_khalifa", "name": "Salem"}
+    # Track incoming message (Tier3 integration)
+    if _session_tracker:
+        _session_tracker.add_message("user", text)
+    if _memory_extractor:
+        _memory_extractor.record_message("user", text)
     logger.info(f"TG_V2 user={user_profile.get('user_id','?')} text={text[:50]}")
     
     # Auto-save admin chat_id
@@ -7380,6 +7398,12 @@ async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
     _elapsed = round((_t.monotonic() - _started), 2)
     logger.info(f"TG_V2 done in {_elapsed}s: {text[:40]}")
     
+    # Track response (Tier3 integration)
+    if _session_tracker:
+        _session_tracker.add_message("assistant", response)
+    if _memory_extractor:
+        _memory_extractor.record_message("assistant", response)
+
     await tg_send(chat_id, response)
 
 
