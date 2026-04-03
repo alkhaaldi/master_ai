@@ -2622,3 +2622,14 @@ async def api_latency_stats():
         }
     except Exception as e:
         return {"error": str(e), "avg_total_ms": 0, "samples": 0}
+
+
+@router.get("/api/skills")
+async def api_skills():
+    """List all available skills from skills/ directory (#20 Tier3)."""
+    try:
+        from skill_loader import SkillLoader
+        loader = SkillLoader()
+        return {"skills": loader.list_skills(), "count": len(loader.list_skills())}
+    except Exception as e:
+        return {"skills": [], "count": 0, "error": str(e)}
