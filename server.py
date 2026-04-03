@@ -5064,7 +5064,21 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
             if parse_mode:
                 payload["parse_mode"] = parse_mode
             resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json=payload)
-            if resp.status_code != 200:
+            if resp.status_code == 400 and parse_mode:
+                # Fallback: strip HTML/Markdown and retry as plain text
+                import re as _re
+                plain = _re.sub(r'<[^>]+>', '', part)
+                plain = plain.replace('*', '').replace('_', '').replace('`', '')
+                _fb_payload = {"chat_id": chat_id, "text": plain}
+                _fb_resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json=_fb_payload)
+                if _fb_resp.status_code == 200:
+                    _cb_tg.record_success()
+                    logger.info("TG send fallback to plain text (parse_mode=%s failed)", parse_mode)
+                    continue
+                _cb_tg.record_failure()
+                logger.error(f"TG send fail (even plain): {_fb_resp.text[:200]}")
+                return False
+            elif resp.status_code != 200:
                 _cb_tg.record_failure()
                 logger.error(f"TG send fail: {resp.text[:200]}")
                 if kairos_agent and hasattr(kairos_agent, 'tg_queue') and ff.is_enabled("telegram_queue"):
@@ -7285,6 +7299,11 @@ try:
 except ImportError:
     _memory_extractor = None
 
+# Wire anthropic client into extractor (after lifespan creates it)
+def _wire_extractor_client():
+    if _memory_extractor and anthropic_client:
+        _memory_extractor.set_client(anthropic_client)
+
 
 async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
     """V2: command -> fast_path(whitelist) -> LLM. Never silent drop."""
@@ -7302,6 +7321,8 @@ async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
     if _session_tracker:
         _session_tracker.add_message("user", text)
     if _memory_extractor:
+        if not _memory_extractor._client and anthropic_client:
+            _memory_extractor.set_client(anthropic_client)
         _memory_extractor.record_message("user", text)
     logger.info(f"TG_V2 user={user_profile.get('user_id','?')} text={text[:50]}")
     
