@@ -17,6 +17,13 @@ from circuit_breaker import CircuitBreaker
 
 logger = logging.getLogger("news")
 
+# Integration: cursor-based processing (Tier1 #7)
+try:
+    from processing_cursor import ProcessingCursor
+    _digest_cursor = ProcessingCursor("news_last_digest_id", cursor_type="id")
+except ImportError:
+    _digest_cursor = None
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "life.db")
 
 # Per-source circuit breakers: stop hitting a source after 3 consecutive failures
