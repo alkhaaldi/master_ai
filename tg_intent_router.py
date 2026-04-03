@@ -12,6 +12,13 @@ import re, json, os, logging, httpx
 
 logger = logging.getLogger("tg_intent")
 
+# Integration: Tier3 intent state machine
+try:
+    from intent_state_machine import IntentContext, IntentState, log_intent_audit
+    _INTENT_SM_OK = True
+except ImportError:
+    _INTENT_SM_OK = False
+
 HA_URL = os.getenv("HA_URL", "http://localhost:8123")
 HA_TOKEN = os.getenv("HA_TOKEN", "")
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -235,6 +242,32 @@ async def _ha_get_state(entity_id):
 async def route_intent(text: str) -> dict | None:
     """Try to route text to a fast-path handler.
     Returns dict {text, entities, action} or None."""
+    # Intent state tracking (Tier3 #17)
+    _ctx = None
+    if _INTENT_SM_OK:
+        import time as _t
+        _ctx = IntentContext(message_id=str(int(_t.time()*1000)), raw_text=text)
+    try:
+        result = await _route_intent_inner(text)
+        if _ctx:
+            _ctx.intent = (result or {}).get("source", "unknown")
+            _ctx.transition(IntentState.RESPONDED, f"{_ctx.duration_ms}ms")
+        return result
+    except Exception as _e:
+        if _ctx:
+            _ctx.error = str(_e)
+            _ctx.transition(IntentState.FAILED, str(_e)[:80])
+        raise
+    finally:
+        if _ctx:
+            try:
+                log_intent_audit(_ctx.to_audit_dict())
+            except Exception:
+                pass
+
+
+async def _route_intent_inner(text: str) -> dict | None:
+    """Inner routing logic (unwrapped)."""
     # Step 9: Check learned aliases first
     _alias_eid = resolve_alias(text)
     if _alias_eid:
