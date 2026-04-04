@@ -192,21 +192,35 @@ def snapshot_signals(signals: list = None):
                 continue
 
             ema_cross = sig.get("ema_cross") or {}
+            pivots = sig.get("pivots") or {}
+            # Phase 7: S/R distance calculations
+            _price = sig.get("price") or 0
+            _s_levels = [v for v in [pivots.get("s1", 0), pivots.get("s2", 0), sig.get("support", 0)] if v and v > 0 and v < _price]
+            _r_levels = [v for v in [pivots.get("r1", 0), pivots.get("r2", 0), sig.get("resistance", 0)] if v and v > _price]
+            _nearest_s = max(_s_levels) if _s_levels else 0
+            _nearest_r = min(_r_levels) if _r_levels else 0
+            _dist_support = round(((_price - _nearest_s) / _price) * 100, 2) if _nearest_s > 0 and _price > 0 else 0
+            _dist_resist = round(((_nearest_r - _price) / _price) * 100, 2) if _nearest_r > 0 and _price > 0 else 0
+            _near_support = 1 if (_nearest_s > 0 and sig.get("atr_14") and (_price - _nearest_s) < sig["atr_14"]) else 0
+
             c.execute(
                 """INSERT INTO signal_snapshots
                 (symbol, trade_state, verdict, verdict_key, confluence_score,
                  price_at_signal, rsi_14, macd_state, macd_momentum, ema_state,
                  adx, vol_ratio, stoch_k, bb_squeeze, rsi_divergence,
                  ema_cross_type, ema_cross_bars_ago, support, resistance, atr_14,
-                 ind_rsi, ind_macd, ind_ema, ind_adx, ind_vol, ind_stoch)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                 ind_rsi, ind_macd, ind_ema, ind_adx, ind_vol, ind_stoch,
+                 daily_pp, daily_s1, daily_s2, daily_r1, daily_r2,
+                 pdh, pdl, distance_to_support_pct, distance_to_resistance_pct,
+                 near_support, daily_sma20, daily_trend)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     sym,
                     sig.get("trade_state"),
                     sig.get("verdict"),
                     sig.get("verdict_key"),
                     sig.get("confluence_score", 0),
-                    sig.get("price"),
+                    _price,
                     sig.get("rsi_14"),
                     sig.get("macd_state"),
                     sig.get("macd_momentum"),
@@ -221,13 +235,26 @@ def snapshot_signals(signals: list = None):
                     sig.get("support"),
                     sig.get("resistance"),
                     sig.get("atr_14"),
-                    # Individual indicator votes (6 indicators, OBV removed)
+                    # Individual indicator votes
                     1 if (sig.get("rsi_14") or 0) > 50 else 0,
                     1 if sig.get("macd_state") == "bullish" else 0,
                     1 if sig.get("ema_state") == "bullish" else 0,
                     1 if (sig.get("adx") or 0) > 25 else 0,
                     1 if (sig.get("vol_ratio") or 0) > 1.0 else 0,
                     1 if (sig.get("stoch_k") or 0) > 50 else 0,
+                    # Phase 7: S/R tracking columns
+                    pivots.get("pp", 0),
+                    pivots.get("s1", 0),
+                    pivots.get("s2", 0),
+                    pivots.get("r1", 0),
+                    pivots.get("r2", 0),
+                    0,  # pdh (populated when daily_bars has prev day data)
+                    0,  # pdl
+                    _dist_support,
+                    _dist_resist,
+                    _near_support,
+                    sig.get("daily_sma20", 0),
+                    sig.get("daily_trend", "UNKNOWN"),
                 ),
             )
             count += 1
