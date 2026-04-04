@@ -1659,6 +1659,98 @@ def dashboard_signals_daily():
 
     data["timeframe"] = "1D"
     data["price_note"] = "Prices are daily closing prices from DB, not live 30m."
+
+    # ═══ Gemini Analysis Overlay ═══
+    try:
+        from stock_analyzer import get_all_cached_analyses
+        _analyses = {a["symbol"]: a for a in get_all_cached_analyses()}
+
+        for sig in data.get("all_signals", []):
+            sym = sig.get("symbol", "")
+            ga = _analyses.get(sym)
+            if ga and ga.get("structured_json"):
+                sj = ga["structured_json"]
+                a_date = ga.get("analysis_date", "")
+                _stale = False
+                try:
+                    from datetime import datetime as _dt, timedelta as _td
+                    _stale = (_dt.now() - _dt.strptime(a_date, "%Y-%m-%d")) > _td(days=3)
+                except Exception:
+                    pass
+                sig["gemini"] = {
+                    "signal": ga.get("signal", ""),
+                    "confidence": ga.get("confidence", 0),
+                    "direction": sj.get("direction", ""),
+                    "targets": sj.get("targets", []),
+                    "stop_loss": sj.get("stop_loss", ""),
+                    "entry": sj.get("entry", ""),
+                    "support": sj.get("support", []),
+                    "resistance": sj.get("resistance", []),
+                    "analysis_date": a_date,
+                    "stale": _stale,
+                }
+                # Conflict detection
+                radar_verdict = sig.get("verdict_key", "")
+                gemini_signal = (ga.get("signal") or "").lower()
+                _conflict = False
+                if radar_verdict == "buy" and any(w in gemini_signal for w in ["\u0628\u064a\u0639", "\u0627\u0646\u062a\u0638\u0627\u0631"]):
+                    _conflict = True
+                elif radar_verdict == "avoid" and "\u0634\u0631\u0627\u0621" in gemini_signal:
+                    _conflict = True
+                sig["gemini_conflict"] = _conflict
+            else:
+                sig["gemini"] = None
+                sig["gemini_conflict"] = False
+
+        # Gemini-boosted decision card
+        dc = data.get("decision_card")
+        if dc and dc.get("gemini") and not dc["gemini"].get("stale"):
+            gc = dc["gemini"].get("confidence", 0)
+            if gc >= 70:
+                old_score = dc.get("confluence_score", 0)
+                boost = min(15, int((gc - 50) * 0.3))
+                dc["confluence_score_raw"] = old_score
+                dc["gemini_boost"] = boost
+    except Exception as _ge:
+        import logging
+        logging.getLogger("dashboard_api").warning("Gemini overlay failed: %s", _ge)
+
+    # ═══ Risk Summary ═══
+    try:
+        from risk_engine import _get_risk_config
+        _rc = _get_risk_config()
+        _open_count = len([s for s in data.get("all_signals", []) if s.get("trade_state") in ("entered", "manage")])
+        _max_pos = int(_rc.get("max_open_positions", 5))
+        data["risk_summary"] = {
+            "capital": _rc.get("account_capital", 0),
+            "risk_per_trade_pct": _rc.get("risk_per_trade_pct", 2),
+            "max_positions": _max_pos,
+            "open_positions_count": _open_count,
+            "slots_available": max(0, _max_pos - _open_count),
+            "portfolio_heat_pct": round(_open_count / max(_max_pos, 1) * 100, 1),
+        }
+    except Exception:
+        data["risk_summary"] = None
+
+    # ═══ Transaction counts for open positions ═══
+    try:
+        _tdb = _sq.connect(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "data", "life.db"), timeout=3)
+        for pos in data.get("open_positions", []):
+            _tid = pos.get("id") or pos.get("trade_id")
+            if _tid:
+                _txr = _tdb.execute(
+                    "SELECT COUNT(*) as cnt, "
+                    "COALESCE(SUM(CASE WHEN tx_type='partial_sell' THEN quantity ELSE 0 END), 0) as sold "
+                    "FROM trade_transactions WHERE trade_id=?", (_tid,)).fetchone()
+                pos["tx_count"] = _txr[0] if _txr else 0
+                pos["qty_sold"] = _txr[1] if _txr else 0
+            else:
+                pos["tx_count"] = 0
+                pos["qty_sold"] = 0
+        _tdb.close()
+    except Exception:
+        pass
+
     return data
 
 
