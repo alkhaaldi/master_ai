@@ -140,6 +140,7 @@ document.getElementById('filterBar').addEventListener('click',function(e){
 
 function getSmartClass(sd){return sd==='ENTER'?'golden':sd==='WAIT'?'candidate':'watch'}
 function sdColor(sd){return sd==='ENTER'?'var(--grn)':sd==='WAIT'?'var(--amb)':'var(--t3)'}
+const V2_WHITELIST=["INOVEST","URC","ACICO","AAYANRE","OOREDOO","ALFTAQA","NINV","MUBARRAD","NRE","RASIYAT"];
 
 function renderCards(){
   const grid=document.getElementById('cardsGrid');
@@ -169,8 +170,13 @@ function renderCards(){
       +'<div class="opp-head">'
       +'<span class="opp-sym" onclick="window.open(\'personality?symbol='+o.symbol+'\',\'_blank\')">'+L('#'+o.rank+' '+o.symbol)+'</span>'
       +'<div style="display:flex;gap:.4rem;align-items:center">'
+      +(V2_WHITELIST.includes(o.symbol)?'<span style="font-size:.58rem;padding:2px 6px;border-radius:4px;background:var(--gold-bg);border:1px solid var(--gold-br);color:var(--gold)">V2 Whitelist</span>':'<span style="font-size:.58rem;padding:2px 6px;border-radius:4px;background:var(--n7);color:var(--t4)">&#x062E;&#x0627;&#x0631;&#x062C; V2</span>')
       +'<span style="font-size:.78rem;padding:4px 12px;border-radius:8px;font-weight:700;color:'+sdClr+';background:rgba(0,0,0,.4);border:1px solid '+sdClr+'">'+sdAr+'</span>'
       +'</div></div>'
+      +'<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem">'
+      +(o.daily_trend?'<span style="font-size:.6rem;padding:2px 8px;border-radius:4px;background:'+(o.daily_trend==='UP'?'var(--grn-bg)':o.daily_trend==='DOWN'?'var(--red-bg)':'var(--amb-bg)')+';border:1px solid '+(o.daily_trend==='UP'?'var(--grn-br)':o.daily_trend==='DOWN'?'var(--red-br)':'var(--amb-br)')+';color:'+(o.daily_trend==='UP'?'var(--grn)':o.daily_trend==='DOWN'?'var(--red)':'var(--amb)')+'">&#x0627;&#x062A;&#x062C;&#x0627;&#x0647;: '+o.daily_trend+'</span>':'')
+      +(o.swing_confluence_pct!=null?'<span style="font-size:.6rem;padding:2px 8px;border-radius:4px;background:var(--cyn-bg);border:1px solid var(--cyn-br);color:var(--cyn)">V2: '+Math.round(o.swing_confluence_pct)+'%</span>':'')
+      +'</div>'
       +'<div class="opp-body">'
       /* Smart reason */
       +'<div style="font-size:.82rem;color:'+sdClr+';font-weight:600;margin-bottom:.6rem;line-height:1.6">'+(reason)+'</div>'
