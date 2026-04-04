@@ -31,6 +31,7 @@ _SEED_FLAGS = [
     ("liquidity_filter", 1, "Filter illiquid stocks / wide spread (KSE)"),
     ("sector_limits", 1, "Sector exposure limits — max 2 per sector"),
     ("pre_trade_checklist", 1, "Pre-trade checklist gate — all checks must pass"),
+    ("paper_trading", 1, "Paper trading mode — simulate trades with slippage"),
     ("risk_engine", 1, "Portfolio risk engine — position sizing + heat"),
 ]
 

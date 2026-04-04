@@ -1805,6 +1805,40 @@ def dashboard_swing():
 
 
 
+
+
+@router.get("/dashboard/paper-trading")
+def dashboard_paper_trading():
+    """Paper trading dashboard — simulated trades with slippage."""
+    try:
+        from paper_trading import get_paper_trading_stats
+        return get_paper_trading_stats()
+    except Exception as e:
+        return {"error": str(e), "mode": "paper", "open_trades": 0}
+
+
+@router.post("/api/paper-trade/open")
+async def api_paper_trade_open(request: Request):
+    """Open a paper trade from signal data."""
+    try:
+        body = await request.json()
+        from paper_trading import open_paper_trade
+        return open_paper_trade(body)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/api/paper-trade/close")
+async def api_paper_trade_close(request: Request):
+    """Close a paper trade."""
+    try:
+        body = await request.json()
+        from paper_trading import close_paper_trade
+        return close_paper_trade(body["trade_id"], body["exit_price"], body.get("reason", "manual"))
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.get("/dashboard/risk-status")
 def dashboard_risk_status():
     """Portfolio risk status — capital, heat, sectors, position sizing."""
