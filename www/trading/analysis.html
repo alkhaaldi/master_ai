@@ -188,16 +188,28 @@ let analysisCache = {};
 
 function buildStockList(){
   let html = '';
+  const allSymbols = [];
   for(const [sector, symbols] of Object.entries(STOCKS)){
-    html += '<div class="sector-group" data-sector="'+esc(sector)+'">';
-    html += '<div class="sector-header">'+esc(sector)+' ('+symbols.length+')</div>';
     for(const sym of symbols){
-      html += '<div class="stock-item" data-sym="'+sym+'" onclick="selectStock(\''+sym+'\')">';
-      html += '<div><div class="si-symbol">'+sym+'</div></div>';
-      html += '</div>';
+      allSymbols.push({sym: sym, sector: sector});
     }
+  }
+  allSymbols.sort(function(a, b){ return a.sym.localeCompare(b.sym); });
+  let currentLetter = '';
+  for(const item of allSymbols){
+    const letter = item.sym.charAt(0).toUpperCase();
+    if(letter !== currentLetter){
+      if(currentLetter) html += '</div>';
+      currentLetter = letter;
+      const count = allSymbols.filter(function(x){return x.sym.charAt(0).toUpperCase()===letter}).length;
+      html += '<div class="sector-group" data-sector="'+letter+'">';
+      html += '<div class="sector-header">'+letter+' ('+count+')</div>';
+    }
+    html += '<div class="stock-item" data-sym="'+item.sym+'" onclick="selectStock(\''+item.sym+'\')">';
+    html += '<div><div class="si-symbol">'+item.sym+'</div></div>';
     html += '</div>';
   }
+  if(currentLetter) html += '</div>';
   $('stock-list').innerHTML = html;
 }
 
