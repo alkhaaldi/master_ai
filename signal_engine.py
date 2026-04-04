@@ -422,8 +422,12 @@ def build_signals() -> dict:
             "liquidity": check_liquidity(sym_upper) if LIQUIDITY_FILTER else {"passed": True, "reasons": []},
             "sector": _get_stock_sector(sym_upper),
             "sector_ar": _get_sector_name_ar(_get_stock_sector(sym_upper)),
-            "checklist": pre_trade_checklist(sig, regime, sig.get("liquidity", {})) if PRE_TRADE_CHECKLIST else None,
+            "checklist": None,  # computed below after sig is built
         }
+
+        # Phase 2 ITEM 6: Compute checklist now that sig is built
+        if PRE_TRADE_CHECKLIST:
+            sig["checklist"] = pre_trade_checklist(sig, regime, sig.get("liquidity", {}))
 
         # Phase 4: Pivots + ATR stops
         pivots = _get_pivots_for_symbol(sym_upper)
