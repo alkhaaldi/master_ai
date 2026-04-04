@@ -29,6 +29,7 @@ SWING_CONFLUENCE = True     # True = VOL+ADX only, False = old RSI+MACD+all
 MARKET_REGIME_FILTER = True  # True = block buys when KWSE index is bearish/choppy
 LIQUIDITY_FILTER = True      # True = filter illiquid stocks / wide spread
 RISK_ENGINE = True           # True = position sizing + portfolio heat
+PRE_TRADE_CHECKLIST = True   # True = pre-trade checklist gate
 
 
 def get_trading_flags() -> dict:
@@ -43,6 +44,7 @@ def get_trading_flags() -> dict:
         "market_regime_filter": MARKET_REGIME_FILTER,
         "liquidity_filter": LIQUIDITY_FILTER,
         "risk_engine": RISK_ENGINE,
+        "pre_trade_checklist": PRE_TRADE_CHECKLIST,
     }
 
 
@@ -103,6 +105,58 @@ _VERDICT_MAP = {
 # ═══════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════
+# Trading V2 Phase 2: Pre-Trade Checklist (ITEM 6)
+# ═══════════════════════════════════════════════════
+def pre_trade_checklist(sig: dict, regime: dict, liquidity: dict) -> dict:
+    """
+    Run comprehensive pre-trade gate. ALL checks must pass for 'ادخل'.
+    """
+    # Try to get risk status (lazy import to avoid circular)
+    risk_ok = True
+    sector_ok = True
+    positions_ok = True
+    try:
+        from risk_engine import check_can_open
+        rc = check_can_open(sig.get("symbol", ""),
+                           sig.get("price", 0), sig.get("swing_stop", 0))
+        risk_ok = rc.get("can_open", True)
+        sector_ok = rc.get("checks", {}).get("sector", {}).get("ok", True)
+        positions_ok = rc.get("checks", {}).get("max_positions", {}).get("ok", True)
+    except Exception:
+        pass
+
+    checks = [
+        {"name": "market_regime", "label": "\u0627\u062a\u062c\u0627\u0647 \u0627\u0644\u0633\u0648\u0642",
+         "passed": regime.get("allow_buy", True)},
+        {"name": "daily_trend", "label": "\u0627\u062a\u062c\u0627\u0647 \u0627\u0644\u0633\u0647\u0645 (SMA20)",
+         "passed": sig.get("daily_trend") == "UP"},
+        {"name": "adx_valid", "label": "ADX > 25",
+         "passed": (sig.get("adx") or 0) >= 25},
+        {"name": "volume_valid", "label": "\u062d\u062c\u0645 1-3x",
+         "passed": 1 <= (sig.get("vol_ratio") or 0) <= 3},
+        {"name": "liquidity_ok", "label": "\u0633\u064a\u0648\u0644\u0629 \u0643\u0627\u0641\u064a\u0629",
+         "passed": liquidity.get("passed", True)},
+        {"name": "risk_ok", "label": "\u0645\u062e\u0627\u0637\u0631\u0629 \u0636\u0645\u0646 \u0627\u0644\u062d\u062f",
+         "passed": risk_ok},
+        {"name": "max_positions", "label": "\u0645\u0631\u0627\u0643\u0632 < \u0627\u0644\u062d\u062f",
+         "passed": positions_ok},
+        {"name": "sector_ok", "label": "\u0642\u0637\u0627\u0639 \u063a\u064a\u0631 \u0645\u0643\u0631\u0631",
+         "passed": sector_ok},
+        {"name": "rr_valid", "label": "R:R > 1.5",
+         "passed": (sig.get("swing_rr") or 0) >= 1.5},
+    ]
+    all_passed = all(c["passed"] for c in checks)
+    return {
+        "all_passed": all_passed,
+        "passed_count": sum(1 for c in checks if c["passed"]),
+        "total_checks": len(checks),
+        "checks": checks,
+        "verdict": "\u0627\u062f\u062e\u0644" if all_passed else "\u0644\u0627 \u062a\u062f\u062e\u0644",
+        "failed": [c["label"] for c in checks if not c["passed"]],
+    }
+
 # Trading V2 Phase 2: Liquidity & Spread Filter (KSE)
 # ═══════════════════════════════════════════════════
 MIN_AVG_DAILY_VALUE_KWD = 50000   # 20-day avg traded value
@@ -364,6 +418,7 @@ def build_signals() -> dict:
             "liquidity": check_liquidity(sym_upper) if LIQUIDITY_FILTER else {"passed": True, "reasons": []},
             "sector": _get_stock_sector(sym_upper),
             "sector_ar": _get_sector_name_ar(_get_stock_sector(sym_upper)),
+            "checklist": pre_trade_checklist(sig, regime, sig.get("liquidity", {})) if PRE_TRADE_CHECKLIST else None,
         }
 
         # Phase 4: Pivots + ATR stops
@@ -1304,4 +1359,36 @@ def build_signals_30m() -> dict:
         sig["scalping_vwap_ok"] = vwap_data.get("price_vs_vwap") == "above"
 
         # Phase 3: Scalping confluence (replaces default for 30m)
-        if 
+        if SCALPING_MODE:
+            sc = scalping_confluence(sig)
+            sig["scalp_confluence_pct"] = sc["confluence_pct"]
+            sig["scalp_action"] = sc["action"]
+            sig["scalp_factors"] = sc["factors"]
+            sig["scalp_reason"] = sc.get("reason")
+
+        signals.append(sig)
+
+    signals.sort(key=lambda s: s.get("confluence_score", 0), reverse=True)
+    result["signals"] = signals
+    result["count"] = len(signals)
+    return result
+
+
+def _get_radar_watchlist_safe() -> dict:
+    """Get radar watchlist as {SYMBOL: dict}."""
+    try:
+        from stock_radar import get_watchlist
+        wl = get_watchlist()
+        return {item["symbol"].upper(): item for item in wl if item.get("symbol")}
+    except Exception:
+        return {}
+
+
+def _get_bridge_symbols_set() -> set:
+    """Get set of symbols currently in bridge cache."""
+    try:
+        from bridge_client import get_bridge_client
+        client = get_bridge_client()
+        return {k.split(":")[-1] for k in client._cache if k.startswith("analysis:")}
+    except Exception:
+        return set()

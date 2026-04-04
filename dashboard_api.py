@@ -1724,6 +1724,7 @@ def dashboard_swing():
                 "liquidity": s.get("liquidity", {}),
                 "sector": s.get("sector", "unknown"),
                 "sector_ar": s.get("sector_ar", ""),
+                "checklist": s.get("checklist"),
             }
             opportunities.append(entry)
             if not top_signal or entry["confluence_pct"] > top_signal["confluence_pct"]:
@@ -2934,4 +2935,15 @@ async def api_latency_stats():
             "samples": len(durations),
         }
     except Exception as e:
-      
+        return {"error": str(e), "avg_total_ms": 0, "samples": 0}
+
+
+@router.get("/api/skills")
+async def api_skills():
+    """List all available skills from skills/ directory (#20 Tier3)."""
+    try:
+        from skill_loader import SkillLoader
+        loader = SkillLoader()
+        return {"skills": loader.list_skills(), "count": len(loader.list_skills())}
+    except Exception as e:
+        return {"skills": [], "count": 0, "error": str(e)}
