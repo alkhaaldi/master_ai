@@ -27,6 +27,7 @@ _SEED_FLAGS = [
     ("golden_engine", 1, "Golden opportunities matching"),
     ("position_monitor", 1, "Position auto-monitoring"),
     ("daily_refresh", 1, "Daily snapshot auto-refresh"),
+    ("market_regime_filter", 1, "Block buys in bearish/choppy market regime"),
 ]
 
 # Map flag name → env var name (for backward compat)
@@ -146,7 +147,4 @@ class FeatureFlags:
                     """INSERT INTO feature_flags (name, enabled, updated_at)
                        VALUES (?, ?, datetime('now'))
                        ON CONFLICT(name) DO UPDATE SET enabled=?, updated_at=datetime('now')""",
-                    (name, int(enabled), int(enabled)),
-                )
-            conn.commit()
-        self._refresh()
+                    (name, int(enabled), int(
