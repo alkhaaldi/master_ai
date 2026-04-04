@@ -2,611 +2,685 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>&#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0631;&#x0628; — EMA 9/21</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>&#x0645;&#x0636;&#x0627;&#x0631;&#x0628; &#x0633;&#x0631;&#x064A;&#x0639; | Master AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{
-  --navy-900:#070D17;--navy-800:#0C1525;--navy-700:#111E32;
-  --navy-600:#162840;--navy-500:#1C334F;--navy-400:#24405F;
-  --gold:#C6974B;--gold-bright:#D4A95C;--gold-dim:#9E7A3D;
-  --gold-bg:rgba(198,151,75,.06);--gold-br:rgba(198,151,75,.25);
-  --green:#4CAF82;--green-bright:#5BC492;--green-bg:rgba(76,175,130,.08);--green-br:rgba(76,175,130,.3);
-  --red:#D94452;--red-bright:#E5606C;--red-bg:rgba(217,68,82,.08);--red-br:rgba(217,68,82,.3);
-  --amber:#E8A838;--amber-bg:rgba(232,168,56,.08);--amber-br:rgba(232,168,56,.3);
-  --cyan:#38BDF8;--cyan-bg:rgba(56,189,248,.08);--cyan-br:rgba(56,189,248,.3);
-  --text:#E8ECF0;--text-2:#A0ADBC;--text-3:#6B7D90;--text-4:#405060;
-  --card:#0E1929;--card-hover:#132137;--card-border:#1A2E45;
-  --f:'Tajawal','Noto Kufi Arabic',sans-serif;
-  --fd:'Noto Kufi Arabic','Tajawal',sans-serif;
-  --fm:'IBM Plex Mono','Consolas',monospace;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{
-  font-family:var(--f);font-variant-numeric:tabular-nums;
-  background:var(--navy-900);color:var(--text);
-  min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased;
-}
-.ltr{direction:ltr;unicode-bidi:isolate}
+  :root {
+    --navy: #0a1628;
+    --navy-light: #111d35;
+    --navy-mid: #162544;
+    --gold: #d4a841;
+    --gold-dim: #a88832;
+    --green: #00c853;
+    --green-dim: #1b5e20;
+    --red: #ff1744;
+    --red-dim: #7f0000;
+    --cyan: #26c6da;
+    --white: #e8eaf0;
+    --gray: #6b7b99;
+    --orange: #ff9100;
+    --card-bg: rgba(17, 29, 53, 0.85);
+    --border: rgba(212, 168, 65, 0.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* ===== NAV BAR ===== */
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--navy-light);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .nav a {
+    color: var(--gray);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .nav a:hover { color: var(--gold); background: rgba(212,168,65,0.08); }
+  .nav a.active { color: var(--gold); background: rgba(212,168,65,0.15); font-weight: 700; }
+
+  /* ===== PULSE BAR ===== */
+  .pulse-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, var(--navy-mid), var(--navy-light));
+    border-bottom: 2px solid var(--gold-dim);
+  }
+  .pulse-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pulse-title .icon { font-size: 26px; }
+  .pulse-stats {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  .pulse-stat {
+    text-align: center;
+  }
+  .pulse-stat .val {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--gold);
+  }
+  .pulse-stat .lbl {
+    font-size: 11px;
+    color: var(--gray);
+    margin-top: 2px;
+  }
+  .pulse-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.5s infinite;
+    margin-left: 8px;
+  }
+  .pulse-dot.offline { background: var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ===== FILTERS ===== */
+  .filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    background: var(--navy-light);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .filter-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    color: var(--cyan);
+    background: rgba(38,198,218,0.06);
+  }
+  .filter-chip .fv { color: var(--gold); font-weight: 700; }
+  .refresh-info {
+    margin-right: auto;
+    font-size: 11px;
+    color: var(--gray);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .countdown {
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* ===== SCANNER TABLE ===== */
+  .scanner-wrap {
+    padding: 12px 16px;
+  }
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+  .badge-hot { background: rgba(255,23,68,0.2); color: var(--red); }
+  .badge-ok  { background: rgba(0,200,83,0.2); color: var(--green); }
+  .badge-watch { background: rgba(255,145,0,0.2); color: var(--orange); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    padding: 8px 6px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--gray);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--navy);
+    z-index: 2;
+  }
+  tbody td {
+    padding: 10px 6px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(212,168,65,0.05); }
+  tbody tr.strong-buy { border-right: 3px solid var(--green); }
+  tbody tr.buy { border-right: 3px solid var(--cyan); }
+
+  .sym-cell {
+    text-align: right;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--white);
+    padding-right: 12px !important;
+  }
+  .price-up { color: var(--green); }
+  .price-dn { color: var(--red); }
+  .price-flat { color: var(--gray); }
+
+  .vwap-above {
+    background: rgba(0,200,83,0.12);
+    color: var(--green);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .vwap-below {
+    background: rgba(255,23,68,0.12);
+    color: var(--red);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .conf-bar-wrap {
+    width: 60px;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+  .conf-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s;
+  }
+  .conf-high { background: var(--green); }
+  .conf-mid { background: var(--gold); }
+  .conf-low { background: var(--orange); }
+
+  .factors-cell {
+    display: flex;
+    gap: 3px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .factor-tag {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .factor-tag.vwap  { background: rgba(0,200,83,0.2); color: var(--green); }
+  .factor-tag.vol   { background: rgba(38,198,218,0.2); color: var(--cyan); }
+  .factor-tag.adx   { background: rgba(212,168,65,0.2); color: var(--gold); }
+  .factor-tag.stoch { background: rgba(156,39,176,0.2); color: #ce93d8; }
+
+  .action-strong { color: var(--green); font-weight: 800; font-size: 12px; }
+  .action-buy { color: var(--cyan); font-weight: 700; font-size: 12px; }
+  .action-watch { color: var(--orange); font-weight: 600; font-size: 12px; }
+
+  .sl-tp {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .sl-val { color: var(--red); }
+  .tp-val { color: var(--green); }
+  .rr-val { color: var(--gold); font-weight: 600; }
+
+  /* ===== ACTIVE SCALPS ===== */
+  .active-scalps {
+    padding: 12px 16px;
+  }
+  .scalp-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .scalp-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .scalp-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+  }
+  .scalp-card.profit::before { background: var(--green); }
+  .scalp-card.loss::before { background: var(--red); }
+  .scalp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .scalp-sym {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--white);
+  }
+  .scalp-pnl {
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .scalp-pnl.pos { color: var(--green); }
+  .scalp-pnl.neg { color: var(--red); }
+  .scalp-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray);
+  }
+  .scalp-details .val { color: var(--white); font-weight: 600; }
+  .bars-indicator {
+    display: flex;
+    gap: 3px;
+    margin-top: 8px;
+  }
+  .bar-dot {
+    width: 20px;
+    height: 5px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.1);
+  }
+  .bar-dot.used { background: var(--gold); }
+  .bar-dot.danger { background: var(--red); animation: blink 0.8s infinite; }
+  .exit-warning {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ===== DEGRADED MODE ===== */
+  .degraded-banner {
+    padding: 8px 20px;
+    background: rgba(255,145,0,0.15);
+    border-bottom: 1px solid rgba(255,145,0,0.3);
+    color: var(--orange);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    display: none;
+  }
+  .degraded-banner.show { display: block; }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--gray);
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  /* ===== NO DATA ===== */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gray);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state .msg { font-size: 16px; font-weight: 600; }
+  .empty-state .sub { font-size: 13px; margin-top: 6px; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .pulse-bar { flex-direction: column; gap: 10px; }
+    .pulse-stats { gap: 16px; }
+    .filters-bar { gap: 8px; }
+    table { font-size: 12px; }
+    thead th, tbody td { padding: 6px 3px; }
+    .conf-bar-wrap { width: 40px; }
+    .scalp-cards { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
-<style>
-/* ===== TOPBAR ===== */
-.topbar{
-  position:sticky;top:0;z-index:100;
-  background:rgba(7,13,23,.92);backdrop-filter:blur(16px);
-  border-bottom:1px solid var(--card-border);
-  padding:0 1.25rem;height:56px;
-  display:flex;align-items:center;justify-content:space-between;gap:.75rem;
-}
-.topbar-brand{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
-.brand-mark{
-  background:linear-gradient(135deg,var(--gold),var(--gold-dim));
-  color:var(--navy-900);font-family:var(--fm);font-weight:700;
-  font-size:.85rem;padding:.25rem .6rem;border-radius:4px;letter-spacing:.5px;
-}
-.topbar-title{font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--text)}
-.topbar-center{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
-.status-chip{
-  display:flex;align-items:center;gap:.35rem;
-  font-size:.75rem;padding:.25rem .65rem;border-radius:20px;
-  border:1px solid var(--card-border);background:var(--navy-800);color:var(--text-2);
-}
-.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.dot-green{background:var(--green);box-shadow:0 0 6px var(--green)}
-.dot-red{background:var(--red);box-shadow:0 0 6px var(--red)}
-.dot-amber{background:var(--amber);box-shadow:0 0 6px var(--amber)}
 
-/* ===== PULSE HERO ===== */
-.pulse-row{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;
-  padding:1.25rem 1.25rem .75rem;
-}
-.pulse-card{
-  background:var(--card);border:1px solid var(--card-border);
-  border-radius:12px;padding:1rem 1.25rem;text-align:center;
-  transition:border-color .2s;
-}
-.pulse-card:hover{border-color:var(--gold-br)}
-.pulse-num{font-family:var(--fm);font-size:2.2rem;font-weight:700;line-height:1.1}
-.pulse-label{font-size:.8rem;color:var(--text-3);margin-top:.25rem}
-.num-green{color:var(--green-bright)}
-.num-red{color:var(--red-bright)}
-.num-gold{color:var(--gold-bright)}
-
-/* ===== APPROACHING BANNER ===== */
-.approaching-banner{
-  margin:0 1.25rem .75rem;padding:.75rem 1rem;
-  background:var(--amber-bg);border:1px solid var(--amber-br);
-  border-radius:10px;display:flex;align-items:center;gap:.75rem;
-  font-size:.85rem;
-}
-.approaching-banner .icon{font-size:1.2rem;flex-shrink:0}
-.approaching-list{display:flex;flex-wrap:wrap;gap:.4rem}
-.approaching-chip{
-  font-family:var(--fm);font-size:.72rem;
-  padding:2px 8px;border-radius:6px;
-  background:var(--navy-700);border:1px solid var(--amber-br);color:var(--amber);
-}
-
-/* ===== FILTER TABS ===== */
-.filter-bar{
-  display:flex;align-items:center;gap:.5rem;
-  padding:.5rem 1.25rem;border-bottom:1px solid var(--card-border);
-}
-.filter-btn{
-  font-family:var(--f);font-size:.8rem;
-  padding:.35rem .85rem;border-radius:20px;
-  border:1px solid var(--card-border);background:transparent;
-  color:var(--text-3);cursor:pointer;transition:all .2s;
-}
-.filter-btn:hover{border-color:var(--gold-br);color:var(--text-2)}
-.filter-btn.active{background:var(--gold-bg);border-color:var(--gold-br);color:var(--gold)}
-.filter-spacer{flex:1}
-.refresh-info{font-size:.7rem;color:var(--text-4);font-family:var(--fm)}
-.hours-select{
-  font-family:var(--fm);font-size:.75rem;
-  background:var(--navy-700);color:var(--text-2);border:1px solid var(--card-border);
-  padding:4px 8px;border-radius:6px;cursor:pointer;
-}
-</style>
-<style>
-/* ===== TABLE ===== */
-.events-table{width:100%;border-collapse:collapse}
-.events-table th{
-  position:sticky;top:56px;z-index:10;
-  background:var(--navy-800);
-  font-family:var(--fd);font-weight:600;font-size:.75rem;
-  color:var(--text-3);text-transform:uppercase;letter-spacing:.3px;
-  padding:.65rem .75rem;border-bottom:1px solid var(--card-border);
-  text-align:right;white-space:nowrap;
-}
-.events-table td{
-  padding:.6rem .75rem;border-bottom:1px solid rgba(26,46,69,.4);
-  font-size:.82rem;white-space:nowrap;
-}
-.events-table tr{transition:background .15s}
-.events-table tr:hover{background:var(--card-hover)}
-.events-table tr.new-flash{animation:flash .8s ease}
-@keyframes flash{
-  0%,100%{background:transparent}
-  30%{background:rgba(198,151,75,.12)}
-}
-
-.sig-badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:3px 10px;border-radius:6px;font-size:.75rem;font-weight:600;
-}
-.sig-bull{background:var(--green-bg);border:1px solid var(--green-br);color:var(--green-bright)}
-.sig-bear{background:var(--red-bg);border:1px solid var(--red-br);color:var(--red-bright)}
-
-.age-badge{
-  display:inline-flex;align-items:center;gap:3px;
-  padding:2px 8px;border-radius:5px;font-size:.68rem;font-weight:600;
-}
-.age-fresh{background:var(--green-bg);border:1px solid var(--green-br);color:var(--green-bright);animation:pulse-glow 2s infinite}
-.age-today{background:var(--green-bg);border:1px solid rgba(76,175,130,.15);color:var(--green)}
-.age-recent{background:var(--gold-bg);border:1px solid var(--gold-br);color:var(--gold)}
-.age-old{background:var(--navy-700);border:1px solid var(--card-border);color:var(--text-3)}
-.age-reversed{background:var(--red-bg);border:1px solid var(--red-br);color:var(--red-bright)}
-@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 rgba(76,175,130,0)}50%{box-shadow:0 0 8px 2px rgba(76,175,130,.3)}}
-
-.score-bar{
-  display:inline-flex;align-items:center;gap:4px;
-  font-family:var(--fm);font-size:.75rem;
-}
-.score-fill{
-  width:40px;height:6px;border-radius:3px;background:var(--navy-600);overflow:hidden;
-}
-.score-fill-inner{height:100%;border-radius:3px;transition:width .3s}
-
-.sym-name{font-weight:600;color:var(--text)}
-.sym-code{font-family:var(--fm);font-size:.7rem;color:var(--text-3)}
-.mono{font-family:var(--fm);font-size:.78rem}
-.txt2{color:var(--text-2)}
-.txt3{color:var(--text-3)}
-
-/* ===== EMPTY STATE ===== */
-.empty-state{
-  text-align:center;padding:4rem 2rem;color:var(--text-3);
-}
-.empty-state .icon{font-size:3rem;margin-bottom:1rem;opacity:.4}
-.empty-state .title{font-size:1.1rem;color:var(--text-2);margin-bottom:.5rem}
-
-/* ===== AUDIO TOGGLE ===== */
-.sound-toggle{
-  display:flex;align-items:center;gap:.4rem;
-  font-size:.75rem;color:var(--text-3);cursor:pointer;
-  padding:.3rem .6rem;border-radius:8px;border:1px solid var(--card-border);
-  background:transparent;transition:all .2s;
-}
-.sound-toggle:hover{border-color:var(--gold-br)}
-.sound-toggle.active{color:var(--gold);border-color:var(--gold-br);background:var(--gold-bg)}
-
-/* ===== NAV ===== */
-.nav-strip{
-  display:flex;gap:.3rem;overflow-x:auto;padding:.5rem 1.25rem;
-  border-bottom:1px solid var(--card-border);background:var(--navy-800);
-}
-.nav-link{
-  font-size:.72rem;padding:.3rem .7rem;border-radius:6px;
-  color:var(--text-3);text-decoration:none;white-space:nowrap;
-  transition:all .15s;
-}
-.nav-link:hover{color:var(--text);background:var(--navy-600)}
-.nav-link.active{color:var(--gold);background:var(--gold-bg);font-weight:600}
-
-/* ===== RESPONSIVE ===== */
-@media(max-width:768px){
-  .pulse-row{grid-template-columns:1fr 1fr 1fr;gap:.5rem;padding:.75rem}
-  .pulse-num{font-size:1.5rem}
-  .topbar{padding:0 .75rem;height:48px}
-  .events-table th,.events-table td{padding:.5rem .4rem;font-size:.72rem}
-  .approaching-banner{flex-direction:column;align-items:flex-start;gap:.5rem}
-  .hide-mobile{display:none}
-}
-</style>
-<!-- ===== TOPBAR ===== -->
-<header class="topbar">
-  <div class="topbar-brand">
-    <span class="brand-mark">KSE</span>
-    <span class="topbar-title">&#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0631;&#x0628;</span>
-  </div>
-  <div class="topbar-center">
-    <span class="status-chip"><span class="status-dot" id="bridgeDot"></span><span id="bridgeStatus">...</span></span>
-    <span class="status-chip" style="background:var(--gold-bg);border-color:var(--gold-br);color:var(--gold)">&#x23F0; 30m</span>
-    <span class="status-chip">EMA 9/21</span>
-  </div>
-  <button class="sound-toggle" id="soundBtn" onclick="toggleSound()">
-    &#x1F50A; &#x0635;&#x0648;&#x062A;
-  </button>
-</header>
-
-<!-- ===== NAV ===== -->
-<nav class="nav-strip">
-  <a href="decisions" class="nav-link">&#x0627;&#x0644;&#x0642;&#x0631;&#x0627;&#x0631;&#x0627;&#x062A;</a>
-  <a href="positions" class="nav-link">&#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x0643;&#x0632;</a>
-  <a href="radar" class="nav-link">&#x0627;&#x0644;&#x0631;&#x0627;&#x062F;&#x0627;&#x0631;</a>
-  <a href="signals" class="nav-link">&#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0627;&#x062A;</a>
-  <a href="scalper" class="nav-link active">&#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0631;&#x0628;</a>
-  <a href="journal" class="nav-link">&#x0627;&#x0644;&#x0633;&#x062C;&#x0644;</a>
-  <a href="strategies" class="nav-link">&#x0627;&#x0644;&#x0627;&#x0633;&#x062A;&#x0631;&#x0627;&#x062A;&#x064A;&#x062C;&#x064A;&#x0627;&#x062A;</a>
-  <a href="brain" class="nav-link">&#x0627;&#x0644;&#x0639;&#x0642;&#x0644;</a>
-  <a href="home" class="nav-link">&#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;</a>
+<!-- NAV -->
+<nav class="nav">
+  <a href="home.html">&#x0627;&#x0644;&#x0631;&#x0626;&#x064A;&#x0633;&#x064A;&#x0629;</a>
+  <a href="radar.html">&#x0631;&#x0627;&#x062F;&#x0627;&#x0631;</a>
+  <a href="signals.html">&#x0625;&#x0634;&#x0627;&#x0631;&#x0627;&#x062A;</a>
+  <a href="scalper.html" class="active">&#x0645;&#x0636;&#x0627;&#x0631;&#x0628;</a>
+  <a href="brain.html">&#x0627;&#x0644;&#x062F;&#x0645;&#x0627;&#x063A;</a>
+  <a href="positions.html">&#x0645;&#x0631;&#x0627;&#x0643;&#x0632;</a>
+  <a href="journal.html">&#x064A;&#x0648;&#x0645;&#x064A;&#x0629;</a>
+  <a href="news.html">&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</a>
+  <a href="system.html">&#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</a>
 </nav>
 
-<!-- ===== PULSE HERO ===== -->
-<div class="pulse-row">
-  <div class="pulse-card">
-    <div class="pulse-num num-green" id="bullCount">-</div>
-    <div class="pulse-label">&#x2B50; &#x0635;&#x0627;&#x0639;&#x062F;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B;</div>
+<!-- DEGRADED -->
+<div class="degraded-banner" id="degradedBanner">
+  &#x26A0;&#xFE0F; Bridge &#x063A;&#x064A;&#x0631; &#x0645;&#x062A;&#x0635;&#x0644; &mdash; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0642;&#x062F; &#x062A;&#x0643;&#x0648;&#x0646; &#x0642;&#x062F;&#x064A;&#x0645;&#x0629;
+</div>
+
+<!-- PULSE BAR -->
+<div class="pulse-bar">
+  <div class="pulse-title">
+    <span class="icon">&#x26A1;</span>
+    <span>&#x0645;&#x0636;&#x0627;&#x0631;&#x0628; &#x0633;&#x0631;&#x064A;&#x0639; 30m</span>
+    <span class="pulse-dot" id="statusDot"></span>
   </div>
-  <div class="pulse-card">
-    <div class="pulse-num num-red" id="bearCount">-</div>
-    <div class="pulse-label">&#x062A;&#x0642;&#x0627;&#x0637;&#x0639; &#x0647;&#x0627;&#x0628;&#x0637; &#x2193;</div>
-  </div>
-  <div class="pulse-card">
-    <div class="pulse-num num-gold" id="totalCount">-</div>
-    <div class="pulse-label">&#x0625;&#x062C;&#x0645;&#x0627;&#x0644;&#x064A;</div>
+  <div class="pulse-stats">
+    <div class="pulse-stat">
+      <div class="val" id="hotCount">-</div>
+      <div class="lbl">&#x0641;&#x0631;&#x0635;&#x0629; &#x062D;&#x0627;&#x0631;&#x0629;</div>
+    </div>
+    <div class="pulse-stat">
+      <div class="val" id="activeCount">-</div>
+      <div class="lbl">&#x0645;&#x0636;&#x0627;&#x0631;&#x0628;&#x0629; &#x0646;&#x0634;&#x0637;&#x0629;</div>
+    </div>
+    <div class="pulse-stat">
+      <div class="val" id="avgConf">-</div>
+      <div class="lbl">&#x0645;&#x062A;&#x0648;&#x0633;&#x0637; Confluence</div>
+    </div>
+    <div class="pulse-stat">
+      <div class="val mono" id="scannedCount">-</div>
+      <div class="lbl">&#x0645;&#x0646; 128</div>
+    </div>
   </div>
 </div>
 
-<!-- ===== APPROACHING BANNER ===== -->
-<div class="approaching-banner" id="approachBanner" style="display:none">
-  <span class="icon">&#x26A1;</span>
-  <div>
-    <strong>&#x0642;&#x0631;&#x064A;&#x0628;&#x0629; &#x0645;&#x0646; &#x0627;&#x0644;&#x062A;&#x0642;&#x0627;&#x0637;&#x0639;:</strong>
-    <div class="approaching-list" id="approachList"></div>
+<!-- FILTERS -->
+<div class="filters-bar">
+  <div class="filter-chip">Vol <span class="fv">&ge;3x</span></div>
+  <div class="filter-chip">ADX <span class="fv">&ge;25</span></div>
+  <div class="filter-chip">VWAP <span class="fv">&#x0641;&#x0648;&#x0642;</span></div>
+  <div class="filter-chip">Stoch <span class="fv">K&gt;D</span></div>
+  <div class="refresh-info">
+    <span>&#x062A;&#x062D;&#x062F;&#x064A;&#x062B; &#x0643;&#x0644;</span>
+    <span class="countdown mono" id="countdown">30</span>
+    <span>&#x062B;&#x0627;&#x0646;&#x064A;&#x0629;</span>
   </div>
 </div>
 
-<!-- ===== FILTERS ===== -->
-<div class="filter-bar">
-  <button class="filter-btn active" data-filter="active_bull" onclick="setFilter('active_bull',this)" style="background:var(--green-bg);border-color:var(--green-br);color:var(--green)">&#x2B50; &#x0635;&#x0627;&#x0639;&#x062F;&#x0629; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B;</button>
-  <button class="filter-btn" data-filter="all" onclick="setFilter('all',this)">&#x0627;&#x0644;&#x0643;&#x0644;</button>
-  <button class="filter-btn" data-filter="bullish" onclick="setFilter('bullish',this)">&#x0635;&#x0627;&#x0639;&#x062F; &#x2191;</button>
-  <button class="filter-btn" data-filter="bearish" onclick="setFilter('bearish',this)">&#x0647;&#x0627;&#x0628;&#x0637; &#x2193;</button>
-  <div class="filter-spacer"></div>
-  <select class="hours-select" id="hoursSelect" onchange="loadData()">
-    <option value="2">&#x0622;&#x062E;&#x0631; &#x0633;&#x0627;&#x0639;&#x062A;&#x064A;&#x0646;</option>
-    <option value="4">&#x0622;&#x062E;&#x0631; 4 &#x0633;&#x0627;&#x0639;&#x0627;&#x062A;</option>
-    <option value="8">&#x0622;&#x062E;&#x0631; 8 &#x0633;&#x0627;&#x0639;&#x0627;&#x062A;</option>
-    <option value="24">&#x0622;&#x062E;&#x0631; 24 &#x0633;&#x0627;&#x0639;&#x0629;</option>
-    <option value="72" selected>&#x0622;&#x062E;&#x0631; 3 &#x0623;&#x064A;&#x0627;&#x0645;</option>
-    <option value="168">&#x0622;&#x062E;&#x0631; &#x0623;&#x0633;&#x0628;&#x0648;&#x0639;</option>
-  </select>
-  <span class="refresh-info" id="refreshInfo">...</span>
+<!-- ACTIVE SCALPS -->
+<div class="active-scalps" id="activeScalpsSection" style="display:none">
+  <div class="section-head">
+    <div class="section-title">
+      &#x1F3AF; &#x0645;&#x0636;&#x0627;&#x0631;&#x0628;&#x0627;&#x062A; &#x0646;&#x0634;&#x0637;&#x0629;
+    </div>
+  </div>
+  <div class="scalp-cards" id="scalpCards"></div>
 </div>
-<!-- ===== TABLE ===== -->
-<div style="padding:.4rem 1.25rem 0;display:flex;align-items:center;gap:.5rem">
-  <span style="font-size:.7rem;color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br);padding:2px 10px;border-radius:6px;font-family:var(--fm)">&#x23F0; 30m &#x2014; &#x0646;&#x0635; &#x0633;&#x0627;&#x0639;&#x0629;</span>
-  <span style="font-size:.7rem;color:var(--text-3)">&#x0645;&#x0635;&#x062F;&#x0631; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;: Bridge API &#x2192; Stock Radar &#x2192; 128 &#x0633;&#x0647;&#x0645; &#x0643;&#x0648;&#x064A;&#x062A;&#x064A;</span>
+
+<!-- HOT SCANNER -->
+<div class="scanner-wrap">
+  <div class="section-head">
+    <div class="section-title">
+      &#x1F525; &#x0641;&#x0631;&#x0635; &#x062D;&#x0627;&#x0631;&#x0629;
+      <span class="badge badge-hot" id="hotBadge">0</span>
+    </div>
+  </div>
+  <div id="scannerContent">
+    <table>
+      <thead>
+        <tr>
+          <th>&#x0627;&#x0644;&#x0633;&#x0647;&#x0645;</th>
+          <th>&#x0627;&#x0644;&#x0633;&#x0639;&#x0631;</th>
+          <th>&#x0627;&#x0644;&#x062A;&#x063A;&#x064A;&#x0631;</th>
+          <th>Vol</th>
+          <th>ADX</th>
+          <th>VWAP</th>
+          <th>Confluence</th>
+          <th>&#x0627;&#x0644;&#x0639;&#x0648;&#x0627;&#x0645;&#x0644;</th>
+          <th>&#x0627;&#x0644;&#x0642;&#x0631;&#x0627;&#x0631;</th>
+          <th>SL / TP</th>
+        </tr>
+      </thead>
+      <tbody id="hotTableBody">
+      </tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="icon">&#x1F50D;</div>
+      <div class="msg">&#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0641;&#x0631;&#x0635; &#x062D;&#x0627;&#x0644;&#x064A;&#x0627;&#x064B;</div>
+      <div class="sub">&#x064A;&#x062A;&#x0645; &#x0627;&#x0644;&#x0641;&#x062D;&#x0635; &#x0643;&#x0644; 30 &#x062B;&#x0627;&#x0646;&#x064A;&#x0629; &#x2014; &#x0627;&#x0646;&#x062A;&#x0638;&#x0631; &#x0627;&#x0644;&#x062D;&#x0631;&#x0643;&#x0629;</div>
+    </div>
+  </div>
 </div>
-<div style="overflow-x:auto">
-<table class="events-table">
-<thead>
-<tr>
-  <th>#</th>
-  <th>&#x0627;&#x0644;&#x0625;&#x0634;&#x0627;&#x0631;&#x0629; / &#x0627;&#x0644;&#x062D;&#x0627;&#x0644;&#x0629;</th>
-  <th>&#x0627;&#x0644;&#x0633;&#x0647;&#x0645;</th>
-  <th>&#x0627;&#x0644;&#x0633;&#x0639;&#x0631;</th>
-  <th>EMA 9</th>
-  <th>EMA 21</th>
-  <th>RSI</th>
-  <th>&#x0627;&#x0644;&#x062D;&#x062C;&#x0645;</th>
-  <th class="hide-mobile">&#x0627;&#x0644;&#x062F;&#x0639;&#x0645;</th>
-  <th class="hide-mobile">&#x0627;&#x0644;&#x0645;&#x0642;&#x0627;&#x0648;&#x0645;&#x0629;</th>
-  <th>Score</th>
-  <th>&#x0627;&#x0644;&#x062D;&#x0643;&#x0645;</th>
-  <th>&#x0627;&#x0644;&#x0648;&#x0642;&#x062A;</th>
-  <th>&#x0627;&#x0644;&#x0641;&#x0631;&#x064A;&#x0645;</th>
-</tr>
-</thead>
-<tbody id="eventsBody">
-<tr><td colspan="14" class="empty-state">
-  <div class="icon">&#x1F4E1;</div>
-  <div class="title">&#x062C;&#x0627;&#x0631;&#x064A; &#x0627;&#x0644;&#x062A;&#x062D;&#x0645;&#x064A;&#x0644;...</div>
-</td></tr>
-</tbody>
-</table>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>Master AI Scalper</span>
+  &bull;
+  <span>&#x0627;&#x0644;&#x0645;&#x0635;&#x062F;&#x0631;: Bridge 30m</span>
+  &bull;
+  <span>&#x0622;&#x062E;&#x0631; &#x062A;&#x062D;&#x062F;&#x064A;&#x062B;: <span class="mono" id="lastUpdate">--</span></span>
 </div>
+
 <script>
-const BASE = location.hostname === 'localhost' ? '' : '';
-let currentFilter = 'active_bull';
-let soundEnabled = false;
-let lastEventCount = 0;
-let allEvents = [];
-let activeData = null;
-let liveData = null;
+const API_BASE = '';  // same origin (FastAPI serves this page)
+const API_KEY_META = document.querySelector('meta[name="api-key"]');
+const REFRESH_INTERVAL = 30; // seconds
 
-// Sound
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playBeep(type){
-  if(!soundEnabled) return;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.type = 'sine';
-  osc.frequency.value = type === 'bullish_cross' ? 880 : 440;
-  gain.gain.value = 0.15;
-  osc.start();
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-  osc.stop(audioCtx.currentTime + 0.5);
-}
+let countdown = REFRESH_INTERVAL;
+let countdownEl = document.getElementById('countdown');
 
-function toggleSound(){
-  soundEnabled = !soundEnabled;
-  const btn = document.getElementById('soundBtn');
-  btn.classList.toggle('active', soundEnabled);
-  btn.innerHTML = soundEnabled ? '\uD83D\uDD0A \u0635\u0648\u062A \u2714' : '\uD83D\uDD07 \u0635\u0648\u062A';
-  if(soundEnabled) audioCtx.resume();
-}
-
-function setFilter(f, btn){
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderEvents();
-}
-
-function scoreColor(s){
-  if(s >= 70) return 'var(--green-bright)';
-  if(s >= 50) return 'var(--gold)';
-  if(s >= 30) return 'var(--amber)';
-  return 'var(--red-bright)';
-}
-
-function fmtTime(t){
-  if(!t) return '-';
-  try{
-    const d = new Date(t+'Z');
-    const h = d.getHours().toString().padStart(2,'0');
-    const m = d.getMinutes().toString().padStart(2,'0');
-    const dd = d.getDate();
-    const mm = (d.getMonth()+1);
-    return `<span class="mono txt2">${h}:${m}</span> <span class="txt3">${dd}/${mm}</span>`;
-  }catch(e){ return t; }
-}
-
-function fmtNum(v, dec){
-  if(v == null || v === '') return '-';
-  return Number(v).toFixed(dec || 0);
-}
-
-function fmtVol(v){
-  if(!v) return '-';
-  v = Number(v);
-  if(v >= 1e6) return (v/1e6).toFixed(1)+'M';
-  if(v >= 1e3) return (v/1e3).toFixed(0)+'K';
-  return v.toLocaleString();
-}
-</script>
-<script>
-function getActiveBulls(events){
-  // Group by symbol, keep latest signal per symbol
-  const latest = {};
-  events.forEach(e => {
-    if(!latest[e.symbol] || (e.time||e.candle_time) > (latest[e.symbol].time||latest[e.symbol].candle_time)){
-      latest[e.symbol] = e;
-    }
-  });
-  // Return only those whose LATEST signal is bullish
-  return Object.values(latest).filter(e => e.signal === 'bullish_cross')
-    .sort((a,b) => (b.time||b.candle_time||'').localeCompare(a.time||a.candle_time||''));
-}
-
-function getLatestPerSymbol(events){
-  const latest = {};
-  events.forEach(e => {
-    if(!latest[e.symbol] || (e.time||e.candle_time) > (latest[e.symbol].time||latest[e.symbol].candle_time)){
-      latest[e.symbol] = e;
-    }
-  });
-  return Object.values(latest)
-    .sort((a,b) => (b.time||b.candle_time||'').localeCompare(a.time||a.candle_time||''));
-}
-
-function crossAge(timeStr){
-  if(!timeStr) return {hours:999, label:'-', cls:'old'};
-  try{
-    const t = new Date(timeStr+'Z');
-    const now = new Date();
-    const diffH = (now - t) / 3600000;
-    if(diffH < 2) return {hours:diffH, label:'\u2B50 \u062A\u0648\u0647', cls:'fresh'};
-    if(diffH < 6) return {hours:diffH, label:'\u0627\u0644\u064A\u0648\u0645', cls:'today'};
-    if(diffH < 24) return {hours:diffH, label:Math.floor(diffH)+' \u0633\u0627\u0639\u0629', cls:'recent'};
-    return {hours:diffH, label:Math.floor(diffH/24)+' \u064A\u0648\u0645', cls:'old'};
-  }catch(e){return {hours:999, label:'-', cls:'old'};}
-}
-
-function renderEvents(){
-  let filtered;
-  if(currentFilter === 'active_bull'){
-    // Priority: live Bridge data > DB active > calculated from events
-    if(liveData && liveData.bullish && liveData.bullish.length > 0){
-      filtered = liveData.bullish;
-    } else if(activeData && activeData.bullish){
-      filtered = activeData.bullish;
-    } else {
-      filtered = getActiveBulls(allEvents);
-    }
-  } else if(currentFilter === 'all'){
-    filtered = allEvents;
-  } else {
-    filtered = allEvents.filter(e => currentFilter === 'bullish' ? e.signal === 'bullish_cross' : e.signal === 'bearish_cross');
+// ===== FETCH DATA =====
+async function fetchScalperData() {
+  try {
+    const headers = { 'Accept': 'application/json' };
+    // API key from cookie or meta (FastAPI handles auth for served pages)
+    const res = await fetch(`${API_BASE}/dashboard/scalper`, { headers });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    renderData(data);
+  } catch (err) {
+    console.error('Fetch error:', err);
+    showDegraded(true);
   }
-  
-  const tbody = document.getElementById('eventsBody');
-  
-  if(!filtered.length){
-    tbody.innerHTML = `<tr><td colspan="14" class="empty-state">
-      <div class="icon">\uD83D\uDCE1</div>
-      <div class="title">\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0642\u0627\u0637\u0639\u0627\u062A \u0641\u064A \u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629</div>
-      <div>\u062C\u0631\u0628 \u0632\u064A\u0627\u062F\u0629 \u0627\u0644\u0641\u062A\u0631\u0629 \u0623\u0648 \u0627\u0646\u062A\u0638\u0631 \u0648\u0642\u062A \u0627\u0644\u0633\u0648\u0642</div>
-    </td></tr>`;
+}
+
+// ===== RENDER =====
+function renderData(data) {
+  // Degraded check
+  const bridgeOk = data.scalper_active !== false;
+  showDegraded(!bridgeOk);
+  document.getElementById('statusDot').className = bridgeOk ? 'pulse-dot' : 'pulse-dot offline';
+
+  // Pulse stats
+  const stats = data.stats || {};
+  document.getElementById('hotCount').textContent = stats.hot_count || 0;
+  document.getElementById('activeCount').textContent = stats.active_scalps || 0;
+  document.getElementById('avgConf').textContent = stats.avg_confluence ? stats.avg_confluence + '%' : '-';
+  document.getElementById('scannedCount').textContent = stats.total_scanned || 0;
+  document.getElementById('lastUpdate').textContent = formatTime(data.scan_time);
+
+  // Hot stocks
+  renderHotStocks(data.hot_stocks || []);
+
+  // Active scalps
+  renderActiveScalps(data.active_scalps || []);
+}
+
+function renderHotStocks(stocks) {
+  const tbody = document.getElementById('hotTableBody');
+  const empty = document.getElementById('emptyState');
+  const badge = document.getElementById('hotBadge');
+
+  badge.textContent = stocks.length;
+
+  if (stocks.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
     return;
   }
-  
-  let html = '';
-  filtered.forEach((e, i) => {
-    const sig = e.signal || e.last_signal || e.status || '';
-    const isBull = sig.indexOf('bullish') >= 0 || sig === 'above';
-    const sigClass = isBull ? 'sig-bull' : 'sig-bear';
-    const sigText = isBull ? '\u2191 \u0635\u0627\u0639\u062F' : '\u2193 \u0647\u0627\u0628\u0637';
-    const sc = e.score || 0;
-    const scCol = scoreColor(sc);
-    const rsiVal = e.rsi ? Number(e.rsi) : null;
-    let rsiClass = 'txt2';
-    if(rsiVal && rsiVal >= 70) rsiClass = 'num-red';
-    else if(rsiVal && rsiVal <= 30) rsiClass = 'num-green';
-    
-    const volRatio = e.vol_ratio ? Number(e.vol_ratio) : 0;
-    let volIcon = '';
-    if(volRatio >= 2.0) volIcon = ' \uD83D\uDD25';
-    else if(volRatio >= 1.5) volIcon = ' \u26A1';
-    
-    // Age badge — live data shows gap%, historical shows age
-    const eventTime = e.time || e.signal_time || e.candle_time;
-    const isLiveEntry = (e.status === 'above' || e.status === 'below' || e.status === 'touching');
-    let ageCls, ageLabel, ageFresh;
-    if(isLiveEntry){
-      ageFresh = true;
-      ageCls = isBull ? 'age-fresh' : 'age-reversed';
-      ageLabel = '\uD83D\uDFE2 \u062D\u064A';
-      if(e.gap_pct !== undefined) ageLabel += ' ' + e.gap_pct.toFixed(1) + '%';
-    } else {
-      const age = crossAge(eventTime);
-      ageFresh = (age.cls === 'fresh');
-      ageCls = isBull ? ('age-' + age.cls) : 'age-reversed';
-      ageLabel = isBull ? age.label : '\u26D4 \u0627\u0646\u0639\u0643\u0633';
-    }
-    
-    html += `<tr class="${i < 3 && lastEventCount > 0 ? 'new-flash' : ''}" style="${ageFresh && isBull ? 'background:rgba(76,175,130,.04)' : ''}">
-      <td class="mono txt3">${i+1}</td>
-      <td><span class="sig-badge ${sigClass}">${sigText}</span><br><span class="age-badge ${ageCls}">${ageLabel}</span></td>
-      <td><span class="sym-name">${e.name_ar || e.symbol}</span><br><span class="sym-code ltr">${e.symbol}</span></td>
-      <td class="mono">${fmtNum(e.price, 0)}</td>
-      <td class="mono txt2">${fmtNum(e.ema9 || e.ema_fast, 1)}</td>
-      <td class="mono txt2">${fmtNum(e.ema21 || e.ema_slow, 1)}</td>
-      <td class="mono ${rsiClass}">${rsiVal ? rsiVal.toFixed(1) : '-'}</td>
-      <td class="mono txt2">${fmtVol(e.volume)}${volIcon}<br><span class="txt3">x${volRatio.toFixed(1)}</span></td>
-      <td class="mono txt2 hide-mobile">${fmtNum(e.support, 0)}</td>
-      <td class="mono txt2 hide-mobile">${fmtNum(e.resistance, 0)}</td>
-      <td><div class="score-bar">
-        <div class="score-fill"><div class="score-fill-inner" style="width:${sc}%;background:${scCol}"></div></div>
-        <span class="mono" style="color:${scCol}">${sc}</span>
-      </div></td>
-      <td style="font-size:.78rem">${e.verdict || '-'}</td>
-      <td>${fmtTime(eventTime)}</td>
-      <td><span class="mono" style="color:var(--gold);font-size:.7rem">30m</span></td>
-    </tr>`;
-  });
-  tbody.innerHTML = html;
-}
-</script>
-<script>
-async function loadData(){
-  const hours = document.getElementById('hoursSelect').value;
-  try {
-    // Load ALL 3 endpoints
-    const [liveResp, activeResp, crossResp] = await Promise.all([
-      fetch('/dashboard/ema-live').then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/dashboard/ema-active').then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/dashboard/ema-crosses?hours=' + hours).then(r => r.ok ? r.json() : null).catch(() => null),
-    ]);
-    
-    // Live data (real-time from Bridge) — primary source
-    if(liveResp && liveResp.bridge_online && liveResp.total_checked > 0){
-      liveData = liveResp;
-      document.getElementById('bullCount').textContent = liveResp.bullish_count;
-      document.getElementById('bearCount').textContent = liveResp.bearish_count;
-      const dot = document.getElementById('bridgeDot');
-      const st = document.getElementById('bridgeStatus');
-      dot.className = 'status-dot dot-green';
-      st.textContent = liveResp.total_checked + ' \u0633\u0647\u0645 \u062D\u064A';
-    } else if(activeResp){
-      // Fallback to DB state
-      liveData = null;
-      document.getElementById('bullCount').textContent = activeResp.bullish_count;
-      document.getElementById('bearCount').textContent = activeResp.bearish_count;
-      const dot = document.getElementById('bridgeDot');
-      const st = document.getElementById('bridgeStatus');
-      dot.className = 'status-dot dot-amber';
-      st.textContent = 'DB \u0641\u0642\u0637';
-    } else {
-      liveData = null;
-      document.getElementById('bridgeDot').className = 'status-dot dot-red';
-      document.getElementById('bridgeStatus').textContent = '\u063A\u064A\u0631 \u0645\u062A\u0635\u0644';
-    }
-    
-    // Crosses data (event history)
-    if(crossResp){
-      document.getElementById('totalCount').textContent = crossResp.total;
-      if(lastEventCount > 0 && crossResp.events.length > lastEventCount){
-        const newest = crossResp.events[0];
-        if(newest) playBeep(newest.signal);
-      }
-      lastEventCount = crossResp.events.length;
-      allEvents = crossResp.events;
-    }
-    
-    if(activeResp) activeData = activeResp;
-    
-    renderEvents();
-    
-    const now = new Date();
-    document.getElementById('refreshInfo').textContent = 
-      now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
-  } catch(err) {
-    console.error('Load error:', err);
-    document.getElementById('bridgeDot').className = 'status-dot dot-red';
-    document.getElementById('bridgeStatus').textContent = '\u062E\u0637\u0623';
-  }
-}
+  empty.style.display = 'none';
 
-async function loadApproaching(){
-  try {
-    const resp = await fetch('/dashboard/ema-proximity?threshold_pct=2');
-    if(!resp.ok) return;
-    const data = await resp.json();
-    const banner = document.getElementById('approachBanner');
-    const list = document.getElementById('approachList');
-    
-    if(data.count === 0){
-      banner.style.display = 'none';
-      return;
-    }
-    
-    banner.style.display = 'flex';
-    list.innerHTML = data.stocks.map(s => {
-      const arrow = s.direction === 'bullish_approach' ? '&#x2191;' : '&#x2193;';
-      return `<span class="approaching-chip">${s.name_ar || s.symbol} ${arrow} ${s.gap_pct}%</span>`;
+  tbody.innerHTML = stocks.map(s => {
+    const chgClass = s.change_pct > 0 ? 'price-up' : s.change_pct < 0 ? 'price-dn' : 'price-flat';
+    const chgSign = s.change_pct > 0 ? '+' : '';
+    const vwapClass = s.price_vs_vwap === 'above' ? 'vwap-above' : 'vwap-below';
+    const vwapText = s.price_vs_vwap === 'above' ? '\u2191 ' + s.vwap_distance_pct + '%' : '\u2193 ' + Math.abs(s.vwap_distance_pct) + '%';
+
+    const confPct = s.confluence_pct || 0;
+    const confClass = confPct >= 75 ? 'conf-high' : confPct >= 50 ? 'conf-mid' : 'conf-low';
+
+    const actionClass = s.action === 'STRONG_BUY' ? 'action-strong' : s.action === 'BUY' ? 'action-buy' : 'action-watch';
+    const actionText = s.action === 'STRONG_BUY' ? '\u0634\u0631\u0627\u0621 \u0642\u0648\u064A' : s.action === 'BUY' ? '\u0634\u0631\u0627\u0621' : '\u0645\u0631\u0627\u0642\u0628\u0629';
+
+    const factors = (s.factors || []).map(f => {
+      let cls = 'vol';
+      if (f.includes('VWAP')) cls = 'vwap';
+      else if (f.includes('ADX')) cls = 'adx';
+      else if (f.includes('STOCH')) cls = 'stoch';
+      return `<span class="factor-tag ${cls}">${f}</span>`;
     }).join('');
-  } catch(err) {
-    console.error('Proximity error:', err);
-  }
-}
-</script>
-<script>
-// Auto-refresh
-let refreshTimer = null;
 
-function startAutoRefresh(){
-  loadData();
-  loadApproaching();
-  refreshTimer = setInterval(() => {
-    loadData();
-    loadApproaching();
-  }, 90000); // 90 seconds
+    const rowClass = s.action === 'STRONG_BUY' ? 'strong-buy' : s.action === 'BUY' ? 'buy' : '';
+
+    return `<tr class="${rowClass}">
+      <td class="sym-cell">${s.symbol}</td>
+      <td class="mono">${s.price}</td>
+      <td class="${chgClass} mono">${chgSign}${s.change_pct}%</td>
+      <td class="mono" style="color:var(--cyan)">${s.volume_ratio}x</td>
+      <td class="mono">${s.adx}</td>
+      <td><span class="${vwapClass}">${vwapText}</span></td>
+      <td>
+        <span class="mono">${confPct}%</span>
+        <div class="conf-bar-wrap"><div class="conf-bar ${confClass}" style="width:${confPct}%"></div></div>
+      </td>
+      <td><div class="factors-cell">${factors}</div></td>
+      <td class="${actionClass}">${actionText}</td>
+      <td class="sl-tp mono">
+        <span class="sl-val">SL ${s.stop_loss}</span><br>
+        <span class="tp-val">TP ${s.target}</span><br>
+        <span class="rr-val">${s.risk_reward || 1.5}R</span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderActiveScalps(scalps) {
+  const section = document.getElementById('activeScalpsSection');
+  const container = document.getElementById('scalpCards');
+
+  if (scalps.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+
+  container.innerHTML = scalps.map(s => {
+    const pnlClass = s.pnl_pct >= 0 ? 'pos' : 'neg';
+    const cardClass = s.pnl_pct >= 0 ? 'profit' : 'loss';
+    const pnlSign = s.pnl_pct >= 0 ? '+' : '';
+    const barsHeld = s.bars_held || 0;
+    const exitCheck = s.exit_check || {};
+
+    // Bar dots (max 5 shown)
+    let barDots = '';
+    for (let i = 0; i < 5; i++) {
+      if (i < barsHeld) {
+        barDots += `<div class="bar-dot ${barsHeld >= 3 && s.pnl_pct <= 0 ? 'danger' : 'used'}"></div>`;
+      } else {
+        barDots += '<div class="bar-dot"></div>';
+      }
+    }
+
+    let exitWarn = '';
+    if (exitCheck.should_exit) {
+      const reason = exitCheck.exit_reason === 'TIMEOUT_3BARS' ? '\u23F0 3 \u0634\u0645\u0648\u0639 \u0628\u062F\u0648\u0646 \u0631\u0628\u062D' :
+                     exitCheck.exit_reason === 'BELOW_EMA9' ? '\u26A0 \u062A\u062D\u062A EMA9' : exitCheck.exit_reason;
+      exitWarn = `<div class="exit-warning">\u26D4 ${reason} \u2014 \u0627\u062E\u0631\u062C!</div>`;
+    }
+
+    return `<div class="scalp-card ${cardClass}">
+      <div class="scalp-header">
+        <div class="scalp-sym">${s.symbol}</div>
+        <div class="scalp-pnl ${pnlClass}">${pnlSign}${s.pnl_pct}%</div>
+      </div>
+      <div class="scalp-details">
+        <div>\u062F\u062E\u0648\u0644: <span class="val mono">${s.entry_price}</span></div>
+        <div>\u062D\u0627\u0644\u064A: <span class="val mono">${s.current_price}</span></div>
+        <div>SL: <span class="val mono" style="color:var(--red)">${s.stop_loss}</span></div>
+        <div>TP: <span class="val mono" style="color:var(--green)">${s.target}</span></div>
+      </div>
+      <div class="bars-indicator">${barDots}</div>
+      ${exitWarn}
+    </div>`;
+  }).join('');
+}
+
+// ===== HELPERS =====
+function showDegraded(show) {
+  document.getElementById('degradedBanner').className = show ? 'degraded-banner show' : 'degraded-banner';
+}
+
+function formatTime(ts) {
+  if (!ts) return '--';
+  try {
+    const d = new Date(ts);
+    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch { return '--'; }
+}
+
+// ===== COUNTDOWN + AUTO REFRESH =====
+function tick() {
+  countdown--;
+  if (countdown <= 0) {
+    countdown = REFRESH_INTERVAL;
+    fetchScalperData();
+  }
+  countdownEl.textContent = countdown;
 }
 
 // Init
-startAutoRefresh();
+fetchScalperData();
+setInterval(tick, 1000);
 </script>
-
 </body>
 </html>

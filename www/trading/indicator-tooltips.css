@@ -1,0 +1,10 @@
+/* ═══ INDICATOR TOOLTIPS ═══ */
+.ind-tip{position:relative;cursor:help;border-bottom:1px dotted var(--t3,#6B7D90)}
+.ind-tip:hover{color:var(--gold,#C6974B)}
+.ind-tip .tip-box{display:none;position:absolute;bottom:calc(100% + 8px);right:50%;transform:translateX(50%);background:#0C1525;border:1px solid rgba(198,151,75,.35);border-radius:10px;padding:10px 14px;min-width:260px;max-width:320px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none}
+.ind-tip:hover .tip-box{display:block}
+.tip-box .tip-title{font-weight:700;color:#C6974B;font-size:.8rem;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;direction:ltr}
+.tip-box .tip-desc{font-size:.75rem;color:#A0ADBC;line-height:1.7}
+.tip-box .tip-vals{margin-top:6px;font-size:.7rem;color:#6B7D90;border-top:1px solid rgba(26,46,69,.5);padding-top:6px}
+.tip-box .tip-vals span{color:#E8ECF0;font-family:'IBM Plex Mono',monospace}
+.tip-box::after{content:'';position:absolute;top:100%;right:50%;transform:translateX(50%);border:6px solid transparent;border-top-color:rgba(198,151,75,.35)}

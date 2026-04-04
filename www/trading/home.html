@@ -212,27 +212,22 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 <!-- TRADING TEASER -->
 <div class="section">
   <div class="section-hdr">📈 أفضل فرصة تداول</div>
-  <div class="teaser" id="teaser" onclick="navTo('/master-ai-dashboard/sub-radar')">
-    <div class="teaser-empty">جاري التحميل...</div>
+  <div class="teaser" id="teaser" onclick="navTo('/trading/swing')">
+    <div class="teaser-empty">&#x062C;&#x0627;&#x0631;&#x064A; &#x0627;&#x0644;&#x062A;&#x062D;&#x0645;&#x064A;&#x0644;...</div>
   </div>
 </div>
 
 <!-- NAVIGATION -->
 <div class="section">
-  <div class="section-hdr">🧭 التنقل</div>
+  <div class="section-hdr">&#x1F9ED; &#x0627;&#x0644;&#x062A;&#x0646;&#x0642;&#x0644;</div>
   <div class="nav-grid">
-    <a class="nav-btn" onclick="navTo('/trading/scalper')" style="border-color:var(--green-br);background:var(--green-bg);grid-column:span 2"><div class="nav-icon">&#x26A1;</div><div class="nav-label" style="color:var(--green);font-size:.75rem">&#x0627;&#x0644;&#x0645;&#x0636;&#x0627;&#x0631;&#x0628; EMA 9/21 &#x23F0; 30m</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-decisions')" style="border-color:var(--gold-br);background:var(--gold-bg)"><div class="nav-icon">&#x1F525;</div><div class="nav-label">&#x0627;&#x0644;&#x0642;&#x0631;&#x0627;&#x0631;&#x0627;&#x062A;</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-radar')"><div class="nav-icon">&#x1F4C8;</div><div class="nav-label">&#x0627;&#x0644;&#x062A;&#x062F;&#x0627;&#x0648;&#x0644;</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-signals')"><div class="nav-icon">📡</div><div class="nav-label">الإشارات</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-brain')"><div class="nav-icon">🧠</div><div class="nav-label">العقل</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-personality')"><div class="nav-icon">⭐</div><div class="nav-label">الشخصية</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-calendar-tasks')"><div class="nav-icon">📅</div><div class="nav-label">المواعيد</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-home')"><div class="nav-icon">🏠</div><div class="nav-label">البيت</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-assistant')"><div class="nav-icon">🤖</div><div class="nav-label">المساعد</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-system-health')"><div class="nav-icon">⚙️</div><div class="nav-label">النظام</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-email')"><div class="nav-icon">📧</div><div class="nav-label">البريد</div></a>
-    <a class="nav-btn" onclick="navTo('/master-ai-dashboard/sub-news')"><div class="nav-icon">📰</div><div class="nav-label">الأخبار</div></a>
+    <a class="nav-btn" onclick="navTo('/trading/swing')" style="border-color:var(--gold-br);background:var(--gold-bg);grid-column:span 2"><div class="nav-icon">&#x1F4C8;</div><div class="nav-label" style="color:var(--gold);font-size:.75rem">&#x0627;&#x0644;&#x062A;&#x062F;&#x0627;&#x0648;&#x0644;</div></a>
+    <a class="nav-btn" onclick="navTo('/trading/calendar')"><div class="nav-icon">&#x1F4C5;</div><div class="nav-label">&#x0627;&#x0644;&#x0645;&#x0648;&#x0627;&#x0639;&#x064A;&#x062F;</div></a>
+    <a class="nav-btn" onclick="navTo('/trading/home-control')"><div class="nav-icon">&#x1F3E0;</div><div class="nav-label">&#x0627;&#x0644;&#x0628;&#x064A;&#x062A;</div></a>
+    <a class="nav-btn" onclick="navTo('/trading/email')"><div class="nav-icon">&#x1F4E7;</div><div class="nav-label">&#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F;</div></a>
+    <a class="nav-btn" onclick="navTo('/trading/news')"><div class="nav-icon">&#x1F4F0;</div><div class="nav-label">&#x0627;&#x0644;&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</div></a>
+    <a class="nav-btn" onclick="navTo('/trading/system')"><div class="nav-icon">&#x2699;&#xFE0F;</div><div class="nav-label">&#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</div></a>
+    <a class="nav-btn" onclick="navTo('/trading/assistant')"><div class="nav-icon">&#x1F916;</div><div class="nav-label">&#x0627;&#x0644;&#x0645;&#x0633;&#x0627;&#x0639;&#x062F;</div></a>
   </div>
 </div>
 
@@ -246,23 +241,7 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 
 /* ── Navigation (all same-origin) ── */
 function navTo(path){
-  const MAP = {
-    '/master-ai-dashboard/master-ai': '/trading/home',
-    '/master-ai-dashboard/sub-radar': '/trading/radar',
-    '/master-ai-dashboard/sub-signals': '/trading/signals',
-    '/master-ai-dashboard/sub-brain': '/trading/brain',
-    '/master-ai-dashboard/sub-positions': '/trading/positions',
-    '/master-ai-dashboard/sub-journal': '/trading/journal',
-    '/master-ai-dashboard/sub-calendar-tasks': '/trading/calendar',
-    '/master-ai-dashboard/sub-home': '/trading/home-control',
-    '/master-ai-dashboard/sub-assistant': '/trading/assistant',
-    '/master-ai-dashboard/sub-system-health': '/trading/system',
-    '/master-ai-dashboard/sub-email': '/trading/email',
-    '/master-ai-dashboard/sub-news': '/trading/news',
-    '/master-ai-dashboard/sub-decisions': '/trading/decisions',
-    '/master-ai-dashboard/sub-personality': '/trading/personality',
-  };
-  window.location.href = MAP[path] || path;
+  window.location.href = path;
 }
 window.navTo = navTo;
 
@@ -292,7 +271,7 @@ async function load(){
     const [r1,r2,r3] = await Promise.all([
       fetch('/dashboard').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch('/dashboard/extended').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('/dashboard/signals').then(r=>r.ok?r.json():null).catch(()=>null)
+      fetch('/dashboard/swing').then(r=>r.ok?r.json():null).catch(()=>null)
     ]);
     dash=r1; ext=r2; sig=r3;
   }catch(e){ console.error('fetch err',e); }
@@ -382,25 +361,32 @@ async function load(){
     $('s-sys-sub').textContent = 'RAM '+mem+'% · '+tmp+'°C';
   }
 
-  /* ── TRADING TEASER ── */
+  /* ── TRADING TEASER (V2 Swing) ── */
   const teaser = $('teaser');
-  if(sig && sig.decision_card && sig.decision_card.symbol){
-    const dc = sig.decision_card;
-    const verdictClass = (dc.verdict||'').includes('buy')||dc.confluence_score>70?'buy':
-                         (dc.verdict||'').includes('avoid')?'avoid':'watch';
-    const verdictLabel = verdictClass==='buy'?'شراء': verdictClass==='avoid'?'تجنب':'مراقبة';
+  if(sig && sig.top_signal && sig.top_signal.symbol){
+    const ts = sig.top_signal;
+    const conf = ts.confluence_pct || ts.confidence || 0;
+    const entry = ts.entry_status || 'watch';
+    const verdictClass = entry==='enter_now'?'buy': entry==='avoid'?'avoid':'watch';
+    const verdictLabel = entry==='enter_now'?'\u0627\u062F\u062E\u0644': entry==='avoid'?'\u062A\u062C\u0646\u0628':'\u0631\u0627\u0642\u0628';
+    const trend = ts.daily_trend || '\u2014';
+    const trendIcon = trend==='UP'?'\u2191':trend==='DOWN'?'\u2193':'\u2192';
     teaser.innerHTML =
-      '<div class="teaser-top"><span class="teaser-sym">'+esc(dc.symbol)+(dc.name_ar?' — '+esc(dc.name_ar):'')+'</span>'+
+      '<div class="teaser-top"><span class="teaser-sym">'+esc(ts.symbol)+'</span>'+
       '<span class="teaser-verdict '+verdictClass+'">'+verdictLabel+'</span></div>'+
       '<div class="teaser-row">'+
-      '<span>السعر: '+(dc.price||'--')+' فلس</span>'+
-      '<span>التوافق: '+(dc.confluence_score||'--')+'</span>'+
-      '<span>RSI: '+(dc.rsi!==undefined?dc.rsi:'--')+'</span>'+
+      '<span>'+trendIcon+' '+trend+'</span>'+
+      '<span>Confluence: '+Math.round(conf)+'%</span>'+
+      '<span>R:R '+(ts.swing_rr?(ts.swing_rr).toFixed(1)+'x':'\u2014')+'</span>'+
       '</div>';
-  } else if(dash && dash.top_signal){
-    teaser.innerHTML = '<div class="teaser-top"><span class="teaser-sym">'+esc(dash.top_signal)+'</span></div>';
+  } else if(sig && sig.market_trend){
+    const mt = sig.market_trend;
+    const tIcon = mt.majority==='UP'?'\u2705':mt.majority==='DOWN'?'\u26D4':'\u26A0\uFE0F';
+    const tLabel = mt.majority==='UP'?'\u0627\u0644\u0633\u0648\u0642 \u0635\u0627\u0639\u062F':mt.majority==='DOWN'?'\u0627\u0644\u0633\u0648\u0642 \u0646\u0627\u0632\u0644':'\u062C\u0627\u0646\u0628\u064A';
+    teaser.innerHTML = '<div class="teaser-top"><span class="teaser-sym">'+tIcon+' '+tLabel+'</span></div>'+
+      '<div class="teaser-row"><span>Whitelist: '+(mt.total||10)+' \u0633\u0647\u0645</span><span>\u0642\u0627\u0628\u0644 \u0644\u0644\u0634\u0631\u0627\u0621: '+(mt.buyable||0)+'</span></div>';
   } else {
-    teaser.innerHTML = '<div class="teaser-empty">لا توجد فرص حالياً</div>';
+    teaser.innerHTML = '<div class="teaser-empty">\u0644\u0627 \u062A\u0648\u062C\u062F \u0641\u0631\u0635 \u062D\u0627\u0644\u064A\u0627\u064B</div>';
   }
 
   /* ── FOOTER ── */
