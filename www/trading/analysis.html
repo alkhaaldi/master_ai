@@ -299,12 +299,18 @@ function renderAnalysis(data, symbol){
     formatted = formatted.replace(/ملخص خطة التداول \(JSON\)\s*/g, '');
     // Markdown formatting
     formatted = formatted.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
-    formatted = formatted.replace(/^###\s*(.*)$/gm,'<h3>$1</h3>');
-    formatted = formatted.replace(/^##\s*(.*)$/gm,'<h2>$1</h2>');
-    formatted = formatted.replace(/^#\s*(.*)$/gm,'<h1>$1</h1>');
-    // Clean up excessive newlines
-    formatted = formatted.replace(/\n{3,}/g, '\n\n');
-    html += '<div class="report-box"><div class="report-text">'+formatted+'</div></div>';
+    formatted = formatted.replace(/^###\s*(.*)$/gm,'<h3 style="color:var(--gold);font-size:.85rem;margin:1rem 0 .3rem">$1</h3>');
+    formatted = formatted.replace(/^##\s*(.*)$/gm,'<h2 style="color:var(--gold);font-size:.95rem;margin:1.2rem 0 .4rem">$1</h2>');
+    formatted = formatted.replace(/^#\s*(.*)$/gm,'<h1 style="color:var(--gold);font-size:1.05rem;margin:1.2rem 0 .4rem">$1</h1>');
+    // Bullet points
+    formatted = formatted.replace(/^\* (.*)$/gm,'<div style="padding-right:1rem;margin:.2rem 0">\u2022 $1</div>');
+    formatted = formatted.replace(/^- (.*)$/gm,'<div style="padding-right:1rem;margin:.2rem 0">\u2022 $1</div>');
+    // Newlines to breaks
+    formatted = formatted.replace(/\n\n/g,'<br><br>');
+    formatted = formatted.replace(/\n/g,'<br>');
+    // Clean up excessive breaks
+    formatted = formatted.replace(/(<br>){3,}/g, '<br><br>');
+    html += '<div class="report-box"><div class="report-text" style="font-size:.82rem;line-height:1.8;color:var(--text-2)">'+formatted+'</div></div>';
   }
 
   // Targets list
