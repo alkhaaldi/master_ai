@@ -31,6 +31,7 @@ LIQUIDITY_FILTER = True      # True = filter illiquid stocks / wide spread
 RISK_ENGINE = True           # True = position sizing + portfolio heat
 PRE_TRADE_CHECKLIST = True   # True = pre-trade checklist gate
 PAPER_TRADING = True         # True = paper trading mode
+EQUITY_TRACKER = True        # True = equity curve + drawdown tracking
 
 
 def get_trading_flags() -> dict:
@@ -47,6 +48,7 @@ def get_trading_flags() -> dict:
         "risk_engine": RISK_ENGINE,
         "pre_trade_checklist": PRE_TRADE_CHECKLIST,
         "paper_trading": PAPER_TRADING,
+        "equity_tracker": EQUITY_TRACKER,
     }
 
 

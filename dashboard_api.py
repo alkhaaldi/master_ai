@@ -1839,6 +1839,18 @@ async def api_paper_trade_close(request: Request):
         return {"error": str(e)}
 
 
+
+
+@router.get("/dashboard/equity")
+def dashboard_equity():
+    """Equity curve + drawdown + trade journal stats."""
+    try:
+        from equity_tracker import get_equity_dashboard
+        return get_equity_dashboard()
+    except Exception as e:
+        return {"error": str(e), "current_equity": 0}
+
+
 @router.get("/dashboard/risk-status")
 def dashboard_risk_status():
     """Portfolio risk status — capital, heat, sectors, position sizing."""
