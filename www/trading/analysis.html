@@ -330,6 +330,12 @@ function renderAnalysis(data, symbol){
 }
 
 buildStockList();
+/* Auto-open symbol if coming from decisions page */
+var _autoSym = localStorage.getItem('analysis_symbol');
+if(_autoSym){
+  localStorage.removeItem('analysis_symbol');
+  setTimeout(function(){ selectStock(_autoSym); }, 300);
+}
 })();
 </script>
 </body>

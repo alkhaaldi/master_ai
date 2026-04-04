@@ -239,7 +239,10 @@ function renderCards(){
       /* Footer */
       +'<div class="opp-footer">'
       +'<span class="opp-driver">\u0645\u0624\u0634\u0631: '+(o.dominant_driver||'-')+' \u2022 '+L(o.price)+' \u2022 '+L((o.change_pct||0).toFixed(1))+'%</span>'
+      +'<div style="display:flex;gap:.75rem">'
       +'<a class="opp-link" href="personality?symbol='+o.symbol+'">\u0627\u0644\u0634\u062E\u0635\u064A\u0629 \u2192</a>'
+      +'<a class="opp-link" href="analysis" onclick="localStorage.setItem(\'analysis_symbol\',\''+o.symbol+'\');return true" style="color:var(--cyn)">\u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0641\u0646\u064A \u2192</a>'
+      +'</div>'
       +'</div></div>';
   }).join('');
 }
