@@ -83,6 +83,10 @@ def build_signals() -> dict:
         "open_positions": [],
         "signal_counts": {"discovery": 0, "setup": 0, "ready": 0, "entered": 0, "manage": 0},
         "thresholds": _get_thresholds(),
+        # V2 Phase 2+3 metadata
+        "daily_trend_filter": DAILY_TREND_FILTER,
+        "whitelist_mode": WHITELIST_MODE,
+        "whitelist": sorted(WHITELIST),
     }
 
     # 1. Get open trades from journal
@@ -100,8 +104,15 @@ def build_signals() -> dict:
 
     # 4. Build signal for each bridge-enriched symbol
     signals = []
+    _skipped_blacklist = 0
     for sym, bd in bridge_symbols.items():
         sym_upper = sym.upper()
+
+        # Phase 3: Whitelist/Blacklist filter
+        if not should_trade(sym_upper):
+            _skipped_blacklist += 1
+            continue
+
         trade = open_syms.get(sym_upper)
         radar_entry = radar_syms.get(sym_upper)
 
@@ -112,6 +123,12 @@ def build_signals() -> dict:
         verdict_key = _compute_verdict(bd, state)
         verdict = _VERDICT_MAP.get(verdict_key, verdict_key)
         confluence = _extract_confluence(bd)
+
+        # Phase 2: Daily trend filter
+        daily_trend = get_daily_trend(sym_upper)
+        if DAILY_TREND_FILTER and not daily_trend["allow_buy"] and state not in ("entered", "manage"):
+            verdict_key = "avoid"
+            verdict = _VERDICT_MAP.get("avoid", "avoid")
 
         sig = {
             "symbol": sym_upper,
@@ -138,6 +155,9 @@ def build_signals() -> dict:
             "confluence_detail": confluence,
             "timeframe": "1D",
             "valid_until": now.replace(hour=23, minute=59, second=59).strftime("%Y-%m-%dT%H:%M:%S"),
+            "daily_trend": daily_trend.get("trend", "UNKNOWN"),
+            "daily_sma20": daily_trend.get("sma20", 0),
+            "daily_trend_allow_buy": daily_trend.get("allow_buy", False),
             "source": bd.get("source", ""),
             "stale": bd.get("stale", False),
         }
@@ -161,6 +181,7 @@ def build_signals() -> dict:
 
     # 7. All signals for Signals page full indicator matrix
     result["all_signals"] = signals
+    result["filtered_out"] = _skipped_blacklist
 
     # 8. Open positions with live P&L
     for sym, trade in open_syms.items():
@@ -258,6 +279,129 @@ def _compute_verdict(bridge: dict, state: str) -> str:
     if "bearish" in direction and regime == "trending":
         return "avoid"  # bearish in trending market is more meaningful
     return "neutral"
+
+
+# ═══════════════════════════════════════════════════
+# Trading V2 — Phase 2: Daily Trend Filter (SMA 20)
+# ═══════════════════════════════════════════════════
+
+import os as _os
+import sqlite3 as _sqlite3
+
+_LIFE_DB = _os.path.join(_os.path.dirname(__file__), "data", "life.db")
+
+DAILY_TREND_FILTER = True  # Feature flag — block buys when market is down
+
+
+def get_daily_trend(symbol: str, sma_period: int = 20) -> dict:
+    """
+    Daily trend filter — only buy when price is above SMA 20.
+
+    Data priority:
+    1. daily_bars table (real OHLCV history, needs >= sma_period bars)
+    2. Bridge EMA 21 as proxy (bridge_data from last fetch)
+    3. stock_radar_daily EMA data as fallback
+
+    Returns: trend (UP/DOWN/SIDEWAYS), sma20, price_vs_sma_pct, allow_buy
+    """
+    # --- Source 1: daily_bars table ---
+    try:
+        conn = _sqlite3.connect(_LIFE_DB, timeout=5)
+        conn.row_factory = _sqlite3.Row
+        rows = conn.execute(
+            "SELECT close FROM daily_bars WHERE symbol=? ORDER BY trading_date ASC",
+            (symbol.upper(),),
+        ).fetchall()
+        conn.close()
+        closes = [float(r["close"]) for r in rows if r["close"]]
+        if len(closes) >= sma_period:
+            sma = sum(closes[-sma_period:]) / sma_period
+            price = closes[-1]
+            dist_pct = ((price - sma) / sma) * 100 if sma > 0 else 0
+            return _trend_result(price, sma, dist_pct)
+    except Exception as e:
+        logger.debug("daily_bars lookup failed for %s: %s", symbol, e)
+
+    # --- Source 2: stock_radar_daily (EMA 21 as proxy) ---
+    try:
+        conn = _sqlite3.connect(_LIFE_DB, timeout=5)
+        conn.row_factory = _sqlite3.Row
+        row = conn.execute(
+            "SELECT price, daily_ema21 FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1",
+            (symbol.upper(),),
+        ).fetchone()
+        conn.close()
+        if row and row["price"] and row["daily_ema21"]:
+            price = float(row["price"])
+            ema21 = float(row["daily_ema21"])
+            if ema21 > 0:
+                dist_pct = ((price - ema21) / ema21) * 100
+                return _trend_result(price, ema21, dist_pct)
+    except Exception as e:
+        logger.debug("radar_daily trend lookup failed for %s: %s", symbol, e)
+
+    return {"trend": "UNKNOWN", "sma20": 0, "price_vs_sma_pct": 0, "allow_buy": False}
+
+
+def _trend_result(price: float, sma: float, dist_pct: float) -> dict:
+    """Classify trend from price vs SMA distance."""
+    if dist_pct > 0.5:
+        trend, allow = "UP", True
+    elif dist_pct < -0.5:
+        trend, allow = "DOWN", False
+    else:
+        trend, allow = "SIDEWAYS", False
+    return {
+        "trend": trend,
+        "sma20": round(sma, 3),
+        "price_vs_sma_pct": round(dist_pct, 2),
+        "allow_buy": allow,
+    }
+
+
+# ═══════════════════════════════════════════════════
+# Trading V2 — Phase 3: Whitelist / Blacklist
+# ═══════════════════════════════════════════════════
+
+WHITELIST_MODE = True  # True=trade whitelist only, False=trade all except blacklist
+
+# Top 10 by hit rate from Brain analysis (66,937 signals)
+WHITELIST = {
+    "INOVEST",    # 41.2% hit, avg gain 3.9%
+    "URC",        # 38.6% hit, avg gain 3.54%
+    "ACICO",      # 38.2% hit, avg gain 6.53%
+    "AAYANRE",    # 36.5% hit, avg gain 2.88%
+    "OOREDOO",    # 36.2% hit, avg gain 3.10%
+    "ALFTAQA",    # 35.9% hit, avg gain 3.18%
+    "NINV",       # 35.6% hit, avg gain 2.05%
+    "MUBARRAD",   # 33.6% hit, avg gain 2.76%
+    "NRE",        # 33.5% hit, avg gain 1.96%
+    "RASIYAT",    # 32.2% hit, avg gain 2.09%
+}
+
+# Bottom 10 by hit rate — almost guaranteed losers
+BLACKLIST = {
+    "KFH",          # 2.8% hit
+    "GINS",         # 4.5% hit, avg loss 12.86%!
+    "KHOT",         # 5.2% hit
+    "MUNTAZAHAT",   # 5.8% hit
+    "PCEM",         # 6.4% hit
+    "INJAZZAT",     # 6.9% hit
+    "BOUBYAN",      # 8.4% hit
+    "TAHSSILAT",    # 8.6% hit
+    "GBK",          # 9.0% hit
+    "PAPER",        # 9.4% hit
+}
+
+
+def should_trade(symbol: str) -> bool:
+    """Check if a symbol should be traded based on whitelist/blacklist."""
+    sym = symbol.upper()
+    if sym in BLACKLIST:
+        return False
+    if WHITELIST_MODE and sym not in WHITELIST:
+        return False
+    return True
 
 
 # --- Phase 3: Scalping Mode ---
