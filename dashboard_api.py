@@ -1624,17 +1624,41 @@ def dashboard_signals():
 def dashboard_signals_daily():
     """Daily-only signals — uses closing prices, NOT live 30m data.
     Separated from 30m to prevent timeframe mixing (Trading V2 Phase 1)."""
+    import sqlite3 as _sq, os as _os
     from signal_engine import build_signals
     data = build_signals()
-    # Strip 30m-only fields and enforce timeframe tag
+
+    # Load daily closing prices from DB to replace live bridge prices
+    _closing = {}
+    try:
+        _db = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "data", "life.db")
+        _c = _sq.connect(_db, timeout=5)
+        _c.row_factory = _sq.Row
+        for r in _c.execute(
+            "SELECT symbol, close FROM daily_bars WHERE trading_date = "
+            "(SELECT MAX(trading_date) FROM daily_bars)"
+        ).fetchall():
+            _closing[r["symbol"]] = float(r["close"])
+        _c.close()
+    except Exception:
+        pass
+
     for sig in data.get("all_signals", []):
         sig["timeframe"] = "1D"
-        # Remove any 30m scalping fields that might leak
+        # Use closing price from DB if available (NOT live 30m bridge price)
+        sym = sig.get("symbol", "")
+        if sym in _closing:
+            sig["price"] = _closing[sym]
+            sig["price_source"] = "daily_close"
+        else:
+            sig["price_source"] = "bridge_live"
+        # Strip 30m-only scalping fields
         for k in ("scalp_confluence_pct", "scalp_action", "scalp_factors",
                    "scalp_reason", "scalping_vwap_ok"):
             sig.pop(k, None)
+
     data["timeframe"] = "1D"
-    data["warning"] = "Daily data only. Do NOT mix with 30m signals."
+    data["price_note"] = "Prices are daily closing prices from DB, not live 30m."
     return data
 
 
