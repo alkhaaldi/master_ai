@@ -2487,17 +2487,49 @@ async def api_trade_close(data: dict = Body(...)):
 
 @router.post("/api/trade/update")
 async def api_trade_update(data: dict = Body(...)):
-    """Update stop loss / take profit on a trade."""
+    """Update trade fields: entry_price, quantity, stop_loss, take_profit."""
     try:
-        from journal_engine import update_trade_levels
         trade_id = data.get("trade_id")
         if not trade_id:
             return {"success": False, "error": "Missing trade_id"}
-        sl = float(data["stop_loss"]) if data.get("stop_loss") is not None else None
-        tp = float(data["take_profit"]) if data.get("take_profit") is not None else None
-        result = update_trade_levels(int(trade_id), stop_loss=sl, take_profit=tp)
-        if result is None:
+        trade_id = int(trade_id)
+
+        import sqlite3 as _sq
+        db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
+        conn = _sq.connect(db_path, timeout=5)
+        conn.row_factory = _sq.Row
+
+        row = conn.execute("SELECT id, status FROM trades WHERE id=?", (trade_id,)).fetchone()
+        if not row or row["status"] != "open":
+            conn.close()
             return {"success": False, "error": "Trade not found or not open"}
+
+        updates = []
+        params = []
+        if data.get("entry_price") is not None:
+            updates.append("entry_price=?")
+            params.append(float(data["entry_price"]))
+        if data.get("quantity") is not None:
+            updates.append("quantity=?")
+            params.append(int(data["quantity"]))
+        if data.get("stop_loss") is not None:
+            updates.append("stop_loss=?")
+            params.append(float(data["stop_loss"]))
+        if data.get("take_profit") is not None:
+            updates.append("take_profit=?")
+            params.append(float(data["take_profit"]))
+
+        if not updates:
+            conn.close()
+            return {"success": False, "error": "Nothing to update"}
+
+        from datetime import datetime as _dt2
+        updates.append("updated_at=?")
+        params.append(_dt2.now().strftime("%Y-%m-%d %H:%M:%S"))
+        params.append(trade_id)
+        conn.execute(f"UPDATE trades SET {','.join(updates)} WHERE id=?", params)
+        conn.commit()
+        conn.close()
         return {"success": True, "message": "Trade updated"}
     except Exception as e:
         return {"success": False, "error": str(e)}
