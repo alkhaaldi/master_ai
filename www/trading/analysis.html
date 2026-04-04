@@ -290,13 +290,13 @@ function renderAnalysis(data, symbol){
   // Full report
   const report = data.report || data.analysis || '';
   if(report){
-    let formatted = esc(report);
-    // Remove JSON code blocks (the structured summary at the end)
-    formatted = formatted.replace(/```json[\s\S]*?```/g, '');
-    // Remove any remaining triple backtick blocks
-    formatted = formatted.replace(/```[\s\S]*?```/g, '');
-    // Clean up "ملخص خطة التداول" header if JSON was removed
-    formatted = formatted.replace(/ملخص خطة التداول \(JSON\)\s*/g, '');
+    // FIRST: strip JSON/code blocks on RAW text (before esc)
+    let raw = report;
+    raw = raw.replace(/```json[\s\S]*?```/g, '');
+    raw = raw.replace(/```[\s\S]*?```/g, '');
+    raw = raw.replace(/ملخص خطة التداول \(JSON\)\s*/g, '');
+    // THEN: escape for HTML safety
+    let formatted = esc(raw);
     // Markdown formatting
     formatted = formatted.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
     formatted = formatted.replace(/^###\s*(.*)$/gm,'<h3 style="color:var(--gold);font-size:.85rem;margin:1rem 0 .3rem">$1</h3>');
