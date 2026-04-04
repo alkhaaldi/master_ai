@@ -144,3 +144,38 @@ class RiskEngine:
         except Exception as e:
             logger.debug("Avg daily value lookup failed for %s: %s", symbol, e)
         return None
+
+
+def calculate_position_risk(entry_price: float, stop_loss: float, target: float = 0,
+                            capital: float = 1000) -> dict:
+    """
+    Calculate risk/reward and position size for a trade.
+    Safe against ZeroDivisionError when entry == stop.
+    """
+    if not entry_price or entry_price <= 0:
+        return {"error": "invalid entry_price", "risk_reward": 0, "position_size": 0}
+    if not stop_loss or stop_loss <= 0:
+        return {"error": "invalid stop_loss", "risk_reward": 0, "position_size": 0}
+    if abs(entry_price - stop_loss) < 0.001:
+        return {"error": "entry equals stop loss", "risk_reward": 0, "position_size": 0}
+
+    risk = abs(entry_price - stop_loss)
+    risk_pct = (risk / entry_price) * 100
+    reward = abs(target - entry_price) if target and target > entry_price else 0
+    rr = round(reward / risk, 2) if risk > 0 else 0
+
+    # Position size: risk 1% of capital
+    risk_amount = capital * 0.01
+    position_size = int(risk_amount / risk) if risk > 0 else 0
+
+    return {
+        "entry_price": entry_price,
+        "stop_loss": stop_loss,
+        "target": target,
+        "risk_per_share": round(risk, 3),
+        "risk_pct": round(risk_pct, 2),
+        "reward_per_share": round(reward, 3),
+        "risk_reward": rr,
+        "position_size": position_size,
+        "capital_at_risk": round(risk * position_size, 2),
+    }

@@ -29,6 +29,8 @@ _SEED_FLAGS = [
     ("daily_refresh", 1, "Daily snapshot auto-refresh"),
     ("market_regime_filter", 1, "Block buys in bearish/choppy market regime"),
     ("liquidity_filter", 1, "Filter illiquid stocks / wide spread (KSE)"),
+    ("sector_limits", 1, "Sector exposure limits — max 2 per sector"),
+    ("risk_engine", 1, "Portfolio risk engine — position sizing + heat"),
 ]
 
 # Map flag name → env var name (for backward compat)
@@ -147,5 +149,4 @@ class FeatureFlags:
                 conn.execute(
                     """INSERT INTO feature_flags (name, enabled, updated_at)
                        VALUES (?, ?, datetime('now'))
-                       ON CONFLICT(name) DO UPDATE SET enabled=?, updated_at=datetime('now')""",
-                    (name, int(enabled), int(enab
+                       ON CONFLICT(name) DO UPDATE SET enabled=?, update

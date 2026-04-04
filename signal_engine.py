@@ -28,6 +28,7 @@ DAILY_TREND_FILTER = True   # True = block buys when daily trend DOWN/SIDEWAYS
 SWING_CONFLUENCE = True     # True = VOL+ADX only, False = old RSI+MACD+all
 MARKET_REGIME_FILTER = True  # True = block buys when KWSE index is bearish/choppy
 LIQUIDITY_FILTER = True      # True = filter illiquid stocks / wide spread
+RISK_ENGINE = True           # True = position sizing + portfolio heat
 
 
 def get_trading_flags() -> dict:
@@ -41,6 +42,7 @@ def get_trading_flags() -> dict:
         "mode": "swing" if SWING_MODE else ("scalping" if SCALPING_MODE else "default"),
         "market_regime_filter": MARKET_REGIME_FILTER,
         "liquidity_filter": LIQUIDITY_FILTER,
+        "risk_engine": RISK_ENGINE,
     }
 
 
@@ -360,6 +362,8 @@ def build_signals() -> dict:
             "market_regime": regime.get("regime", "UNKNOWN"),
             "regime_allow_buy": regime.get("allow_buy", True),
             "liquidity": check_liquidity(sym_upper) if LIQUIDITY_FILTER else {"passed": True, "reasons": []},
+            "sector": _get_stock_sector(sym_upper),
+            "sector_ar": _get_sector_name_ar(_get_stock_sector(sym_upper)),
         }
 
         # Phase 4: Pivots + ATR stops
@@ -621,6 +625,26 @@ BLACKLIST = {
     "PAPER",        # 9.4% hit
 }
 
+
+
+# Sector helpers (ITEM 7)
+_STOCK_SECTORS = {
+    "INOVEST": "financial_services", "URC": "industrial", "ACICO": "industrial",
+    "AAYANRE": "real_estate", "OOREDOO": "telecom", "ALFTAQA": "financial_services",
+    "NINV": "financial_services", "MUBARRAD": "industrial",
+    "NRE": "real_estate", "RASIYAT": "real_estate",
+}
+_SECTOR_AR = {
+    "financial_services": "\u062e\u062f\u0645\u0627\u062a \u0645\u0627\u0644\u064a\u0629",
+    "industrial": "\u0635\u0646\u0627\u0639\u064a", "real_estate": "\u0639\u0642\u0627\u0631\u064a",
+    "telecom": "\u0627\u062a\u0635\u0627\u0644\u0627\u062a", "unknown": "\u063a\u064a\u0631 \u0645\u062d\u062f\u062f",
+}
+
+def _get_stock_sector(symbol: str) -> str:
+    return _STOCK_SECTORS.get(symbol.upper(), "unknown")
+
+def _get_sector_name_ar(sector: str) -> str:
+    return _SECTOR_AR.get(sector, sector)
 
 def should_trade(symbol: str) -> bool:
     """Check if a symbol should be traded based on whitelist/blacklist."""
@@ -1255,3 +1279,29 @@ def build_signals_30m() -> dict:
             "macd_momentum": (bd.get("signals") or {}).get("macd_momentum", ""),
             "adx": bd.get("adx"),
             "vol_ratio": bd.get("vol_ratio"),
+            "support": (bd.get("support") or [None])[0],
+            "resistance": (bd.get("resistance") or [None])[0],
+            "atr_14": bd.get("atr_14"),
+            "bb_squeeze": (bd.get("bb") or {}).get("squeeze"),
+            "stoch_k": (bd.get("stoch_rsi") or {}).get("k"),
+            "stoch_d": (bd.get("stoch_rsi") or {}).get("d"),
+            "rsi_divergence": (bd.get("signals") or {}).get("rsi_divergence"),
+            "ema_cross": (bd.get("signals") or {}).get("ema_cross"),
+            "ema9": (bd.get("ema") or {}).get("ema9", 0),
+            "ema21": (bd.get("ema") or {}).get("ema21", 0),
+            "confluence_detail": confluence,
+            "timeframe": "30m",
+            "valid_until": (now + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%S"),
+            "source": bd.get("source", ""),
+            "stale": bd.get("stale", False),
+        }
+
+        # Phase 2: VWAP enrichment for scalping
+        vwap_data = _get_vwap_for_symbol(sym_upper, bd)
+        sig["vwap"] = vwap_data.get("vwap", 0)
+        sig["vwap_distance_pct"] = vwap_data.get("vwap_distance_pct", 0)
+        sig["price_vs_vwap"] = vwap_data.get("price_vs_vwap", "unknown")
+        sig["scalping_vwap_ok"] = vwap_data.get("price_vs_vwap") == "above"
+
+        # Phase 3: Scalping confluence (replaces default for 30m)
+        if 

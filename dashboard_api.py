@@ -1722,6 +1722,8 @@ def dashboard_swing():
                 "market_regime": s.get("market_regime", "UNKNOWN"),
                 "regime_allow_buy": s.get("regime_allow_buy", True),
                 "liquidity": s.get("liquidity", {}),
+                "sector": s.get("sector", "unknown"),
+                "sector_ar": s.get("sector_ar", ""),
             }
             opportunities.append(entry)
             if not top_signal or entry["confluence_pct"] > top_signal["confluence_pct"]:
@@ -1798,6 +1800,18 @@ def dashboard_swing():
             "filtered_out": raw.get("filtered_out", 0),
         },
     }
+
+
+
+
+@router.get("/dashboard/risk-status")
+def dashboard_risk_status():
+    """Portfolio risk status — capital, heat, sectors, position sizing."""
+    try:
+        from risk_engine import get_risk_status
+        return get_risk_status()
+    except Exception as e:
+        return {"error": str(e), "capital": 0, "open_positions": 0}
 
 
 @router.get("/dashboard/scalper")
@@ -2920,14 +2934,4 @@ async def api_latency_stats():
             "samples": len(durations),
         }
     except Exception as e:
-        return {"error": str(e), "avg_total_ms": 0, "samples": 0}
-
-
-@router.get("/api/skills")
-async def api_skills():
-    """List all available skills from skills/ directory (#20 Tier3)."""
-    try:
-        from skill_loader import SkillLoader
-        loader = SkillLoader()
-        return {"skills": loader.list_skills(), "count": len(loader.list_skills())}
-    except Exce
+      
