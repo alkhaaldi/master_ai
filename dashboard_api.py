@@ -1679,7 +1679,8 @@ def dashboard_swing():
     from datetime import datetime as _dt
     from signal_engine import (
         build_signals, SWING_MODE, WHITELIST_MODE, WHITELIST, BLACKLIST,
-        DAILY_TREND_FILTER, check_scalping_exit, get_trading_flags,
+        DAILY_TREND_FILTER, MARKET_REGIME_FILTER, LIQUIDITY_FILTER,
+        check_scalping_exit, get_trading_flags, check_market_regime,
     )
 
     raw = build_signals()
@@ -1718,6 +1719,9 @@ def dashboard_swing():
                 "pivots": s.get("pivots", {}),
                 "support": s.get("support"),
                 "resistance": s.get("resistance"),
+                "market_regime": s.get("market_regime", "UNKNOWN"),
+                "regime_allow_buy": s.get("regime_allow_buy", True),
+                "liquidity": s.get("liquidity", {}),
             }
             opportunities.append(entry)
             if not top_signal or entry["confluence_pct"] > top_signal["confluence_pct"]:
@@ -1766,11 +1770,15 @@ def dashboard_swing():
     trend_down = sum(1 for s in all_sigs if s.get("daily_trend") == "DOWN")
     trend_side = sum(1 for s in all_sigs if s.get("daily_trend") == "SIDEWAYS")
 
+    # Market regime from signal engine
+    regime = raw.get("market_regime", check_market_regime())
+
     return {
         "flags": get_trading_flags(),
         "scan_time": _dt.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "market_status": "open" if raw.get("market_open") else "closed",
         "bridge_online": bridge_online,
+        "market_regime": regime,
         "market_trend": {
             "up": trend_up,
             "down": trend_down,
@@ -2922,5 +2930,4 @@ async def api_skills():
         from skill_loader import SkillLoader
         loader = SkillLoader()
         return {"skills": loader.list_skills(), "count": len(loader.list_skills())}
-    except Exception as e:
-        return {"skills": [], "count": 0, "error": str(e)}
+    except Exce

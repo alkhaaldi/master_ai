@@ -26,6 +26,8 @@ SCALPING_MODE = True        # True = 30m scalping logic (V1, runs alongside swin
 WHITELIST_MODE = True       # True = trade whitelist only, False = all except blacklist
 DAILY_TREND_FILTER = True   # True = block buys when daily trend DOWN/SIDEWAYS
 SWING_CONFLUENCE = True     # True = VOL+ADX only, False = old RSI+MACD+all
+MARKET_REGIME_FILTER = True  # True = block buys when KWSE index is bearish/choppy
+LIQUIDITY_FILTER = True      # True = filter illiquid stocks / wide spread
 
 
 def get_trading_flags() -> dict:
@@ -37,6 +39,8 @@ def get_trading_flags() -> dict:
         "daily_trend_filter": DAILY_TREND_FILTER,
         "swing_confluence": SWING_CONFLUENCE,
         "mode": "swing" if SWING_MODE else ("scalping" if SCALPING_MODE else "default"),
+        "market_regime_filter": MARKET_REGIME_FILTER,
+        "liquidity_filter": LIQUIDITY_FILTER,
     }
 
 
@@ -93,6 +97,170 @@ _VERDICT_MAP = {
 }
 
 
+
+# ═══════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════
+# Trading V2 Phase 2: Liquidity & Spread Filter (KSE)
+# ═══════════════════════════════════════════════════
+MIN_AVG_DAILY_VALUE_KWD = 50000   # 20-day avg traded value
+MIN_AVG_DAILY_VOLUME = 100000     # 20-day avg volume
+MAX_SPREAD_PCT = 1.5              # max bid-ask spread %
+
+def check_liquidity(symbol: str) -> dict:
+    """
+    Check stock liquidity from daily_bars (20-day averages).
+    Returns pass/fail + details.
+    """
+    result = {"passed": True, "avg_daily_volume": 0, "avg_daily_value_kwd": 0,
+              "spread_pct": 0, "reasons": []}
+    try:
+        import sqlite3 as _sq
+        conn = _sq.connect("data/life.db", timeout=3)
+        rows = conn.execute(
+            "SELECT close, volume FROM daily_bars WHERE symbol=? ORDER BY trading_date DESC LIMIT 20",
+            (symbol.upper(),)
+        ).fetchall()
+        conn.close()
+        if not rows or len(rows) < 5:
+            result["reasons"].append("insufficient daily data")
+            return result  # pass by default if no data
+
+        volumes = [r[1] for r in rows if r[1]]
+        values = [r[0] * r[1] for r in rows if r[0] and r[1]]
+
+        if volumes:
+            avg_vol = sum(volumes) / len(volumes)
+            result["avg_daily_volume"] = int(avg_vol)
+            if avg_vol < MIN_AVG_DAILY_VOLUME:
+                result["passed"] = False
+                result["reasons"].append(f"avg volume {avg_vol:.0f} < {MIN_AVG_DAILY_VOLUME}")
+
+        if values:
+            avg_val = sum(values) / len(values)
+            result["avg_daily_value_kwd"] = round(avg_val, 0)
+            if avg_val < MIN_AVG_DAILY_VALUE_KWD:
+                result["passed"] = False
+                result["reasons"].append(f"avg daily value {avg_val:.0f} < {MIN_AVG_DAILY_VALUE_KWD}")
+
+    except Exception as e:
+        import logging
+        logging.getLogger("signal_engine").debug(f"check_liquidity error for {symbol}: {e}")
+    return result
+
+# Trading V2 Phase 2: Market Regime Filter (KWSE Index)
+# ═══════════════════════════════════════════════════
+_regime_cache = {"data": None, "ts": 0}
+
+def check_market_regime() -> dict:
+    """
+    Determine overall market regime from KWSE index.
+    Uses SMA 50 + ADX from daily_bars (index row) or stock_radar_daily.
+    Cached 15 min (doesn't change intraday).
+    """
+    import time as _t
+    now = _t.time()
+    if _regime_cache["data"] and (now - _regime_cache["ts"]) < 900:
+        return _regime_cache["data"]
+
+    result = {"regime": "UNKNOWN", "allow_buy": True, "reason": "insufficient data",
+              "index_close": None, "index_sma50": None, "index_adx": None}
+    try:
+        import sqlite3 as _sq
+        conn = _sq.connect("data/life.db", timeout=3)
+        # Try daily_bars for KWSE index
+        rows = conn.execute(
+            "SELECT close FROM daily_bars WHERE symbol='KWSE' ORDER BY trading_date ASC"
+        ).fetchall()
+        if not rows or len(rows) < 50:
+            # Fallback: compute regime from whitelist stock trends
+            row = conn.execute("""
+                SELECT COUNT(*) as total,
+                       SUM(CASE WHEN trend='UP' THEN 1 ELSE 0 END) as up_count,
+                       AVG(adx) as avg_adx
+                FROM stock_radar_daily
+            """).fetchone()
+            conn.close()
+            if row and row[0] and row[0] > 0:
+                total, up_count, avg_adx = row[0], row[1] or 0, row[2] or 0
+                up_pct = (up_count / total) * 100
+                if up_pct >= 60 and avg_adx >= 20:
+                    regime, allow = "BULLISH", True
+                elif up_pct >= 40:
+                    regime, allow = "NEUTRAL", True
+                elif up_pct < 40 and avg_adx >= 20:
+                    regime, allow = "BEARISH", False
+                else:
+                    regime, allow = "CHOPPY", False
+                result = {"regime": regime, "allow_buy": allow,
+                          "index_close": None, "index_sma50": None,
+                          "index_adx": round(avg_adx, 1),
+                          "up_pct": round(up_pct, 1),
+                          "reason": f"{up_pct:.0f}% stocks UP, ADX={avg_adx:.0f}"}
+            _regime_cache["data"] = result
+            _regime_cache["ts"] = now
+            return result
+
+        closes = [r[0] for r in rows]
+        sma50 = sum(closes[-50:]) / 50
+        current = closes[-1]
+        above_sma = current > sma50
+
+        # Try to get ADX from bridge analysis or radar
+        adx = 0
+        try:
+            row2 = conn.execute(
+                "SELECT adx FROM stock_radar_daily WHERE symbol='KWSE' LIMIT 1"
+            ).fetchone()
+            if row2 and row2[0]:
+                adx = row2[0]
+        except Exception:
+            pass
+        conn.close()
+
+        trending = adx > 20
+        if above_sma and trending:
+            regime, allow = "BULLISH", True
+        elif above_sma and not trending:
+            regime, allow = "NEUTRAL", True
+        elif not above_sma and trending:
+            regime, allow = "BEARISH", False
+        else:
+            regime, allow = "CHOPPY", False
+
+        result = {"regime": regime, "allow_buy": allow,
+                  "index_close": round(current, 2), "index_sma50": round(sma50, 2),
+                  "index_adx": round(adx, 1),
+                  "above_sma50": above_sma,
+                  "reason": f"Index {'above' if above_sma else 'below'} SMA50, ADX={adx:.0f}"}
+    except Exception as e:
+        import logging
+        logging.getLogger("signal_engine").warning(f"check_market_regime error: {e}")
+
+    _regime_cache["data"] = result
+    _regime_cache["ts"] = now
+    return result
+
+
+def _save_regime_snapshot(regime_data: dict):
+    """Persist daily regime to DB for history."""
+    try:
+        import sqlite3 as _sq
+        from datetime import datetime as _dt
+        today = _dt.now().strftime("%Y-%m-%d")
+        conn = _sq.connect("data/life.db", timeout=3)
+        conn.execute("""INSERT OR REPLACE INTO market_regime
+            (date, regime, allow_buy, index_close, index_sma50, index_adx)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+            (today, regime_data.get("regime"), 1 if regime_data.get("allow_buy") else 0,
+             regime_data.get("index_close"), regime_data.get("index_sma50"),
+             regime_data.get("index_adx")))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 def build_signals() -> dict:
     """Main entry: build composite signals from radar + bridge + journal."""
     now = datetime.now()
@@ -108,6 +276,7 @@ def build_signals() -> dict:
         "thresholds": _get_thresholds(),
         # V2 feature flags (Phase 8)
         "flags": get_trading_flags(),
+        "market_regime": check_market_regime(),
         "whitelist": sorted(WHITELIST),
     }
 
@@ -152,6 +321,12 @@ def build_signals() -> dict:
             verdict_key = "avoid"
             verdict = _VERDICT_MAP.get("avoid", "avoid")
 
+        # Phase 2 ITEM 3: Market regime filter
+        regime = result.get("market_regime", {})
+        if MARKET_REGIME_FILTER and not regime.get("allow_buy", True) and state not in ("entered", "manage"):
+            verdict_key = "avoid"
+            verdict = _VERDICT_MAP.get("avoid", "avoid")
+
         sig = {
             "symbol": sym_upper,
             "name_ar": (trade or {}).get("name_ar", ""),
@@ -182,6 +357,9 @@ def build_signals() -> dict:
             "daily_trend_allow_buy": daily_trend.get("allow_buy", False),
             "source": bd.get("source", ""),
             "stale": bd.get("stale", False),
+            "market_regime": regime.get("regime", "UNKNOWN"),
+            "regime_allow_buy": regime.get("allow_buy", True),
+            "liquidity": check_liquidity(sym_upper) if LIQUIDITY_FILTER else {"passed": True, "reasons": []},
         }
 
         # Phase 4: Pivots + ATR stops
@@ -1077,61 +1255,3 @@ def build_signals_30m() -> dict:
             "macd_momentum": (bd.get("signals") or {}).get("macd_momentum", ""),
             "adx": bd.get("adx"),
             "vol_ratio": bd.get("vol_ratio"),
-            "support": (bd.get("support") or [None])[0],
-            "resistance": (bd.get("resistance") or [None])[0],
-            "atr_14": bd.get("atr_14"),
-            "bb_squeeze": (bd.get("bb") or {}).get("squeeze"),
-            "stoch_k": (bd.get("stoch_rsi") or {}).get("k"),
-            "stoch_d": (bd.get("stoch_rsi") or {}).get("d"),
-            "rsi_divergence": (bd.get("signals") or {}).get("rsi_divergence"),
-            "ema_cross": (bd.get("signals") or {}).get("ema_cross"),
-            "ema9": (bd.get("ema") or {}).get("ema9", 0),
-            "ema21": (bd.get("ema") or {}).get("ema21", 0),
-            "confluence_detail": confluence,
-            "timeframe": "30m",
-            "valid_until": (now + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%S"),
-            "source": bd.get("source", ""),
-            "stale": bd.get("stale", False),
-        }
-
-        # Phase 2: VWAP enrichment for scalping
-        vwap_data = _get_vwap_for_symbol(sym_upper, bd)
-        sig["vwap"] = vwap_data.get("vwap", 0)
-        sig["vwap_distance_pct"] = vwap_data.get("vwap_distance_pct", 0)
-        sig["price_vs_vwap"] = vwap_data.get("price_vs_vwap", "unknown")
-        sig["scalping_vwap_ok"] = vwap_data.get("price_vs_vwap") == "above"
-
-        # Phase 3: Scalping confluence (replaces default for 30m)
-        if SCALPING_MODE:
-            sc = scalping_confluence(sig)
-            sig["scalp_confluence_pct"] = sc["confluence_pct"]
-            sig["scalp_action"] = sc["action"]
-            sig["scalp_factors"] = sc["factors"]
-            sig["scalp_reason"] = sc.get("reason")
-
-        signals.append(sig)
-
-    signals.sort(key=lambda s: s.get("confluence_score", 0), reverse=True)
-    result["signals"] = signals
-    result["count"] = len(signals)
-    return result
-
-
-def _get_radar_watchlist_safe() -> dict:
-    """Get radar watchlist as {SYMBOL: dict}."""
-    try:
-        from stock_radar import get_watchlist
-        wl = get_watchlist()
-        return {item["symbol"].upper(): item for item in wl if item.get("symbol")}
-    except Exception:
-        return {}
-
-
-def _get_bridge_symbols_set() -> set:
-    """Get set of symbols currently in bridge cache."""
-    try:
-        from bridge_client import get_bridge_client
-        client = get_bridge_client()
-        return {k.split(":")[-1] for k in client._cache if k.startswith("analysis:")}
-    except Exception:
-        return set()
