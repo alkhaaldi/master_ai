@@ -290,16 +290,21 @@ function renderAnalysis(data, symbol){
   // Full report
   const report = data.report || data.analysis || '';
   if(report){
-    // FIRST: strip JSON/code blocks on RAW text (before esc)
+    // FIRST: strip JSON/code blocks and summary section on RAW text (before esc)
     let raw = report;
     // Remove the entire "ملخص" section with its JSON block
     raw = raw.replace(/ملخص[^\n]*```json[\s\S]*?```/g, '');
     raw = raw.replace(/```json[\s\S]*?```/g, '');
     raw = raw.replace(/```[\s\S]*?```/g, '');
-    // Remove any leftover summary headers without content
-    raw = raw.replace(/ملخص الخطة الفنية\s*/g, '');
-    raw = raw.replace(/ملخص خطة التداول[^\n]*/g, '');
-    // Trim trailing whitespace/newlines
+    // Remove ANY line containing "ملخص" + "JSON" (covers all variations)
+    raw = raw.replace(/^.*ملخص.*JSON.*$/gm, '');
+    // Remove any remaining "ملخص" headers (standalone)
+    raw = raw.replace(/^.*ملخص الخطة الفنية.*$/gm, '');
+    raw = raw.replace(/^.*ملخص خطة التداول.*$/gm, '');
+    raw = raw.replace(/^.*ملخص التحليل الفني.*$/gm, '');
+    // Remove trailing --- separators and whitespace
+    raw = raw.replace(/---\s*$/g, '');
+    raw = raw.replace(/^---$/gm, '');
     raw = raw.replace(/\s+$/, '');
     // THEN: escape for HTML safety
     let formatted = esc(raw);
