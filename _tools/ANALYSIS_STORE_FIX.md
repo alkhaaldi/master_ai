@@ -9,9 +9,13 @@ Every time user opens analysis = 30-60 sec wait + Bridge MUST be online.
 If Bridge offline = no analysis at all.
 This is WRONG. Analysis should be PRE-COMPUTED and STORED.
 
-## IMPORTANT: Analysis covers ALL 128 KSE stocks, NOT just Whitelist 10.
-## Whitelist = what you TRADE. Analysis = what you can VIEW/RESEARCH.
-## User must be able to analyze any stock at any time.
+## IMPORTANT FACTS:
+## 1. Analysis covers ALL 128 KSE stocks, NOT just Whitelist 10.
+## 2. TradingView has ALL historical data 24/7 — NOT only during market hours.
+## 3. Bridge can pull data ANY TIME — it connects to TradingView servers, not the exchange.
+## 4. The daily scheduled refresh at 2:15 PM is for FRESHNESS (after new candles close),
+##    but a manual refresh-all can run ANY TIME Bridge is running.
+## 5. Bridge not running = PC issue, NOT a market issue.
 
 ---
 
@@ -19,7 +23,7 @@ This is WRONG. Analysis should be PRE-COMPUTED and STORED.
 
 After market closes (Sunday-Thursday):
   for each symbol in ALL_128_SYMBOLS:
-    1. Fetch bars from Bridge (while Bridge is still online)
+    1. Fetch bars from Bridge (TradingView data available 24/7)
     2. Send to Gemini 2.5 Pro for analysis
     3. Store result in DB table stock_analysis_cache
     4. Rate limit: sleep 3-5 sec between stocks (Gemini free tier)
@@ -27,6 +31,10 @@ After market closes (Sunday-Thursday):
   Telegram: "تحليل فني محدث ل 128 سهم"
   Total time estimate: 128 stocks x ~10 sec each = ~20 min
   This runs in background — doesnt block anything.
+
+  NOTE: The 2:15 PM schedule is optimal (after new daily candle closes)
+  but refresh-all can run ANY TIME Bridge is online on the PC.
+  TradingView data is available 24/7 — not limited to market hours.
 
 ---
 
