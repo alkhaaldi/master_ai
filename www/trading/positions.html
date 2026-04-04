@@ -585,7 +585,8 @@ function esc(s){
     if(!r.ok) return;
     const d = await r.json();
     const dl = document.getElementById('symbolsList');
-    (d.symbols||[]).forEach(s=>{
+    var sorted = (d.symbols||[]).slice().sort(function(a,b){return (a.symbol||'').localeCompare(b.symbol||'')});
+    sorted.forEach(s=>{
       const opt = document.createElement('option');
       opt.value = s.symbol;
       opt.textContent = s.name_ar||s.symbol;
