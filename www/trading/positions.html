@@ -606,8 +606,16 @@ function closeAddTrade(){
   document.getElementById('addTradeOverlay').classList.remove('open');
 }
 function openCloseModal(tradeId, symbol, currentPrice){
+  document.getElementById('ct_trade_id').value = tradeId;
+  document.getElementById('ct_symbol_display').textContent = symbol;
+  document.getElementById('ct_exit').value = currentPrice || '';
+  document.getElementById('ct_reason').value = '';
+  hideMsg('ct_msg');
+  document.getElementById('closeTradeOverlay').classList.add('open');
+}
+
 /* ===== Partial Sell Modal ===== */
-function openPartialSell(tradeId, symbol, qty, price){
+window.openPartialSell = function(tradeId, symbol, qty, price){
   var html = '<div class="modal-overlay open" id="partialSellOverlay" onclick="if(event.target===this)this.remove()">';
   html += '<div class="modal-card"><h3 style="color:var(--amber);margin-bottom:1rem">\u0628\u064A\u0639 \u062C\u0632\u0626\u064A \u2014 '+esc(symbol)+'</h3>';
   html += '<div style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem">\u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629: <strong>'+qty+'</strong> \u0633\u0647\u0645</div>';
@@ -621,7 +629,7 @@ function openPartialSell(tradeId, symbol, qty, price){
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-async function doPartialSell(tradeId){
+window.doPartialSell = async function(tradeId){
   var qty = Number(document.getElementById('ps_qty').value);
   var price = Number(document.getElementById('ps_price').value);
   var msg = document.getElementById('ps_msg');
@@ -638,7 +646,7 @@ async function doPartialSell(tradeId){
 }
 
 /* ===== Add More (Averaging) Modal ===== */
-function openAddMore(tradeId, symbol, price){
+window.openAddMore = function(tradeId, symbol, price){
   var html = '<div class="modal-overlay open" id="addMoreOverlay" onclick="if(event.target===this)this.remove()">';
   html += '<div class="modal-card"><h3 style="color:var(--cyan);margin-bottom:1rem">\u0632\u064A\u0627\u062F\u0629 \u0643\u0645\u064A\u0629 \u2014 '+esc(symbol)+'</h3>';
   html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0643\u0645\u064A\u0629 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0625\u0636\u0627\u0641\u064A\u0629</label><input type="number" id="am_qty" min="1" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)" placeholder="\u0643\u0645 \u0633\u0647\u0645\u061F"></div>';
@@ -651,7 +659,7 @@ function openAddMore(tradeId, symbol, price){
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-async function doAddMore(tradeId){
+window.doAddMore = async function(tradeId){
   var qty = Number(document.getElementById('am_qty').value);
   var price = Number(document.getElementById('am_price').value);
   var msg = document.getElementById('am_msg');
@@ -668,7 +676,7 @@ async function doAddMore(tradeId){
 }
 
 /* ===== Load Gemini Analysis for open positions ===== */
-async function loadGeminiForPositions(symbols){
+window.loadGeminiForPositions = async function(symbols){
   for(var i=0;i<symbols.length;i++){
     var sym = symbols[i];
     try{
@@ -696,13 +704,6 @@ async function loadGeminiForPositions(symbols){
   }
 }
 
-  document.getElementById('ct_trade_id').value = tradeId;
-  document.getElementById('ct_symbol_display').textContent = symbol;
-  document.getElementById('ct_exit').value = currentPrice || '';
-  document.getElementById('ct_reason').value = '';
-  hideMsg('ct_msg');
-  document.getElementById('closeTradeOverlay').classList.add('open');
-}
 function closeCloseModal(){
   document.getElementById('closeTradeOverlay').classList.remove('open');
 }
