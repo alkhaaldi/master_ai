@@ -13,7 +13,7 @@ Trade State Model:
 import logging
 import time
 import time as _time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger("signal_engine")
 
@@ -136,6 +136,8 @@ def build_signals() -> dict:
             "rsi_divergence": (bd.get("signals") or {}).get("rsi_divergence"),
             "ema_cross": (bd.get("signals") or {}).get("ema_cross"),
             "confluence_detail": confluence,
+            "timeframe": "1D",
+            "valid_until": now.replace(hour=23, minute=59, second=59).strftime("%Y-%m-%dT%H:%M:%S"),
             "source": bd.get("source", ""),
             "stale": bd.get("stale", False),
         }
@@ -256,6 +258,213 @@ def _compute_verdict(bridge: dict, state: str) -> str:
     if "bearish" in direction and regime == "trending":
         return "avoid"  # bearish in trending market is more meaningful
     return "neutral"
+
+
+# --- Phase 3: Scalping Mode ---
+SCALPING_MODE = True  # Feature flag — True=scalping logic for 30m, False=original
+
+SCALPING_WEIGHTS = {
+    "volume_surge": 1.15,   # 65% hit rate from Brain data
+    "adx_strong":   1.13,   # 63% hit rate
+    "stoch_signal": 1.05,   # 55% hit rate
+    "vwap_aligned": 1.20,   # mandatory — price must be above VWAP
+}
+_SCALP_MAX = sum(SCALPING_WEIGHTS.values())  # 4.53
+
+
+def scalping_confluence(sig: dict) -> dict:
+    """
+    Compute scalping-specific confluence.
+    Uses ONLY Volume + ADX + Stoch + VWAP.
+    RSI/MACD/EMA crossover excluded (low hit rates from Brain analysis).
+
+    Args: sig dict with vol_ratio, adx, stoch_k, stoch_d, price_vs_vwap
+    Returns: {confluence_pct, action, factors, reason}
+    """
+    score = 0.0
+    factors = []
+
+    # Mandatory: VWAP
+    if sig.get("price_vs_vwap") != "above":
+        return {
+            "confluence_pct": 0, "action": "NO_ENTRY",
+            "factors": [], "reason": "Price below VWAP",
+        }
+    score += SCALPING_WEIGHTS["vwap_aligned"]
+    factors.append("VWAP\u2713")
+
+    # Volume Surge (>= 3x average)
+    vol = sig.get("vol_ratio") or 0
+    if vol >= 3.0:
+        score += SCALPING_WEIGHTS["volume_surge"]
+        factors.append(f"VOL:{vol:.1f}x")
+
+    # ADX >= 25 (trending)
+    adx = sig.get("adx") or 0
+    if adx >= 25:
+        score += SCALPING_WEIGHTS["adx_strong"]
+        factors.append(f"ADX:{adx:.0f}")
+
+    # Stochastic: K > D and not overbought
+    stoch_k = sig.get("stoch_k") or 0
+    stoch_d = sig.get("stoch_d") or 0
+    if stoch_k > stoch_d and stoch_k < 80:
+        score += SCALPING_WEIGHTS["stoch_signal"]
+        factors.append(f"STOCH:{stoch_k:.0f}")
+
+    confluence_pct = round((score / _SCALP_MAX) * 100, 1) if _SCALP_MAX > 0 else 0
+
+    if confluence_pct >= 75:
+        action = "STRONG_BUY"
+    elif confluence_pct >= 50:
+        action = "BUY"
+    else:
+        action = "WATCH"
+
+    return {
+        "confluence_pct": confluence_pct,
+        "action": action,
+        "factors": factors,
+        "reason": None,
+    }
+
+
+# --- Phase 4: Scalping Exit Rules ---
+
+def calculate_scalping_stop(entry_price: float, candle_low: float, ema21: float) -> dict:
+    """
+    Scalping stop loss — tightest of:
+    1. Current candle low
+    2. EMA 21
+    3. 0.5% max below entry
+    """
+    if not entry_price or entry_price <= 0:
+        return {"stop_loss": 0, "target": 0, "risk_pct": 0, "reward_pct": 0,
+                "risk_reward": 0, "stop_type": "error"}
+
+    max_stop = entry_price * 0.995  # 0.5% max
+
+    valid_stops = [s for s in [candle_low, ema21, max_stop]
+                   if s and s > 0 and s < entry_price]
+
+    stop = max(valid_stops) if valid_stops else max_stop
+    risk = abs(entry_price - stop)
+    risk_pct = (risk / entry_price * 100) if entry_price > 0 else 0
+    target = entry_price + risk * 1.5  # 1.5R reward
+
+    if stop == candle_low:
+        stype = "candle_low"
+    elif stop == ema21:
+        stype = "ema21"
+    else:
+        stype = "max_0.5pct"
+
+    return {
+        "stop_loss": round(stop, 3),
+        "target": round(target, 3),
+        "risk_pct": round(risk_pct, 2),
+        "reward_pct": round(risk_pct * 1.5, 2),
+        "risk_reward": 1.5,
+        "stop_type": stype,
+    }
+
+
+def check_scalping_exit(bars_since_entry: int, current_pnl_pct: float,
+                        current_close: float, ema9: float) -> dict:
+    """
+    Exit rules for scalping:
+    1. 3 bars with no profit → TIMEOUT
+    2. Close below EMA 9 → TREND BREAK
+    """
+    exit_signal = False
+    exit_reason = None
+
+    if bars_since_entry >= 3 and current_pnl_pct <= 0:
+        exit_signal = True
+        exit_reason = "TIMEOUT_3BARS"
+    elif ema9 and current_close < ema9:
+        exit_signal = True
+        exit_reason = "BELOW_EMA9"
+
+    return {
+        "should_exit": exit_signal,
+        "exit_reason": exit_reason,
+        "bars_held": bars_since_entry,
+        "current_pnl_pct": round(current_pnl_pct, 2),
+    }
+
+
+# --- Phase 2: VWAP + PDH/PDL for scalping ---
+
+def calculate_vwap(high: list, low: list, close: list, volume: list) -> dict:
+    """
+    VWAP = cumulative(TypicalPrice * Volume) / cumulative(Volume)
+    TypicalPrice = (High + Low + Close) / 3
+    Resets daily (caller provides intraday bars).
+    """
+    if not high or len(high) < 2:
+        return {"vwap": 0, "vwap_distance_pct": 0, "price_vs_vwap": "unknown"}
+
+    # Align arrays to shortest length
+    min_len = min(len(high), len(low), len(close), len(volume))
+    if min_len < 2:
+        return {"vwap": 0, "vwap_distance_pct": 0, "price_vs_vwap": "unknown"}
+    high = high[-min_len:]
+    low = low[-min_len:]
+    close = close[-min_len:]
+    volume = volume[-min_len:]
+
+    cum_tp_vol = 0
+    cum_vol = 0
+    vwap_val = 0
+    for h, l, c, v in zip(high, low, close, volume):
+        tp = (h + l + c) / 3
+        cum_tp_vol += tp * v
+        cum_vol += v
+        if cum_vol > 0:
+            vwap_val = cum_tp_vol / cum_vol
+
+    current_price = close[-1]
+    distance_pct = ((current_price - vwap_val) / vwap_val * 100) if vwap_val > 0 else 0
+
+    return {
+        "vwap": round(vwap_val, 3),
+        "vwap_distance_pct": round(distance_pct, 2),
+        "price_vs_vwap": "above" if current_price > vwap_val else "below",
+    }
+
+
+def calculate_pdh_pdl(daily_bars: list) -> dict:
+    """
+    Previous Day High/Low — key scalping levels.
+    daily_bars: list of dicts with high, low, open, close (newest last).
+    Needs at least 2 bars.
+    """
+    if not daily_bars or len(daily_bars) < 2:
+        return {"pdh": 0, "pdl": 0, "daily_open": 0}
+    prev_day = daily_bars[-2]
+    today = daily_bars[-1]
+    return {
+        "pdh": prev_day.get("high", 0),
+        "pdl": prev_day.get("low", 0),
+        "daily_open": today.get("open", today.get("close", 0)),
+    }
+
+
+def _get_vwap_for_symbol(sym: str, bridge_data: dict) -> dict:
+    """Extract VWAP from bridge bars data if available, else return empty."""
+    try:
+        bars = bridge_data.get("bars") or bridge_data.get("candles") or []
+        if not bars or len(bars) < 5:
+            return {"vwap": 0, "vwap_distance_pct": 0, "price_vs_vwap": "unknown"}
+        high = [b.get("high", b.get("h", 0)) for b in bars]
+        low = [b.get("low", b.get("l", 0)) for b in bars]
+        close = [b.get("close", b.get("c", 0)) for b in bars]
+        volume = [b.get("volume", b.get("v", 0)) for b in bars]
+        return calculate_vwap(high, low, close, volume)
+    except Exception as e:
+        logger.debug("VWAP calc failed for %s: %s", sym, e)
+        return {"vwap": 0, "vwap_distance_pct": 0, "price_vs_vwap": "unknown"}
 
 
 def _extract_confluence(bridge: dict) -> dict:
@@ -423,6 +632,13 @@ def build_signals_30m() -> dict:
         sym_upper = sym.upper()
         trade = open_syms.get(sym_upper)
 
+        # Data alignment guard: skip symbols with missing critical fields
+        _price = bd.get("price", 0)
+        _vol = bd.get("vol_ratio")
+        if not _price or _price <= 0:
+            logger.debug("Skipping %s: missing price", sym_upper)
+            continue
+
         confluence = _extract_confluence(bd)
         score = confluence.get("score", 0)
         direction = confluence.get("direction", "")
@@ -479,13 +695,33 @@ def build_signals_30m() -> dict:
             "atr_14": bd.get("atr_14"),
             "bb_squeeze": (bd.get("bb") or {}).get("squeeze"),
             "stoch_k": (bd.get("stoch_rsi") or {}).get("k"),
+            "stoch_d": (bd.get("stoch_rsi") or {}).get("d"),
             "rsi_divergence": (bd.get("signals") or {}).get("rsi_divergence"),
             "ema_cross": (bd.get("signals") or {}).get("ema_cross"),
+            "ema9": (bd.get("ema") or {}).get("ema9", 0),
+            "ema21": (bd.get("ema") or {}).get("ema21", 0),
             "confluence_detail": confluence,
             "timeframe": "30m",
+            "valid_until": (now + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%S"),
             "source": bd.get("source", ""),
             "stale": bd.get("stale", False),
         }
+
+        # Phase 2: VWAP enrichment for scalping
+        vwap_data = _get_vwap_for_symbol(sym_upper, bd)
+        sig["vwap"] = vwap_data.get("vwap", 0)
+        sig["vwap_distance_pct"] = vwap_data.get("vwap_distance_pct", 0)
+        sig["price_vs_vwap"] = vwap_data.get("price_vs_vwap", "unknown")
+        sig["scalping_vwap_ok"] = vwap_data.get("price_vs_vwap") == "above"
+
+        # Phase 3: Scalping confluence (replaces default for 30m)
+        if SCALPING_MODE:
+            sc = scalping_confluence(sig)
+            sig["scalp_confluence_pct"] = sc["confluence_pct"]
+            sig["scalp_action"] = sc["action"]
+            sig["scalp_factors"] = sc["factors"]
+            sig["scalp_reason"] = sc.get("reason")
+
         signals.append(sig)
 
     signals.sort(key=lambda s: s.get("confluence_score", 0), reverse=True)

@@ -1620,11 +1620,155 @@ def dashboard_signals():
     return build_signals()
 
 
+@router.get("/dashboard/signals-daily")
+def dashboard_signals_daily():
+    """Daily-only signals — uses closing prices, NOT live 30m data.
+    Separated from 30m to prevent timeframe mixing (Trading V2 Phase 1)."""
+    from signal_engine import build_signals
+    data = build_signals()
+    # Strip 30m-only fields and enforce timeframe tag
+    for sig in data.get("all_signals", []):
+        sig["timeframe"] = "1D"
+        # Remove any 30m scalping fields that might leak
+        for k in ("scalp_confluence_pct", "scalp_action", "scalp_factors",
+                   "scalp_reason", "scalping_vwap_ok"):
+            sig.pop(k, None)
+    data["timeframe"] = "1D"
+    data["warning"] = "Daily data only. Do NOT mix with 30m signals."
+    return data
+
+
 @router.get("/dashboard/signals-30m")
 def dashboard_signals_30m():
     """30m signals for all watchlist symbols using Brain weights."""
     from signal_engine import build_signals_30m
     return build_signals_30m()
+
+
+@router.get("/dashboard/scalper")
+def dashboard_scalper():
+    """
+    Scalper dashboard — hot stocks filtered by VWAP+Volume+ADX+Stoch.
+    Phase 5 of Scalping Optimization Plan.
+    """
+    from datetime import datetime as _dt
+    from signal_engine import (
+        build_signals_30m, SCALPING_MODE,
+        calculate_scalping_stop, check_scalping_exit,
+    )
+
+    raw = build_signals_30m()
+    all_sigs = raw.get("signals", [])
+    bridge_online = raw.get("bridge_online", False)
+
+    # --- Filter: scalping candidates ---
+    hot = []
+    for s in all_sigs:
+        # Must have scalping data
+        if not s.get("scalp_action"):
+            continue
+        # Only BUY or STRONG_BUY
+        if s["scalp_action"] not in ("BUY", "STRONG_BUY"):
+            continue
+        # Must be above VWAP
+        if s.get("price_vs_vwap") != "above":
+            continue
+        # Minimum volume ratio
+        if (s.get("vol_ratio") or 0) < 3.0:
+            continue
+        # Minimum ADX
+        if (s.get("adx") or 0) < 25:
+            continue
+
+        # Calculate stop/target
+        price = s.get("price", 0)
+        ema21 = s.get("ema21", 0)
+        # Use support as candle_low proxy when no bar data available
+        candle_low = s.get("support") or (price * 0.997)
+        stop_data = calculate_scalping_stop(price, candle_low, ema21)
+
+        hot.append({
+            "symbol": s["symbol"],
+            "name_ar": s.get("name_ar", ""),
+            "price": price,
+            "change_pct": s.get("change_pct", 0),
+            "volume_ratio": s.get("vol_ratio"),
+            "adx": s.get("adx"),
+            "stoch_k": s.get("stoch_k"),
+            "stoch_d": s.get("stoch_d"),
+            "vwap": s.get("vwap"),
+            "vwap_distance_pct": s.get("vwap_distance_pct"),
+            "price_vs_vwap": s.get("price_vs_vwap"),
+            "confluence_pct": s.get("scalp_confluence_pct", 0),
+            "action": s.get("scalp_action"),
+            "factors": s.get("scalp_factors", []),
+            "stop_loss": stop_data.get("stop_loss"),
+            "target": stop_data.get("target"),
+            "risk_pct": stop_data.get("risk_pct"),
+            "reward_pct": stop_data.get("reward_pct"),
+            "risk_reward": stop_data.get("risk_reward"),
+            "stop_type": stop_data.get("stop_type"),
+            "ema9": s.get("ema9"),
+            "ema21": ema21,
+        })
+
+    # Sort by confluence descending, take top 10
+    hot.sort(key=lambda x: x.get("confluence_pct", 0), reverse=True)
+    hot = hot[:10]
+
+    # --- Active scalps: open positions with exit check ---
+    active_scalps = []
+    try:
+        from journal_engine import get_open_trades
+        for t in get_open_trades():
+            sym = (t.get("symbol") or "").upper()
+            entry_p = t.get("entry_price") or t.get("avg_price") or 0
+            # Find current price from signals
+            cur_sig = next((s for s in all_sigs if s["symbol"] == sym), None)
+            if not cur_sig or not entry_p:
+                continue
+            cur_price = cur_sig.get("price", 0)
+            if not cur_price:
+                continue
+            pnl_pct = ((cur_price - entry_p) / entry_p * 100) if entry_p > 0 else 0
+            ema9 = cur_sig.get("ema9", 0)
+            bars_held = t.get("bars_held", 0)
+            exit_ck = check_scalping_exit(bars_held, pnl_pct, cur_price, ema9)
+            active_scalps.append({
+                "symbol": sym,
+                "entry_price": entry_p,
+                "current_price": cur_price,
+                "bars_held": bars_held,
+                "pnl_pct": round(pnl_pct, 2),
+                "stop_loss": t.get("stop_loss"),
+                "target": t.get("target_price"),
+                "exit_check": exit_ck,
+            })
+    except Exception:
+        pass
+
+    avg_conf = round(sum(h["confluence_pct"] for h in hot) / len(hot), 1) if hot else 0
+
+    return {
+        "scalper_active": SCALPING_MODE,
+        "scan_time": _dt.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "market_status": "open" if raw.get("market_open") else "closed",
+        "bridge_online": bridge_online,
+        "hot_stocks": hot,
+        "active_scalps": active_scalps,
+        "stats": {
+            "total_scanned": len(all_sigs),
+            "hot_count": len(hot),
+            "active_scalps": len(active_scalps),
+            "avg_confluence": avg_conf,
+        },
+        "filters_applied": {
+            "min_volume_ratio": 3.0,
+            "min_adx": 25,
+            "vwap_required": True,
+            "scalping_mode": SCALPING_MODE,
+        },
+    }
 
 
 # ═══════════════════════════════════════════════════

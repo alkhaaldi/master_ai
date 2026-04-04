@@ -85,6 +85,16 @@ except Exception as _e:
     TG_INTENT_OK = False
     logging.getLogger("master_ai").warning("tg_intent_router not loaded: %s", _e)
 
+# R2-P2: Smart Tips Engine
+try:
+    from tips_engine import TipsEngine
+    _tips_engine = TipsEngine()
+    TIPS_OK = True
+except Exception as _e:
+    _tips_engine = None
+    TIPS_OK = False
+    logging.getLogger("master_ai").warning("tips_engine not loaded: %s", _e)
+
 try:
     from smart_router import classify_message
     SMART_ROUTER_OK = True
@@ -2868,6 +2878,40 @@ async def lifespan(app):
         logger.info("Signal engine context ready")
     except Exception as e:
         logger.warning(f"Signal engine init failed (non-fatal): {e}")
+    # R2-P1: Dream Consolidator scheduler
+    async def _dream_scheduler():
+        """Run memory consolidation at 3 AM KWT daily."""
+        _log = logging.getLogger("dream_scheduler")
+        _log.info("Dream scheduler started")
+        await asyncio.sleep(60)  # let startup complete
+        while True:
+            now = datetime.now()
+            target = now.replace(hour=3, minute=0, second=0, microsecond=0)
+            if now >= target:
+                target += timedelta(days=1)
+            wait_secs = (target - now).total_seconds()
+            _log.info(f"Next dream consolidation in {wait_secs/3600:.1f}h")
+            await asyncio.sleep(wait_secs)
+            try:
+                from dream_consolidator import run_dream_consolidation
+                report = await run_dream_consolidation()
+                _cid = ADMIN_TELEGRAM_ID or "669769765"
+                merged = report.get("merged", 0)
+                archived = report.get("archived", 0)
+                compacted = report.get("session_compacted", 0)
+                kept = report.get("kept", "?")
+                if merged + archived + compacted > 0:
+                    await tg_send(int(_cid),
+                        f"🧹 Dream Consolidation:\n"
+                        f"  دمج: {merged} | أرشفة: {archived} | ضغط: {compacted}\n"
+                        f"  باقي: {kept} ذاكرة نشطة")
+                _log.info(f"Dream done: {report}")
+            except Exception as _e:
+                _log.error(f"Dream error: {_e}", exc_info=True)
+
+    asyncio.create_task(_dream_scheduler())
+    logger.info("Dream consolidator scheduler started (3 AM KWT)")
+
     # Trading brain — signal learning engine
     BRAIN_TRADING_OK = False
     try:
@@ -3038,7 +3082,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dashboard/ema-active", "/dashboard/ema-live", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
+    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/signals-daily", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dashboard/ema-active", "/dashboard/ema-live", "/dashboard/scalper", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -3124,6 +3168,31 @@ async def backup_endpoint():
     if not BRAIN_AVAILABLE:
         return {"error": "brain module not loaded"}
     return run_backup()
+
+@app.get("/dream/status")
+async def dream_status_endpoint():
+    """Dream Consolidator — memory health status."""
+    try:
+        from dream_consolidator import get_dream_status
+        return await get_dream_status()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/dream/run")
+async def dream_run_endpoint():
+    """Dream Consolidator — trigger manual consolidation."""
+    try:
+        from dream_consolidator import run_dream_consolidation
+        return await run_dream_consolidation()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/tips")
+async def tips_endpoint():
+    """Smart Tips — list all tips with status."""
+    if not _tips_engine:
+        return {"error": "tips engine not loaded"}
+    return {"tips": _tips_engine.get_all_tips()}
 
 @app.get('/brain/analytics')
 async def analytics_endpoint(days: int = 7):
@@ -5047,6 +5116,10 @@ def tg_split_message(text: str) -> list[str]:
     return parts
 async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
     """Send message to Telegram, auto-split if >4096 chars."""
+    import re as _re
+    # Auto-detect HTML tags and set parse_mode if not already set
+    if not parse_mode and _re.search(r'<(?:b|i|u|s|code|pre|a)\b[^>]*>', text):
+        parse_mode = "HTML"
     # Phase 1: CB check for Telegram
     if not _cb_tg.is_available():
         logger.warning(f"TG circuit open, dropping message to {chat_id}")
@@ -5066,7 +5139,6 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
             resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json=payload)
             if resp.status_code == 400 and parse_mode:
                 # Fallback: strip HTML/Markdown and retry as plain text
-                import re as _re
                 plain = _re.sub(r'<[^>]+>', '', part)
                 plain = plain.replace('*', '').replace('_', '').replace('`', '')
                 _fb_payload = {"chat_id": chat_id, "text": plain}
@@ -5190,6 +5262,8 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/reset":
         if TG_SESSION_OK:
             tg_session_reset(str(chat_id))
+        if _tips_engine:
+            _tips_engine.reset_session()
         return "Session cleared"
 
     if cmd == "/status":
@@ -5261,6 +5335,33 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             _lines.append('\U0001f4b0 Cost: today=$' + f"{_k['today_usd']:.4f}" + '  month=$' + f"{_k['month_usd']:.2f}" + '/' + f"{_k['month_budget_usd']:.0f}")
         except Exception: pass
         return "\n".join(_lines)
+
+    # R2-P1: Dream Consolidator commands
+    if cmd in ("/dream", "/تنظيف"):
+        try:
+            from dream_consolidator import get_dream_status, format_dream_status
+            status = await get_dream_status()
+            await tg_send(chat_id, format_dream_status(status))
+            return "__inline_sent__"
+        except Exception as e:
+            return f"Dream error: {str(e)[:100]}"
+    if cmd == "/dream run":
+        try:
+            await tg_send(chat_id, "🧹 بدأ التنظيف...")
+            from dream_consolidator import run_dream_consolidation
+            report = await run_dream_consolidation()
+            merged = report.get("merged", 0)
+            archived = report.get("archived", 0)
+            compacted = report.get("session_compacted", 0)
+            kept = report.get("kept", "?")
+            await tg_send(chat_id,
+                f"✅ Dream Consolidation:\n"
+                f"  دمج: {merged} | أرشفة: {archived} | ضغط: {compacted}\n"
+                f"  باقي: {kept} ذاكرة نشطة")
+            return "__inline_sent__"
+        except Exception as e:
+            return f"Dream run error: {str(e)[:100]}"
+
     if cmd == "/lights":
         try:
             async with httpx.AsyncClient(timeout=10) as c:
@@ -6199,7 +6300,37 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/فرص" or cmd == "/decisions":
         try:
             from golden_engine import scan_opportunities
-            result = scan_opportunities()
+            import sqlite3 as _sq
+            live_list = []
+            try:
+                from signal_engine import build_signals_30m
+                sig_data = build_signals_30m()
+                live_list = sig_data.get("signals", [])
+            except Exception:
+                pass
+            if not live_list:
+                try:
+                    from signal_engine import build_signals
+                    sig_data = build_signals()
+                    live_list = sig_data.get("all_signals", [])
+                except Exception:
+                    pass
+            if not live_list:
+                _db = os.path.join(os.path.dirname(__file__), "data", "life.db")
+                try:
+                    _c = _sq.connect(_db, timeout=5)
+                    _c.row_factory = _sq.Row
+                    _rows = _c.execute(
+                        "SELECT symbol, price, rsi, vol_ratio, support, resistance, "
+                        "macd_cross AS macd_state, daily_ema_cross AS ema_state, "
+                        "stoch_k, adx, atr, bb_squeeze, confluence_score, change_pct "
+                        "FROM stock_radar_daily"
+                    ).fetchall()
+                    _c.close()
+                    live_list = [dict(r) for r in _rows]
+                except Exception:
+                    pass
+            result = scan_opportunities(live_list)
             opps = result.get("all_opportunities", [])
             enters = [o for o in opps if o.get("smart_decision") == "ENTER"]
             if not enters:
@@ -7425,7 +7556,29 @@ async def _tg_v2_pipeline(chat_id: int, text: str, user: dict):
     if _memory_extractor:
         _memory_extractor.record_message("assistant", response)
 
+    # R2-P3: Tool summary for long responses (non-blocking, 5s timeout)
+    if response and len(response) > 500:
+        try:
+            from tool_summary import generate_summary as _gen_summary
+            _summary = await asyncio.wait_for(_gen_summary("chat", response), timeout=5)
+            if _summary:
+                response = f"\U0001f4cb {_summary}\n\n{response}"
+        except Exception:
+            pass
+
     await tg_send(chat_id, response)
+
+    # R2-P2: Show a contextual tip (max 1 per session, non-blocking)
+    if _tips_engine:
+        try:
+            _tip_ctx = {"message_count": _router_stats.get("total", 0)}
+            if bridge:
+                _tip_ctx["bridge_online"] = bridge.get_status().get("online", True)
+            _tip = _tips_engine.get_tip(_tip_ctx)
+            if _tip:
+                await tg_send(chat_id, _tip)
+        except Exception:
+            pass
 
 
 async def tg_handle_message(chat_id, text: str, user: dict):
