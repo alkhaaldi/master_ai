@@ -60,7 +60,23 @@ def init_schema():
             c.execute("ALTER TABLE trades ADD COLUMN stop_loss REAL")
         if "take_profit" not in cols:
             c.execute("ALTER TABLE trades ADD COLUMN take_profit REAL")
-    logger.info("journal schema initialized")
+    c.execute("""CREATE TABLE IF NOT EXISTS trade_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trade_id INTEGER NOT NULL,
+        tx_type TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        price REAL NOT NULL,
+        pnl_fils REAL,
+        pnl_pct REAL,
+        fees REAL DEFAULT 0,
+        avg_price_after REAL,
+        qty_after INTEGER,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (trade_id) REFERENCES trades(id)
+    )""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ttx_trade ON trade_transactions(trade_id)")
+    logger.info("Journal schema initialized")
 
     # Phase 2: Position engine schema (new columns + position_alerts table)
     try:
@@ -338,6 +354,156 @@ def get_trade_stats(days=30):
 # ═══════════════════════════════════════════════════
 # WEEKLY PERFORMANCE REPORT
 # ═══════════════════════════════════════════════════
+
+
+
+# ═══════════════════════════════════════════════════
+# Partial Sell + Add More
+# ═══════════════════════════════════════════════════
+
+BROKER_FEE_PCT = 0.125  # 0.125% each way
+
+
+def partial_sell_trade(trade_id, sell_qty, sell_price, notes=""):
+    """
+    Sell part of a position.
+    - If sell_qty == remaining qty → fully closes the trade
+    - Otherwise updates quantity, logs transaction, calculates realized P&L
+    """
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    today = date.today().isoformat()
+    with _conn() as c:
+        row = c.execute("SELECT * FROM trades WHERE id=? AND status='open'", (trade_id,)).fetchone()
+        if not row:
+            return {"error": f"Trade {trade_id} not found or not open"}
+        trade = dict(row)
+
+        old_qty = int(trade["quantity"] or 0)
+        if old_qty <= 0:
+            return {"error": "Trade has no quantity to sell"}
+        if sell_qty <= 0 or sell_qty > old_qty:
+            return {"error": f"Invalid sell_qty={sell_qty}, current={old_qty}"}
+
+        entry = float(trade["entry_price"])
+        direction = trade.get("direction", "long")
+
+        # P&L for sold portion
+        if direction == "long":
+            pnl_fils = round((sell_price - entry) * sell_qty, 2)
+            pnl_pct = round((sell_price - entry) / entry * 100, 2) if entry else 0
+        else:
+            pnl_fils = round((entry - sell_price) * sell_qty, 2)
+            pnl_pct = round((entry - sell_price) / entry * 100, 2) if entry else 0
+
+        fees = round(sell_price * sell_qty * BROKER_FEE_PCT / 100, 3)
+        pnl_net = round(pnl_fils - fees, 2)
+        new_qty = old_qty - sell_qty
+
+        if new_qty == 0:
+            # Full close
+            c.execute("""UPDATE trades SET
+                status='closed', exit_price=?, exit_date=?, exit_reason=?,
+                pnl_fils=?, pnl_pct=?, quantity=0, updated_at=?
+                WHERE id=?""",
+                (sell_price, today, "partial_sell_complete",
+                 pnl_net, pnl_pct, now, trade_id))
+        else:
+            # Partial — keep open with reduced qty
+            c.execute("""UPDATE trades SET
+                quantity=?, updated_at=?, notes=COALESCE(notes,'') || ?
+                WHERE id=?""",
+                (new_qty, now,
+                 f"\nPartial sell: {sell_qty}@{sell_price} on {today} (PnL: {pnl_net})",
+                 trade_id))
+
+        # Log transaction
+        c.execute("""INSERT INTO trade_transactions
+            (trade_id, tx_type, quantity, price, pnl_fils, pnl_pct, fees,
+             avg_price_after, qty_after, notes, created_at)
+            VALUES (?, 'partial_sell', ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (trade_id, sell_qty, sell_price, pnl_net, pnl_pct, fees,
+             entry, new_qty, notes or f"Sold {sell_qty}@{sell_price}", now))
+
+    status = "closed" if new_qty == 0 else "open"
+    logger.info("Partial sell #%d: %s %d@%s → remaining %d (PnL: %s)",
+                trade_id, trade["symbol"], sell_qty, sell_price, new_qty, pnl_net)
+    return {
+        "success": True,
+        "trade_id": trade_id,
+        "symbol": trade["symbol"],
+        "sold_qty": sell_qty,
+        "sell_price": sell_price,
+        "remaining_qty": new_qty,
+        "realized_pnl": pnl_net,
+        "realized_pnl_pct": pnl_pct,
+        "fees": fees,
+        "status": status,
+        "entry_price": entry,
+    }
+
+
+def add_more_trade(trade_id, add_qty, add_price, notes=""):
+    """
+    Add more shares to an existing position.
+    Recalculates weighted average entry price.
+    """
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with _conn() as c:
+        row = c.execute("SELECT * FROM trades WHERE id=? AND status='open'", (trade_id,)).fetchone()
+        if not row:
+            return {"error": f"Trade {trade_id} not found or not open"}
+        trade = dict(row)
+
+        old_qty = int(trade["quantity"] or 0)
+        old_price = float(trade["entry_price"])
+
+        if add_qty <= 0 or add_price <= 0:
+            return {"error": "add_qty and add_price must be > 0"}
+
+        # Weighted average
+        new_qty = old_qty + add_qty
+        new_avg = round((old_qty * old_price + add_qty * add_price) / new_qty, 3)
+
+        fees = round(add_price * add_qty * BROKER_FEE_PCT / 100, 3)
+
+        c.execute("""UPDATE trades SET
+            entry_price=?, quantity=?, updated_at=?,
+            notes=COALESCE(notes,'') || ?
+            WHERE id=?""",
+            (new_avg, new_qty, now,
+             f"\nAdded {add_qty}@{add_price} on {now[:10]} (avg: {new_avg})",
+             trade_id))
+
+        # Log transaction
+        c.execute("""INSERT INTO trade_transactions
+            (trade_id, tx_type, quantity, price, fees,
+             avg_price_after, qty_after, notes, created_at)
+            VALUES (?, 'add_more', ?, ?, ?, ?, ?, ?, ?)""",
+            (trade_id, add_qty, add_price, fees,
+             new_avg, new_qty, notes or f"Added {add_qty}@{add_price}", now))
+
+    logger.info("Add more #%d: %s +%d@%s → total %d @ avg %s",
+                trade_id, trade["symbol"], add_qty, add_price, new_qty, new_avg)
+    return {
+        "success": True,
+        "trade_id": trade_id,
+        "symbol": trade["symbol"],
+        "added_qty": add_qty,
+        "add_price": add_price,
+        "new_qty": new_qty,
+        "old_avg_price": old_price,
+        "new_avg_price": new_avg,
+        "fees": fees,
+    }
+
+
+def get_trade_transactions(trade_id):
+    """Get all transactions for a trade."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM trade_transactions WHERE trade_id=? ORDER BY created_at ASC",
+            (trade_id,)).fetchall()
+        return [dict(r) for r in rows]
 
 def generate_weekly_report():
     """Generate weekly trading performance report.

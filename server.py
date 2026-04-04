@@ -8108,6 +8108,62 @@ async def api_analyze_refresh_all():
     return {"status": "started", "message": "Refreshing all 128 stocks in background"}
 
 
+
+
+# ── Portfolio Operations (partial sell + add more) ──
+@app.post("/api/portfolio/partial-sell")
+async def api_partial_sell(request: Request):
+    """Sell part of an open position. Updates quantity and calculates realized P&L."""
+    try:
+        body = await request.json()
+        trade_id = body.get("trade_id")
+        sell_qty = body.get("sell_qty")
+        sell_price = body.get("sell_price")
+        if not all([trade_id, sell_qty, sell_price]):
+            return JSONResponse({"error": "Required: trade_id, sell_qty, sell_price"}, status_code=400)
+        from journal_engine import partial_sell_trade
+        result = partial_sell_trade(int(trade_id), int(sell_qty), float(sell_price),
+                                    notes=body.get("notes", ""))
+        if result.get("error"):
+            return JSONResponse(result, status_code=400)
+        return result
+    except Exception as e:
+        logger.error("partial-sell error: %s", e, exc_info=True)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/portfolio/add-more")
+async def api_add_more(request: Request):
+    """Add more shares to an existing position. Recalculates weighted average entry price."""
+    try:
+        body = await request.json()
+        trade_id = body.get("trade_id")
+        add_qty = body.get("add_qty")
+        add_price = body.get("add_price")
+        if not all([trade_id, add_qty, add_price]):
+            return JSONResponse({"error": "Required: trade_id, add_qty, add_price"}, status_code=400)
+        from journal_engine import add_more_trade
+        result = add_more_trade(int(trade_id), int(add_qty), float(add_price),
+                                notes=body.get("notes", ""))
+        if result.get("error"):
+            return JSONResponse(result, status_code=400)
+        return result
+    except Exception as e:
+        logger.error("add-more error: %s", e, exc_info=True)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/portfolio/transactions/{trade_id}")
+async def api_trade_transactions(trade_id: int):
+    """Get all partial sell / add more transactions for a trade."""
+    try:
+        from journal_engine import get_trade_transactions
+        txs = get_trade_transactions(trade_id)
+        return {"trade_id": trade_id, "transactions": txs}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── Task Manager API (Tier2 #8 integration) ──────────────
 @app.get("/api/tasks")
 async def get_tasks():
