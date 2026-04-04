@@ -332,6 +332,22 @@ a:hover{color:var(--gold-bright)}
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       data = await res.json();
       render(data);
+      /* Equity Curve Phase 2 */
+      try{
+        var eqR=await fetch('/dashboard/equity');
+        if(eqR.ok){var eq=await eqR.json();var curve=eq.equity_curve||[];
+          if(curve.length>1){
+            var eqDiv=document.createElement('div');eqDiv.style.cssText='margin:1rem 0;padding:1rem;background:var(--card);border:1px solid var(--card-border);border-radius:12px';
+            var maxEq=Math.max.apply(null,curve.map(function(c){return c.equity}));
+            var minEq=Math.min.apply(null,curve.map(function(c){return c.equity}));
+            var range=maxEq-minEq||1;var w=100/curve.length;
+            var bars=curve.map(function(c,i){var h=((c.equity-minEq)/range)*80+10;var clr=c.equity>=eq.capital?'var(--green)':'var(--red)';return '<div style="display:inline-block;width:'+w+'%;height:'+h+'px;background:'+clr+';border-radius:2px 2px 0 0;vertical-align:bottom" title="'+c.date+': '+(c.equity).toFixed(0)+' KWD"></div>'}).join('');
+            eqDiv.innerHTML='<div style="font-size:.78rem;color:var(--gold);font-weight:600;margin-bottom:.5rem">\u{1F4C8} Equity Curve</div><div style="display:flex;align-items:flex-end;height:100px;gap:1px">'+bars+'</div><div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--text-4);margin-top:.25rem"><span>'+curve[0].date+'</span><span style="color:var(--gold)">'+(eq.current_equity||0).toFixed(0)+' KWD (DD: '+(eq.drawdown_pct||0).toFixed(1)+'%)</span><span>'+curve[curve.length-1].date+'</span></div>';
+            var app=document.getElementById('app');var firstSection=app.querySelector('.section-head,.pulse-bar');
+            if(firstSection)app.insertBefore(eqDiv,firstSection);else app.prepend(eqDiv);
+          }
+        }
+      }catch(e){console.error('Equity:',e)}
     } catch(e){
       showError(e.message);
     } finally {

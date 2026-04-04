@@ -779,6 +779,10 @@ function render(data){
   html += '<button class="btn-add-trade" onclick="openAddTrade()"><span class="mdi mdi-plus-thick"></span> إضافة صفقة</button>';
   html += '</div>';
 
+  /* ===== RISK STATUS (Phase 2) ===== */
+  html += '<div class="section-title"><span class="mdi mdi-shield-alert-outline"></span> &#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x062E;&#x0627;&#x0637;&#x0631;</div>';
+  html += '<div id="riskStatusContainer" style="margin-bottom:1rem"><div style="text-align:center;color:var(--text-3);font-size:.8rem;padding:1rem">&#x062C;&#x0627;&#x0631;&#x064A; &#x0627;&#x0644;&#x062A;&#x062D;&#x0645;&#x064A;&#x0644;...</div></div>';
+
   /* ===== OPEN POSITIONS ===== */
   html += '<div class="section-title"><span class="mdi mdi-swap-vertical-bold"></span> المراكز المفتوحة <span style="font-size:.72rem;color:var(--text-3);font-weight:400;margin-right:.4rem">('+op.length+')</span></div>';
   if(op.length===0){
@@ -1051,6 +1055,21 @@ async function loadData(){
     const data = await res.json();
     render(data);
     showContent();
+    /* Risk Status Phase 2 */
+    try{
+      var rr=await fetch('/dashboard/risk-status');
+      if(rr.ok){var rd=await rr.json();var rc=document.getElementById('riskStatusContainer');
+        var heat=rd.portfolio_heat_pct||0;var hc=heat>5?'var(--red)':heat>3?'var(--amber)':'var(--green)';
+        var sectors=rd.sector_exposure||{};
+        var secHtml=Object.entries(sectors).map(function(e){var k=e[0],v=e[1];return '<span style="font-size:.65rem;padding:2px 8px;border-radius:4px;background:var(--navy-700);color:'+(v.full?'var(--red)':'var(--text-2)')+'">'+k+': '+v.count+'/'+v.max+'</span>'}).join(' ');
+        rc.innerHTML='<div class="pulse-grid">'
+          +'<div class="pulse-card"><div class="pulse-icon" style="color:'+hc+'"><span class="mdi mdi-fire"></span></div><div class="pulse-val" style="color:'+hc+'">'+heat.toFixed(1)+'%</div><div class="pulse-lbl">Portfolio Heat (max '+(rd.max_heat_pct||6)+'%)</div><div style="height:4px;background:var(--navy-700);border-radius:2px;margin-top:4px"><div style="height:100%;border-radius:2px;background:'+hc+';width:'+Math.min(heat/(rd.max_heat_pct||6)*100,100)+'%"></div></div></div>'
+          +'<div class="pulse-card"><div class="pulse-icon" style="color:var(--gold)"><span class="mdi mdi-account-group"></span></div><div class="pulse-val">'+(rd.open_positions||0)+'/'+(rd.max_positions||3)+'</div><div class="pulse-lbl">&#x0645;&#x0631;&#x0627;&#x0643;&#x0632;</div></div>'
+          +'<div class="pulse-card"><div class="pulse-icon" style="color:var(--cyan)"><span class="mdi mdi-cash"></span></div><div class="pulse-val"><span class="ltr">'+(rd.capital||0).toLocaleString()+'</span></div><div class="pulse-lbl">&#x0631;&#x0623;&#x0633; &#x0645;&#x0627;&#x0644; (&#x062F;.&#x0643;)</div></div>'
+          +'<div class="pulse-card"><div class="pulse-icon" style="color:var(--amber)"><span class="mdi mdi-chart-pie"></span></div><div class="pulse-val" style="font-size:.8rem">'+secHtml+'</div><div class="pulse-lbl">&#x0642;&#x0637;&#x0627;&#x0639;&#x0627;&#x062A;</div></div>'
+          +'</div>';
+      }
+    }catch(e){console.error('Risk fetch:',e)}
   }catch(e){
     console.error('Portfolio fetch error:', e);
     showError('تعذّر تحميل البيانات: '+e.message);

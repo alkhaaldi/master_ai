@@ -361,32 +361,33 @@ async function load(){
     $('s-sys-sub').textContent = 'RAM '+mem+'% · '+tmp+'°C';
   }
 
-  /* ── TRADING TEASER (V2 Swing) ── */
+  /* ── TRADING TEASER (V2 Phase 2) ── */
   const teaser = $('teaser');
+  const mr = sig ? (sig.market_regime||{}) : {};
+  const regime = mr.regime || 'UNKNOWN';
+  const regimeBg = regime==='BULLISH'?'var(--green-bg)':regime==='BEARISH'?'var(--red-bg)':'var(--amber-bg)';
+  const regimeBr = regime==='BULLISH'?'var(--green-br)':regime==='BEARISH'?'var(--red-br)':'var(--amber-br)';
+  const regimeC = regime==='BULLISH'?'var(--green)':regime==='BEARISH'?'var(--red)':'var(--amber)';
+  const regimeAr = regime==='BULLISH'?'\u0635\u0627\u0639\u062F':regime==='BEARISH'?'\u0646\u0627\u0632\u0644':'\u0645\u062D\u0627\u064A\u062F';
+  const regimeIcon = regime==='BULLISH'?'\u2705':regime==='BEARISH'?'\u26D4':'\u26A0\uFE0F';
+
   if(sig && sig.top_signal && sig.top_signal.symbol){
     const ts = sig.top_signal;
     const conf = ts.confluence_pct || ts.confidence || 0;
     const entry = ts.entry_status || 'watch';
     const verdictClass = entry==='enter_now'?'buy': entry==='avoid'?'avoid':'watch';
     const verdictLabel = entry==='enter_now'?'\u0627\u062F\u062E\u0644': entry==='avoid'?'\u062A\u062C\u0646\u0628':'\u0631\u0627\u0642\u0628';
-    const trend = ts.daily_trend || '\u2014';
-    const trendIcon = trend==='UP'?'\u2191':trend==='DOWN'?'\u2193':'\u2192';
     teaser.innerHTML =
       '<div class="teaser-top"><span class="teaser-sym">'+esc(ts.symbol)+'</span>'+
-      '<span class="teaser-verdict '+verdictClass+'">'+verdictLabel+'</span></div>'+
+      '<div style="display:flex;gap:4px"><span style="font-size:.6rem;padding:2px 8px;border-radius:4px;background:'+regimeBg+';border:1px solid '+regimeBr+';color:'+regimeC+'">'+regimeIcon+' '+regimeAr+'</span>'+
+      '<span class="teaser-verdict '+verdictClass+'">'+verdictLabel+'</span></div></div>'+
       '<div class="teaser-row">'+
-      '<span>'+trendIcon+' '+trend+'</span>'+
-      '<span>Confluence: '+Math.round(conf)+'%</span>'+
+      '<span>Conf: '+Math.round(conf)+'%</span>'+
       '<span>R:R '+(ts.swing_rr?(ts.swing_rr).toFixed(1)+'x':'\u2014')+'</span>'+
       '</div>';
-  } else if(sig && sig.market_trend){
-    const mt = sig.market_trend;
-    const tIcon = mt.majority==='UP'?'\u2705':mt.majority==='DOWN'?'\u26D4':'\u26A0\uFE0F';
-    const tLabel = mt.majority==='UP'?'\u0627\u0644\u0633\u0648\u0642 \u0635\u0627\u0639\u062F':mt.majority==='DOWN'?'\u0627\u0644\u0633\u0648\u0642 \u0646\u0627\u0632\u0644':'\u062C\u0627\u0646\u0628\u064A';
-    teaser.innerHTML = '<div class="teaser-top"><span class="teaser-sym">'+tIcon+' '+tLabel+'</span></div>'+
-      '<div class="teaser-row"><span>Whitelist: '+(mt.total||10)+' \u0633\u0647\u0645</span><span>\u0642\u0627\u0628\u0644 \u0644\u0644\u0634\u0631\u0627\u0621: '+(mt.buyable||0)+'</span></div>';
   } else {
-    teaser.innerHTML = '<div class="teaser-empty">\u0644\u0627 \u062A\u0648\u062C\u062F \u0641\u0631\u0635 \u062D\u0627\u0644\u064A\u0627\u064B</div>';
+    teaser.innerHTML = '<div class="teaser-top"><span class="teaser-sym">'+regimeIcon+' '+regimeAr+'</span></div>'+
+      '<div class="teaser-row"><span>'+(mr.reason||'\u0644\u0627 \u062A\u0648\u062C\u062F \u0641\u0631\u0635')+'</span></div>';
   }
 
   /* ── FOOTER ── */
