@@ -2651,6 +2651,40 @@ async def lifespan(app):
         if REVIEW_OK:
             asyncio.create_task(review_scheduler())
             logger.info("Signal review scheduler started (2 PM KWT)")
+        # Daily analysis refresh at 14:15 KWT (after market close)
+        async def analysis_daily_scheduler():
+            """Run full analysis refresh at 14:15 KWT Sun-Thu."""
+            import datetime as _dt
+            while True:
+                try:
+                    now = _dt.datetime.utcnow() + _dt.timedelta(hours=3)  # KWT
+                    # Next 14:15 KWT
+                    target = now.replace(hour=14, minute=15, second=0, microsecond=0)
+                    if now >= target:
+                        target += _dt.timedelta(days=1)
+                    # Skip Fri/Sat
+                    while target.weekday() in (4, 5):
+                        target += _dt.timedelta(days=1)
+                    wait = (target - now).total_seconds()
+                    logger.info("Analysis scheduler: next run in %.1fh (%s)", wait / 3600, target.strftime("%a %H:%M"))
+                    await asyncio.sleep(wait)
+                    # Double check it's a trading day
+                    now2 = _dt.datetime.utcnow() + _dt.timedelta(hours=3)
+                    if now2.weekday() in (4, 5):
+                        continue
+                    logger.info("Analysis scheduler: starting daily refresh")
+                    _cid = ADMIN_TELEGRAM_ID or "669769765"
+                    await tg_send(int(_cid), "\u23f0 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0641\u0646\u064a \u0627\u0644\u064a\u0648\u0645\u064a (128 \u0633\u0647\u0645)...")
+                    from stock_analyzer import refresh_all_analyses
+                    result = await asyncio.to_thread(refresh_all_analyses)
+                    msg = f"\u2705 \u062a\u062d\u0644\u064a\u0644 \u064a\u0648\u0645\u064a: {result.get('done', 0)}/{result.get('total', 0)} ({result.get('errors', 0)} \u0623\u062e\u0637\u0627\u0621)"
+                    await tg_send(int(_cid), msg)
+                except Exception as e:
+                    logger.error("Analysis scheduler error: %s", e, exc_info=True)
+                    await asyncio.sleep(300)
+        asyncio.create_task(analysis_daily_scheduler())
+        logger.info("Daily analysis scheduler started (14:15 KWT Sun-Thu)")
+
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
     if TG_ALERTS_OK:
@@ -3082,7 +3116,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/signals-daily", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dashboard/ema-active", "/dashboard/ema-live", "/dashboard/scalper", "/dashboard/swing", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
+    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/signals-daily", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dashboard/ema-active", "/dashboard/ema-live", "/dashboard/scalper", "/dashboard/swing", "/dev/context", "/dashboard/equity", "/dashboard/paper-trading", "/dashboard/risk-status", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -7993,20 +8027,88 @@ async def get_service_health():
 
 
 
-# ── Stock Analysis API (Gemini 2.5 Pro via stock_analyzer.py) ──
+# ── Stock Analysis API (cache-first, no live Bridge) ──
 @app.get("/api/analyze")
 async def api_analyze(symbol: str = ""):
-    """Full technical analysis for a stock using Gemini 2.5 Pro + Bridge data."""
+    """Get cached technical analysis for a stock. Never calls Bridge live."""
+    if not symbol:
+        # Return all cached analyses summary
+        try:
+            from stock_analyzer import get_all_cached_analyses
+            analyses = get_all_cached_analyses()
+            return {"count": len(analyses), "analyses": analyses}
+        except Exception as e:
+            return {"error": str(e), "analyses": []}
+
+    symbol = symbol.upper().strip()
+    try:
+        from stock_analyzer import get_cached_analysis
+        cached = get_cached_analysis(symbol)
+        if not cached:
+            return {"error": f"No analysis cached for {symbol}. Wait for daily refresh or POST /api/analyze/refresh",
+                    "symbol": symbol, "cached": False}
+        return {
+            "symbol": cached["symbol"],
+            "analysis_date": cached["analysis_date"],
+            "report": cached["analysis_json"].get("report", "") if isinstance(cached["analysis_json"], dict) else "",
+            "structured": cached["structured_json"] if isinstance(cached["structured_json"], dict) else {},
+            "signal": cached.get("signal", ""),
+            "confidence": cached.get("confidence", 0),
+            "created_at": cached.get("created_at", ""),
+            "cached": True,
+        }
+    except Exception as e:
+        logger.error("analyze cache error for %s: %s", symbol, e)
+        return {"error": str(e)}
+
+
+@app.post("/api/analyze/refresh")
+async def api_analyze_refresh(symbol: str = ""):
+    """Refresh analysis for ONE stock via Bridge + Gemini. API key protected."""
     if not symbol:
         return {"error": "symbol parameter required"}
     symbol = symbol.upper().strip()
     try:
-        from stock_analyzer import analyze_stock
+        from stock_analyzer import analyze_stock, store_analysis
         result = await asyncio.to_thread(analyze_stock, symbol)
+        if not result.get("error"):
+            store_analysis(symbol, result)
         return result
     except Exception as e:
-        logger.error("analyze error for %s: %s", symbol, e)
+        logger.error("analyze refresh error for %s: %s", symbol, e)
         return {"error": str(e)}
+
+
+_analysis_refresh_running = False
+
+@app.post("/api/analyze/refresh-all")
+async def api_analyze_refresh_all():
+    """Refresh ALL 128 KSE stocks in background. API key protected."""
+    global _analysis_refresh_running
+    if _analysis_refresh_running:
+        return {"status": "already running"}
+
+    async def _run_refresh():
+        global _analysis_refresh_running
+        _analysis_refresh_running = True
+        _cid = ADMIN_TELEGRAM_ID or "669769765"
+        try:
+            await tg_send(int(_cid), "\u26a1 \u0628\u062f\u0627\u064a\u0629 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0641\u0646\u064a \u0644\u0643\u0644 128 \u0633\u0647\u0645...")
+            from stock_analyzer import refresh_all_analyses
+            def _send_sync(text):
+                asyncio.get_event_loop().call_soon_threadsafe(
+                    asyncio.create_task, tg_send(int(_cid), text))
+            result = await asyncio.to_thread(refresh_all_analyses, _send_sync)
+            msg = f"\u2705 \u062a\u062d\u0644\u064a\u0644 \u0641\u0646\u064a \u0645\u062d\u062f\u0651\u062b: {result.get('done', 0)}/{result.get('total', 0)} ({result.get('errors', 0)} \u0623\u062e\u0637\u0627\u0621)"
+            await tg_send(int(_cid), msg)
+        except Exception as e:
+            logger.error("Analysis refresh-all failed: %s", e, exc_info=True)
+            await tg_send(int(_cid), f"\u274c Analysis refresh failed: {e}")
+        finally:
+            _analysis_refresh_running = False
+
+    asyncio.create_task(_run_refresh())
+    return {"status": "started", "message": "Refreshing all 128 stocks in background"}
 
 
 # ── Task Manager API (Tier2 #8 integration) ──────────────

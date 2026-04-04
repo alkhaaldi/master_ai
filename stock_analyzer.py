@@ -1,5 +1,5 @@
 """Stock Deep Analysis — Bridge bars + Gemini 2.5 Pro analysis."""
-import os, json, time, re, logging, urllib.request, urllib.error
+import os, json, time, re, logging, sqlite3, csv, asyncio, urllib.request, urllib.error
 
 logger = logging.getLogger("stock_analyzer")
 
@@ -23,6 +23,171 @@ def _bridge_available():
     except Exception:
         return False
 
+
+
+
+# ═══════════════════════════════════
+# DB Cache: stock_analysis_cache
+# ═══════════════════════════════════
+_LIFE_DB = "data/life.db"
+
+
+def _db():
+    c = sqlite3.connect(_LIFE_DB, timeout=5)
+    c.row_factory = sqlite3.Row
+    return c
+
+
+def init_analysis_cache_table():
+    """Create stock_analysis_cache table if not exists."""
+    c = _db()
+    c.execute("""CREATE TABLE IF NOT EXISTS stock_analysis_cache (
+        symbol TEXT NOT NULL,
+        analysis_date TEXT NOT NULL,
+        analysis_json TEXT NOT NULL,
+        structured_json TEXT,
+        signal TEXT,
+        confidence INTEGER,
+        bridge_data TEXT,
+        gemini_model TEXT DEFAULT 'gemini-2.5-pro',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (symbol, analysis_date)
+    )""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sac_symbol ON stock_analysis_cache(symbol)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sac_date ON stock_analysis_cache(analysis_date)")
+    c.commit()
+    c.close()
+
+
+# Run on import
+try:
+    init_analysis_cache_table()
+except Exception:
+    pass
+
+
+def store_analysis(symbol, result):
+    """Store analysis result in DB."""
+    structured = result.get("structured", {})
+    c = _db()
+    c.execute("""INSERT OR REPLACE INTO stock_analysis_cache
+        (symbol, analysis_date, analysis_json, structured_json, signal, confidence, gemini_model)
+        VALUES (?, date('now'), ?, ?, ?, ?, ?)""",
+        (symbol.upper(),
+         json.dumps(result, ensure_ascii=False),
+         json.dumps(structured, ensure_ascii=False),
+         structured.get("signal", ""),
+         structured.get("confidence", 0),
+         "gemini-2.5-pro"))
+    c.commit()
+    c.close()
+    logger.info(f"Stored analysis for {symbol}")
+
+
+def get_cached_analysis(symbol):
+    """Get latest cached analysis for a symbol."""
+    c = _db()
+    row = c.execute(
+        "SELECT * FROM stock_analysis_cache WHERE symbol=? ORDER BY analysis_date DESC LIMIT 1",
+        (symbol.upper(),)).fetchone()
+    c.close()
+    if not row:
+        return None
+    r = dict(row)
+    try:
+        r["analysis_json"] = json.loads(r["analysis_json"])
+    except Exception:
+        pass
+    try:
+        r["structured_json"] = json.loads(r["structured_json"])
+    except Exception:
+        pass
+    return r
+
+
+def get_all_cached_analyses():
+    """Get latest analysis for ALL symbols (one per symbol)."""
+    c = _db()
+    rows = c.execute("""
+        SELECT s.* FROM stock_analysis_cache s
+        INNER JOIN (
+            SELECT symbol, MAX(analysis_date) as max_date
+            FROM stock_analysis_cache GROUP BY symbol
+        ) latest ON s.symbol = latest.symbol AND s.analysis_date = latest.max_date
+        ORDER BY s.symbol
+    """).fetchall()
+    c.close()
+    results = []
+    for row in rows:
+        r = dict(row)
+        try:
+            r["structured_json"] = json.loads(r["structured_json"])
+        except Exception:
+            pass
+        # Don't parse full analysis_json here — too heavy for list view
+        del r["analysis_json"]
+        results.append(r)
+    return results
+
+
+def get_all_kse_symbols():
+    """Get all 128 KSE symbols from csv."""
+    csv_path = os.path.join(os.path.dirname(__file__) or ".", "data", "kse_stocks.csv")
+    if not os.path.exists(csv_path):
+        return []
+    symbols = []
+    with open(csv_path) as f:
+        reader = csv.reader(f)
+        next(reader, None)  # skip header
+        for row in reader:
+            if row and row[0].strip():
+                symbols.append(row[0].strip())
+    return symbols
+
+
+def refresh_all_analyses(send_update=None):
+    """
+    Refresh analysis for ALL 128 KSE stocks. Blocking (sync).
+    send_update: optional callback(text) for progress messages.
+    Returns summary dict.
+    """
+    symbols = get_all_kse_symbols()
+    if not symbols:
+        return {"error": "no symbols found in kse_stocks.csv"}
+
+    if not _bridge_available():
+        return {"error": "Bridge offline — cant refresh analyses"}
+
+    total = len(symbols)
+    done = 0
+    errors = 0
+    error_list = []
+
+    for sym in symbols:
+        try:
+            result = analyze_stock(sym)
+            if result.get("error"):
+                errors += 1
+                error_list.append(f"{sym}: {result['error']}")
+            else:
+                store_analysis(sym, result)
+                done += 1
+        except Exception as e:
+            errors += 1
+            error_list.append(f"{sym}: {e}")
+            logger.error(f"Analysis refresh failed for {sym}: {e}")
+
+        if send_update and (done + errors) % 20 == 0:
+            send_update(f"\u062a\u062d\u0644\u064a\u0644: {done + errors}/{total} ({errors} \u0623\u062e\u0637\u0627\u0621)")
+
+        time.sleep(4)  # Gemini rate limit
+
+    summary = {
+        "total": total, "done": done, "errors": errors,
+        "error_details": error_list[:10],
+    }
+    logger.info(f"Analysis refresh complete: {done}/{total} ({errors} errors)")
+    return summary
 
 # ═══════════════════════════════════
 # Bridge Data
@@ -227,7 +392,11 @@ def analyze_stock(symbol):
         },
     }
 
-    # 10. Cache
+    # 10. Cache in memory + DB
     _analysis_cache[symbol] = {"data": analysis, "ts": time.time()}
+    try:
+        store_analysis(symbol, analysis)
+    except Exception as e:
+        logger.warning(f"Failed to store analysis for {symbol}: {e}")
 
     return analysis
