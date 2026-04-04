@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>&#x0633;&#x0648;&#x064A;&#x0646;&#x0642; — KSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-900:#070D17;--navy-800:#0C1525;--navy-700:#111E32;
+  --navy-600:#162840;--navy-500:#1C334F;--navy-400:#24405F;
+  --gold:#C6974B;--gold-bright:#D4A95C;--gold-dim:#9E7A3D;
+  --gold-bg:rgba(198,151,75,.06);--gold-br:rgba(198,151,75,.25);
+  --green:#4CAF82;--green-bright:#5BC492;--green-bg:rgba(76,175,130,.08);--green-br:rgba(76,175,130,.3);
+  --red:#D94452;--red-bright:#E5606C;--red-bg:rgba(217,68,82,.08);--red-br:rgba(217,68,82,.3);
+  --amber:#E8A838;--amber-bg:rgba(232,168,56,.08);--amber-br:rgba(232,168,56,.3);
+  --cyan:#38BDF8;--cyan-bg:rgba(56,189,248,.08);--cyan-br:rgba(56,189,248,.3);
+  --text:#E8ECF0;--text-2:#A0ADBC;--text-3:#6B7D90;--text-4:#405060;
+  --card:#0E1929;--card-hover:#132137;--card-border:#1A2E45;
+  --f:'Tajawal','Noto Kufi Arabic',sans-serif;
+  --fd:'Noto Kufi Arabic','Tajawal',sans-serif;
+  --fm:'IBM Plex Mono','Consolas',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--f);font-variant-numeric:tabular-nums;background:var(--navy-900);color:var(--text);min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased}
+.ltr{direction:ltr;unicode-bidi:isolate}
+a{color:var(--gold);text-decoration:none}
+a:hover{color:var(--gold-bright)}
+
+/* ===== TOPBAR ===== */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(7,13,23,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--card-border);padding:0 1.25rem;height:56px;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+.topbar-brand{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.brand-mark{background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:var(--navy-900);font-family:var(--fm);font-weight:700;font-size:.85rem;padding:.25rem .6rem;border-radius:4px;letter-spacing:.5px}
+.topbar-title{font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--text)}
+.topbar-tag{font-size:.65rem;background:var(--navy-600);color:var(--text-3);padding:2px 8px;border-radius:10px;white-space:nowrap}
+.topbar-center{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.status-chip{display:flex;align-items:center;gap:.35rem;font-size:.75rem;padding:.25rem .65rem;border-radius:20px;border:1px solid var(--card-border);background:var(--navy-800);color:var(--text-2);white-space:nowrap}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.off{background:var(--red);box-shadow:0 0 6px var(--red)}
+.topbar-right{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.clock{font-family:var(--fm);font-size:.85rem;color:var(--gold);direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.btn-refresh{background:none;border:1px solid var(--card-border);color:var(--text-2);width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.btn-refresh:hover{border-color:var(--gold-br);color:var(--gold)}
+.btn-refresh.spinning svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.nav-links{display:flex;gap:.15rem}
+.nav-link{font-size:.75rem;padding:.3rem .6rem;border-radius:6px;color:var(--text-3);transition:all .2s}
+.nav-link:hover{color:var(--text);background:var(--navy-700)}
+.nav-link.active{color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br)}
+
+/* ===== DEGRADED BANNER ===== */
+.degraded-banner{display:none;background:var(--amber-bg);border:1px solid var(--amber-br);color:var(--amber);text-align:center;padding:.5rem;font-size:.8rem;font-weight:600}
+.degraded-banner.show{display:block}
+
+/* ===== TREND HERO ===== */
+.trend-hero{margin:1rem;padding:1.25rem 1.5rem;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:all .3s}
+.trend-hero.up{background:linear-gradient(135deg,rgba(76,175,130,.12),rgba(76,175,130,.04));border:1px solid var(--green-br)}
+.trend-hero.down{background:linear-gradient(135deg,rgba(217,68,82,.12),rgba(217,68,82,.04));border:1px solid var(--red-br)}
+.trend-hero.sideways{background:linear-gradient(135deg,rgba(232,168,56,.12),rgba(232,168,56,.04));border:1px solid var(--amber-br)}
+.trend-hero.unknown{background:var(--navy-800);border:1px solid var(--card-border)}
+.trend-main{display:flex;align-items:center;gap:1rem}
+.trend-icon{font-size:2.5rem;line-height:1}
+.trend-label{font-family:var(--fd);font-size:1.1rem;font-weight:700}
+.trend-sub{font-size:.8rem;color:var(--text-2);margin-top:.15rem}
+.trend-stats{display:flex;gap:1.5rem;align-items:center}
+.trend-stat{text-align:center}
+.trend-stat-val{font-family:var(--fm);font-size:1rem;font-weight:600}
+.trend-stat-lbl{font-size:.65rem;color:var(--text-3);margin-top:.1rem}
+
+/* ===== CARDS GRID ===== */
+.content{padding:0 1rem 2rem}
+.section-title{font-family:var(--fd);font-size:.9rem;font-weight:700;color:var(--gold);margin:1.25rem 0 .75rem;display:flex;align-items:center;gap:.5rem}
+.section-title .badge{font-family:var(--fm);font-size:.7rem;background:var(--gold-bg);border:1px solid var(--gold-br);color:var(--gold);padding:1px 8px;border-radius:10px}
+
+/* ===== TOP SIGNAL CARD ===== */
+.top-signal{background:var(--card);border:1px solid var(--gold-br);border-radius:12px;padding:1.25rem;margin-bottom:1rem;position:relative;overflow:hidden}
+.top-signal::before{content:'';position:absolute;top:0;right:0;width:120px;height:120px;background:radial-gradient(circle,rgba(198,151,75,.08),transparent);border-radius:0 12px 0 100%}
+.top-signal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.top-signal-sym{font-family:var(--fm);font-size:1.3rem;font-weight:700;color:var(--gold)}
+.top-signal-badge{font-size:.75rem;padding:.25rem .75rem;border-radius:20px;font-weight:600}
+.badge-enter{background:var(--green-bg);border:1px solid var(--green-br);color:var(--green)}
+.badge-wait{background:var(--amber-bg);border:1px solid var(--amber-br);color:var(--amber)}
+.badge-watch{background:var(--navy-700);border:1px solid var(--card-border);color:var(--text-2)}
+.badge-avoid{background:var(--red-bg);border:1px solid var(--red-br);color:var(--red)}
+.badge-missed{background:var(--navy-700);border:1px solid var(--card-border);color:var(--text-3)}
+.top-signal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:.75rem}
+.ts-cell{text-align:center;padding:.5rem;background:var(--navy-800);border-radius:8px;border:1px solid var(--card-border)}
+.ts-cell-val{font-family:var(--fm);font-size:.95rem;font-weight:600}
+.ts-cell-lbl{font-size:.65rem;color:var(--text-3);margin-top:.2rem}
+.ts-cell-val.green{color:var(--green)}
+.ts-cell-val.red{color:var(--red)}
+.ts-cell-val.gold{color:var(--gold)}
+.top-signal-factors{display:flex;flex-wrap:wrap;gap:.35rem}
+.factor-tag{font-size:.7rem;padding:2px 8px;border-radius:4px;font-family:var(--fm)}
+.factor-tag.pos{background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+.factor-tag.neg{background:var(--red-bg);color:var(--red);border:1px solid var(--red-br)}
+.factor-tag.neutral{background:var(--navy-700);color:var(--text-2);border:1px solid var(--card-border)}
+.top-signal-reason{font-size:.8rem;color:var(--text-2);margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--card-border)}
+
+/* ===== SIGNAL TABLE ===== */
+.signal-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.signal-table th{font-family:var(--fd);font-size:.7rem;color:var(--text-3);font-weight:600;padding:.6rem .5rem;text-align:right;border-bottom:1px solid var(--card-border);position:sticky;top:56px;background:var(--navy-900);z-index:10}
+.signal-table td{padding:.6rem .5rem;border-bottom:1px solid rgba(26,46,69,.4);vertical-align:middle}
+.signal-table tr:hover td{background:var(--card-hover)}
+.signal-table .sym{font-family:var(--fm);font-weight:600;color:var(--text)}
+.signal-table .mono{font-family:var(--fm);direction:ltr;unicode-bidi:isolate}
+.conf-bar{width:60px;height:6px;background:var(--navy-700);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-inline-start:.35rem}
+.conf-fill{height:100%;border-radius:3px;transition:width .5s}
+.conf-fill.high{background:var(--green)}
+.conf-fill.mid{background:var(--amber)}
+.conf-fill.low{background:var(--red)}
+
+/* ===== POSITIONS ===== */
+.pos-card{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:1rem;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;transition:border-color .2s}
+.pos-card:hover{border-color:var(--gold-br)}
+.pos-left{display:flex;align-items:center;gap:.75rem}
+.pos-sym{font-family:var(--fm);font-weight:700;font-size:1rem}
+.pos-meta{font-size:.75rem;color:var(--text-3)}
+.pos-right{text-align:left;direction:ltr}
+.pos-pnl{font-family:var(--fm);font-weight:600;font-size:.95rem}
+.pos-pnl.up{color:var(--green)}
+.pos-pnl.dn{color:var(--red)}
+.pos-days{font-size:.7rem;color:var(--text-3);margin-top:.15rem}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text-3)}
+.empty-state .icon{font-size:2.5rem;margin-bottom:.75rem}
+.empty-state .msg{font-size:.9rem}
+.footer{text-align:center;padding:1.5rem;font-size:.7rem;color:var(--text-4);border-top:1px solid var(--card-border);margin-top:1rem}
+
+@media(max-width:768px){
+  .topbar-tag,.nav-links{display:none}
+  .trend-hero{flex-direction:column;text-align:center}
+  .trend-stats{justify-content:center}
+  .top-signal-grid{grid-template-columns:repeat(2,1fr)}
+  .signal-table{font-size:.75rem}
+  .signal-table th,.signal-table td{padding:.5rem .35rem}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-mark">KSE</span>
+    <span class="topbar-title">&#x0633;&#x0648;&#x064A;&#x0646;&#x0642;</span>
+    <span class="topbar-tag">V2 &#x00B7; Daily Swing</span>
+  </div>
+  <div class="topbar-center">
+    <div class="status-chip"><span class="status-dot off" id="bridgeDot"></span><span id="bridgeLabel">Bridge</span></div>
+    <div class="status-chip"><span class="status-dot on" id="trendDot"></span><span id="trendChip">&#x2014;</span></div>
+  </div>
+  <div class="topbar-right">
+    <nav class="nav-links">
+      <a href="decisions" class="nav-link">&#x0627;&#x0644;&#x0642;&#x0631;&#x0627;&#x0631;&#x0627;&#x062A;</a>
+      <a href="positions" class="nav-link">&#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x0643;&#x0632;</a>
+      <a href="radar" class="nav-link">&#x0627;&#x0644;&#x0631;&#x0627;&#x062F;&#x0627;&#x0631;</a>
+      <a href="journal" class="nav-link">&#x0627;&#x0644;&#x0633;&#x062C;&#x0644;</a>
+      <a href="swing" class="nav-link active">&#x0633;&#x0648;&#x064A;&#x0646;&#x0642;</a>
+      <a href="brain" class="nav-link">&#x0627;&#x0644;&#x0639;&#x0642;&#x0644;</a>
+    </nav>
+    <span class="clock" id="clock"></span>
+    <button class="btn-refresh" id="btnRefresh" title="&#x062A;&#x062D;&#x062F;&#x064A;&#x062B;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+  </div>
+</header>
+
+<div class="degraded-banner" id="degradedBanner">&#x26A0;&#xFE0F; Bridge &#x063A;&#x064A;&#x0631; &#x0645;&#x062A;&#x0635;&#x0644; &#x2014; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A; &#x0642;&#x062F; &#x062A;&#x0643;&#x0648;&#x0646; &#x0642;&#x062F;&#x064A;&#x0645;&#x0629;</div>
+
+<div class="trend-hero unknown" id="trendHero">
+  <div class="trend-main">
+    <div class="trend-icon" id="trendIcon">&#x2014;</div>
+    <div>
+      <div class="trend-label" id="trendLabel">&#x062C;&#x0627;&#x0631;&#x064A; &#x0627;&#x0644;&#x062A;&#x062D;&#x0645;&#x064A;&#x0644;...</div>
+      <div class="trend-sub" id="trendSub"></div>
+    </div>
+  </div>
+  <div class="trend-stats">
+    <div class="trend-stat"><div class="trend-stat-val ltr" id="statWhitelist">&#x2014;</div><div class="trend-stat-lbl">Whitelist</div></div>
+    <div class="trend-stat"><div class="trend-stat-val ltr" id="statBuyable">&#x2014;</div><div class="trend-stat-lbl">&#x0642;&#x0627;&#x0628;&#x0644; &#x0644;&#x0644;&#x0634;&#x0631;&#x0627;&#x0621;</div></div>
+    <div class="trend-stat"><div class="trend-stat-val ltr" id="statFiltered">&#x2014;</div><div class="trend-stat-lbl">&#x0645;&#x0641;&#x0644;&#x062A;&#x0631;</div></div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="section-title">&#x1F3AF; &#x0623;&#x0641;&#x0636;&#x0644; &#x0641;&#x0631;&#x0635;&#x0629; &#x0627;&#x0644;&#x0622;&#x0646;</div>
+  <div id="topSignalContainer"><div class="empty-state"><div class="icon">&#x1F4E1;</div><div class="msg">&#x062C;&#x0627;&#x0631;&#x064A; &#x062A;&#x062D;&#x0645;&#x064A;&#x0644; &#x0627;&#x0644;&#x0628;&#x064A;&#x0627;&#x0646;&#x0627;&#x062A;...</div></div></div>
+
+  <div class="section-title">&#x1F4CA; &#x0641;&#x0631;&#x0635; &#x0623;&#x062E;&#x0631;&#x0649; <span class="badge" id="signalCount">0</span></div>
+  <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--card-border);background:var(--card)">
+    <table class="signal-table">
+      <thead><tr><th>&#x0627;&#x0644;&#x0633;&#x0647;&#x0645;</th><th>&#x0627;&#x0644;&#x0633;&#x0639;&#x0631;</th><th>&#x0627;&#x0644;&#x0627;&#x062A;&#x062C;&#x0627;&#x0647;</th><th>Confluence</th><th>&#x0627;&#x0644;&#x0642;&#x0631;&#x0627;&#x0631;</th><th>R:R</th><th>&#x0627;&#x0644;&#x0639;&#x0648;&#x0627;&#x0645;&#x0644;</th></tr></thead>
+      <tbody id="signalBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section-title">&#x1F4C8; &#x0645;&#x0631;&#x0627;&#x0643;&#x0632; &#x0646;&#x0634;&#x0637;&#x0629; <span class="badge" id="posCount">0</span></div>
+  <div id="posContainer"><div class="empty-state"><div class="icon">&#x1F4BC;</div><div class="msg">&#x0644;&#x0627; &#x062A;&#x0648;&#x062C;&#x062F; &#x0645;&#x0631;&#x0627;&#x0643;&#x0632; &#x0645;&#x0641;&#x062A;&#x0648;&#x062D;&#x0629;</div></div></div>
+</div>
+
+<div class="footer">
+  &#x26A0;&#xFE0F; &#x0625;&#x0634;&#x0627;&#x0631;&#x0627;&#x062A; &#x0641;&#x0646;&#x064A;&#x0629; &#x2014; &#x0645;&#x0648; &#x062A;&#x0648;&#x0635;&#x064A;&#x0629; &#x0645;&#x0627;&#x0644;&#x064A;&#x0629;. &#x0643;&#x0644; &#x0642;&#x0631;&#x0627;&#x0631; &#x062A;&#x062F;&#x0627;&#x0648;&#x0644; &#x0645;&#x0633;&#x0624;&#x0648;&#x0644;&#x064A;&#x062A;&#x0643;.
+  <br>&#x062A;&#x062D;&#x062F;&#x064A;&#x062B; &#x0643;&#x0644; 5 &#x062F;&#x0642;&#x0627;&#x0626;&#x0642; &#x00B7; Whitelist 10 &#x0623;&#x0633;&#x0647;&#x0645; &#x00B7; Daily Swing V2
+  <br><span id="lastUpdate" style="color:var(--text-4)"></span>
+</div>
+
+<script>
+const API_BASE='';
+let bridgeOnline=false,refreshTimer=null;
+const REFRESH_INTERVAL=300000;
+
+function updateClock(){const n=new Date(),h=String(n.getHours()).padStart(2,'0'),m=String(n.getMinutes()).padStart(2,'0'),s=String(n.getSeconds()).padStart(2,'0');document.getElementById('clock').textContent=`${h}:${m}:${s}`}
+setInterval(updateClock,1000);updateClock();
+
+async function fetchData(){
+  const btn=document.getElementById('btnRefresh');btn.classList.add('spinning');
+  try{
+    let data;
+    try{const r=await fetch(`${API_BASE}/dashboard/swing`);if(r.ok)data=await r.json()}catch(e){}
+    if(!data){
+      try{
+        const[sigR,posR]=await Promise.all([fetch(`${API_BASE}/dashboard/signals`),fetch(`${API_BASE}/api/portfolio-status`)]);
+        const sigData=sigR.ok?await sigR.json():null,posData=posR.ok?await posR.json():null;
+        data={bridge_online:sigData?.bridge_online||false,whitelist_mode:sigData?.whitelist_mode||true,daily_trend_filter:sigData?.daily_trend_filter||true,signals:sigData?.signals||[],positions:posData?.portfolio?.positions||[],filtered_out:sigData?.filtered_out||0};
+      }catch(e2){showDegraded();return}
+    }
+    renderAll(data);
+  }catch(err){console.error('Fetch error:',err);showDegraded()}
+  finally{btn.classList.remove('spinning');document.getElementById('lastUpdate').textContent='\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: '+new Date().toLocaleTimeString('en-GB')}
+}
+
+function showDegraded(){document.getElementById('degradedBanner').classList.add('show');document.getElementById('bridgeDot').className='status-dot off'}
+
+function renderAll(data){
+  bridgeOnline=data.bridge_online;
+  document.getElementById('bridgeDot').className=bridgeOnline?'status-dot on':'status-dot off';
+  document.getElementById('degradedBanner').classList.toggle('show',!bridgeOnline);
+  const signals=data.signals||[];
+  const buyable=signals.filter(s=>s.daily_trend_allow_buy&&s.verdict!=='avoid').length;
+  document.getElementById('statWhitelist').textContent=signals.length;
+  document.getElementById('statBuyable').textContent=buyable;
+  document.getElementById('statFiltered').textContent=data.filtered_out||0;
+  const trends=signals.map(s=>s.daily_trend).filter(Boolean);
+  const upC=trends.filter(t=>t==='UP').length,dnC=trends.filter(t=>t==='DOWN').length;
+  const maj=upC>dnC?'UP':dnC>upC?'DOWN':'SIDEWAYS';
+  renderTrendHero(maj,upC,dnC,signals.length);
+  renderTopSignal(signals);renderSignalTable(signals);renderPositions(data.positions||[]);
+}
+
+function renderTrendHero(trend,up,dn,total){
+  const hero=document.getElementById('trendHero'),icon=document.getElementById('trendIcon'),label=document.getElementById('trendLabel'),sub=document.getElementById('trendSub'),chip=document.getElementById('trendChip'),cdot=document.getElementById('trendDot');
+  hero.className='trend-hero';
+  if(trend==='UP'){hero.classList.add('up');icon.textContent='\u2705';label.textContent='\u0627\u0644\u0633\u0648\u0642 \u0635\u0627\u0639\u062F \u2014 \u0627\u0628\u062D\u062B \u0639\u0646 \u0641\u0631\u0635';label.style.color='var(--green)';chip.textContent='\u0635\u0627\u0639\u062F';cdot.className='status-dot on'}
+  else if(trend==='DOWN'){hero.classList.add('down');icon.textContent='\u26D4';label.textContent='\u0627\u0644\u0633\u0648\u0642 \u0646\u0627\u0632\u0644 \u2014 \u0644\u0627 \u062A\u0634\u062A\u0631\u064A';label.style.color='var(--red)';chip.textContent='\u0646\u0627\u0632\u0644';cdot.className='status-dot off'}
+  else{hero.classList.add('sideways');icon.textContent='\u26A0\uFE0F';label.textContent='\u0627\u0644\u0633\u0648\u0642 \u062C\u0627\u0646\u0628\u064A \u2014 \u062D\u0630\u0631';label.style.color='var(--amber)';chip.textContent='\u062C\u0627\u0646\u0628\u064A';cdot.style.background='var(--amber)'}
+  sub.textContent=`${up} \u0635\u0627\u0639\u062F / ${dn} \u0646\u0627\u0632\u0644 / ${total-up-dn} \u062C\u0627\u0646\u0628\u064A`;
+}
+
+function renderTopSignal(signals){
+  const c=document.getElementById('topSignalContainer');
+  const cands=signals.filter(s=>s.daily_trend_allow_buy&&s.verdict!=='avoid'&&s.entry_status!=='missed').sort((a,b)=>(b.confluence_pct||b.confidence||0)-(a.confluence_pct||a.confidence||0));
+  if(!cands.length){c.innerHTML='<div class="empty-state"><div class="icon">\uD83D\uDD0D</div><div class="msg">\u0644\u0627 \u062A\u0648\u062C\u062F \u0641\u0631\u0635 \u062D\u0627\u0644\u064A\u0627\u064B</div></div>';return}
+  const s=cands[0],conf=s.confluence_pct||s.confidence||0,entry=s.entry_status||'watch';
+  const bc=entry==='enter_now'?'badge-enter':entry==='wait_pullback'?'badge-wait':entry==='avoid'?'badge-avoid':entry==='missed'?'badge-missed':'badge-watch';
+  const bt=entry==='enter_now'?'\u0627\u062F\u062E\u0644 \u0627\u0644\u062D\u064A\u0646':entry==='wait_pullback'?'\u0627\u0646\u062A\u0638\u0631':entry==='avoid'?'\u062A\u062C\u0646\u0628':entry==='missed'?'\u0641\u0627\u062A':'\u0631\u0627\u0642\u0628';
+  const stop=s.stop_loss||s.trade_plan?.stop_loss||'\u2014',target=s.target_1||s.trade_plan?.target_1||'\u2014',rr=s.risk_reward||s.trade_plan?.rr_ratio||'\u2014',price=s.price||'\u2014';
+  const factors=s.factors||s.confluence_factors||[],blockers=s.blockers||[],reason=s.smart_reason_ar||s.reason||'';
+  const fmt=v=>typeof v==='number'?v.toFixed(3):v;
+  c.innerHTML=`<div class="top-signal"><div class="top-signal-header"><span class="top-signal-sym">${s.symbol}</span><span class="top-signal-badge ${bc}">${bt}</span></div><div class="top-signal-grid"><div class="ts-cell"><div class="ts-cell-val gold">${typeof conf==='number'?conf.toFixed(0)+'%':conf}</div><div class="ts-cell-lbl">Confluence</div></div><div class="ts-cell"><div class="ts-cell-val">${fmt(price)}</div><div class="ts-cell-lbl">\u0627\u0644\u0633\u0639\u0631</div></div><div class="ts-cell"><div class="ts-cell-val red">${fmt(stop)}</div><div class="ts-cell-lbl">\u0633\u062A\u0648\u0628</div></div><div class="ts-cell"><div class="ts-cell-val green">${fmt(target)}</div><div class="ts-cell-lbl">\u0647\u062F\u0641</div></div></div><div style="text-align:center;margin-bottom:.5rem"><span style="font-family:var(--fm);font-size:.85rem;color:var(--gold)">R:R ${typeof rr==='number'?rr.toFixed(1)+'x':rr}</span><span style="font-size:.75rem;color:var(--text-3);margin-right:.75rem">\u0627\u062A\u062C\u0627\u0647: ${s.daily_trend||'\u2014'}</span></div><div class="top-signal-factors">${factors.map(f=>`<span class="factor-tag pos">${f}</span>`).join('')}${blockers.map(b=>`<span class="factor-tag neg">${b}</span>`).join('')}</div>${reason?`<div class="top-signal-reason">${reason}</div>`:''}</div>`;
+}
+
+function renderSignalTable(signals){
+  const tbody=document.getElementById('signalBody'),countEl=document.getElementById('signalCount');
+  const sorted=[...signals].sort((a,b)=>(b.confluence_pct||b.confidence||0)-(a.confluence_pct||a.confidence||0)).slice(1);
+  countEl.textContent=sorted.length;
+  if(!sorted.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:2rem">\u0644\u0627 \u062A\u0648\u062C\u062F \u0641\u0631\u0635 \u0625\u0636\u0627\u0641\u064A\u0629</td></tr>';return}
+  tbody.innerHTML=sorted.map(s=>{
+    const conf=s.confluence_pct||s.confidence||0,confCls=conf>=70?'high':conf>=45?'mid':'low';
+    const trend=s.daily_trend||'\u2014',ti=trend==='UP'?'\u2191':trend==='DOWN'?'\u2193':'\u2192',tc=trend==='UP'?'var(--green)':trend==='DOWN'?'var(--red)':'var(--amber)';
+    const entry=s.entry_status||'watch',vt=entry==='enter_now'?'\u0627\u062F\u062E\u0644':entry==='wait_pullback'?'\u0627\u0646\u062A\u0638\u0631':entry==='avoid'?'\u062A\u062C\u0646\u0628':entry==='missed'?'\u0641\u0627\u062A':'\u0631\u0627\u0642\u0628';
+    const vc=entry==='enter_now'?'var(--green)':entry==='wait_pullback'?'var(--amber)':entry==='avoid'?'var(--red)':'var(--text-3)';
+    const rr=s.risk_reward||s.trade_plan?.rr_ratio,factors=(s.factors||s.confluence_factors||[]).slice(0,3),price=s.price;
+    return`<tr><td class="sym">${s.symbol}</td><td class="mono">${typeof price==='number'?price.toFixed(3):'\u2014'}</td><td><span style="color:${tc};font-weight:600">${ti} ${trend}</span></td><td class="mono">${typeof conf==='number'?conf.toFixed(0):'\u2014'}%<span class="conf-bar"><span class="conf-fill ${confCls}" style="width:${Math.min(conf,100)}%"></span></span></td><td><span style="color:${vc};font-weight:600">${vt}</span></td><td class="mono">${rr?(typeof rr==='number'?rr.toFixed(1)+'x':rr):'\u2014'}</td><td>${factors.map(f=>`<span class="factor-tag neutral" style="font-size:.65rem">${f}</span>`).join(' ')}</td></tr>`;
+  }).join('');
+}
+
+function renderPositions(positions){
+  const c=document.getElementById('posContainer'),countEl=document.getElementById('posCount');
+  if(!positions||!positions.length){countEl.textContent='0';c.innerHTML='<div class="empty-state"><div class="icon">\uD83D\uDCBC</div><div class="msg">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0631\u0627\u0643\u0632 \u0645\u0641\u062A\u0648\u062D\u0629</div></div>';return}
+  countEl.textContent=positions.length;
+  c.innerHTML=positions.map(p=>{
+    const pnl=p.pnl_pct||0,pc=pnl>=0?'up':'dn',days=p.days_held||0,stop=p.stop||p.trailing_stop||p.stop_loss||'\u2014',fmt=v=>typeof v==='number'?v.toFixed(3):v;
+    return`<div class="pos-card"><div class="pos-left"><div><div class="pos-sym">${p.symbol}</div><div class="pos-meta">\u062F\u062E\u0648\u0644: <span class="ltr">${fmt(p.entry)}</span> \u00B7 \u0633\u062A\u0648\u0628: <span class="ltr">${fmt(stop)}</span></div></div></div><div class="pos-right"><div class="pos-pnl ${pc}">${pnl>=0?'+':''}${pnl.toFixed(2)}%</div><div class="pos-days">${days} \u064A\u0648\u0645</div></div></div>`;
+  }).join('');
+}
+
+document.getElementById('btnRefresh').addEventListener('click',fetchData);
+fetchData();refreshTimer=setInterval(fetchData,REFRESH_INTERVAL);
+</script>
+</body>
+</html>

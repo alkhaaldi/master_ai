@@ -161,6 +161,34 @@ def build_signals() -> dict:
             "source": bd.get("source", ""),
             "stale": bd.get("stale", False),
         }
+
+        # Phase 4: Pivots + ATR stops
+        pivots = _get_pivots_for_symbol(sym_upper)
+        sig["pivots"] = pivots
+        price = sig["price"]
+        atr = sig.get("atr_14") or 0
+        if price and atr:
+            stop_data = calculate_swing_stop(price, atr, sig.get("support"))
+            target_data = calculate_swing_target(price, pivots, atr)
+            sig["swing_stop"] = stop_data.get("stop_loss")
+            sig["swing_stop_pct"] = stop_data.get("risk_pct")
+            sig["swing_stop_type"] = stop_data.get("stop_type")
+            sig["swing_target"] = target_data.get("target")
+            sig["swing_target_pct"] = target_data.get("reward_pct")
+            sig["swing_target_type"] = target_data.get("target_type")
+            risk = stop_data.get("risk_pct", 0)
+            reward = target_data.get("reward_pct", 0)
+            sig["swing_rr"] = round(reward / risk, 2) if risk > 0 else 0
+
+        # Phase 5: Swing confluence
+        if SWING_MODE:
+            sc = swing_confluence(sym_upper, sig, daily_trend)
+            sig["swing_confluence_pct"] = sc["confluence_pct"]
+            sig["swing_action"] = sc["action"]
+            sig["swing_factors"] = sc["factors"]
+            sig["swing_blockers"] = sc.get("blockers", [])
+            sig["swing_reason"] = sc.get("reason")
+
         signals.append(sig)
 
         # Count states
@@ -402,6 +430,198 @@ def should_trade(symbol: str) -> bool:
     if WHITELIST_MODE and sym not in WHITELIST:
         return False
     return True
+
+
+# ═══════════════════════════════════════════════════
+# Trading V2 — Phase 4: ATR Stops + Daily Pivots
+# ═══════════════════════════════════════════════════
+
+def calculate_daily_pivots(prev_high: float, prev_low: float,
+                           prev_close: float) -> dict:
+    """Standard Daily Pivot Points from yesterday's OHLC."""
+    if not prev_high or not prev_low or not prev_close:
+        return {"pp": 0, "s1": 0, "s2": 0, "r1": 0, "r2": 0}
+    pp = (prev_high + prev_low + prev_close) / 3
+    return {
+        "pp": round(pp, 3),
+        "s1": round((2 * pp) - prev_high, 3),
+        "s2": round(pp - (prev_high - prev_low), 3),
+        "r1": round((2 * pp) - prev_low, 3),
+        "r2": round(pp + (prev_high - prev_low), 3),
+    }
+
+
+def calculate_swing_stop(entry_price: float, atr_14: float,
+                         support_level: float = None) -> dict:
+    """
+    Swing Trading stop — ATR-based with support awareness.
+    Priority: support - 1×ATR > 2×ATR below entry > 3% max.
+    """
+    if not entry_price or entry_price <= 0 or not atr_14 or atr_14 <= 0:
+        return {"stop_loss": 0, "risk_pct": 0, "stop_type": "error", "atr_14": 0}
+
+    atr_stop = entry_price - (2.0 * atr_14)
+    sr_stop = (support_level - (1.0 * atr_14)) if support_level and 0 < support_level < entry_price else atr_stop
+    max_stop = entry_price * 0.97  # 3% max protection
+
+    stop = max(min(atr_stop, sr_stop), max_stop)
+    risk_pct = abs(entry_price - stop) / entry_price * 100
+
+    if stop == sr_stop and sr_stop != atr_stop:
+        stype = "support_atr"
+    elif stop == max_stop and max_stop > atr_stop:
+        stype = "max_3pct"
+    else:
+        stype = "atr_2x"
+
+    return {
+        "stop_loss": round(stop, 3),
+        "risk_pct": round(risk_pct, 2),
+        "stop_type": stype,
+        "atr_14": round(atr_14, 4),
+    }
+
+
+def calculate_swing_target(entry_price: float, daily_levels: dict,
+                           atr_14: float) -> dict:
+    """Dynamic target at nearest resistance above entry."""
+    if not entry_price or entry_price <= 0:
+        return {"target": 0, "reward_pct": 0, "target_type": "error"}
+
+    # Find nearest resistance above entry (+0.5% minimum)
+    resistance = []
+    for key in ("r1", "pdh", "pp", "r2"):
+        val = daily_levels.get(key, 0)
+        if val and val > entry_price * 1.005:
+            resistance.append((key, val))
+    resistance.sort(key=lambda x: x[1])
+
+    if resistance:
+        t_key, t_price = resistance[0]
+    else:
+        t_price = entry_price + (3.0 * (atr_14 or entry_price * 0.01))
+        t_key = "atr_3x"
+
+    reward_pct = (t_price - entry_price) / entry_price * 100 if entry_price > 0 else 0
+    return {
+        "target": round(t_price, 3),
+        "reward_pct": round(reward_pct, 2),
+        "target_type": t_key,
+    }
+
+
+def _get_pivots_for_symbol(symbol: str) -> dict:
+    """Load yesterday's OHLC from daily_bars and compute pivots."""
+    try:
+        conn = _sqlite3.connect(_LIFE_DB, timeout=5)
+        conn.row_factory = _sqlite3.Row
+        rows = conn.execute(
+            "SELECT high, low, close FROM daily_bars WHERE symbol=? ORDER BY trading_date DESC LIMIT 2",
+            (symbol.upper(),),
+        ).fetchall()
+        conn.close()
+        if len(rows) >= 2:
+            prev = rows[1]  # yesterday (rows[0] is today)
+            return calculate_daily_pivots(
+                float(prev["high"]), float(prev["low"]), float(prev["close"]))
+    except Exception as e:
+        logger.debug("Pivots lookup failed for %s: %s", symbol, e)
+    return {"pp": 0, "s1": 0, "s2": 0, "r1": 0, "r2": 0}
+
+
+# ═══════════════════════════════════════════════════
+# Trading V2 — Phase 5: Swing Confluence (simplified)
+# ═══════════════════════════════════════════════════
+
+SWING_MODE = True  # Feature flag — swing logic for daily signals
+
+
+def swing_confluence(symbol: str, sig: dict, daily_trend: dict) -> dict:
+    """
+    Simplified confluence for Swing Trading.
+    Uses ONLY: Daily Trend + Volume + ADX + RSI filter + near-support bonus.
+    RSI/MACD/Stoch/EMA crossovers EXCLUDED (low hit rates from Brain data).
+    """
+    score = 0
+    factors = []
+    blockers = []
+
+    # 1. Daily Trend (mandatory)
+    trend = daily_trend.get("trend", "UNKNOWN")
+    if trend != "UP":
+        return {
+            "confluence_pct": 0, "action": "NO_ENTRY",
+            "reason": f"Daily trend = {trend}",
+            "factors": [], "blockers": [f"TREND:{trend}"],
+        }
+    score += 30
+    factors.append("TREND:UP")
+
+    # 2. Volume 1-3x (mandatory range from Brain data)
+    vol = sig.get("vol_ratio") or 0
+    if 1.0 <= vol <= 3.0:
+        score += 25
+        factors.append(f"VOL:{vol:.1f}x")
+    elif vol > 3.0:
+        score += 15  # high volume is OK but less predictable
+        factors.append(f"VOL:{vol:.1f}x(high)")
+    else:
+        blockers.append(f"VOL:{vol:.1f}x(low)")
+
+    # 3. ADX >= 25 (mandatory)
+    adx = sig.get("adx") or 0
+    if adx >= 25:
+        score += 25
+        factors.append(f"ADX:{adx:.0f}")
+        if adx >= 40:
+            score += 5
+            factors.append("ADX:STRONG")
+    else:
+        blockers.append(f"ADX:{adx:.0f}(<25)")
+
+    # 4. RSI < 50 filter (not as a signal — just avoid overbought)
+    rsi = sig.get("rsi_14") or 50
+    if rsi < 30:
+        score += 15
+        factors.append(f"RSI:{rsi:.0f}(oversold)")
+    elif rsi < 50:
+        score += 10
+        factors.append(f"RSI:{rsi:.0f}(<50)")
+    else:
+        blockers.append(f"RSI:{rsi:.0f}(>50)")
+
+    # 5. Near support bonus
+    support = sig.get("support") or 0
+    price = sig.get("price") or 0
+    atr = sig.get("atr_14") or 0
+    if support and price and atr and (price - support) < atr:
+        score += 10
+        factors.append("NEAR_SUPPORT")
+
+    # Decision
+    if blockers and score < 55:
+        action = "NO_ENTRY"
+        reason = " + ".join(blockers)
+    elif score >= 80:
+        action = "STRONG_BUY"
+        reason = "All conditions met"
+    elif score >= 60:
+        action = "BUY"
+        reason = "Core conditions met"
+    elif score >= 40:
+        action = "WATCH"
+        reason = "Partial match"
+    else:
+        action = "NO_ENTRY"
+        reason = " + ".join(blockers) if blockers else "Score too low"
+
+    return {
+        "confluence_pct": min(score, 100),
+        "action": action,
+        "reason": reason,
+        "factors": factors,
+        "blockers": blockers,
+    }
 
 
 # --- Phase 3: Scalping Mode ---

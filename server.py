@@ -3082,7 +3082,7 @@ event_engine = EventEngine(AUDIT_DB)
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/signals-daily", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dashboard/ema-active", "/dashboard/ema-live", "/dashboard/scalper", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
+    OPEN_PATHS = {"/tradingview/webhook", "/health", "/panel", "/trading", "/dashboard", "/dashboard/extended", "/dashboard/signals", "/dashboard/signals-30m", "/dashboard/signals-daily", "/dashboard/radar", "/dashboard/brain", "/dashboard/brain-insights", "/dashboard/regime", "/dashboard/portfolio", "/dashboard/journal", "/dashboard/strategies", "/dashboard/reviews", "/dashboard/ema-crosses", "/dashboard/ema-proximity", "/dashboard/ema-active", "/dashboard/ema-live", "/dashboard/scalper", "/dashboard/swing", "/dev/context", "/gmail/auth", "/gmail/callback", "/google/auth", "/google/callback"}
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path

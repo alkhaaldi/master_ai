@@ -1645,6 +1645,131 @@ def dashboard_signals_30m():
     return build_signals_30m()
 
 
+@router.get("/dashboard/swing")
+def dashboard_swing():
+    """
+    Swing Trading dashboard — daily signals with ATR stops, pivots,
+    simplified confluence (Volume+ADX only), whitelist filtered.
+    Trading V2 Phase 4+5+6.
+    """
+    from datetime import datetime as _dt
+    from signal_engine import (
+        build_signals, SWING_MODE, WHITELIST_MODE, WHITELIST, BLACKLIST,
+        DAILY_TREND_FILTER, check_scalping_exit,
+    )
+
+    raw = build_signals()
+    all_sigs = raw.get("all_signals", [])
+    bridge_online = raw.get("bridge_online", False)
+
+    # Top signal = best swing opportunity
+    top_signal = None
+    opportunities = []
+    for s in all_sigs:
+        action = s.get("swing_action", "")
+        if action in ("STRONG_BUY", "BUY"):
+            entry = {
+                "symbol": s["symbol"],
+                "name_ar": s.get("name_ar", ""),
+                "price": s.get("price", 0),
+                "change_pct": s.get("change_pct", 0),
+                "daily_trend": s.get("daily_trend", "UNKNOWN"),
+                "daily_sma20": s.get("daily_sma20", 0),
+                "confluence_pct": s.get("swing_confluence_pct", 0),
+                "action": action,
+                "factors": s.get("swing_factors", []),
+                "blockers": s.get("swing_blockers", []),
+                "reason": s.get("swing_reason", ""),
+                "stop_loss": s.get("swing_stop"),
+                "stop_pct": s.get("swing_stop_pct"),
+                "stop_type": s.get("swing_stop_type"),
+                "target": s.get("swing_target"),
+                "target_pct": s.get("swing_target_pct"),
+                "target_type": s.get("swing_target_type"),
+                "risk_reward": s.get("swing_rr", 0),
+                "rsi_14": s.get("rsi_14"),
+                "adx": s.get("adx"),
+                "vol_ratio": s.get("vol_ratio"),
+                "atr_14": s.get("atr_14"),
+                "pivots": s.get("pivots", {}),
+                "support": s.get("support"),
+                "resistance": s.get("resistance"),
+            }
+            opportunities.append(entry)
+            if not top_signal or entry["confluence_pct"] > top_signal["confluence_pct"]:
+                top_signal = entry
+
+    # Watch list (not yet buy but close)
+    watchlist = []
+    for s in all_sigs:
+        action = s.get("swing_action", "")
+        if action == "WATCH":
+            watchlist.append({
+                "symbol": s["symbol"],
+                "price": s.get("price", 0),
+                "daily_trend": s.get("daily_trend", "UNKNOWN"),
+                "confluence_pct": s.get("swing_confluence_pct", 0),
+                "action": action,
+                "factors": s.get("swing_factors", []),
+                "blockers": s.get("swing_blockers", []),
+            })
+
+    # Active positions with exit check
+    active_positions = []
+    for pos in raw.get("open_positions", []):
+        sym = (pos.get("symbol") or "").upper()
+        entry_p = pos.get("entry_price") or pos.get("avg_price") or 0
+        cur_p = pos.get("current_price") or pos.get("price") or 0
+        if entry_p and cur_p:
+            pnl_pct = ((cur_p - entry_p) / entry_p * 100)
+            # Find current signal for EMA data
+            cur_sig = next((s for s in all_sigs if s["symbol"] == sym), None)
+            ema9 = (cur_sig or {}).get("ema9") or ((cur_sig or {}).get("ema") or {}).get("ema9", 0) if cur_sig else 0
+            days_held = pos.get("days_held", 0)
+            active_positions.append({
+                "symbol": sym,
+                "entry_price": entry_p,
+                "current_price": cur_p,
+                "pnl_pct": round(pnl_pct, 2),
+                "days_held": days_held,
+                "stop_loss": pos.get("stop_loss"),
+                "target": pos.get("target_price"),
+                "daily_trend": (cur_sig or {}).get("daily_trend", "UNKNOWN"),
+            })
+
+    # Market trend summary: how many whitelist stocks are UP?
+    trend_up = sum(1 for s in all_sigs if s.get("daily_trend") == "UP")
+    trend_down = sum(1 for s in all_sigs if s.get("daily_trend") == "DOWN")
+    trend_side = sum(1 for s in all_sigs if s.get("daily_trend") == "SIDEWAYS")
+
+    return {
+        "swing_mode": SWING_MODE,
+        "scan_time": _dt.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "market_status": "open" if raw.get("market_open") else "closed",
+        "bridge_online": bridge_online,
+        "daily_trend_filter": DAILY_TREND_FILTER,
+        "whitelist_mode": WHITELIST_MODE,
+        "market_trend": {
+            "up": trend_up,
+            "down": trend_down,
+            "sideways": trend_side,
+            "total": len(all_sigs),
+            "status": "bullish" if trend_up > trend_down else ("bearish" if trend_down > trend_up else "mixed"),
+        },
+        "top_signal": top_signal,
+        "opportunities": sorted(opportunities, key=lambda x: x["confluence_pct"], reverse=True),
+        "watchlist": sorted(watchlist, key=lambda x: x["confluence_pct"], reverse=True),
+        "active_positions": active_positions,
+        "stats": {
+            "total_scanned": len(all_sigs),
+            "opportunities": len(opportunities),
+            "watching": len(watchlist),
+            "active": len(active_positions),
+            "filtered_out": raw.get("filtered_out", 0),
+        },
+    }
+
+
 @router.get("/dashboard/scalper")
 def dashboard_scalper():
     """
