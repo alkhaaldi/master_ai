@@ -1679,7 +1679,7 @@ def dashboard_swing():
     from datetime import datetime as _dt
     from signal_engine import (
         build_signals, SWING_MODE, WHITELIST_MODE, WHITELIST, BLACKLIST,
-        DAILY_TREND_FILTER, check_scalping_exit,
+        DAILY_TREND_FILTER, check_scalping_exit, get_trading_flags,
     )
 
     raw = build_signals()
@@ -1767,12 +1767,10 @@ def dashboard_swing():
     trend_side = sum(1 for s in all_sigs if s.get("daily_trend") == "SIDEWAYS")
 
     return {
-        "swing_mode": SWING_MODE,
+        "flags": get_trading_flags(),
         "scan_time": _dt.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "market_status": "open" if raw.get("market_open") else "closed",
         "bridge_online": bridge_online,
-        "daily_trend_filter": DAILY_TREND_FILTER,
-        "whitelist_mode": WHITELIST_MODE,
         "market_trend": {
             "up": trend_up,
             "down": trend_down,

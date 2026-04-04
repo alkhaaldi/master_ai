@@ -17,6 +17,29 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger("signal_engine")
 
+# ═══════════════════════════════════════════════════
+# Trading V2 — Feature Flags (Phase 8)
+# All flags consolidated here. Toggle to switch modes.
+# ═══════════════════════════════════════════════════
+SWING_MODE = True           # True = daily swing logic (V2)
+SCALPING_MODE = True        # True = 30m scalping logic (V1, runs alongside swing for 30m)
+WHITELIST_MODE = True       # True = trade whitelist only, False = all except blacklist
+DAILY_TREND_FILTER = True   # True = block buys when daily trend DOWN/SIDEWAYS
+SWING_CONFLUENCE = True     # True = VOL+ADX only, False = old RSI+MACD+all
+
+
+def get_trading_flags() -> dict:
+    """Return current feature flags for API responses."""
+    return {
+        "swing_mode": SWING_MODE,
+        "scalping_mode": SCALPING_MODE,
+        "whitelist_mode": WHITELIST_MODE,
+        "daily_trend_filter": DAILY_TREND_FILTER,
+        "swing_confluence": SWING_CONFLUENCE,
+        "mode": "swing" if SWING_MODE else ("scalping" if SCALPING_MODE else "default"),
+    }
+
+
 # --- Context injection (same pattern as dashboard_api) ---
 _ctx = {}
 
@@ -83,9 +106,8 @@ def build_signals() -> dict:
         "open_positions": [],
         "signal_counts": {"discovery": 0, "setup": 0, "ready": 0, "entered": 0, "manage": 0},
         "thresholds": _get_thresholds(),
-        # V2 Phase 2+3 metadata
-        "daily_trend_filter": DAILY_TREND_FILTER,
-        "whitelist_mode": WHITELIST_MODE,
+        # V2 feature flags (Phase 8)
+        "flags": get_trading_flags(),
         "whitelist": sorted(WHITELIST),
     }
 
@@ -318,7 +340,7 @@ import sqlite3 as _sqlite3
 
 _LIFE_DB = _os.path.join(_os.path.dirname(__file__), "data", "life.db")
 
-DAILY_TREND_FILTER = True  # Feature flag — block buys when market is down
+# (DAILY_TREND_FILTER flag at top of file)
 
 
 def get_daily_trend(symbol: str, sma_period: int = 20) -> dict:
@@ -391,7 +413,7 @@ def _trend_result(price: float, sma: float, dist_pct: float) -> dict:
 # Trading V2 — Phase 3: Whitelist / Blacklist
 # ═══════════════════════════════════════════════════
 
-WHITELIST_MODE = True  # True=trade whitelist only, False=trade all except blacklist
+# (WHITELIST_MODE flag at top of file)
 
 # Top 10 by hit rate from Brain analysis (66,937 signals)
 WHITELIST = {
@@ -533,7 +555,7 @@ def _get_pivots_for_symbol(symbol: str) -> dict:
 # Trading V2 — Phase 5: Swing Confluence (simplified)
 # ═══════════════════════════════════════════════════
 
-SWING_MODE = True  # Feature flag — swing logic for daily signals
+# (SWING_MODE flag at top of file)
 
 
 def swing_confluence(symbol: str, sig: dict, daily_trend: dict) -> dict:
@@ -625,7 +647,7 @@ def swing_confluence(symbol: str, sig: dict, daily_trend: dict) -> dict:
 
 
 # --- Phase 3: Scalping Mode ---
-SCALPING_MODE = True  # Feature flag — True=scalping logic for 30m, False=original
+# (SCALPING_MODE flag at top of file)
 
 SCALPING_WEIGHTS = {
     "volume_surge": 1.15,   # 65% hit rate from Brain data
@@ -982,6 +1004,7 @@ def build_signals_30m() -> dict:
         "timestamp": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "signals": [],
         "thresholds": _get_thresholds(),
+        "flags": get_trading_flags(),
     }
 
     bridge_data = _get_bridge_data_30m_safe()
