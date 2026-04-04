@@ -292,9 +292,15 @@ function renderAnalysis(data, symbol){
   if(report){
     // FIRST: strip JSON/code blocks on RAW text (before esc)
     let raw = report;
+    // Remove the entire "ملخص" section with its JSON block
+    raw = raw.replace(/ملخص[^\n]*```json[\s\S]*?```/g, '');
     raw = raw.replace(/```json[\s\S]*?```/g, '');
     raw = raw.replace(/```[\s\S]*?```/g, '');
-    raw = raw.replace(/ملخص خطة التداول \(JSON\)\s*/g, '');
+    // Remove any leftover summary headers without content
+    raw = raw.replace(/ملخص الخطة الفنية\s*/g, '');
+    raw = raw.replace(/ملخص خطة التداول[^\n]*/g, '');
+    // Trim trailing whitespace/newlines
+    raw = raw.replace(/\s+$/, '');
     // THEN: escape for HTML safety
     let formatted = esc(raw);
     // Markdown formatting
