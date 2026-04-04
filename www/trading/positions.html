@@ -676,6 +676,49 @@ window.doAddMore = async function(tradeId){
 }
 
 /* ===== Load Gemini Analysis for open positions ===== */
+/* ===== Risk Config Modal ===== */
+window.openRiskConfig = async function(){
+  var cfg = {};
+  try{ var r = await fetch('/api/risk-config'); cfg = await r.json(); }catch(e){}
+  var cap = cfg.account_capital || 10000;
+  var rpt = cfg.risk_per_trade_pct || 2;
+  var mp = cfg.max_positions || 3;
+  var mh = cfg.max_heat_pct || 6;
+  var ms = cfg.max_sector_positions || 2;
+  var html = '<div class="modal-overlay open" id="riskConfigOverlay" onclick="if(event.target===this)this.remove()">';
+  html += '<div class="modal-card"><h3 style="color:var(--gold);margin-bottom:1rem">\u2699\uFE0F \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0637\u0631</h3>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0631\u0623\u0633 \u0627\u0644\u0645\u0627\u0644 (\u062F.\u0643)</label><input type="number" id="rc_capital" value="'+cap+'" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)"></div>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0645\u062E\u0627\u0637\u0631\u0629 \u0644\u0643\u0644 \u0635\u0641\u0642\u0629 (%)</label><input type="number" step="0.1" id="rc_risk" value="'+rpt+'" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)"></div>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0623\u0642\u0635\u0649 \u0639\u062F\u062F \u0645\u0631\u0627\u0643\u0632</label><input type="number" id="rc_maxpos" value="'+mp+'" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)"></div>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0623\u0642\u0635\u0649 \u062D\u0631\u0627\u0631\u0629 \u0627\u0644\u0645\u062D\u0641\u0638\u0629 (%)</label><input type="number" step="0.5" id="rc_heat" value="'+mh+'" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)"></div>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0623\u0642\u0635\u0649 \u0645\u0631\u0627\u0643\u0632 \u0644\u0643\u0644 \u0642\u0637\u0627\u0639</label><input type="number" id="rc_sector" value="'+ms+'" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)"></div>';
+  html += '<div id="rc_msg" style="font-size:.78rem;margin-bottom:.5rem"></div>';
+  html += '<div style="display:flex;gap:.5rem;justify-content:flex-end">';
+  html += '<button onclick="document.getElementById(\'riskConfigOverlay\').remove()" style="padding:.5rem 1rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text-2);cursor:pointer">\u0625\u0644\u063A\u0627\u0621</button>';
+  html += '<button onclick="saveRiskConfig()" style="padding:.5rem 1rem;background:var(--gold);border:none;border-radius:6px;color:var(--navy-900);font-weight:700;cursor:pointer">\u062D\u0641\u0638</button>';
+  html += '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+};
+
+window.saveRiskConfig = async function(){
+  var msg = document.getElementById('rc_msg');
+  msg.innerHTML = '<span style="color:var(--gold)">\u062C\u0627\u0631\u064A...</span>';
+  try{
+    var body = {
+      account_capital: Number(document.getElementById('rc_capital').value),
+      risk_per_trade_pct: Number(document.getElementById('rc_risk').value),
+      max_positions: Number(document.getElementById('rc_maxpos').value),
+      max_heat_pct: Number(document.getElementById('rc_heat').value),
+      max_sector_positions: Number(document.getElementById('rc_sector').value)
+    };
+    var r = await fetch('/api/risk-config', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify(body)});
+    var d = await r.json();
+    if(d.error){msg.innerHTML='<span style="color:var(--red)">'+d.error+'</span>';return}
+    msg.innerHTML='<span style="color:var(--green)">\u2705 \u062A\u0645 \u0627\u0644\u062D\u0641\u0638</span>';
+    setTimeout(function(){document.getElementById('riskConfigOverlay').remove();loadData()},1500);
+  }catch(e){msg.innerHTML='<span style="color:var(--red)">\u062E\u0637\u0623: '+e.message+'</span>'}
+};
+
 window.loadGeminiForPositions = async function(symbols){
   for(var i=0;i<symbols.length;i++){
     var sym = symbols[i];
@@ -877,6 +920,7 @@ function render(data){
   /* ===== RISK STATUS (Phase 2) ===== */
   html += '<div class="section-title"><span class="mdi mdi-shield-alert-outline"></span> &#x0625;&#x062F;&#x0627;&#x0631;&#x0629; &#x0627;&#x0644;&#x0645;&#x062E;&#x0627;&#x0637;&#x0631;</div>';
   html += '<div id="riskStatusContainer" style="margin-bottom:1rem"><div style="text-align:center;color:var(--text-3);font-size:.8rem;padding:1rem">&#x062C;&#x0627;&#x0631;&#x064A; &#x0627;&#x0644;&#x062A;&#x062D;&#x0645;&#x064A;&#x0644;...</div></div>';
+  html += '<div style="text-align:center;margin-bottom:1rem"><button onclick="openRiskConfig()" style="background:var(--gold-bg);border:1px solid var(--gold-br);color:var(--gold);padding:.4rem 1rem;border-radius:6px;cursor:pointer;font-family:var(--f);font-size:.75rem"><span class="mdi mdi-cog-outline"></span> \u062A\u0639\u062F\u064A\u0644 \u0631\u0623\u0633 \u0627\u0644\u0645\u0627\u0644 \u0648\u0627\u0644\u0645\u062E\u0627\u0637\u0631</button></div>';
 
   /* ===== OPEN POSITIONS ===== */
   html += '<div class="section-title"><span class="mdi mdi-swap-vertical-bold"></span> المراكز المفتوحة <span style="font-size:.72rem;color:var(--text-3);font-weight:400;margin-right:.4rem">('+op.length+')</span></div>';

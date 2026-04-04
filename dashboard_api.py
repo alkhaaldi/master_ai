@@ -2536,6 +2536,42 @@ async def api_trade_update(data: dict = Body(...)):
 
 
 # ═══════════════════════════════════════════════════
+# /api/risk-config — Get/Update risk configuration
+# ═══════════════════════════════════════════════════
+
+@router.get("/api/risk-config")
+async def api_risk_config_get():
+    """Get current risk configuration."""
+    try:
+        from risk_engine import _get_risk_config
+        return _get_risk_config()
+    except Exception as e:
+        return {"error": str(e)}
+
+@router.post("/api/risk-config")
+async def api_risk_config_update(data: dict = Body(...)):
+    """Update risk configuration (capital, max positions, risk per trade, etc.)."""
+    try:
+        import sqlite3 as _sq3
+        db_path = os.path.join(os.path.dirname(__file__), "data", "life.db")
+        conn = _sq3.connect(db_path, timeout=5)
+        conn.execute("CREATE TABLE IF NOT EXISTS risk_config (key TEXT PRIMARY KEY, value TEXT)")
+        allowed_keys = ["account_capital", "risk_per_trade_pct", "max_positions", "max_heat_pct", "max_sector_positions"]
+        updated = []
+        for k, v in data.items():
+            if k in allowed_keys:
+                conn.execute("INSERT OR REPLACE INTO risk_config (key, value) VALUES (?, ?)", (k, str(v)))
+                updated.append(k)
+        conn.commit()
+        conn.close()
+        if not updated:
+            return {"success": False, "error": "No valid keys provided. Allowed: " + ", ".join(allowed_keys)}
+        return {"success": True, "updated": updated}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ═══════════════════════════════════════════════════
 # /api/data-health — Data collection health status
 # ═══════════════════════════════════════════════════
 
