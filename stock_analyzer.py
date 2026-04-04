@@ -189,6 +189,62 @@ def refresh_all_analyses(send_update=None):
     logger.info(f"Analysis refresh complete: {done}/{total} ({errors} errors)")
     return summary
 
+async def refresh_all_analyses_parallel(send_update=None, max_concurrent=5):
+    """
+    Refresh ALL 128 KSE stocks using ParallelCoordinator.
+    ~6 min with 5 parallel vs ~30 min sequential.
+    send_update: optional async callback(text) for Telegram progress.
+    """
+    from parallel_coordinator import ParallelCoordinator
+
+    symbols = get_all_kse_symbols()
+    if not symbols:
+        return {"error": "no symbols found in kse_stocks.csv"}
+    if not _bridge_available():
+        return {"error": "Bridge offline — cant refresh analyses"}
+
+    total = len(symbols)
+    done = 0
+    errors = 0
+    error_list = []
+
+    coord = ParallelCoordinator("analysis_refresh")
+
+    for sym in symbols:
+        async def _do_analysis(s=sym):
+            # analyze_stock is sync — run in thread
+            result = await asyncio.to_thread(analyze_stock, s)
+            if result and not result.get("error"):
+                store_analysis(s, result)
+            return result
+        coord.add_worker(sym, _do_analysis)
+
+    def _on_progress(name, completed, t):
+        nonlocal done, errors, error_list
+        # Progress callback is sync — just log
+        if completed % 20 == 0 or completed == t:
+            logger.info(f"Analysis progress: {completed}/{t}")
+
+    results = await coord.run(max_concurrent=max_concurrent, timeout=120,
+                              on_progress=_on_progress)
+
+    for wr in results:
+        if wr.success and wr.result and not wr.result.get("error"):
+            done += 1
+        else:
+            errors += 1
+            err = wr.error or (wr.result.get("error") if wr.result else "unknown")
+            error_list.append(f"{wr.name}: {err}")
+
+    summary = {
+        "total": total, "done": done, "errors": errors,
+        "error_details": error_list[:10],
+        "parallel": max_concurrent,
+    }
+    logger.info(f"Parallel analysis complete: {done}/{total} ({errors} errors)")
+    return summary
+
+
 # ═══════════════════════════════════
 # Bridge Data
 # ═══════════════════════════════════

@@ -2675,8 +2675,8 @@ async def lifespan(app):
                     logger.info("Analysis scheduler: starting daily refresh")
                     _cid = ADMIN_TELEGRAM_ID or "669769765"
                     await tg_send(int(_cid), "\u23f0 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0641\u0646\u064a \u0627\u0644\u064a\u0648\u0645\u064a (128 \u0633\u0647\u0645)...")
-                    from stock_analyzer import refresh_all_analyses
-                    result = await asyncio.to_thread(refresh_all_analyses)
+                    from stock_analyzer import refresh_all_analyses_parallel
+                    result = await refresh_all_analyses_parallel(max_concurrent=5)
                     msg = f"\u2705 \u062a\u062d\u0644\u064a\u0644 \u064a\u0648\u0645\u064a: {result.get('done', 0)}/{result.get('total', 0)} ({result.get('errors', 0)} \u0623\u062e\u0637\u0627\u0621)"
                     await tg_send(int(_cid), msg)
                 except Exception as e:
@@ -8094,11 +8094,8 @@ async def api_analyze_refresh_all():
         _cid = ADMIN_TELEGRAM_ID or "669769765"
         try:
             await tg_send(int(_cid), "\u26a1 \u0628\u062f\u0627\u064a\u0629 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0641\u0646\u064a \u0644\u0643\u0644 128 \u0633\u0647\u0645...")
-            from stock_analyzer import refresh_all_analyses
-            def _send_sync(text):
-                asyncio.get_event_loop().call_soon_threadsafe(
-                    asyncio.create_task, tg_send(int(_cid), text))
-            result = await asyncio.to_thread(refresh_all_analyses, _send_sync)
+            from stock_analyzer import refresh_all_analyses_parallel
+            result = await refresh_all_analyses_parallel(max_concurrent=5)
             msg = f"\u2705 \u062a\u062d\u0644\u064a\u0644 \u0641\u0646\u064a \u0645\u062d\u062f\u0651\u062b: {result.get('done', 0)}/{result.get('total', 0)} ({result.get('errors', 0)} \u0623\u062e\u0637\u0627\u0621)"
             await tg_send(int(_cid), msg)
         except Exception as e:
