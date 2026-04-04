@@ -637,7 +637,7 @@ window.doPartialSell = async function(tradeId){
   if(!price || price <= 0){msg.innerHTML='<span style="color:var(--red)">\u0623\u062F\u062E\u0644 \u0627\u0644\u0633\u0639\u0631</span>';return}
   msg.innerHTML='<span style="color:var(--gold)">\u062C\u0627\u0631\u064A...</span>';
   try{
-    var r = await fetch('/api/portfolio/partial-sell', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({trade_id:tradeId, sell_qty:qty, sell_price:price})});
+    var r = await fetch('/api/portfolio/partial-sell', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':getApiKey()}, body:JSON.stringify({trade_id:tradeId, sell_qty:qty, sell_price:price})});
     var d = await r.json();
     if(d.error){msg.innerHTML='<span style="color:var(--red)">'+esc(d.error)+'</span>';return}
     msg.innerHTML='<span style="color:var(--green)">\u2705 \u062A\u0645 \u0628\u064A\u0639 '+qty+' \u0633\u0647\u0645 \u0628\u0633\u0639\u0631 '+price+'</span>';
@@ -667,7 +667,7 @@ window.doAddMore = async function(tradeId){
   if(!price || price <= 0){msg.innerHTML='<span style="color:var(--red)">\u0623\u062F\u062E\u0644 \u0627\u0644\u0633\u0639\u0631</span>';return}
   msg.innerHTML='<span style="color:var(--gold)">\u062C\u0627\u0631\u064A...</span>';
   try{
-    var r = await fetch('/api/portfolio/add-more', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({trade_id:tradeId, add_qty:qty, add_price:price})});
+    var r = await fetch('/api/portfolio/add-more', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':getApiKey()}, body:JSON.stringify({trade_id:tradeId, add_qty:qty, add_price:price})});
     var d = await r.json();
     if(d.error){msg.innerHTML='<span style="color:var(--red)">'+esc(d.error)+'</span>';return}
     msg.innerHTML='<span style="color:var(--green)">\u2705 \u062A\u0645 \u0634\u0631\u0627\u0621 '+qty+' \u0633\u0647\u0645 \u0628\u0633\u0639\u0631 '+price+(d.new_avg_price?' \u2014 \u0645\u062A\u0648\u0633\u0637 \u062C\u062F\u064A\u062F: '+Number(d.new_avg_price).toFixed(3):'')+'</span>';
@@ -711,7 +711,7 @@ window.saveRiskConfig = async function(){
       max_heat_pct: Number(document.getElementById('rc_heat').value),
       max_sector_positions: Number(document.getElementById('rc_sector').value)
     };
-    var r = await fetch('/api/risk-config', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify(body)});
+    var r = await fetch('/api/risk-config', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':getApiKey()}, body:JSON.stringify(body)});
     var d = await r.json();
     if(d.error){msg.innerHTML='<span style="color:var(--red)">'+d.error+'</span>';return}
     msg.innerHTML='<span style="color:var(--green)">\u2705 \u062A\u0645 \u0627\u0644\u062D\u0641\u0638</span>';
