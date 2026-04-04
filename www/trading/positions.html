@@ -606,6 +606,96 @@ function closeAddTrade(){
   document.getElementById('addTradeOverlay').classList.remove('open');
 }
 function openCloseModal(tradeId, symbol, currentPrice){
+/* ===== Partial Sell Modal ===== */
+function openPartialSell(tradeId, symbol, qty, price){
+  var html = '<div class="modal-overlay open" id="partialSellOverlay" onclick="if(event.target===this)this.remove()">';
+  html += '<div class="modal-card"><h3 style="color:var(--amber);margin-bottom:1rem">\u0628\u064A\u0639 \u062C\u0632\u0626\u064A \u2014 '+esc(symbol)+'</h3>';
+  html += '<div style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem">\u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629: <strong>'+qty+'</strong> \u0633\u0647\u0645</div>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0643\u0645\u064A\u0629 \u0627\u0644\u0628\u064A\u0639</label><input type="number" id="ps_qty" min="1" max="'+qty+'" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)" placeholder="\u0643\u0645 \u0633\u0647\u0645 \u062A\u0628\u064A\u0639\u061F"></div>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0633\u0639\u0631 \u0627\u0644\u0628\u064A\u0639</label><input type="number" step="0.001" id="ps_price" value="'+price+'" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)"></div>';
+  html += '<div id="ps_msg" style="font-size:.78rem;margin-bottom:.5rem"></div>';
+  html += '<div style="display:flex;gap:.5rem;justify-content:flex-end">';
+  html += '<button onclick="document.getElementById(\'partialSellOverlay\').remove()" style="padding:.5rem 1rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text-2);cursor:pointer">\u0625\u0644\u063A\u0627\u0621</button>';
+  html += '<button onclick="doPartialSell(\''+tradeId+'\')" style="padding:.5rem 1rem;background:var(--amber);border:none;border-radius:6px;color:var(--navy-900);font-weight:700;cursor:pointer">\u0628\u064A\u0639</button>';
+  html += '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function doPartialSell(tradeId){
+  var qty = Number(document.getElementById('ps_qty').value);
+  var price = Number(document.getElementById('ps_price').value);
+  var msg = document.getElementById('ps_msg');
+  if(!qty || qty <= 0){msg.innerHTML='<span style="color:var(--red)">\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0645\u064A\u0629</span>';return}
+  if(!price || price <= 0){msg.innerHTML='<span style="color:var(--red)">\u0623\u062F\u062E\u0644 \u0627\u0644\u0633\u0639\u0631</span>';return}
+  msg.innerHTML='<span style="color:var(--gold)">\u062C\u0627\u0631\u064A...</span>';
+  try{
+    var r = await fetch('/api/portfolio/partial-sell', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({trade_id:tradeId, sell_qty:qty, sell_price:price})});
+    var d = await r.json();
+    if(d.error){msg.innerHTML='<span style="color:var(--red)">'+esc(d.error)+'</span>';return}
+    msg.innerHTML='<span style="color:var(--green)">\u2705 \u062A\u0645 \u0628\u064A\u0639 '+qty+' \u0633\u0647\u0645 \u0628\u0633\u0639\u0631 '+price+'</span>';
+    setTimeout(function(){document.getElementById('partialSellOverlay').remove();loadData()},1500);
+  }catch(e){msg.innerHTML='<span style="color:var(--red)">\u062E\u0637\u0623: '+e.message+'</span>'}
+}
+
+/* ===== Add More (Averaging) Modal ===== */
+function openAddMore(tradeId, symbol, price){
+  var html = '<div class="modal-overlay open" id="addMoreOverlay" onclick="if(event.target===this)this.remove()">';
+  html += '<div class="modal-card"><h3 style="color:var(--cyan);margin-bottom:1rem">\u0632\u064A\u0627\u062F\u0629 \u0643\u0645\u064A\u0629 \u2014 '+esc(symbol)+'</h3>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0643\u0645\u064A\u0629 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0625\u0636\u0627\u0641\u064A\u0629</label><input type="number" id="am_qty" min="1" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)" placeholder="\u0643\u0645 \u0633\u0647\u0645\u061F"></div>';
+  html += '<div style="margin-bottom:.75rem"><label style="font-size:.75rem;color:var(--text-2)">\u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621</label><input type="number" step="0.001" id="am_price" value="'+price+'" style="width:100%;padding:.5rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-family:var(--fm)"></div>';
+  html += '<div id="am_msg" style="font-size:.78rem;margin-bottom:.5rem"></div>';
+  html += '<div style="display:flex;gap:.5rem;justify-content:flex-end">';
+  html += '<button onclick="document.getElementById(\'addMoreOverlay\').remove()" style="padding:.5rem 1rem;background:var(--navy-700);border:1px solid var(--card-border);border-radius:6px;color:var(--text-2);cursor:pointer">\u0625\u0644\u063A\u0627\u0621</button>';
+  html += '<button onclick="doAddMore(\''+tradeId+'\')" style="padding:.5rem 1rem;background:var(--cyan);border:none;border-radius:6px;color:var(--navy-900);font-weight:700;cursor:pointer">\u0634\u0631\u0627\u0621</button>';
+  html += '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function doAddMore(tradeId){
+  var qty = Number(document.getElementById('am_qty').value);
+  var price = Number(document.getElementById('am_price').value);
+  var msg = document.getElementById('am_msg');
+  if(!qty || qty <= 0){msg.innerHTML='<span style="color:var(--red)">\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0645\u064A\u0629</span>';return}
+  if(!price || price <= 0){msg.innerHTML='<span style="color:var(--red)">\u0623\u062F\u062E\u0644 \u0627\u0644\u0633\u0639\u0631</span>';return}
+  msg.innerHTML='<span style="color:var(--gold)">\u062C\u0627\u0631\u064A...</span>';
+  try{
+    var r = await fetch('/api/portfolio/add-more', {method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({trade_id:tradeId, add_qty:qty, add_price:price})});
+    var d = await r.json();
+    if(d.error){msg.innerHTML='<span style="color:var(--red)">'+esc(d.error)+'</span>';return}
+    msg.innerHTML='<span style="color:var(--green)">\u2705 \u062A\u0645 \u0634\u0631\u0627\u0621 '+qty+' \u0633\u0647\u0645 \u0628\u0633\u0639\u0631 '+price+(d.new_avg_price?' \u2014 \u0645\u062A\u0648\u0633\u0637 \u062C\u062F\u064A\u062F: '+Number(d.new_avg_price).toFixed(3):'')+'</span>';
+    setTimeout(function(){document.getElementById('addMoreOverlay').remove();loadData()},1500);
+  }catch(e){msg.innerHTML='<span style="color:var(--red)">\u062E\u0637\u0623: '+e.message+'</span>'}
+}
+
+/* ===== Load Gemini Analysis for open positions ===== */
+async function loadGeminiForPositions(symbols){
+  for(var i=0;i<symbols.length;i++){
+    var sym = symbols[i];
+    try{
+      var r = await fetch('/api/analyze?symbol='+encodeURIComponent(sym));
+      if(!r.ok) continue;
+      var d = await r.json();
+      if(d.error) continue;
+      var s = d.structured || {};
+      var el = document.getElementById('gem_'+sym);
+      if(!el) continue;
+      var signal = s.signal || '\u2014';
+      var sigCls = signal.includes('\u0634\u0631\u0627\u0621')?'color:var(--green)':signal.includes('\u0628\u064A\u0639')?'color:var(--red)':'color:var(--amber)';
+      var sup = (s.support||[]).join(' / ') || '\u2014';
+      var res = (s.resistance||[]).join(' / ') || '\u2014';
+      var conf = s.confidence || '\u2014';
+      el.style.display = 'flex';
+      el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;padding:.6rem 1rem;background:var(--navy-800);border:1px solid var(--card-border);border-radius:8px;margin-top:.4rem;font-size:.75rem">'
+        +'<span style="color:var(--gold);font-weight:700">\u{1F916} Gemini</span>'
+        +'<span style="'+sigCls+';font-weight:700">\u0625\u0634\u0627\u0631\u0629: '+esc(signal)+'</span>'
+        +'<span style="color:var(--text-2)">\u062B\u0642\u0629: '+conf+'%</span>'
+        +'<span style="color:var(--green)">\u062F\u0639\u0645: <span class="ltr">'+esc(sup)+'</span></span>'
+        +'<span style="color:var(--red)">\u0645\u0642\u0627\u0648\u0645\u0629: <span class="ltr">'+esc(res)+'</span></span>'
+        +'</div>';
+    }catch(e){}
+  }
+}
+
   document.getElementById('ct_trade_id').value = tradeId;
   document.getElementById('ct_symbol_display').textContent = symbol;
   document.getElementById('ct_exit').value = currentPrice || '';
@@ -910,9 +1000,15 @@ function render(data){
 
       /* Action buttons */
       html += '<div class="pos-actions">';
-      html += '<button class="btn-pos-close" onclick="openCloseModal(\''+esc(tradeId)+'\',\''+esc(p.symbol)+'\','+(p.current_price||'')+')"><span class="mdi mdi-close-thick"></span> إغلاق</button>';
-      html += '<button class="btn-pos-edit" onclick="toggleInlineEdit(\''+esc(tradeId)+'\')"><span class="mdi mdi-pencil-outline"></span> تعديل</button>';
+      html += '<button class="btn-pos-close" onclick="openCloseModal(\''+esc(tradeId)+'\',\''+esc(p.symbol)+'\','+(p.current_price||'')+')"><span class="mdi mdi-close-thick"></span> \u0625\u063A\u0644\u0627\u0642</button>';
+      html += '<button class="btn-pos-edit" onclick="toggleInlineEdit(\''+esc(tradeId)+'\')"><span class="mdi mdi-pencil-outline"></span> \u062A\u0639\u062F\u064A\u0644</button>';
+      html += '<button class="btn-pos-edit" style="background:var(--amber-bg);border-color:var(--amber-br);color:var(--amber)" onclick="openPartialSell(\''+esc(tradeId)+'\',\''+esc(p.symbol)+'\','+n(p.quantity)+','+(p.current_price||0)+')"><span class="mdi mdi-arrow-down-bold"></span> \u0628\u064A\u0639 \u062C\u0632\u0626\u064A</button>';
+      html += '<button class="btn-pos-edit" style="background:var(--cyan-bg);border-color:var(--cyan-br);color:var(--cyan)" onclick="openAddMore(\''+esc(tradeId)+'\',\''+esc(p.symbol)+'\','+(p.current_price||0)+')"><span class="mdi mdi-plus-thick"></span> \u0632\u064A\u0627\u062F\u0629</button>';
+      html += '<a class="btn-pos-edit" style="background:var(--gold-bg);border-color:var(--gold-br);color:var(--gold);text-decoration:none;text-align:center" href="analysis" onclick="localStorage.setItem(\'analysis_symbol\',\''+esc(p.symbol)+'\');return true"><span class="mdi mdi-chart-line"></span> \u062A\u062D\u0644\u064A\u0644 \u0641\u0646\u064A</a>';
       html += '</div>';
+
+      /* Gemini Analysis Strip */
+      html += '<div class="gemini-strip" id="gem_'+esc(p.symbol)+'" style="display:none"></div>';
 
       /* Inline edit for SL/TP */
       html += '<div class="inline-edit" id="ie_'+esc(tradeId)+'">';
@@ -1071,6 +1167,11 @@ async function loadData(){
           +'</div>';
       }
     }catch(e){console.error('Risk fetch:',e)}
+    /* Load Gemini analysis for open positions */
+    try{
+      var openSyms = (data.open_positions||data.positions||[]).map(function(p){return p.symbol}).filter(Boolean);
+      if(openSyms.length) loadGeminiForPositions(openSyms);
+    }catch(e){}
   }catch(e){
     console.error('Portfolio fetch error:', e);
     showError('تعذّر تحميل البيانات: '+e.message);
