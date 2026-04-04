@@ -805,11 +805,14 @@ function toggleInlineEdit(tradeId){
 async function saveInlineEdit(tradeId){
   const slEl = document.getElementById('ie_sl_'+tradeId);
   const tpEl = document.getElementById('ie_tp_'+tradeId);
+  const entryEl = document.getElementById('ie_entry_'+tradeId);
+  const qtyEl = document.getElementById('ie_qty_'+tradeId);
   const msgEl = document.getElementById('ie_msg_'+tradeId);
-  if(!slEl||!tpEl) return;
   const body = {trade_id: tradeId};
-  if(slEl.value) body.stop_loss = parseFloat(slEl.value);
-  if(tpEl.value) body.take_profit = parseFloat(tpEl.value);
+  if(slEl && slEl.value) body.stop_loss = parseFloat(slEl.value);
+  if(tpEl && tpEl.value) body.take_profit = parseFloat(tpEl.value);
+  if(entryEl && entryEl.value) body.entry_price = parseFloat(entryEl.value);
+  if(qtyEl && qtyEl.value) body.quantity = parseInt(qtyEl.value);
   try{
     const res = await fetch('/api/trade/update', {
       method:'POST',
@@ -1014,8 +1017,10 @@ function render(data){
       /* Inline edit for SL/TP */
       html += '<div class="inline-edit" id="ie_'+esc(tradeId)+'">';
       html += '<div class="inline-edit-row">';
-      html += '<div class="inline-edit-field"><label>وقف الخسارة</label><input type="number" step="any" id="ie_sl_'+esc(tradeId)+'" value="'+(slVal||'')+'" placeholder="SL"></div>';
-      html += '<div class="inline-edit-field"><label>جني الأرباح</label><input type="number" step="any" id="ie_tp_'+esc(tradeId)+'" value="'+(tpVal||'')+'" placeholder="TP"></div>';
+      html += '<div class="inline-edit-field"><label>\u0633\u0639\u0631 \u0627\u0644\u062F\u062E\u0648\u0644</label><input type="number" step="any" id="ie_entry_'+esc(tradeId)+'" value="'+(p.entry_price||'')+'" placeholder="\u0633\u0639\u0631 \u0627\u0644\u062F\u062E\u0648\u0644"></div>';
+      html += '<div class="inline-edit-field"><label>\u0627\u0644\u0643\u0645\u064A\u0629</label><input type="number" step="1" id="ie_qty_'+esc(tradeId)+'" value="'+(p.quantity||'')+'" placeholder="\u0639\u062F\u062F \u0627\u0644\u0623\u0633\u0647\u0645"></div>';
+      html += '<div class="inline-edit-field"><label>\u0648\u0642\u0641 \u0627\u0644\u062E\u0633\u0627\u0631\u0629</label><input type="number" step="any" id="ie_sl_'+esc(tradeId)+'" value="'+(slVal||'')+'" placeholder="SL"></div>';
+      html += '<div class="inline-edit-field"><label>\u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D</label><input type="number" step="any" id="ie_tp_'+esc(tradeId)+'" value="'+(tpVal||'')+'" placeholder="TP"></div>';
       html += '<button class="btn-inline-save" onclick="saveInlineEdit(\''+esc(tradeId)+'\')">حفظ</button>';
       html += '<button class="btn-inline-cancel" onclick="toggleInlineEdit(\''+esc(tradeId)+'\')">إلغاء</button>';
       html += '</div>';
