@@ -2692,7 +2692,7 @@ async def lifespan(app):
             _cid = ADMIN_TELEGRAM_ID or "669769765"
             await tg_send(int(_cid), text)
         asyncio.create_task(tg_alert_loop(_alert_sender))
-        asyncio.create_task(proactive_suggestion_loop(_alert_sender))
+        # asyncio.create_task(proactive_suggestion_loop(_alert_sender))  # disabled: 0 activity
         logger.info("Proactive suggestions loop scheduled")
         logger.info("Alert monitor task scheduled")
     # v8 Phase 1: Calendar sync + reminders
@@ -2721,7 +2721,6 @@ async def lifespan(app):
         async def _stock_sender(text):
             _cid = ADMIN_TELEGRAM_ID or "669769765"
             await tg_send(int(_cid), text)
-        asyncio.create_task(tg_alert_loop(_stock_sender))
         asyncio.create_task(news_scheduler(_news_sender))
         logger.info("News scheduler scheduled")
     # Phase B5b: Auto news digest (news_engine) every 6 hours
