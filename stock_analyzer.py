@@ -420,8 +420,8 @@ def analyze_stock(symbol):
             "tools": [{"google_search": {}}],
             "generationConfig": {
                 "temperature": 0.4,
-                "maxOutputTokens": 8192,
-                "thinkingConfig": {"thinkingBudget": -1},
+                "maxOutputTokens": 16384,
+                "thinkingConfig": {"thinkingBudget": 2048},
             },
         }).encode("utf-8")
 
@@ -461,7 +461,7 @@ def analyze_stock(symbol):
             if not p.get("thought", False):
                 answer += p.get("text", "")
 
-    # 8. Try to extract JSON from end of response
+    # 8. Extract structured JSON from response
     analysis_json = {}
     try:
         json_matches = re.findall(r'\{[^{}]*"signal"[^{}]*\}', answer)
@@ -469,6 +469,62 @@ def analyze_stock(symbol):
             analysis_json = json.loads(json_matches[-1])
     except Exception:
         pass
+
+    # 8b. Fallback: if no structured JSON, ask Gemini Flash for extraction
+    if not analysis_json.get("signal") and answer and GEMINI_KEY:
+        try:
+            _fx_url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                "gemini-2.5-flash:generateContent?key=" + GEMINI_KEY
+            )
+            _fx_prompt = (
+                "من التقرير التالي، استخرج JSON فقط بدون أي نص:\n"
+                + answer[:3000]
+                + '\n\nارجع JSON فقط بهالشكل: {"signal":"شراء/بيع/انتظار/مراقبة","confidence":0-100,'
+                  '"direction":"صاعد/هابط/محايد","entry":"السعر","stop_loss":"السعر",'
+                  '"targets":["هدف1"],"support":["دعم1"],"resistance":["مقاومة1"],"risk":"وصف"}'
+            )
+            _fx_body = json.dumps({
+                "contents": [{"role": "user", "parts": [{"text": _fx_prompt}]}],
+                "generationConfig": {"temperature": 0.1, "maxOutputTokens": 1024},
+            }).encode("utf-8")
+            _fx_req = urllib.request.Request(
+                _fx_url, data=_fx_body,
+                headers={"Content-Type": "application/json", "User-Agent": "MasterAI/1.0"},
+            )
+            _fx_resp = urllib.request.urlopen(_fx_req, timeout=30)
+            _fx_result = json.loads(_fx_resp.read().decode())
+            _fx_text = ""
+            for _fc in _fx_result.get("candidates", []):
+                for _fp in _fc.get("content", {}).get("parts", []):
+                    if not _fp.get("thought", False):
+                        _fx_text += _fp.get("text", "")
+            _fx_matches = re.findall(r'\{[^{}]*"signal"[^{}]*\}', _fx_text)
+            if _fx_matches:
+                analysis_json = json.loads(_fx_matches[-1])
+                logger.info(f"Extracted structured via follow-up for {symbol}")
+        except Exception as _fe:
+            logger.debug(f"Follow-up extraction failed for {symbol}: {_fe}")
+
+    # 8c. Last resort: extract signal from Arabic text
+    if not analysis_json.get("signal") and answer:
+        _text_lower = answer.lower()
+        _signal = ""
+        if any(w in answer for w in ["شراء", "شراء قوي", "شراء تدريجي"]):
+            _signal = "شراء"
+        elif any(w in answer for w in ["بيع", "جني أرباح"]):
+            _signal = "بيع"
+        elif "مراقبة" in answer:
+            _signal = "مراقبة"
+        elif "انتظار" in answer:
+            _signal = "انتظار"
+        if _signal:
+            analysis_json["signal"] = _signal
+            # Try to find confidence number near "ثقة" or "confidence"
+            _conf_m = re.search(r'(?:ثقة|confidence)[:\s]*(\d{1,3})', answer, re.IGNORECASE)
+            if _conf_m:
+                analysis_json["confidence"] = int(_conf_m.group(1))
+            logger.info(f"Text-parsed signal for {symbol}: {_signal}")
 
     # 9. Build result
     analysis = {
