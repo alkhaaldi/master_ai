@@ -78,7 +78,7 @@ def store_analysis(symbol, result):
          json.dumps(structured, ensure_ascii=False),
          structured.get("signal", ""),
          structured.get("confidence", 0),
-         "gemini-2.5-pro"))
+         result.get("gemini_model", "gemini-2.5-pro")))
     c.commit()
     c.close()
     logger.info(f"Stored analysis for {symbol}")
@@ -153,9 +153,13 @@ def refresh_all_analyses(send_update=None):
     """
     symbols = get_all_kse_symbols()
     if not symbols:
+        logger.error("refresh_all: no symbols found in kse_stocks.csv")
         return {"error": "no symbols found in kse_stocks.csv"}
 
-    if not _bridge_available():
+    bridge_ok = _bridge_available()
+    logger.info("refresh_all: symbols=%d, bridge=%s", len(symbols), bridge_ok)
+    if not bridge_ok:
+        logger.error("refresh_all: Bridge offline — aborting")
         return {"error": "Bridge offline — cant refresh analyses"}
 
     total = len(symbols)
@@ -199,8 +203,12 @@ async def refresh_all_analyses_parallel(send_update=None, max_concurrent=5):
 
     symbols = get_all_kse_symbols()
     if not symbols:
+        logger.error("refresh_parallel: no symbols found")
         return {"error": "no symbols found in kse_stocks.csv"}
-    if not _bridge_available():
+    bridge_ok = _bridge_available()
+    logger.info("refresh_parallel: symbols=%d, bridge=%s, concurrent=%d", len(symbols), bridge_ok, max_concurrent)
+    if not bridge_ok:
+        logger.error("refresh_parallel: Bridge offline — aborting")
         return {"error": "Bridge offline — cant refresh analyses"}
 
     total = len(symbols)
@@ -394,30 +402,57 @@ def analyze_stock(symbol):
         summary_daily=json.dumps(summary_daily, indent=2, ensure_ascii=False),
     )
 
-    # 6. Call Gemini 2.5 Pro
+    # 6. Call Gemini API (retry + model fallback: pro → flash)
     if not GEMINI_KEY:
         return {"error": "Gemini API key not configured"}
 
-    gemini_url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        "gemini-2.5-pro:generateContent?key=" + GEMINI_KEY
-    )
-    body = json.dumps({
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "tools": [{"google_search": {}}],
-        "generationConfig": {
-            "temperature": 0.4,
-            "maxOutputTokens": 8192,
-            "thinkingConfig": {"thinkingBudget": -1},
-        },
-    }).encode("utf-8")
+    _MODELS = ["gemini-2.5-pro", "gemini-2.5-flash"]
+    result = None
+    _used_model = None
 
-    req = urllib.request.Request(
-        gemini_url, data=body,
-        headers={"Content-Type": "application/json", "User-Agent": "MasterAI/1.0"},
-    )
-    resp = urllib.request.urlopen(req, timeout=120)
-    result = json.loads(resp.read().decode())
+    for _model in _MODELS:
+        gemini_url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{_model}:generateContent?key=" + GEMINI_KEY
+        )
+        body = json.dumps({
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "tools": [{"google_search": {}}],
+            "generationConfig": {
+                "temperature": 0.4,
+                "maxOutputTokens": 8192,
+                "thinkingConfig": {"thinkingBudget": -1},
+            },
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            gemini_url, data=body,
+            headers={"Content-Type": "application/json", "User-Agent": "MasterAI/1.0"},
+        )
+
+        for _attempt in range(3):
+            try:
+                resp = urllib.request.urlopen(req, timeout=120)
+                result = json.loads(resp.read().decode())
+                _used_model = _model
+                break
+            except urllib.error.HTTPError as he:
+                if he.code in (429, 503) and _attempt < 2:
+                    _wait = (2 ** _attempt) * 10  # 10s, 20s
+                    logger.warning(f"Gemini {he.code} for {symbol} ({_model}), retry in {_wait}s (attempt {_attempt+1})")
+                    time.sleep(_wait)
+                else:
+                    logger.warning(f"Gemini HTTP {he.code} for {symbol} ({_model}): {he.reason}")
+                    break  # try next model
+            except Exception as e:
+                logger.warning(f"Gemini error for {symbol} ({_model}): {e}")
+                break  # try next model
+
+        if result:
+            break  # success, stop trying models
+
+    if not result:
+        return {"error": f"Gemini failed for {symbol} after retries on all models"}
 
     # 7. Extract non-thought text
     answer = ""
@@ -441,6 +476,7 @@ def analyze_stock(symbol):
         "report": answer,
         "structured": analysis_json,
         "analyzed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "gemini_model": _used_model or "unknown",
         "data": {
             "bars_30m": summary_30m.get("total_bars", 0),
             "bars_daily": summary_daily.get("total_bars", 0),

@@ -2677,6 +2677,7 @@ async def lifespan(app):
                     await tg_send(int(_cid), "\u23f0 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0641\u0646\u064a \u0627\u0644\u064a\u0648\u0645\u064a (128 \u0633\u0647\u0645)...")
                     from stock_analyzer import refresh_all_analyses_parallel
                     result = await refresh_all_analyses_parallel(max_concurrent=5)
+                    logger.info("Analysis scheduler result: %s", result)
                     msg = f"\u2705 \u062a\u062d\u0644\u064a\u0644 \u064a\u0648\u0645\u064a: {result.get('done', 0)}/{result.get('total', 0)} ({result.get('errors', 0)} \u0623\u062e\u0637\u0627\u0621)"
                     await tg_send(int(_cid), msg)
                 except Exception as e:
@@ -8107,6 +8108,27 @@ async def api_analyze_refresh_all():
     return {"status": "started", "message": "Refreshing all 128 stocks in background"}
 
 
+
+
+
+
+# ── Manual Analysis Refresh Trigger ──
+@app.post("/api/refresh-analysis")
+async def api_refresh_analysis():
+    """Manual trigger for daily analysis refresh (API key protected)."""
+    try:
+        from stock_analyzer import refresh_all_analyses_parallel, _bridge_available, get_all_kse_symbols
+        bridge_ok = _bridge_available()
+        symbols = get_all_kse_symbols()
+        if not bridge_ok:
+            return {"error": "Bridge offline", "bridge": False, "symbols_count": len(symbols)}
+        if not symbols:
+            return {"error": "No symbols found", "bridge": True, "symbols_count": 0}
+        result = await refresh_all_analyses_parallel(max_concurrent=5)
+        return {"ok": True, "bridge": True, "symbols_count": len(symbols), **result}
+    except Exception as e:
+        logger.error("Manual analysis refresh failed: %s", e, exc_info=True)
+        return {"error": str(e)}
 
 
 # ── Portfolio Operations (partial sell + add more) ──
