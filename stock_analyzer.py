@@ -8,7 +8,7 @@ _gk = os.path.expanduser("~/.gemini_key")
 if os.path.exists(_gk):
     GEMINI_KEY = open(_gk).read().strip()
 
-BRIDGE_BASE = "http://192.168.111.158:8059"
+BRIDGE_BASE = "http://192.168.111.159:8059"
 
 # TTL cache: 30 min per symbol
 _analysis_cache = {}
