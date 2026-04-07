@@ -238,8 +238,10 @@ class KairosAgent:
             failures = svc.get("consecutive_failures", 0)
             if failures >= 3:
                 alert_key = f"down_{svc_name}"
-                if self._can_alert(alert_key):
-                    reason = svc.get("reason", "unknown")
+                reason = svc.get("reason", "unknown")
+                # Persistent issues ("never refreshed") → alert once/day; transient → once/hour
+                cooldown = 1440 if "never" in reason else 60
+                if self._can_alert(alert_key, cooldown_min=cooldown):
                     msg = f"⚠️ {svc_name} غير متاح — {reason}"
                     await self._send_alert(msg)
                     self._record_alert(alert_key)

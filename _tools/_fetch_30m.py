@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""Fetch 30m bars for 3 stocks and save to JSON"""
+import json, urllib.request
+
+BRIDGE = "http://192.168.111.158:8059"
+STOCKS = ["EQUIPMENT", "IFA", "CLEANING"]
+out = {}
+
+for sym in STOCKS:
+    url = f"{BRIDGE}/analysis?symbol={sym}&interval=30"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as r:
+            data = json.loads(r.read().decode())
+        bars = data.get("bars", [])
+        out[sym] = {
+            "count": len(bars),
+            "bars": [{"o":b["open"],"h":b["high"],"l":b["low"],"c":b["close"],"v":b["volume"],"t":b.get("time",0)} for b in bars]
+        }
+        print(f"{sym}: {len(bars)} 30m bars")
+    except Exception as e:
+        print(f"{sym}: ERROR {e}")
+
+with open("/tmp/bars_30m.json", "w") as f:
+    json.dump(out, f)
+print("Saved to /tmp/bars_30m.json")

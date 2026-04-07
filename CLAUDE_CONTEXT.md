@@ -242,3 +242,17 @@ Full analysis: _tools/CLAUDE_CODE_SOURCE_ANALYSIS_ROUND2.md
 ### Audit: 67/68 = 99% (full_audit.py)
 - Module Imports 14/14, Integration Wiring 14/14, API Endpoints 13/14
 - Database Tables 12/12, Skills 2/2, Dashboard HTML 12/12
+
+---
+
+## Auto Daily Analysis Refresh (analysis_daily_scheduler)
+- **Location:** server.py (line ~2655), inside startup if RADAR_OK block
+- **Schedule:** 14:15 KWT daily (Sun-Thu), skips Fri/Sat
+- **Function:** `refresh_all_analyses_parallel(max_concurrent=5)` from stock_analyzer.py
+- **Telegram:** Sends "⏰ تحديث التحليل الفني اليومي (128 سهم)..." before, result after
+- **Dependency:** Requires Bridge API online (192.168.111.158:8059)
+- **Feature Flag:** `daily_refresh` must be enabled
+- **Manual trigger:** POST /api/refresh-analysis (with X-API-Key)
+- **KAIROS role:** Detects stale daily_snapshot during market hours, sends alert (does NOT auto-refresh)
+- **Gemini fallback (commit 4305324):** 3 retries with backoff (10s, 20s). If Pro 503 × 3 → auto-fallback to Flash
+- **Logging:** Result logged after each step + final summary in server.log

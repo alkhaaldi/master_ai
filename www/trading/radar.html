@@ -275,6 +275,54 @@ tbody tr:last-child td{border-bottom:none}
 .btn-retry:hover{background:rgba(198,151,75,.15)}
 .empty-state{color:var(--text-3);text-align:center;padding:2rem;font-size:.85rem}
 
+/* ===== GEMINI OVERLAY ===== */
+.gemini-section{
+  margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--card-border);
+}
+.gemini-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem}
+.gemini-icon{font-size:.9rem}
+.gemini-title{font-size:.72rem;color:var(--cyan);font-weight:600;font-family:var(--fd)}
+.gemini-stale{font-size:.6rem;color:var(--text-4);font-style:italic}
+.gemini-body{display:flex;gap:1rem;flex-wrap:wrap;align-items:center}
+.gemini-signal{font-family:var(--fd);font-size:.85rem;font-weight:600}
+.gemini-conf{font-family:var(--fm);font-size:.8rem;font-weight:600}
+.gemini-targets{font-size:.72rem;color:var(--text-2);display:flex;gap:.5rem;flex-wrap:wrap}
+.gemini-targets span{font-family:var(--fm);background:var(--navy-700);padding:1px 6px;border-radius:4px}
+.conflict-badge{
+  display:inline-flex;align-items:center;gap:.25rem;
+  font-size:.72rem;font-weight:600;padding:.2rem .6rem;border-radius:12px;
+  background:rgba(217,68,82,.12);color:var(--red);border:1px solid var(--red-br);
+  animation:pulse-conflict 2s infinite;
+}
+@keyframes pulse-conflict{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ===== RISK BAR ===== */
+.risk-bar{
+  display:flex;align-items:center;gap:.75rem;padding:.65rem 1rem;
+  background:var(--card);border:1px solid var(--card-border);border-radius:10px;
+  margin-bottom:1rem;flex-wrap:wrap;
+}
+.risk-item{display:flex;align-items:center;gap:.3rem;font-size:.75rem}
+.risk-label{color:var(--text-3)}
+.risk-val{font-family:var(--fm);font-weight:600}
+.risk-slots{
+  display:flex;gap:3px;align-items:center;
+}
+.risk-slot{width:18px;height:8px;border-radius:2px;border:1px solid var(--card-border)}
+.risk-slot.filled{background:var(--gold);border-color:var(--gold-br)}
+.risk-slot.empty{background:var(--navy-700)}
+.risk-heat{font-family:var(--fm);font-size:.7rem;padding:1px 6px;border-radius:8px;font-weight:600}
+
+/* ===== GEMINI TABLE CELL ===== */
+.gemini-cell{display:flex;flex-direction:column;gap:2px;max-width:110px}
+.gemini-cell-signal{font-size:.68rem;font-weight:600;white-space:normal;line-height:1.2}
+.gemini-cell-conf{font-family:var(--fm);font-size:.65rem}
+.gemini-cell-conflict{font-size:.6rem;color:var(--red);font-weight:600}
+
+/* ===== TX INFO ===== */
+.pos-tx{font-size:.68rem;color:var(--text-3);margin-top:.35rem;padding-top:.35rem;border-top:1px solid var(--card-border)}
+.pos-tx-item{display:flex;justify-content:space-between;margin-bottom:.1rem}
+
 /* ===== RESPONSIVE ===== */
 @media(max-width:1024px){
   .hero-metrics{grid-template-columns:repeat(2,1fr)}
@@ -372,6 +420,8 @@ tbody tr:last-child td{border-bottom:none}
   <div id="data-content" style="display:none">
     <!-- HERO -->
     <div id="hero-section"></div>
+    <!-- RISK BAR -->
+    <div id="risk-section"></div>
     <!-- TABLE -->
     <div id="table-section"></div>
     <!-- POSITIONS -->
@@ -453,6 +503,150 @@ function momentumText(m){
   if(s==='accelerating_bearish') return {t:'▼▼ تسارع',c:'var(--red)'};
   if(s==='decelerating_bearish') return {t:'▼ تباطؤ',c:'var(--red-bright)'};
   return {t:'—',c:'var(--text-3)'};
+}
+
+/* ===== Gemini Helpers ===== */
+function geminiSignalColor(signal){
+  if(!signal) return 'var(--text-3)';
+  const s = signal.toLowerCase();
+  if(s.includes('\u0634\u0631\u0627\u0621')) return 'var(--green)';
+  if(s.includes('\u0628\u064A\u0639')) return 'var(--red)';
+  if(s.includes('\u0645\u0631\u0627\u0642\u0628')) return 'var(--amber)';
+  return 'var(--gold)';
+}
+function renderGeminiHero(card){
+  const g = card.gemini;
+  if(!g) return '';
+  const gc = g.confidence||0;
+  const gcC = gc>=70?'var(--green)':gc>=50?'var(--gold)':gc>=30?'var(--amber)':'var(--red)';
+  const sigC = geminiSignalColor(g.signal);
+  const stale = g.stale ? ' <span class="gemini-stale">(\u0642\u062F\u064A\u0645)</span>' : '';
+  const conflict = card.gemini_conflict ? ' <span class="conflict-badge">\u26A0\uFE0F \u062A\u0639\u0627\u0631\u0636</span>' : '';
+  const targets = (g.targets||[]).map(t=>`<span>${ltr(t)}</span>`).join('');
+  const sl = g.stop_loss ? `<span style="color:var(--red);font-family:var(--fm);font-size:.75rem">SL: ${ltr(g.stop_loss)}</span>` : '';
+  return `
+    <div class="gemini-section">
+      <div class="gemini-header">
+        <span class="gemini-icon">\u2728</span>
+        <span class="gemini-title">Gemini 2.5 Pro</span>${stale}${conflict}
+      </div>
+      <div class="gemini-body">
+        <span class="gemini-signal" style="color:${sigC}">${g.signal||'\u2014'}</span>
+        <span class="gemini-conf" style="color:${gcC}">${ltr(gc)}%</span>
+        ${sl}
+        ${targets?`<div class="gemini-targets">\u{1F3AF} ${targets}</div>`:''}
+      </div>
+    </div>`;
+}
+function renderRiskBar(rs){
+  if(!rs) return '';
+  const heat = rs.portfolio_heat_pct||0;
+  const heatC = heat>=80?'var(--red)':heat>=50?'var(--amber)':'var(--green)';
+  const heatBg = heat>=80?'var(--red-bg)':heat>=50?'var(--amber-bg)':'var(--green-bg)';
+  const max = rs.max_positions||5;
+  const open = rs.open_positions_count||0;
+  let slots = '';
+  for(let i=0;i<max;i++){
+    slots += `<div class="risk-slot ${i<open?'filled':'empty'}"></div>`;
+  }
+  return `<div class="risk-bar">
+    <div class="risk-item"><span class="risk-label">\u{1F4B0} \u0631\u0623\u0633 \u0627\u0644\u0645\u0627\u0644:</span> <span class="risk-val">${ltr(fmtNum(rs.capital,0))} KWD</span></div>
+    <div class="risk-item"><span class="risk-label">\u{1F4CA} \u0627\u0644\u0645\u0631\u0627\u0643\u0632:</span> <span class="risk-val">${ltr(open)}/${ltr(max)}</span> <div class="risk-slots">${slots}</div></div>
+    <div class="risk-item"><span class="risk-label">\u{1F525} \u0627\u0644\u062D\u0631\u0627\u0631\u0629:</span> <span class="risk-heat" style="color:${heatC};background:${heatBg}">${ltr(fmtNum(heat,0))}%</span></div>
+    <div class="risk-item"><span class="risk-label">\u2699\uFE0F \u0627\u0644\u0645\u062E\u0627\u0637\u0631\u0629:</span> <span class="risk-val">${ltr(rs.risk_per_trade_pct||2)}% / \u0635\u0641\u0642\u0629</span></div>
+  </div>`;
+}
+function geminiCellHtml(s){
+  const g = s.gemini;
+  if(!g) return '<span style="color:var(--text-4);font-size:.68rem">\u2014</span>';
+  const gc = g.confidence||0;
+  const gcC = gc>=70?'var(--green)':gc>=50?'var(--gold)':gc>=30?'var(--amber)':'var(--red)';
+  const sigC = geminiSignalColor(g.signal);
+  const conflict = s.gemini_conflict ? '<div class="gemini-cell-conflict">\u26A0 \u062A\u0639\u0627\u0631\u0636</div>' : '';
+  return `<div class="gemini-cell">
+    <div class="gemini-cell-signal" style="color:${sigC}">${g.signal||'\u2014'}</div>
+    <div class="gemini-cell-conf" style="color:${gcC}">${ltr(gc)}%</div>
+    ${conflict}
+  </div>`;
+}
+
+/* ===== Tooltip Helpers ===== */
+function tipState(st){
+  const m={
+    manage:'\u0625\u062F\u0627\u0631\u0629: \u0639\u0646\u062F\u0643 \u0635\u0641\u0642\u0629 \u0645\u0641\u062A\u0648\u062D\u0629 \u0648\u0627\u0644\u0628\u0631\u064A\u062F\u062C \u064A\u0631\u0627\u0642\u0628\u0647\u0627',
+    entered:'\u062F\u0627\u062E\u0644: \u0639\u0646\u062F\u0643 \u0635\u0641\u0642\u0629 \u0645\u0641\u062A\u0648\u062D\u0629',
+    ready:'\u062C\u0627\u0647\u0632: confluence \u2265 60 + \u062D\u062C\u0645 \u062A\u062F\u0627\u0648\u0644 \u0645\u0624\u0643\u062F \u2014 \u0634\u0631\u0648\u0637 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u062A\u0648\u0641\u0631\u0629',
+    setup:'\u062A\u062D\u0636\u064A\u0631: confluence \u2265 40 \u2014 \u0627\u0644\u0633\u0647\u0645 \u064A\u062A\u062D\u0633\u0646 \u0628\u0633 \u0645\u0627 \u0648\u0635\u0644 \u0644\u0644\u062C\u0627\u0647\u0632\u064A\u0629',
+    discovery:'\u0627\u0633\u062A\u0643\u0634\u0627\u0641: \u0627\u0644\u0631\u0627\u062F\u0627\u0631 \u0631\u0635\u062F \u062D\u0631\u0643\u0629 \u0628\u0633 \u0628\u062F\u0648\u0646 \u062A\u0623\u0643\u064A\u062F \u0645\u0646 \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A'
+  };
+  return m[st]||st||'';
+}
+function tipVerdict(key){
+  const m={
+    buy:'\u0634\u0631\u0627\u0621: \u0627\u0644\u0633\u0647\u0645 \u062C\u0627\u0647\u0632 + \u0627\u062A\u062C\u0627\u0647 \u0635\u0627\u0639\u062F + confluence \u0639\u0627\u0644\u064A',
+    watch:'\u0645\u0631\u0627\u0642\u0628\u0629: \u0627\u0644\u0633\u0647\u0645 \u064A\u062A\u062D\u0633\u0646 \u2014 \u0631\u0627\u0642\u0628 \u0648\u0627\u0646\u062A\u0638\u0631 \u0625\u0634\u0627\u0631\u0629 \u0623\u0642\u0648\u0649',
+    review:'\u0645\u0631\u0627\u062C\u0639\u0629: \u0623\u0646\u062A \u062F\u0627\u062E\u0644 \u0648\u0627\u0644\u0632\u062E\u0645 \u064A\u062A\u0628\u0627\u0637\u0623 \u2014 \u0631\u0627\u062C\u0639 \u0627\u0644\u0635\u0641\u0642\u0629',
+    avoid:'\u062A\u062C\u0646\u0628: confluence \u0645\u0646\u062E\u0641\u0636 \u0623\u0648 \u0627\u062A\u062C\u0627\u0647 \u0647\u0627\u0628\u0637 \u0623\u0648 \u0627\u0644\u0633\u0648\u0642 \u063A\u064A\u0631 \u0645\u0646\u0627\u0633\u0628',
+    neutral:'\u062D\u064A\u0627\u062F: \u0644\u0627 \u0625\u0634\u0627\u0631\u0629 \u0648\u0627\u0636\u062D\u0629 \u0644\u0644\u0634\u0631\u0627\u0621 \u0623\u0648 \u0627\u0644\u062A\u062C\u0646\u0628',
+    hold:'\u0625\u0628\u0642\u0627\u0621: \u0627\u0628\u0642 \u0639\u0644\u0649 \u0627\u0644\u0635\u0641\u0642\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629'
+  };
+  return m[key]||'';
+}
+function tipConf(score){
+  if(score==null) return 'Confluence: \u0645\u0642\u064A\u0627\u0633 \u0627\u0644\u062A\u0648\u0627\u0641\u0642 \u0628\u064A\u0646 \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A (0-100)';
+  if(score>=71) return `Confluence ${score}: \u0645\u0645\u062A\u0627\u0632 \u2014 \u0623\u063A\u0644\u0628 \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A \u0645\u062A\u0648\u0627\u0641\u0642\u0629`;
+  if(score>=50) return `Confluence ${score}: \u062C\u064A\u062F \u2014 \u062A\u0648\u0627\u0641\u0642 \u0645\u062A\u0648\u0633\u0637`;
+  if(score>=40) return `Confluence ${score}: \u0636\u0639\u064A\u0641 \u2014 \u0625\u0634\u0627\u0631\u0627\u062A \u0645\u062E\u062A\u0644\u0637\u0629`;
+  return `Confluence ${score}: \u0636\u0639\u064A\u0641 \u062C\u062F\u0627\u064B \u2014 \u0644\u0627 \u062A\u0648\u0627\u0641\u0642`;
+}
+function tipMom(m){
+  if(!m) return 'Momentum: \u0632\u062E\u0645 MACD';
+  const s = m.toLowerCase().replace(/ /g,'_');
+  if(s==='accelerating_bullish') return '\u062A\u0633\u0627\u0631\u0639 \u0635\u0627\u0639\u062F: MACD \u064A\u0628\u062A\u0639\u062F \u0639\u0646 \u062E\u0637 \u0627\u0644\u0625\u0634\u0627\u0631\u0629 \u0644\u0644\u0623\u0639\u0644\u0649 \u2014 \u0632\u062E\u0645 \u0634\u0631\u0627\u0626\u064A \u0642\u0648\u064A';
+  if(s==='decelerating_bullish') return '\u062A\u0628\u0627\u0637\u0624 \u0635\u0627\u0639\u062F: MACD \u0644\u0627 \u064A\u0632\u0627\u0644 \u0641\u0648\u0642 \u062E\u0637 \u0627\u0644\u0625\u0634\u0627\u0631\u0629 \u0644\u0643\u0646 \u064A\u0642\u062A\u0631\u0628 \u0645\u0646\u0647 \u2014 \u0627\u0644\u0632\u062E\u0645 \u064A\u0636\u0639\u0641';
+  if(s==='accelerating_bearish') return '\u062A\u0633\u0627\u0631\u0639 \u0647\u0627\u0628\u0637: MACD \u064A\u0628\u062A\u0639\u062F \u0639\u0646 \u062E\u0637 \u0627\u0644\u0625\u0634\u0627\u0631\u0629 \u0644\u0644\u0623\u0633\u0641\u0644 \u2014 \u0632\u062E\u0645 \u0628\u064A\u0639\u064A \u0642\u0648\u064A';
+  if(s==='decelerating_bearish') return '\u062A\u0628\u0627\u0637\u0624 \u0647\u0627\u0628\u0637: MACD \u062A\u062D\u062A \u062E\u0637 \u0627\u0644\u0625\u0634\u0627\u0631\u0629 \u0644\u0643\u0646 \u064A\u0642\u062A\u0631\u0628 \u2014 \u0642\u062F \u064A\u0646\u0639\u0643\u0633';
+  return 'Momentum: \u0632\u062E\u0645 MACD';
+}
+function tipAdx(v){
+  if(v==null) return 'ADX: \u0645\u0624\u0634\u0631 \u0642\u0648\u0629 \u0627\u0644\u0627\u062A\u062C\u0627\u0647';
+  if(v>=25) return `ADX ${fmtNum(v,1)}: \u0627\u062A\u062C\u0627\u0647 \u0642\u0648\u064A \u2014 \u0627\u0644\u0633\u0647\u0645 \u0641\u064A \u062A\u0631\u0646\u062F \u0648\u0627\u0636\u062D (\u0635\u0627\u0639\u062F \u0623\u0648 \u0647\u0627\u0628\u0637)`;
+  if(v>=20) return `ADX ${fmtNum(v,1)}: \u0627\u0646\u062A\u0642\u0627\u0644\u064A \u2014 \u0628\u064A\u0646 \u0627\u0644\u0639\u0631\u0636\u064A \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647\u064A\u060C \u0627\u0646\u062A\u0638\u0631 \u062A\u0623\u0643\u064A\u062F`;
+  return `ADX ${fmtNum(v,1)}: \u0639\u0631\u0636\u064A \u2014 \u0644\u0627 \u062A\u0631\u0646\u062F \u0648\u0627\u0636\u062D\u060C \u0627\u0644\u0633\u0639\u0631 \u064A\u062A\u0630\u0628\u0630\u0628 \u0628\u0646\u0637\u0627\u0642 \u0636\u064A\u0642`;
+}
+function tipRegime(adx){
+  if((adx||0)>=25) return '\u0627\u062A\u062C\u0627\u0647\u064A: ADX\u226525 \u2014 \u0627\u0644\u0633\u0647\u0645 \u0641\u064A \u062A\u0631\u0646\u062F \u0642\u0648\u064A\u060C \u0627\u0633\u062A\u0631\u0627\u062A\u064A\u062C\u064A\u0627\u062A \u0627\u0644\u062A\u0631\u0646\u062F \u062A\u0646\u0641\u0639';
+  if((adx||0)>=20) return '\u0627\u0646\u062A\u0642\u0627\u0644\u064A: ADX 20-25 \u2014 \u0627\u0644\u0633\u0648\u0642 \u064A\u062A\u062D\u0648\u0644\u060C \u0645\u0645\u0643\u0646 \u064A\u062F\u062E\u0644 \u062A\u0631\u0646\u062F \u0623\u0648 \u064A\u0631\u062C\u0639 \u0639\u0631\u0636\u064A';
+  return '\u0639\u0631\u0636\u064A: ADX<20 \u2014 \u0644\u0627 \u062A\u0631\u0646\u062F\u060C \u0627\u0644\u0633\u0639\u0631 \u064A\u062A\u0630\u0628\u0630\u0628 \u0628\u0646\u0637\u0627\u0642 \u0636\u064A\u0642\u060C \u0627\u0633\u062A\u0631\u0627\u062A\u064A\u062C\u064A\u0627\u062A \u0627\u0644\u0631\u064A\u0646\u062C \u0623\u0641\u0636\u0644';
+}
+function tipRsi(v){
+  if(v==null) return 'RSI: \u0645\u0624\u0634\u0631 \u0627\u0644\u0642\u0648\u0629 \u0627\u0644\u0646\u0633\u0628\u064A\u0629 (0-100)';
+  if(v>=70) return `RSI ${fmtNum(v,1)}: \u062A\u0634\u0628\u0639 \u0634\u0631\u0627\u0626\u064A \u2014 \u0627\u0644\u0633\u0647\u0645 \u0645\u0631\u062A\u0641\u0639 \u0632\u064A\u0627\u062F\u0629\u060C \u0627\u062D\u062A\u0645\u0627\u0644 \u062A\u0635\u062D\u064A\u062D`;
+  if(v>=50) return `RSI ${fmtNum(v,1)}: \u0645\u0646\u0637\u0642\u0629 \u0625\u064A\u062C\u0627\u0628\u064A\u0629 \u2014 \u0627\u0644\u0632\u062E\u0645 \u0645\u0639 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0646`;
+  if(v>=30) return `RSI ${fmtNum(v,1)}: \u0645\u0646\u0637\u0642\u0629 \u0633\u0644\u0628\u064A\u0629 \u2014 \u0627\u0644\u0632\u062E\u0645 \u0645\u0639 \u0627\u0644\u0628\u0627\u0626\u0639\u064A\u0646`;
+  return `RSI ${fmtNum(v,1)}: \u062A\u0634\u0628\u0639 \u0628\u064A\u0639\u064A \u2014 \u0627\u0644\u0633\u0647\u0645 \u0645\u0646\u062E\u0641\u0636 \u0632\u064A\u0627\u062F\u0629\u060C \u0627\u062D\u062A\u0645\u0627\u0644 \u0627\u0631\u062A\u062F\u0627\u062F`;
+}
+function tipEma(st){
+  if(!st) return 'EMA: \u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0645\u062A\u0648\u0633\u0637\u0627\u062A \u0627\u0644\u0645\u062A\u062D\u0631\u0643\u0629';
+  const s = st.toLowerCase();
+  if(s==='bullish') return 'EMA \u0635\u0627\u0639\u062F: EMA9 > EMA21 \u2014 \u0627\u0644\u0645\u062A\u0648\u0633\u0637\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629 \u0641\u0648\u0642 \u0627\u0644\u0628\u0637\u064A\u0626\u0629\u060C \u0627\u062A\u062C\u0627\u0647 \u0635\u0639\u0648\u062F\u064A';
+  if(s==='bearish') return 'EMA \u0647\u0627\u0628\u0637: EMA9 < EMA21 \u2014 \u0627\u0644\u0645\u062A\u0648\u0633\u0637\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629 \u062A\u062D\u062A \u0627\u0644\u0628\u0637\u064A\u0626\u0629\u060C \u0627\u062A\u062C\u0627\u0647 \u0647\u0628\u0648\u0637\u064A';
+  return 'EMA \u0645\u062E\u062A\u0644\u0637: \u0627\u0644\u0645\u062A\u0648\u0633\u0637\u0627\u062A \u0645\u062A\u0634\u0627\u0628\u0643\u0629\u060C \u0644\u0627 \u0627\u062A\u062C\u0627\u0647 \u0648\u0627\u0636\u062D';
+}
+function tipVol(v){
+  if(v==null) return 'Vol Ratio: \u0646\u0633\u0628\u0629 \u0627\u0644\u062D\u062C\u0645 \u0644\u0645\u062A\u0648\u0633\u0637 20 \u064A\u0648\u0645';
+  if(v>=2) return `Vol ${fmtNum(v,2)}x: \u062D\u062C\u0645 \u0639\u0627\u0644\u064A \u062C\u062F\u0627\u064B \u2014 \u0633\u064A\u0648\u0644\u0629 \u0642\u0648\u064A\u0629 \u062A\u062F\u0639\u0645 \u0627\u0644\u062D\u0631\u0643\u0629`;
+  if(v>=1) return `Vol ${fmtNum(v,2)}x: \u062D\u062C\u0645 \u0637\u0628\u064A\u0639\u064A \u2014 \u0633\u064A\u0648\u0644\u0629 \u0643\u0627\u0641\u064A\u0629`;
+  return `Vol ${fmtNum(v,2)}x: \u062D\u062C\u0645 \u0636\u0639\u064A\u0641 \u2014 \u0633\u064A\u0648\u0644\u0629 \u0645\u0646\u062E\u0641\u0636\u0629\u060C \u0627\u0644\u062D\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0624\u0643\u062F\u0629`;
+}
+function tipGemini(s){
+  const g = s.gemini;
+  if(!g) return '\u0644\u0627 \u064A\u0648\u062C\u062F \u062A\u062D\u0644\u064A\u0644 Gemini';
+  let t = `Gemini 2.5 Pro: ${g.signal||''} (\u062B\u0642\u0629 ${g.confidence||0}%)`;
+  if(g.targets&&g.targets.length) t += `\n\u0623\u0647\u062F\u0627\u0641: ${g.targets.join(', ')}`;
+  if(g.stop_loss) t += `\n\u0648\u0642\u0641 \u062E\u0633\u0627\u0631\u0629: ${g.stop_loss}`;
+  if(s.gemini_conflict) t += '\n\u26A0 \u062A\u0639\u0627\u0631\u0636: \u0627\u0644\u0631\u0627\u062F\u0627\u0631 \u0648 Gemini \u0645\u062E\u062A\u0644\u0641\u064A\u0646!';
+  return t;
 }
 
 /* ===== Clock ===== */
@@ -570,6 +764,9 @@ function processData(d){
   // Hero card
   renderHero(d.decision_card);
 
+  // Risk bar
+  $('#risk-section').innerHTML = renderRiskBar(d.risk_summary);
+
   // Table
   renderTable();
 
@@ -661,6 +858,7 @@ function renderHero(card){
       <div class="level-item"><span class="level-dot resistance"></span><span class="level-label">المقاومة</span><span class="level-val">${ltr(fmtNum(card.resistance,3))}</span></div>
       <div class="level-item"><span class="level-dot atr"></span><span class="level-label">ATR</span><span class="level-val">${ltr(fmtNum(card.atr_14,3))}</span></div>
     </div>
+    ${renderGeminiHero(card)}
   </div>`;
 }
 
@@ -679,9 +877,9 @@ function renderTable(){
   let html = `<div class="section-title">أهم الفرص <span class="count">${ltr(rows.length)}</span></div>`;
   html += `<div class="table-wrap"><table>
     <thead><tr>
-      <th>السهم</th><th>الحالة</th><th>السعر</th><th>التغير%</th>
-      <th>Confluence</th><th>القرار</th><th>EMA</th><th>RSI</th>
-      <th>Momentum</th><th>ADX</th><th>النظام</th><th>Vol</th>
+      <th>السهم</th><th title="&#1581;&#1575;&#1604;&#1577; &#1575;&#1604;&#1587;&#1607;&#1605;: &#1575;&#1587;&#1578;&#1603;&#1588;&#1575;&#1601; &#x2192; &#1578;&#1581;&#1590;&#1610;&#1585; &#x2192; &#1580;&#1575;&#1607;&#1586; &#x2192; &#1583;&#1575;&#1582;&#1604; &#x2192; &#1573;&#1583;&#1575;&#1585;&#1577;">الحالة</th><th>السعر</th><th>التغير%</th>
+      <th title="&#1605;&#1602;&#1610;&#1575;&#1587; &#1575;&#1604;&#1578;&#1608;&#1575;&#1601;&#1602; &#1576;&#1610;&#1606; &#1575;&#1604;&#1605;&#1572;&#1588;&#1585;&#1575;&#1578; (0-100). &#1571;&#1608;&#1586;&#1575;&#1606; &#1584;&#1603;&#1610;&#1577; &#1605;&#1606; Brain">Confluence</th><th title="&#1602;&#1585;&#1575;&#1585; &#1575;&#1604;&#1585;&#1575;&#1583;&#1575;&#1585;: &#1588;&#1585;&#1575;&#1569;/&#1605;&#1585;&#1575;&#1602;&#1576;&#1577;/&#1578;&#1580;&#1606;&#1576;/&#1581;&#1610;&#1575;&#1583;">القرار</th><th title="&#1578;&#1581;&#1604;&#1610;&#1604; Gemini 2.5 Pro &#1575;&#1604;&#1593;&#1605;&#1610;&#1602; + &#1606;&#1587;&#1576;&#1577; &#1575;&#1604;&#1579;&#1602;&#1577;">Gemini</th><th title="&#1575;&#1578;&#1580;&#1575;&#1607; EMA9/EMA21: &#1589;&#1575;&#1593;&#1583;/&#1607;&#1575;&#1576;&#1591;/&#1605;&#1582;&#1578;&#1604;&#1591;">EMA</th><th title="&#1605;&#1572;&#1588;&#1585; &#1575;&#1604;&#1602;&#1608;&#1577; &#1575;&#1604;&#1606;&#1587;&#1576;&#1610;&#1577; (0-100). &#1601;&#1608;&#1602; 70=&#1578;&#1588;&#1576;&#1593; &#1588;&#1585;&#1575;&#1574;&#1610;&#1548; &#1578;&#1581;&#1578; 30=&#1578;&#1588;&#1576;&#1593; &#1576;&#1610;&#1593;&#1610;">RSI</th>
+      <th title="&#1586;&#1582;&#1605; MACD: &#1578;&#1587;&#1575;&#1585;&#1593;/&#1578;&#1576;&#1575;&#1591;&#1572; &#1589;&#1575;&#1593;&#1583; &#1571;&#1608; &#1607;&#1575;&#1576;&#1591;">Momentum</th><th title="&#1605;&#1572;&#1588;&#1585; &#1602;&#1608;&#1577; &#1575;&#1604;&#1575;&#1578;&#1580;&#1575;&#1607;. &#1601;&#1608;&#1602; 25=&#1578;&#1585;&#1606;&#1583; &#1602;&#1608;&#1610;&#1548; &#1578;&#1581;&#1578; 20=&#1593;&#1585;&#1590;&#1610;">ADX</th><th title="&#1606;&#1592;&#1575;&#1605; &#1575;&#1604;&#1587;&#1607;&#1605;: &#1575;&#1578;&#1580;&#1575;&#1607;&#1610; (ADX&#x2265;25) / &#1575;&#1606;&#1578;&#1602;&#1575;&#1604;&#1610; (20-25) / &#1593;&#1585;&#1590;&#1610; (&lt;20)">النظام</th><th title="&#1606;&#1587;&#1576;&#1577; &#1575;&#1604;&#1581;&#1580;&#1605; &#1604;&#1605;&#1578;&#1608;&#1587;&#1591; 20 &#1610;&#1608;&#1605;. &#1601;&#1608;&#1602; 1=&#1587;&#1610;&#1608;&#1604;&#1577; &#1603;&#1575;&#1601;&#1610;&#1577;">Vol</th>
     </tr></thead><tbody>`;
   rows.forEach(s=>{
     const dir = pctDir(s.change_pct);
@@ -690,18 +888,19 @@ function renderTable(){
     const mom = momentumText(s.macd_momentum);
     const confW = s.confluence_score!=null ? Math.min(s.confluence_score,100) : 0;
     html += `<tr>
-      <td style="cursor:pointer" onclick="showPersonality('${s.symbol||''}')" title="&#1588;&#1582;&#1589;&#1610;&#1577; &#1575;&#1604;&#1587;&#1607;&#1605;"><span class="cell-sym">${ltr(s.symbol||'')}</span><span class="cell-name">${s.name_ar||''}</span></td>
-      <td>${stateTag(s.trade_state)}</td>
+      <td style="cursor:pointer" onclick="showPersonality('${s.symbol||''}')" title="&#1575;&#1590;&#1594;&#1591; &#1604;&#1593;&#1585;&#1590; &#1588;&#1582;&#1589;&#1610;&#1577; &#1575;&#1604;&#1587;&#1607;&#1605;"><span class="cell-sym">${ltr(s.symbol||'')}</span><span class="cell-name">${s.name_ar||''}</span></td>
+      <td title="${tipState(s.trade_state)}">${stateTag(s.trade_state)}</td>
       <td class="cell-mono">${ltr(fmtNum(s.price,3))}</td>
       <td class="cell-mono" style="color:var(--${dir==='up'?'green':dir==='dn'?'red':'text-3'})">${ltr(fmtPct(s.change_pct))}</td>
-      <td><div class="confluence-cell"><span class="cell-mono" style="color:${cc}">${ltr(s.confluence_score!=null?s.confluence_score:'—')}</span><div class="conf-bar"><div class="conf-fill" style="width:${confW}%;background:${cc}"></div></div></div></td>
-      <td>${verdictPill(s.verdict_key, s.verdict)}</td>
-      <td style="color:${ema.c}">${ema.t}</td>
-      <td class="cell-mono">${ltr(fmtNum(s.rsi_14,1))}</td>
-      <td style="color:${mom.c}">${mom.t}</td>
-      <td class="cell-mono">${ltr(fmtNum(s.adx,1))}</td>
-      <td style="font-size:.72rem;white-space:nowrap">${(s.adx||0)>=25?'<span style="color:var(--green)">\u{1F7E2} \u0627\u062A\u062C\u0627\u0647\u064A</span>':(s.adx||0)<=20?'<span style="color:var(--red)">\u{1F534} \u0639\u0631\u0636\u064A</span>':'<span style="color:var(--amber)">\u{1F7E1} \u0627\u0646\u062A\u0642\u0627\u0644\u064A</span>'}</td>
-      <td class="cell-mono">${ltr(fmtNum(s.vol_ratio,2))}</td>
+      <td title="${tipConf(s.confluence_score)}"><div class="confluence-cell"><span class="cell-mono" style="color:${cc}">${ltr(s.confluence_score!=null?s.confluence_score:'—')}</span><div class="conf-bar"><div class="conf-fill" style="width:${confW}%;background:${cc}"></div></div></div></td>
+      <td title="${tipVerdict(s.verdict_key)}">${verdictPill(s.verdict_key, s.verdict)}</td>
+      <td title="${tipGemini(s)}">${geminiCellHtml(s)}</td>
+      <td title="${tipEma(s.ema_state)}" style="color:${ema.c}">${ema.t}</td>
+      <td title="${tipRsi(s.rsi_14)}" class="cell-mono">${ltr(fmtNum(s.rsi_14,1))}</td>
+      <td title="${tipMom(s.macd_momentum)}" style="color:${mom.c}">${mom.t}</td>
+      <td title="${tipAdx(s.adx)}" class="cell-mono">${ltr(fmtNum(s.adx,1))}</td>
+      <td title="${tipRegime(s.adx)}" style="font-size:.72rem;white-space:nowrap">${(s.adx||0)>=25?'<span style="color:var(--green)">\u{1F7E2} \u0627\u062A\u062C\u0627\u0647\u064A</span>':(s.adx||0)<=20?'<span style="color:var(--red)">\u{1F534} \u0639\u0631\u0636\u064A</span>':'<span style="color:var(--amber)">\u{1F7E1} \u0627\u0646\u062A\u0642\u0627\u0644\u064A</span>'}</td>
+      <td title="${tipVol(s.vol_ratio)}" class="cell-mono">${ltr(fmtNum(s.vol_ratio,2))}</td>
     </tr>`;
   });
   html += '</tbody></table></div>';
@@ -729,6 +928,10 @@ function renderPositions(list){
       <div class="pos-row"><span class="pos-label">الربح/الخسارة</span>
         <span class="pos-pnl ${pDir}">${ltr(fmtPct(p.pnl_pct))} &nbsp; ${ltr(fmtNum(p.pnl_kwd,1))} KWD</span>
       </div>
+      ${(p.tx_count>0||p.qty_sold>0)?`<div class="pos-tx">
+        <div class="pos-tx-item"><span>\u{1F4DD} \u0639\u0645\u0644\u064A\u0627\u062A:</span><span style="font-family:var(--fm)">${ltr(p.tx_count)}</span></div>
+        ${p.qty_sold>0?`<div class="pos-tx-item"><span>\u{1F4E4} \u0645\u0628\u0627\u0639:</span><span style="font-family:var(--fm)">${ltr(p.qty_sold)}</span></div>`:''}
+      </div>`:''}
     </div>`;
   });
   html += '</div>';

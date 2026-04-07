@@ -246,23 +246,38 @@ window.selectStock = async function(symbol){
     if(data.analysis_date){
       panel.dataset.lastUpdate = data.analysis_date;
     }
-    renderAnalysis(data, symbol);
+    await renderAnalysis(data, symbol);
   }catch(e){
     panel.innerHTML='<div class="error-state">\u274C \u062E\u0637\u0623: '+esc(e.message)+'</div>';
   }
 };
 
-function renderAnalysis(data, symbol){
+async function renderAnalysis(data, symbol){
   const s = data.structured || {};
   const sigMap = {'\u0634\u0631\u0627\u0621':'buy','\u0628\u064A\u0639':'sell','\u0627\u0646\u062A\u0638\u0627\u0631':'wait','\u0645\u0631\u0627\u0642\u0628\u0629':'watch'};
   const sigCls = sigMap[s.signal] || 'watch';
   const price = (data.data||{}).price || s.entry || '';
 
+  // Fetch live price from signals-daily if no price from analysis cache
+  let livePrice = null;
+  if(!price || typeof price !== 'number'){
+    try{
+      const sr = await fetch('/dashboard/signals-daily');
+      if(sr.ok){
+        const sd = await sr.json();
+        const sig = (sd.all_signals||[]).find(function(x){return x.symbol===symbol});
+        if(sig && sig.price) livePrice = sig.price;
+      }
+    }catch(e){}
+  }
+  const displayPrice = livePrice || (typeof price==='number' ? price : null);
+
   let html = '';
   // Signal Hero
   html += '<div class="signal-hero">';
   html += '<span class="sh-symbol">'+esc(symbol)+'</span>';
-  if(price) html += '<span class="sh-price">'+price+'</span>';
+  if(displayPrice) html += '<span class="sh-price" style="direction:ltr;unicode-bidi:isolate">'+Number(displayPrice).toFixed(3)+'</span>';
+  else if(price) html += '<span class="sh-price">'+esc(String(price))+'</span>';
   html += '<span class="sh-signal '+sigCls+'">'+(s.signal||'\u2014')+'</span>';
   html += '<span class="sh-conf">\u062B\u0642\u0629: '+(s.confidence||data.confidence||'\u2014')+'%</span>';
   html += '</div>';

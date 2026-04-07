@@ -290,7 +290,7 @@ def get_fresh_price(symbol):
     # 1b. Direct Bridge HTTP quote (live)
     try:
         import urllib.request as _urlreq, json as _json
-        _quote_url = f"http://192.168.111.159:8059/quote?symbol={symbol.upper()}"
+        _quote_url = f"http://192.168.111.158:8059/quote?symbol={symbol.upper()}"
         with _urlreq.urlopen(_quote_url, timeout=5) as _resp:
             _qdata = _json.loads(_resp.read().decode())
         _qprice = _qdata.get("price")

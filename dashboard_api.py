@@ -731,7 +731,7 @@ async def ha_dashboard_portfolio():
                 if _cur and not t.get("support"):
                     try:
                         import urllib.request as _urlreq, json as _json
-                        _aurl = f"http://192.168.111.159:8059/analysis?symbol={sym}&interval=1D"
+                        _aurl = f"http://192.168.111.158:8059/analysis?symbol={sym}&interval=1D"
                         with _urlreq.urlopen(_aurl, timeout=5) as _aresp:
                             _adata = _json.loads(_aresp.read().decode())
                         _abars = _adata.get("bars", [])
@@ -2735,7 +2735,7 @@ async def api_data_freshness():
         bridge_online = False
         try:
             import urllib.request as _ur
-            with _ur.urlopen("http://192.168.111.159:8059/health", timeout=3) as resp:
+            with _ur.urlopen("http://192.168.111.158:8059/health", timeout=3) as resp:
                 if resp.status == 200:
                     bridge_online = True
         except Exception:

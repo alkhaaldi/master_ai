@@ -20,7 +20,7 @@ logger = logging.getLogger("kse_data_collector")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "life.db")
 
-BRIDGE_URL = "http://192.168.111.159:8059"
+BRIDGE_URL = "http://192.168.111.158:8059"
 BATCH_SIZE = 5
 BATCH_TIMEOUT = 90
 

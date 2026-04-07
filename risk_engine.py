@@ -179,3 +179,151 @@ def calculate_position_risk(entry_price: float, stop_loss: float, target: float 
         "position_size": position_size,
         "capital_at_risk": round(risk * position_size, 2),
     }
+
+
+# ═══════════════════════════════════════════════════
+# Trading V2 Phase 2: Enhanced Risk Engine
+# ═══════════════════════════════════════════════════
+STOCK_SECTORS = {
+    "INOVEST": "financial_services", "URC": "industrial", "ACICO": "industrial",
+    "AAYANRE": "real_estate", "OOREDOO": "telecom", "ALFTAQA": "financial_services",
+    "NINV": "financial_services", "MUBARRAD": "industrial",
+    "NRE": "real_estate", "RASIYAT": "real_estate",
+}
+SECTOR_NAMES_AR = {
+    "financial_services": "\u062e\u062f\u0645\u0627\u062a \u0645\u0627\u0644\u064a\u0629",
+    "industrial": "\u0635\u0646\u0627\u0639\u064a",
+    "real_estate": "\u0639\u0642\u0627\u0631\u064a",
+    "telecom": "\u0627\u062a\u0635\u0627\u0644\u0627\u062a",
+    "unknown": "\u063a\u064a\u0631 \u0645\u062d\u062f\u062f",
+}
+
+
+def _get_risk_config() -> dict:
+    defaults = {
+        "account_capital": 10000, "risk_per_trade_pct": 2.0,
+        "max_open_positions": 3, "max_portfolio_heat_pct": 6.0,
+        "max_sector_positions": 2,
+    }
+    try:
+        c = _conn()
+        for k, v in c.execute("SELECT key, value FROM risk_config").fetchall():
+            defaults[k] = v
+        c.close()
+    except Exception:
+        pass
+    return defaults
+
+
+def calculate_position_size(entry_price: float, stop_price: float,
+                            capital: float = None, risk_pct: float = None) -> dict:
+    cfg = _get_risk_config()
+    capital = capital or cfg["account_capital"]
+    risk_pct = risk_pct or cfg["risk_per_trade_pct"]
+    risk_kwd = capital * (risk_pct / 100)
+    risk_per_share = entry_price - stop_price
+    if risk_per_share <= 0 or entry_price <= 0:
+        return {"shares": 0, "position_value_kwd": 0, "risk_kwd": 0,
+                "risk_per_share": 0, "pct_of_capital": 0}
+    shares = int(risk_kwd / risk_per_share)
+    position_value = shares * entry_price
+    return {
+        "shares": shares, "position_value_kwd": round(position_value, 3),
+        "risk_kwd": round(risk_kwd, 3), "risk_per_share": round(risk_per_share, 3),
+        "pct_of_capital": round((position_value / capital) * 100, 1),
+    }
+
+
+def _get_open_positions() -> list:
+    try:
+        c = _conn()
+        rows = c.execute(
+            "SELECT symbol, entry_price, quantity, stop_loss FROM trades WHERE status='open'"
+        ).fetchall()
+        c.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
+def get_portfolio_heat() -> dict:
+    cfg = _get_risk_config()
+    capital = cfg["account_capital"]
+    positions = _get_open_positions()
+    total_risk = 0
+    for p in positions:
+        entry = p.get("entry_price", 0)
+        stop = p.get("stop_loss", 0)
+        qty = p.get("quantity", 0)
+        if entry and stop and qty and entry > stop:
+            total_risk += (entry - stop) * qty
+    heat_pct = (total_risk / capital) * 100 if capital > 0 else 0
+    return {
+        "capital": capital, "total_risk_kwd": round(total_risk, 3),
+        "heat_pct": round(heat_pct, 1), "max_heat_pct": cfg["max_portfolio_heat_pct"],
+        "within_limit": heat_pct <= cfg["max_portfolio_heat_pct"],
+    }
+
+
+def get_sector_exposure(positions: list = None) -> dict:
+    cfg = _get_risk_config()
+    max_per_sector = int(cfg.get("max_sector_positions", 2))
+    positions = positions or _get_open_positions()
+    sectors = {}
+    for p in positions:
+        sym = (p.get("symbol") or "").upper()
+        sector = STOCK_SECTORS.get(sym, "unknown")
+        sectors.setdefault(sector, []).append(sym)
+    return {
+        s: {"count": len(syms), "symbols": syms, "max": max_per_sector,
+            "full": len(syms) >= max_per_sector,
+            "name_ar": SECTOR_NAMES_AR.get(s, s)}
+        for s, syms in sectors.items()
+    }
+
+
+def check_can_open(symbol: str, entry_price: float = 0, stop_price: float = 0) -> dict:
+    cfg = _get_risk_config()
+    positions = _get_open_positions()
+    heat = get_portfolio_heat()
+    sector_exp = get_sector_exposure(positions)
+    sym_upper = symbol.upper()
+    sym_sector = STOCK_SECTORS.get(sym_upper, "unknown")
+    checks = {
+        "max_positions": {"ok": len(positions) < int(cfg["max_open_positions"]),
+                          "current": len(positions), "max": int(cfg["max_open_positions"])},
+        "portfolio_heat": {"ok": heat["within_limit"],
+                           "current_pct": heat["heat_pct"], "max_pct": heat["max_heat_pct"]},
+        "sector": {"ok": not sector_exp.get(sym_sector, {}).get("full", False),
+                   "sector": sym_sector,
+                   "sector_ar": SECTOR_NAMES_AR.get(sym_sector, sym_sector),
+                   "current": sector_exp.get(sym_sector, {}).get("count", 0),
+                   "max": int(cfg.get("max_sector_positions", 2))},
+        "not_duplicate": {"ok": sym_upper not in [p["symbol"].upper() for p in positions]},
+    }
+    sizing = {}
+    if entry_price and stop_price and entry_price > stop_price:
+        sizing = calculate_position_size(entry_price, stop_price)
+    can_open = all(c["ok"] for c in checks.values())
+    return {
+        "symbol": sym_upper, "can_open": can_open, "checks": checks,
+        "reasons": [k for k, v in checks.items() if not v["ok"]],
+        "sizing": sizing, "heat": heat, "sector_exposure": sector_exp, "config": cfg,
+    }
+
+
+def get_risk_status() -> dict:
+    cfg = _get_risk_config()
+    positions = _get_open_positions()
+    heat = get_portfolio_heat()
+    sectors = get_sector_exposure(positions)
+    return {
+        "capital": cfg["account_capital"],
+        "risk_per_trade_pct": cfg["risk_per_trade_pct"],
+        "open_positions": len(positions),
+        "max_positions": int(cfg["max_open_positions"]),
+        "can_open_new": len(positions) < int(cfg["max_open_positions"]) and heat["within_limit"],
+        "portfolio_heat_pct": heat["heat_pct"],
+        "max_heat_pct": heat["max_heat_pct"],
+        "sector_exposure": sectors,
+    }

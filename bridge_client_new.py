@@ -11,7 +11,7 @@ import httpx
 
 logger = logging.getLogger("bridge_client")
 
-BRIDGE_BASE_URL = "http://192.168.111.159:8059"
+BRIDGE_BASE_URL = "http://192.168.111.158:8059"
 DEFAULT_EXCHANGE = "KSE"
 
 # Cache TTLs (seconds)
