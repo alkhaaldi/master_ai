@@ -252,9 +252,13 @@ async def _refresh():
                 headers={"Authorization": f"Bearer {HA_TOKEN}"}
             )
             if r.status_code != 200:
-                logger.error(f"HA API returned {r.status_code}")
+                logger.warning(f"HA API returned {r.status_code}, skipping refresh")
                 return
             states = r.json()
+
+        if not states:
+            logger.debug("World state: HA returned empty states list, skipping refresh")
+            return
 
         data, text = _build_snapshot(states)
         # Phase 2: Build delta (changes only)

@@ -225,27 +225,50 @@ function filterStocks(){
   });
 }
 
-window.selectStock = async function(symbol){
+window.selectStock = async function(symbol, forceRefresh){
   activeSymbol = symbol;
   document.querySelectorAll('.stock-item').forEach(el=>el.classList.toggle('active', el.dataset.sym===symbol));
   
   const panel = $('analysis-panel');
-  panel.innerHTML = '<div class="loading-state"><div class="ld-spinner"></div><div class="ld-text">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u062A\u062D\u0644\u064A\u0644 '+esc(symbol)+'...</div></div>';
+
+  if(!forceRefresh){
+    // Try cache first
+    panel.innerHTML = '<div class="loading-state"><div class="ld-spinner"></div><div class="ld-text">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u062A\u062D\u0644\u064A\u0644 '+esc(symbol)+'...</div></div>';
+    try{
+      const resp = await fetch('/api/analyze?symbol='+encodeURIComponent(symbol));
+      const data = await resp.json();
+      if(!data.error && data.cached){
+        await renderAnalysis(data, symbol);
+        return;
+      }
+    }catch(e){}
+  }
+
+  // Live refresh — call Gemini directly
+  panel.innerHTML = '<div class="loading-state"><div class="ld-spinner"></div>'
+    +'<div class="ld-text">\u062C\u0627\u0631\u064A \u062A\u062D\u0644\u064A\u0644 '+esc(symbol)+' \u0645\u0628\u0627\u0634\u0631\u0629...</div>'
+    +'<div class="ld-sub">Bridge + Gemini \u2022 \u0642\u062F \u064A\u0633\u062A\u063A\u0631\u0642 30-60 \u062B\u0627\u0646\u064A\u0629</div>'
+    +'<div class="ld-progress"><div class="ld-progress-bar"></div></div></div>';
 
   try{
-    const resp = await fetch('/api/analyze?symbol='+encodeURIComponent(symbol));
+    const resp = await fetch('/api/analyze/refresh?symbol='+encodeURIComponent(symbol), {method:'POST'});
     const data = await resp.json();
     if(data.error){
       panel.innerHTML='<div class="error-state" style="padding:2rem;text-align:center">'
-        +'<div style="font-size:2rem;margin-bottom:.5rem">\u{1F4CA}</div>'
-        +'<div style="font-size:.95rem;color:var(--amber);margin-bottom:.5rem">\u0644\u0627 \u064A\u0648\u062C\u062F \u062A\u062D\u0644\u064A\u0644 \u0645\u062E\u0632\u0651\u0646 \u0644\u0640 '+esc(symbol)+'</div>'
-        +'<div style="font-size:.78rem;color:var(--text-3);line-height:1.6">\u0634\u063A\u0651\u0644 Bridge \u0639\u0644\u0649 \u0627\u0644\u0643\u0645\u0628\u064A\u0648\u062A\u0631 \u0648\u0627\u0637\u0644\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u062D\u0644\u064A\u0644<br>\u0623\u0648 \u0627\u0646\u062A\u0638\u0631 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A (\u0627\u0644\u0633\u0627\u0639\u0629 2:15 \u064A\u0648\u0645\u064A\u0627\u064B)</div>'
+        +'<div style="font-size:2rem;margin-bottom:.5rem">\u26A0\uFE0F</div>'
+        +'<div style="font-size:.95rem;color:var(--amber);margin-bottom:.5rem">\u0641\u0634\u0644 \u062A\u062D\u0644\u064A\u0644 '+esc(symbol)+'</div>'
+        +'<div style="font-size:.78rem;color:var(--text-3);line-height:1.6">'+esc(data.error)+'</div>'
+        +'<div style="margin-top:1rem"><button onclick="selectStock(\''+symbol+'\',true)" style="padding:.5rem 1.5rem;border-radius:8px;border:1px solid var(--gold-br);background:var(--gold-bg);color:var(--gold);cursor:pointer;font-family:var(--fd);font-size:.75rem">\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629</button></div>'
         +'</div>';
       return;
     }
-    if(data.analysis_date){
-      panel.dataset.lastUpdate = data.analysis_date;
-    }
+    // Re-fetch from cache to get structured data
+    try{
+      const cr = await fetch('/api/analyze?symbol='+encodeURIComponent(symbol));
+      const cd = await cr.json();
+      if(!cd.error) { await renderAnalysis(cd, symbol); return; }
+    }catch(e2){}
+    // Fallback: render raw result
     await renderAnalysis(data, symbol);
   }catch(e){
     panel.innerHTML='<div class="error-state">\u274C \u062E\u0637\u0623: '+esc(e.message)+'</div>';
@@ -280,6 +303,7 @@ async function renderAnalysis(data, symbol){
   else if(price) html += '<span class="sh-price">'+esc(String(price))+'</span>';
   html += '<span class="sh-signal '+sigCls+'">'+(s.signal||'\u2014')+'</span>';
   html += '<span class="sh-conf">\u062B\u0642\u0629: '+(s.confidence||data.confidence||'\u2014')+'%</span>';
+  html += '<button onclick="selectStock(\''+symbol+'\',true)" style="margin-right:auto;padding:4px 12px;border-radius:6px;border:1px solid var(--gold-br);background:var(--gold-bg);color:var(--gold);cursor:pointer;font-family:var(--fd);font-size:.6rem">\u{1F504} \u062A\u062D\u062F\u064A\u062B</button>';
   html += '</div>';
 
   // Quick stats
@@ -370,5 +394,5 @@ if(_autoSym){
 }
 })();
 </script>
-</body>
+<script src="nav.js?v=1"></script></body>
 </html>

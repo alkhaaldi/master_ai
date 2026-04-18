@@ -5148,7 +5148,7 @@ def tg_split_message(text: str) -> list[str]:
         parts.append(text[:split_at])
         text = text[split_at:].lstrip("\n")
     return parts
-async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
+async def tg_send(chat_id, text: str, parse_mode: str = None, reply_markup: dict = None) -> bool:
     """Send message to Telegram, auto-split if >4096 chars."""
     import re as _re
     # Auto-detect HTML tags and set parse_mode if not already set
@@ -5170,6 +5170,8 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
             payload = {"chat_id": chat_id, "text": part}
             if parse_mode:
                 payload["parse_mode"] = parse_mode
+            if reply_markup:
+                payload["reply_markup"] = json.dumps(reply_markup) if isinstance(reply_markup, dict) else reply_markup
             resp = await _tg_client.post(f"{TG_BASE}/sendMessage", json=payload)
             if resp.status_code == 400 and parse_mode:
                 # Fallback: strip HTML/Markdown and retry as plain text
@@ -5193,7 +5195,7 @@ async def tg_send(chat_id, text: str, parse_mode: str = None) -> bool:
             _cb_tg.record_success()
         except Exception as e:
             _cb_tg.record_failure()
-            logger.error(f"TG send error: {e}")
+            logger.error(f"TG send error: {type(e).__name__}: {e or 'no details'}")
             if kairos_agent and hasattr(kairos_agent, 'tg_queue') and ff.is_enabled("telegram_queue"):
                 kairos_agent.tg_queue.enqueue(int(chat_id), text, parse_mode or "")
             return False
@@ -8481,7 +8483,11 @@ async def stats_save_loop():
     while True:
         await asyncio.sleep(1800)
         _save_router_stats()
-        logger.info(f"Stats saved: total={_router_stats.get('total', 0)}")
+        _t = _router_stats.get('total', 0)
+        if _t > 0:
+            logger.info(f"Stats saved: total={_t}")
+        else:
+            logger.debug(f"Stats saved: total=0")
 
 
 async def shift_alert_loop():
@@ -8548,8 +8554,11 @@ async def brain_snapshot_loop():
                     _bshift = _bgs(datetime.now().date()).get('shift', '')
                 except: pass
             result = await take_snapshot(_bshift)
-            if result.get("changes", 0) > 0:
-                logger.info(f"Brain: {result['changes']} changes")
+            _changes = result.get("changes", 0)
+            if _changes >= 5:
+                logger.info(f"Brain: {_changes} changes")
+            elif _changes > 0:
+                logger.debug(f"Brain: {_changes} changes")
         except Exception as e:
             logger.error(f"Brain snapshot: {e}")
         await asyncio.sleep(300)
@@ -8592,16 +8601,19 @@ async def entity_health_check_loop():
             
             if alerts:
                 _msg = "🔍 فحص صحة الأجهزة:" + chr(10) + chr(10).join(alerts)
-                try:
-                    _tg_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-                    _chat_id = ADMIN_TELEGRAM_ID or "669769765"
-                    httpx.post(_tg_url, json={"chat_id": _chat_id, "text": _msg}, timeout=10)
-                    logger.info(f"Entity health alert sent: {dead} dead, {missing} new")
-                    _notified_entities.update(m["entity_id"] for m in _all_missing)
-                    try: _notified_file.write_text(json.dumps(list(_notified_entities)))
-                    except Exception: pass
-                except Exception as _te:
-                    logger.error(f"Entity health TG alert failed: {_te}")
+                logger.info(f"Entity health: {dead} dead, {len(_new_missing)} new (TG alert disabled)")
+                # TG alert disabled — entity_map needs update first
+                # Uncomment when entity_map is refreshed:
+                # try:
+                #     _tg_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+                #     _chat_id = ADMIN_TELEGRAM_ID or "669769765"
+                #     httpx.post(_tg_url, json={"chat_id": _chat_id, "text": _msg}, timeout=10)
+                #     logger.info(f"Entity health alert sent: {dead} dead, {missing} new")
+                #     _notified_entities.update(m["entity_id"] for m in _all_missing)
+                #     try: _notified_file.write_text(json.dumps(list(_notified_entities)))
+                #     except Exception: pass
+                # except Exception as _te:
+                #     logger.error(f"Entity health TG alert failed: {_te}")
             else:
                 logger.info("Entity health check: all OK")
         except Exception as _e:
@@ -8650,7 +8662,7 @@ async def weather_alert_loop():
                     _last_alert_date = today
                     logger.info(f"Weather alert sent: {alerts}")
         except Exception as e:
-            logger.error(f"Weather alert error: {e}")
+            logger.error(f"Weather alert error: {type(e).__name__}: {e or 'no details'}")
         await asyncio.sleep(3 * 3600)  # every 3 hours
 
 async def plan_check_loop():
@@ -8726,8 +8738,9 @@ async def nightly_summary_scheduler():
             _qq = _router_stats.get("quick_query", 0)
             _unk = _router_stats.get("unknown", 0)
             _fup = _router_stats.get("followup", 0)
+            _cache = _router_stats.get("cache_hit", 0)
             _ls = _router_stats.get("life_stocks", 0) + _router_stats.get("life_expenses", 0) + _router_stats.get("life_health", 0) + _router_stats.get("life_work", 0)
-            _saved = _greet + _intent + _ls + _qq
+            _saved = _greet + _intent + _ls + _qq + _cache
             _pct = round(_saved / _t * 100) if _t > 0 else 0
             _errs = 0
             try:
@@ -8758,6 +8771,29 @@ async def nightly_summary_scheduler():
             f"\u23f1 Avg response: {round(sum(_response_times)/len(_response_times),1) if _response_times else 0}s ({len(_response_times)} msgs)",
                 f"\u26a0\ufe0f Errors: {_errs}",
             ]) + _tmrw
+            # --- Append Brain Digest INTO nightly summary (instead of separate TG msg) ---
+            if BRAIN_OK:
+                try:
+                    _bs = get_daily_summary()
+                    if _bs.get("total", 0) > 0:
+                        _bd = ["", "🧠 *ملخص البرين:*"]
+                        _bd.append(f"  📊 {_bs['total']} تغيير")
+                        if _bs.get("by_domain"):
+                            _dom_ar = {"light":"أضواء","switch":"مفاتيح","climate":"مكيفات","cover":"ستائر","fan":"شفاطات/منقيات","media_player":"سماعات"}
+                            _bd.append("  " + " | ".join(f"{_dom_ar.get(d,d)}:{c}" for d,c in _bs["by_domain"].items()))
+                        if _bs.get("top"):
+                            _bd.append("  🏆 أكثر: " + ", ".join(f"{e.split('.')[-1].replace('_',' ')}({c})" for e,c in _bs["top"][:3]))
+                        if _bs.get("by_hour"):
+                            _peak = max(_bs["by_hour"].items(), key=lambda x: x[1])
+                            _bd.append(f"  ⏰ ذروة: {_peak[0]}:00 ({_peak[1]} تغيير)")
+                        _msg += chr(10) + chr(10).join(_bd)
+                        logger.info(f"Brain digest merged: {_bs['total']} changes")
+                        # Auto-cleanup: keep only 30 days of raw data
+                        _cleaned = cleanup_old_data(30)
+                        if _cleaned > 0:
+                            logger.info(f"Brain cleanup: deleted {_cleaned} old records")
+                except Exception as _be:
+                    logger.error(f"Brain digest: {_be}")
             await tg_send(_chat, _msg)
             logger.info(f"Nightly summary sent: {_t} msgs, {_pct}% saved")
             # Save stats and reset daily counters
@@ -8796,29 +8832,7 @@ async def nightly_summary_scheduler():
                     logger.info(f"Structured memory decay: {_smd} memories decayed")
             except Exception as _se:
                 logger.warning(f"Structured memory decay error: {_se}")
-            # --- Brain Nightly Digest ---
-            if BRAIN_OK:
-                try:
-                    _bs = get_daily_summary()
-                    if _bs.get("total", 0) > 0:
-                        _bd = ["", "🧠 *ملخص البرين:*"]
-                        _bd.append(f"  📊 {_bs['total']} تغيير")
-                        if _bs.get("by_domain"):
-                            _dom_ar = {"light":"أضواء","switch":"مفاتيح","climate":"مكيفات","cover":"ستائر","fan":"شفاطات/منقيات","media_player":"سماعات"}
-                            _bd.append("  " + " | ".join(f"{_dom_ar.get(d,d)}:{c}" for d,c in _bs["by_domain"].items()))
-                        if _bs.get("top"):
-                            _bd.append("  🏆 أكثر: " + ", ".join(f"{e.split('.')[-1].replace('_',' ')}({c})" for e,c in _bs["top"][:3]))
-                        if _bs.get("by_hour"):
-                            _peak = max(_bs["by_hour"].items(), key=lambda x: x[1])
-                            _bd.append(f"  ⏰ ذروة: {_peak[0]}:00 ({_peak[1]} تغيير)")
-                        await tg_send(_chat, chr(10).join(_bd))
-                        logger.info(f"Brain digest sent: {_bs['total']} changes")
-                        # Auto-cleanup: keep only 30 days of raw data
-                        _cleaned = cleanup_old_data(30)
-                        if _cleaned > 0:
-                            logger.info(f"Brain cleanup: deleted {_cleaned} old records")
-                except Exception as e:
-                    logger.error(f"Brain digest: {e}")
+            # --- Brain Nightly Digest (merged into nightly summary above) ---
         except Exception as e:
             logger.error(f"Nightly summary error: {e}")
 
@@ -8960,6 +8974,7 @@ async def weekly_trading_report_scheduler():
 async def confluence_scan_loop():
     """Run confluence scan every 30 min during KSE market hours (Sun-Thu 9:00-13:00 KWT)."""
     logger.info("Confluence scan loop started")
+    _sent_today = {}  # {date_str: set(symbol|signal_type)}
     while True:
         try:
             now = datetime.now()
@@ -8969,10 +8984,23 @@ async def confluence_scan_loop():
                     actionable = run_confluence_scan()
                     if actionable:
                         _chat = ADMIN_TELEGRAM_ID or "669769765"
-                        for sig in actionable[:3]:
-                            text, kb = confluence_build_tg_alert(sig)
-                            await tg_send(int(_chat), text, reply_markup=kb)
-                        logger.info(f"Confluence: {len(actionable)} actionable signals sent to TG")
+                        _today = datetime.now().strftime("%Y-%m-%d")
+                        if _today not in _sent_today:
+                            _sent_today.clear()
+                            _sent_today[_today] = set()
+                        _new_sigs = []
+                        for sig in actionable:
+                            _key = f"{sig.get('symbol','')}|{sig.get('signal','')}"
+                            if _key not in _sent_today[_today]:
+                                _sent_today[_today].add(_key)
+                                _new_sigs.append(sig)
+                        if _new_sigs:
+                            for sig in _new_sigs[:3]:
+                                text, kb = confluence_build_tg_alert(sig)
+                                await tg_send(int(_chat), text, reply_markup=kb)
+                            logger.info(f"Confluence: {len(_new_sigs)} NEW signals sent to TG (filtered from {len(actionable)})")
+                        else:
+                            logger.debug(f"Confluence: {len(actionable)} signals already sent today, skipped")
                 else:
                     logger.debug("Confluence engine not loaded, skip scan")
             await asyncio.sleep(1800)  # 30 min
