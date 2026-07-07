@@ -36,8 +36,10 @@ def _check_ha():
     """Check HA API is responding."""
     try:
         import httpx
-        r = httpx.get("http://192.168.109.123:8123/api/", timeout=5)
-        return r.status_code in (200, 401)  # 401 = auth needed but HA is up
+        # /auth/providers returns 200 without a token; confirms HA core is up
+        # without tripping HA's http.ban invalid-auth counter.
+        r = httpx.get("http://192.168.109.123:8123/auth/providers", timeout=5)
+        return r.status_code in (200, 401)
     except:
         return False
 
