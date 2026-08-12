@@ -2683,8 +2683,9 @@ async def lifespan(app):
                 except Exception as e:
                     logger.error("Analysis scheduler error: %s", e, exc_info=True)
                     await asyncio.sleep(300)
-        asyncio.create_task(analysis_daily_scheduler())
-        logger.info("Daily analysis scheduler started (14:15 KWT Sun-Thu)")
+        # DISABLED 2026-05-10: was consuming ~128 Gemini calls/day (640/week)
+        # asyncio.create_task(analysis_daily_scheduler())
+        logger.info("Daily analysis scheduler DISABLED (on-demand-only mode)")
 
         logger.info("Telegram bot polling scheduled")
     # Phase B3: Home monitoring alerts
@@ -8029,108 +8030,63 @@ async def get_service_health():
 
 
 
-# ── Stock Analysis API (cache-first, no live Bridge) ──
+# ── Stock Analysis API (on-demand, NO cache) ──
 @app.get("/api/analyze")
 async def api_analyze(symbol: str = ""):
-    """Get cached technical analysis for a stock. Never calls Bridge live."""
+    """On-demand stock analysis via Bridge + Gemini. No cache — every call is live."""
     if not symbol:
-        # Return all cached analyses summary
-        try:
-            from stock_analyzer import get_all_cached_analyses
-            analyses = get_all_cached_analyses()
-            return {"count": len(analyses), "analyses": analyses}
-        except Exception as e:
-            return {"error": str(e), "analyses": []}
-
+        return JSONResponse({"error": "symbol parameter required"}, status_code=400)
     symbol = symbol.upper().strip()
+    if len(symbol) > 20:
+        return JSONResponse({"error": "invalid symbol"}, status_code=400)
     try:
-        from stock_analyzer import get_cached_analysis
-        cached = get_cached_analysis(symbol)
-        if not cached:
-            return {"error": f"No analysis cached for {symbol}. Wait for daily refresh or POST /api/analyze/refresh",
-                    "symbol": symbol, "cached": False}
-        return {
-            "symbol": cached["symbol"],
-            "analysis_date": cached["analysis_date"],
-            "report": cached["analysis_json"].get("report", "") if isinstance(cached["analysis_json"], dict) else "",
-            "structured": cached["structured_json"] if isinstance(cached["structured_json"], dict) else {},
-            "signal": cached.get("signal", ""),
-            "confidence": cached.get("confidence", 0),
-            "created_at": cached.get("created_at", ""),
-            "cached": True,
-        }
+        from stock_analyzer import analyze_stock
+        result = await asyncio.to_thread(analyze_stock, symbol)
+        if result.get("error"):
+            # Business error (Bridge offline / no data / Gemini failure) — NOT a gateway
+            # failure. Cloudflare Tunnel replaces any origin 5xx with its own HTML page,
+            # so the frontend must see this as a normal 200 JSON response.
+            err_msg = result["error"]
+            bridge_online = "bridge offline" not in err_msg.lower() and "bridge error" not in err_msg.lower()
+            return JSONResponse(
+                {"error": err_msg, "symbol": symbol, "bridge_online": bridge_online},
+                status_code=200,
+            )
+        return result
     except Exception as e:
-        logger.error("analyze cache error for %s: %s", symbol, e)
-        return {"error": str(e)}
+        logger.exception("api_analyze failed for %s", symbol)
+        return JSONResponse({"error": str(e), "symbol": symbol}, status_code=500)
 
 
 @app.post("/api/analyze/refresh")
 async def api_analyze_refresh(symbol: str = ""):
-    """Refresh analysis for ONE stock via Bridge + Gemini. API key protected."""
-    if not symbol:
-        return {"error": "symbol parameter required"}
-    symbol = symbol.upper().strip()
-    try:
-        from stock_analyzer import analyze_stock, store_analysis
-        result = await asyncio.to_thread(analyze_stock, symbol)
-        if not result.get("error"):
-            store_analysis(symbol, result)
-        return result
-    except Exception as e:
-        logger.error("analyze refresh error for %s: %s", symbol, e)
-        return {"error": str(e)}
+    """Same as GET /api/analyze — kept for frontend backward compatibility."""
+    return await api_analyze(symbol)
 
-
-_analysis_refresh_running = False
 
 @app.post("/api/analyze/refresh-all")
 async def api_analyze_refresh_all():
-    """Refresh ALL 128 KSE stocks in background. API key protected."""
-    global _analysis_refresh_running
-    if _analysis_refresh_running:
-        return {"status": "already running"}
-
-    async def _run_refresh():
-        global _analysis_refresh_running
-        _analysis_refresh_running = True
-        _cid = ADMIN_TELEGRAM_ID or "669769765"
-        try:
-            await tg_send(int(_cid), "\u26a1 \u0628\u062f\u0627\u064a\u0629 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0641\u0646\u064a \u0644\u0643\u0644 128 \u0633\u0647\u0645...")
-            from stock_analyzer import refresh_all_analyses_parallel
-            result = await refresh_all_analyses_parallel(max_concurrent=5)
-            msg = f"\u2705 \u062a\u062d\u0644\u064a\u0644 \u0641\u0646\u064a \u0645\u062d\u062f\u0651\u062b: {result.get('done', 0)}/{result.get('total', 0)} ({result.get('errors', 0)} \u0623\u062e\u0637\u0627\u0621)"
-            await tg_send(int(_cid), msg)
-        except Exception as e:
-            logger.error("Analysis refresh-all failed: %s", e, exc_info=True)
-            await tg_send(int(_cid), f"\u274c Analysis refresh failed: {e}")
-        finally:
-            _analysis_refresh_running = False
-
-    asyncio.create_task(_run_refresh())
-    return {"status": "started", "message": "Refreshing all 128 stocks in background"}
+    """DISABLED: bulk refresh burns ~128 Gemini calls. Use GET /api/analyze?symbol=X instead."""
+    return JSONResponse(
+        {"error": "Bulk refresh disabled \u2014 use GET /api/analyze?symbol=X for single-stock analysis",
+         "status": "gone"},
+        status_code=410,
+    )
 
 
 
 
 
 
-# ── Manual Analysis Refresh Trigger ──
+# ── Manual Analysis Refresh Trigger (DISABLED) ──
 @app.post("/api/refresh-analysis")
 async def api_refresh_analysis():
-    """Manual trigger for daily analysis refresh (API key protected)."""
-    try:
-        from stock_analyzer import refresh_all_analyses_parallel, _bridge_available, get_all_kse_symbols
-        bridge_ok = _bridge_available()
-        symbols = get_all_kse_symbols()
-        if not bridge_ok:
-            return {"error": "Bridge offline", "bridge": False, "symbols_count": len(symbols)}
-        if not symbols:
-            return {"error": "No symbols found", "bridge": True, "symbols_count": 0}
-        result = await refresh_all_analyses_parallel(max_concurrent=5)
-        return {"ok": True, "bridge": True, "symbols_count": len(symbols), **result}
-    except Exception as e:
-        logger.error("Manual analysis refresh failed: %s", e, exc_info=True)
-        return {"error": str(e)}
+    """DISABLED: bulk refresh burns ~128 Gemini calls. Use GET /api/analyze?symbol=X instead."""
+    return JSONResponse(
+        {"error": "Bulk refresh disabled \u2014 use GET /api/analyze?symbol=X for single-stock analysis",
+         "status": "gone"},
+        status_code=410,
+    )
 
 
 # ── Portfolio Operations (partial sell + add more) ──

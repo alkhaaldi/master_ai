@@ -2,6 +2,7 @@
 TradingView Bridge API client for Master AI.
 Fetches live technical analysis from Windows PC Bridge over LAN.
 """
+import os
 import asyncio
 import time
 import logging
@@ -11,7 +12,7 @@ import httpx
 
 logger = logging.getLogger("bridge_client")
 
-BRIDGE_BASE_URL = "http://192.168.111.158:8059"
+BRIDGE_BASE_URL = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 DEFAULT_EXCHANGE = "KSE"
 
 # Cache TTLs (seconds)

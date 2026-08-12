@@ -24,6 +24,10 @@ router = APIRouter()
 # Server context — populated by server.py at startup via init_dashboard_context()
 _ctx = {}
 
+# Short-TTL cache for the heavy /dashboard aggregate (shared across all callers)
+_DASH_CACHE = {"ts": 0.0, "data": None}
+_DASH_TTL = 30  # seconds
+
 def init_dashboard_context(version, start_time, dashboard_jobs, tg_handle_command_fn,
                            radar_ok, journal_ok, get_open_trades_fn, get_trade_stats_fn):
     """Called by server.py to inject shared state."""
@@ -134,6 +138,8 @@ def _check_bridge_health():
 @router.get("/dashboard")
 async def ha_dashboard():
     """Returns all data needed for HA Master AI dashboard page."""
+    if _DASH_CACHE["data"] is not None and (time.time() - _DASH_CACHE["ts"]) < _DASH_TTL:
+        return _DASH_CACHE["data"]
     import psutil, sqlite3
     data = {}
     data["version"] = _ctx["version"]
@@ -316,6 +322,8 @@ async def ha_dashboard():
         if not parts:
             parts.append("\u2705 كل شي تحت السيطرة")
         data["ai_insight"] = " | ".join(parts[:4])
+    _DASH_CACHE["ts"] = time.time()
+    _DASH_CACHE["data"] = data
     return data
 
 
@@ -731,7 +739,7 @@ async def ha_dashboard_portfolio():
                 if _cur and not t.get("support"):
                     try:
                         import urllib.request as _urlreq, json as _json
-                        _aurl = f"http://192.168.111.158:8059/analysis?symbol={sym}&interval=1D"
+                        _aurl = f"{os.getenv('BRIDGE_URL', 'http://192.168.111.214:8059')}/analysis?symbol={sym}&interval=1D"
                         with _urlreq.urlopen(_aurl, timeout=5) as _aresp:
                             _adata = _json.loads(_aresp.read().decode())
                         _abars = _adata.get("bars", [])
@@ -2735,7 +2743,7 @@ async def api_data_freshness():
         bridge_online = False
         try:
             import urllib.request as _ur
-            with _ur.urlopen("http://192.168.111.158:8059/health", timeout=3) as resp:
+            with _ur.urlopen(f"{os.getenv('BRIDGE_URL', 'http://192.168.111.214:8059')}/health", timeout=3) as resp:
                 if resp.status == 200:
                     bridge_online = True
         except Exception:

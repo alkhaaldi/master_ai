@@ -17,7 +17,7 @@ logger = logging.getLogger("brain_backfill")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "life.db")
-BRIDGE_URL = "http://192.168.111.158:8059"
+BRIDGE_URL = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 EVAL_DAYS = 7
 MIN_WARMUP = 60  # skip first 60 bars (indicator warm-up)
 MIN_CONFLUENCE = 50

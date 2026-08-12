@@ -1,3 +1,4 @@
+import os
 import urllib.request, json
 
 checks = {
@@ -10,9 +11,9 @@ checks = {
 }
 
 bridge_checks = {
-    "Bridge Quote NBK": "http://192.168.111.158:8059/quote?symbol=NBK",
-    "Bridge Quote CLEANING": "http://192.168.111.158:8059/quote?symbol=CLEANING",
-    "Bridge Quote EQUIPMENT": "http://192.168.111.158:8059/quote?symbol=EQUIPMENT",
+    "Bridge Quote NBK": os.getenv("BRIDGE_URL", "http://192.168.111.214:8059") + "/quote?symbol=NBK",
+    "Bridge Quote CLEANING": os.getenv("BRIDGE_URL", "http://192.168.111.214:8059") + "/quote?symbol=CLEANING",
+    "Bridge Quote EQUIPMENT": os.getenv("BRIDGE_URL", "http://192.168.111.214:8059") + "/quote?symbol=EQUIPMENT",
 }
 
 print("=" * 60)

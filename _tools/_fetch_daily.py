@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Fetch 1D bars for 3 stocks and save to JSON"""
+import os
 import json, urllib.request
 
-BRIDGE = "http://192.168.111.158:8059"
+BRIDGE = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 STOCKS = ["EQUIPMENT", "IFA", "CLEANING"]
 out = {}
 

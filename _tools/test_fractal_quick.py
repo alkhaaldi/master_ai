@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Quick 5-stock test of Fractal Backtest"""
+import os
 import json, sys, time, urllib.request
 from pathlib import Path
 
-BRIDGE_URL = "http://192.168.111.158:8059"
+BRIDGE_URL = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 PIVOT = 10
 FEE = 0.125
 

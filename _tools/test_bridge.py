@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Quick test: check Bridge /analysis response format"""
+import os
 import urllib.request, json, sys
-url = "http://192.168.111.158:8059/analysis?symbol=NBK&interval=30"
+url = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059") + "/analysis?symbol=NBK&interval=30"
 try:
     with urllib.request.urlopen(url, timeout=15) as resp:
         data = json.loads(resp.read().decode())

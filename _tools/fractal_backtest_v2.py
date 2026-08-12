@@ -12,11 +12,12 @@ Fixes from ChatGPT analysis:
 
 Usage: cd /home/pi/master_ai && python3 _tools/fractal_backtest_v2.py
 """
+import os
 import json, sys, time, urllib.request
 from datetime import datetime
 from pathlib import Path
 
-BRIDGE_URL = "http://192.168.111.158:8059"
+BRIDGE_URL = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 PIVOT = 10
 BROKER_FEE = 0.125   # % per side
 SLIPPAGE = 0.05      # % per side (conservative KSE estimate)

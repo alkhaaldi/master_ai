@@ -8,11 +8,11 @@ _gk = os.path.expanduser("~/.gemini_key")
 if os.path.exists(_gk):
     GEMINI_KEY = open(_gk).read().strip()
 
-BRIDGE_BASE = "http://192.168.111.158:8059"
+BRIDGE_BASE = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 
-# TTL cache: 30 min per symbol
-_analysis_cache = {}
-CACHE_TTL = 1800
+# DISABLED 2026-05-10: cache removed — every call goes to Gemini live.
+# _analysis_cache = {}
+# CACHE_TTL = 1800
 
 
 def _bridge_available():
@@ -370,12 +370,7 @@ ANALYSIS_PROMPT = """أنت محلل فني محترف لبورصة الكويت
 
 def analyze_stock(symbol):
     """Full stock analysis with Gemini 2.5 Pro."""
-    # 1. Check cache
-    cached = _analysis_cache.get(symbol)
-    if cached and (time.time() - cached["ts"]) < CACHE_TTL:
-        return cached["data"]
-
-    # 2. Quick Bridge health check (2s) before heavy calls
+    # 1. Quick Bridge health check (2s) before heavy calls
     if not _bridge_available():
         return {"error": "Bridge offline — التحليل يحتاج Bridge شغّال"}
 
@@ -539,12 +534,5 @@ def analyze_stock(symbol):
             "price": summary_30m.get("latest", {}).get("close"),
         },
     }
-
-    # 10. Cache in memory + DB
-    _analysis_cache[symbol] = {"data": analysis, "ts": time.time()}
-    try:
-        store_analysis(symbol, analysis)
-    except Exception as e:
-        logger.warning(f"Failed to store analysis for {symbol}: {e}")
 
     return analysis

@@ -21,11 +21,12 @@ Usage:
 
 Output: Console results + www/trading/fractal_report_v4.html
 """
+import os
 import json, sys, time, urllib.request
 from datetime import datetime
 from pathlib import Path
 
-BRIDGE_URL = "http://192.168.111.158:8059"
+BRIDGE_URL = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 FEE = 0.125
 SLIP = 0.05
 COST = (FEE + SLIP) * 2

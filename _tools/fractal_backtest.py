@@ -4,11 +4,12 @@ Fractal v3 Backtest Engine — Final
 يختبر استراتيجية Fractal v3 على كل أسهم الرادار (128 سهم)
 بيانات 30m من Bridge API (300 شمعة = ~10 أيام تداول)
 """
+import os
 import json, sys, time, urllib.request, urllib.parse
 from datetime import datetime
 from pathlib import Path
 
-BRIDGE_URL = "http://192.168.111.158:8059"
+BRIDGE_URL = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 PIVOT_PERIOD = 10
 BROKER_FEE_PCT = 0.125
 

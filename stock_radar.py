@@ -684,7 +684,7 @@ def _fetch_bridge_30m(ticker: str) -> dict:
     """Fetch 30m analysis for one symbol from Bridge API (sync)."""
     import requests as _req
     r = _req.get(
-        "http://192.168.111.158:8059/analysis",
+        os.getenv("BRIDGE_URL", "http://192.168.111.214:8059") + "/analysis",
         params={"symbol": ticker, "exchange": "KSE", "interval": "30", "bars": 60},
         timeout=8,
     )
@@ -1158,7 +1158,7 @@ def _fetch_bridge_daily(symbols: list) -> dict:
     """Fetch 1D analysis for all symbols from Bridge API (sync, batched).
     Returns dict: {symbol: normalized_data} or {} on failure."""
     import requests as _req
-    BRIDGE = "http://192.168.111.158:8059"
+    BRIDGE = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
     BATCH = 5   # smaller batches — daily data is slower to fetch
     results = {}
     for i in range(0, len(symbols), BATCH):
