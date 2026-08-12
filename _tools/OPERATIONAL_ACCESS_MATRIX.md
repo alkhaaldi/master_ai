@@ -32,6 +32,7 @@
 | `copy/paste` deployment | Always git deploy: commit → restart |
 | Modifying `server.py` without reading `/system/context` first | Missing current state = blind changes |
 | SSH file transfer (scp/sftp) for code | Use Samba `S:\master_ai\` or deploy endpoint |
+| Returning 5xx from a dashboard-consumed endpoint for an expected/business condition (e.g. 'Bridge offline', 'no data') | Cloudflare Tunnel replaces ANY origin 5xx with its own HTML error page — frontend gets `<!DOCTYPE html>` instead of JSON and `resp.json()` throws. Return HTTP 200 with the error in the JSON body instead; keep 5xx only for real unhandled exceptions. |
 
 ## File Transfer
 
