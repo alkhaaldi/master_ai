@@ -1,0 +1,43 @@
+signal,expected,samples,hit_up%,hit_dn%,avg_5d_ret%,directional_edge_pp
+RSI >= 70,down,1884,36.8,38.8,0.82,2.0
+RSI >= 75,down,1592,38.1,37.8,0.99,-0.3
+RSI >= 80,down,1351,38.4,38.2,0.99,-0.2
+RSI >= 85,down,1088,38.5,38.9,0.94,0.4
+RSI >= 90,down,800,37.0,40.6,0.81,3.6
+RSI >= 92,down,684,37.3,42.4,0.83,5.1
+RSI >= 93,down,629,36.6,43.2,0.71,6.7
+RSI >= 94,down,566,35.9,43.3,0.59,7.4
+RSI >= 95,down,502,35.9,44.0,0.52,8.2
+RSI >= 96,down,415,34.5,44.6,0.51,10.1
+RSI >= 97,down,328,33.5,45.7,0.49,12.2
+RSI crosses DOWN through 60,down,994,36.3,38.6,0.67,2.3
+RSI crosses DOWN through 65,down,928,36.6,38.8,0.65,2.2
+RSI crosses DOWN through 70,down,827,35.7,39.1,0.51,3.4
+RSI crosses DOWN through 75,down,694,37.3,38.0,0.75,0.7
+RSI crosses DOWN through 80,down,590,37.5,37.3,0.88,-0.2
+RSI crosses DOWN through 85,down,478,36.8,37.9,0.66,1.0
+RSI crosses DOWN through 90,down,361,36.6,36.3,0.83,-0.3
+Stoch %K >= 80,down,1127,40.3,36.4,1.07,-3.9
+Stoch %K >= 85,down,837,40.4,36.4,0.87,-3.9
+Stoch %K >= 90,down,544,41.2,34.7,1.07,-6.4
+Stoch %K >= 95,down,300,40.3,36.7,1.4,-3.7
+MACD hist crosses BELOW 0,down,246,35.8,40.7,-0.05,4.9
+Close crosses BELOW Long-exit,down,612,36.6,37.4,0.3,0.8
+RSI <= 10,up,872,33.5,40.0,0.32,-6.5
+RSI <= 15,up,1254,35.0,39.2,0.44,-4.2
+RSI <= 20,up,1589,36.2,38.0,0.52,-1.8
+RSI <= 25,up,1893,36.2,37.6,0.47,-1.4
+RSI <= 30,up,2183,36.6,37.4,0.62,-0.8
+RSI <= 35,up,2482,36.8,37.1,0.67,-0.3
+RSI <= 40,up,2788,36.3,37.6,0.59,-1.3
+RSI crosses UP through 20,up,716,32.8,40.2,0.01,-7.4
+RSI crosses UP through 25,up,833,34.1,39.9,0.01,-5.8
+RSI crosses UP through 30,up,926,35.1,39.8,0.18,-4.8
+RSI crosses UP through 35,up,1010,35.1,39.6,0.28,-4.5
+RSI crosses UP through 40,up,1045,34.1,41.2,0.31,-7.2
+Stoch %K <= 5,up,376,34.8,37.2,0.84,-2.4
+Stoch %K <= 10,up,695,34.4,37.0,0.49,-2.6
+Stoch %K <= 15,up,1060,34.5,40.2,0.14,-5.7
+Stoch %K <= 20,up,1421,34.4,39.5,0.17,-5.1
+MACD hist crosses ABOVE 0,up,247,32.4,47.0,-0.57,-14.6
+Close crosses ABOVE Short-exit,up,549,33.9,42.4,0.28,-8.6

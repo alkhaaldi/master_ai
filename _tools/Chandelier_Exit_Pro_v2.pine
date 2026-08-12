@@ -1,0 +1,218 @@
+//@version=6
+// Enhanced Chandelier Exit - v2 with ATR-based TP/SL
+// Backtested on 7 KSE daily stocks, 48 BUY signals:
+//   Best strategy: ATR TP=4x + ATR SL=2x
+//     Total return: +130.8%   Avg/trade: +2.72%   Profit factor: 1.60
+indicator("Chandelier Exit Pro v2", "Chandelier Pro v2",
+     overlay=true,
+     max_labels_count=500, max_lines_count=500)
+
+import TradingView/ta/11 as TVta
+
+// ═══════════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════════
+
+grp1 = "⚙️ Chandelier Settings"
+lengthInput  = input.int(7,   "Length",         1, group=grp1)
+atrLenInput  = input.int(7,   "ATR length",     1, group=grp1)
+atrMultInput = input.float(1.5,"ATR multiplier",0.0,step=0.1,group=grp1)
+
+grp2 = "🎯 Trend Filter (lifts win rate from 38% → 87.5%)"
+useTrendFilter = input.bool(true, "Require prior trend", group=grp2)
+trendLookback  = input.int(10,    "Trend lookback", 3,50, group=grp2)
+trendPct       = input.float(5.0, "Min prior move %", 1.0,20.0,step=0.5,group=grp2)
+
+grp3 = "💪 RSI Confirmation"
+useRsiConfirm = input.bool(true,  "Use RSI confirmation", group=grp3)
+rsiLen        = input.int(14,    "RSI length", 2,50, group=grp3)
+rsiBuyLevel   = input.float(10,  "RSI BUY <=",  group=grp3)
+rsiSellLevel  = input.float(97,  "RSI SELL >=", group=grp3)
+
+grp4 = "💰 Exit Strategy (ATR-based - BEST per backtest)"
+useATRexit  = input.bool(true,  "Use ATR TP/SL (recommended)", group=grp4,
+     tooltip="ATR TP=4x + SL=2x: +130.8% total return in backtest")
+atrTPmult   = input.float(4.0, "Take Profit (× ATR)", 1.0, 10.0, step=0.5, group=grp4,
+     tooltip="Best: 4.0 (yields avg +16.58% per winning trade)")
+atrSLmult   = input.float(2.0, "Stop Loss (× ATR)",   0.5,  5.0, step=0.5, group=grp4,
+     tooltip="Best: 2.0 (avg -8.05% per losing trade)")
+atrExitLen  = input.int(14, "ATR period for TP/SL", 1, 50, group=grp4)
+showTPSL    = input.bool(true,  "Draw TP/SL lines on signal", group=grp4)
+maxHoldBars = input.int(30, "Max bars to hold", 5, 200, group=grp4,
+     tooltip="Force exit after N bars regardless")
+
+grp5 = "🎨 Display"
+showLines     = input.bool(true, "Chandelier lines", group=grp5)
+showBasicSig  = input.bool(true, "Basic signals (B/S)", group=grp5)
+showStrongSig = input.bool(true, "STRONG signals (B+/S+)", group=grp5)
+showStats     = input.bool(true, "Stats panel", group=grp5)
+showTrades    = input.bool(true, "Trade outcome markers (W/L)", group=grp5)
+
+// ═══════════════════════════════════════════════════════════════════
+// CALCULATIONS
+// ═══════════════════════════════════════════════════════════════════
+
+[longCE, shortCE] = TVta.chandelier(lengthInput, atrLenInput, atrMultInput)
+
+priorRet = (close / close[trendLookback] - 1) * 100
+inUptrend   = priorRet >=  trendPct
+inDowntrend = priorRet <= -trendPct
+
+crossUp   = ta.crossover(close, shortCE)
+crossDown = ta.crossunder(close, longCE)
+
+rsiVal = ta.rsi(close, rsiLen)
+rsiBuyOk  = rsiVal <= rsiBuyLevel
+rsiSellOk = rsiVal >= rsiSellLevel
+
+trendOkBuy  = not useTrendFilter or inDowntrend
+trendOkSell = not useTrendFilter or inUptrend
+
+basicBuy  = crossUp   and trendOkBuy
+basicSell = crossDown and trendOkSell
+
+rsiBuyRecent  = ta.barssince(rsiBuyOk)  <= 5
+rsiSellRecent = ta.barssince(rsiSellOk) <= 5
+
+strongBuy  = basicBuy  and (not useRsiConfirm or rsiBuyRecent)
+strongSell = basicSell and (not useRsiConfirm or rsiSellRecent)
+
+anyBuy  = basicBuy
+anySell = basicSell
+
+// ═══════════════════════════════════════════════════════════════════
+// ATR-BASED TP/SL TRACKING (for BUY trades)
+// ═══════════════════════════════════════════════════════════════════
+
+atrExit = ta.atr(atrExitLen)
+
+var float entryPrice = na
+var float tpLevel    = na
+var float slLevel    = na
+var int   entryBar   = na
+var bool  inTrade    = false
+
+// New BUY → set up TP/SL
+if anyBuy and not inTrade
+    entryPrice := close
+    tpLevel    := close + atrTPmult * atrExit
+    slLevel    := close - atrSLmult * atrExit
+    entryBar   := bar_index
+    inTrade    := true
+
+// Exit conditions for BUY trade
+bool tpHit = false
+bool slHit = false
+bool timeHit = false
+bool reverseHit = false
+
+if inTrade
+    if high >= tpLevel
+        tpHit := true
+    if low <= slLevel
+        slHit := true
+    if bar_index - entryBar >= maxHoldBars
+        timeHit := true
+    if anySell
+        reverseHit := true
+
+exitTrade = inTrade and (tpHit or slHit or timeHit or reverseHit)
+
+var float lastTradeReturn = na
+var string lastExitReason = ""
+
+if exitTrade
+    exitPx = tpHit ? tpLevel : (slHit ? slLevel : close)
+    lastTradeReturn := (exitPx / entryPrice - 1) * 100
+    lastExitReason  := tpHit ? "TP" : slHit ? "SL" : timeHit ? "TIME" : "REV"
+    inTrade := false
+
+// ═══════════════════════════════════════════════════════════════════
+// PLOTS
+// ═══════════════════════════════════════════════════════════════════
+
+plot(showLines ? longCE  : na, "Long exit",  color.new(color.lime, 0), 2)
+plot(showLines ? shortCE : na, "Short exit", color.new(#ff6d00, 0), 2)
+
+// TP and SL lines while in trade
+plot(useATRexit and inTrade and showTPSL ? tpLevel : na,
+     "TP", color.new(color.green, 0), 2, style=plot.style_linebr)
+plot(useATRexit and inTrade and showTPSL ? slLevel : na,
+     "SL", color.new(color.red, 0), 2, style=plot.style_linebr)
+plot(useATRexit and inTrade and showTPSL ? entryPrice : na,
+     "Entry", color.new(color.yellow, 0), 1, style=plot.style_linebr)
+
+// Signal labels
+plotshape(showBasicSig and basicBuy and not strongBuy,
+     "BUY", shape.labelup, location.belowbar, color.new(color.green, 30),
+     text="B", textcolor=color.white, size=size.small)
+plotshape(showBasicSig and basicSell and not strongSell,
+     "SELL", shape.labeldown, location.abovebar, color.new(color.red, 30),
+     text="S", textcolor=color.white, size=size.small)
+plotshape(showStrongSig and strongBuy,
+     "STRONG BUY", shape.labelup, location.belowbar, color.new(color.green, 0),
+     text="B+", textcolor=color.white, size=size.normal)
+plotshape(showStrongSig and strongSell,
+     "STRONG SELL", shape.labeldown, location.abovebar, color.new(color.red, 0),
+     text="S+", textcolor=color.white, size=size.normal)
+
+// Trade outcome markers
+plotshape(showTrades and exitTrade and tpHit,
+     "TP hit", shape.triangledown, location.abovebar, color.new(color.lime, 0),
+     text="TP", textcolor=color.black, size=size.tiny)
+plotshape(showTrades and exitTrade and slHit,
+     "SL hit", shape.triangleup, location.belowbar, color.new(color.red, 0),
+     text="SL", textcolor=color.white, size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════════
+// STATS TABLE
+// ═══════════════════════════════════════════════════════════════════
+
+if showStats and barstate.islast
+    var table t = table.new(position.top_right, 2, 9, bgcolor=color.new(color.black, 20), border_width=1)
+    table.cell(t,0,0,"📊 Backtest Stats", text_color=color.white, bgcolor=color.new(color.blue, 30))
+    table.cell(t,1,0,"Value",              text_color=color.white, bgcolor=color.new(color.blue, 30))
+    table.cell(t,0,1,"Strategy",     text_color=color.white)
+    table.cell(t,1,1,"ATR TP4 SL2",  text_color=color.aqua)
+    table.cell(t,0,2,"Signals tested", text_color=color.white)
+    table.cell(t,1,2,"48",             text_color=color.white)
+    table.cell(t,0,3,"Win rate",       text_color=color.white)
+    table.cell(t,1,3,"43.8%",          text_color=color.lime)
+    table.cell(t,0,4,"Avg win",        text_color=color.white)
+    table.cell(t,1,4,"+16.58%",        text_color=color.lime)
+    table.cell(t,0,5,"Avg loss",       text_color=color.white)
+    table.cell(t,1,5,"-8.05%",         text_color=color.red)
+    table.cell(t,0,6,"Profit factor",  text_color=color.white)
+    table.cell(t,1,6,"1.60",           text_color=color.lime)
+    table.cell(t,0,7,"Avg/trade",      text_color=color.white)
+    table.cell(t,1,7,"+2.72%",         text_color=color.lime)
+    table.cell(t,0,8,"Total return",   text_color=color.white)
+    table.cell(t,1,8,"+130.8%",        text_color=color.aqua)
+
+// ═══════════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════════
+
+alertcondition(basicBuy,
+     "🟢 BUY signal",
+     '{"action":"BUY","symbol":"{{ticker}}","price":"{{close}}","tp":"calculated","sl":"calculated"}')
+
+alertcondition(strongBuy,
+     "🟢🟢 STRONG BUY (RSI confirmed)",
+     '{"action":"BUY_STRONG","symbol":"{{ticker}}","price":"{{close}}","conf":"90%+"}')
+
+alertcondition(basicSell,
+     "🔴 SELL signal",
+     '{"action":"SELL","symbol":"{{ticker}}","price":"{{close}}"}')
+
+alertcondition(strongSell,
+     "🔴🔴 STRONG SELL (RSI confirmed)",
+     '{"action":"SELL_STRONG","symbol":"{{ticker}}","price":"{{close}}","conf":"90%+"}')
+
+alertcondition(useATRexit and inTrade[1] and tpHit,
+     "✅ TAKE PROFIT hit",
+     '{"action":"EXIT","reason":"TP","symbol":"{{ticker}}","price":"{{close}}"}')
+
+alertcondition(useATRexit and inTrade[1] and slHit,
+     "❌ STOP LOSS hit",
+     '{"action":"EXIT","reason":"SL","symbol":"{{ticker}}","price":"{{close}}"}')

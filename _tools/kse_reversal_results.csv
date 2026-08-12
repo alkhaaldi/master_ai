@@ -1,0 +1,46 @@
+signal,mode,context,n,hit_rate%,context_base%,edge_pp
+RSI >= 70,END_OF_RISE,in_uptrend,716,66.8,66.0,0.7
+RSI >= 75,END_OF_RISE,in_uptrend,649,66.3,66.0,0.2
+RSI >= 80,END_OF_RISE,in_uptrend,583,65.7,66.0,-0.3
+RSI >= 85,END_OF_RISE,in_uptrend,502,66.1,66.0,0.1
+RSI >= 90,END_OF_RISE,in_uptrend,421,66.3,66.0,0.2
+RSI >= 92,END_OF_RISE,in_uptrend,384,66.1,66.0,0.1
+RSI >= 94,END_OF_RISE,in_uptrend,344,67.4,66.0,1.4
+RSI >= 95,END_OF_RISE,in_uptrend,314,68.2,66.0,2.1
+RSI >= 96,END_OF_RISE,in_uptrend,275,68.0,66.0,2.0
+RSI >= 97,END_OF_RISE,in_uptrend,232,69.0,66.0,2.9
+RSI crosses DOWN through 60,END_OF_RISE,in_uptrend,190,66.3,66.0,0.3
+RSI crosses DOWN through 65,END_OF_RISE,in_uptrend,203,66.5,66.0,0.5
+RSI crosses DOWN through 70,END_OF_RISE,in_uptrend,201,65.7,66.0,-0.4
+RSI crosses DOWN through 75,END_OF_RISE,in_uptrend,189,63.5,66.0,-2.6
+RSI crosses DOWN through 80,END_OF_RISE,in_uptrend,174,63.8,66.0,-2.3
+RSI crosses DOWN through 85,END_OF_RISE,in_uptrend,160,64.4,66.0,-1.7
+RSI crosses DOWN through 90,END_OF_RISE,in_uptrend,146,62.3,66.0,-3.7
+RSI crosses BELOW its MA,END_OF_RISE,in_uptrend,184,64.1,66.0,-1.9
+Stoch %K >= 80,END_OF_RISE,in_uptrend,655,64.1,66.0,-1.9
+Stoch %K >= 85,END_OF_RISE,in_uptrend,499,64.3,66.0,-1.7
+Stoch %K >= 90,END_OF_RISE,in_uptrend,345,62.9,66.0,-3.1
+Stoch %K >= 95,END_OF_RISE,in_uptrend,198,64.1,66.0,-1.9
+Stoch %K crosses DOWN %D in overbought (>70),END_OF_RISE,in_uptrend,112,63.4,66.0,-2.7
+Stoch %K crosses DOWN %D in overbought (>80),END_OF_RISE,in_uptrend,69,59.4,66.0,-6.6
+Close crosses BELOW Long-exit (Supertrend SELL),END_OF_RISE,in_uptrend,83,72.3,66.0,6.2
+RSI <= 10,END_OF_FALL,in_downtrend,382,74.3,72.0,2.3
+RSI <= 15,END_OF_FALL,in_downtrend,493,73.2,72.0,1.2
+RSI <= 20,END_OF_FALL,in_downtrend,584,73.6,72.0,1.6
+RSI <= 25,END_OF_FALL,in_downtrend,657,73.1,72.0,1.0
+RSI <= 30,END_OF_FALL,in_downtrend,716,73.3,72.0,1.3
+RSI <= 35,END_OF_FALL,in_downtrend,779,73.0,72.0,1.0
+RSI <= 40,END_OF_FALL,in_downtrend,846,72.3,72.0,0.3
+RSI crosses UP through 20,END_OF_FALL,in_downtrend,174,71.8,72.0,-0.2
+RSI crosses UP through 25,END_OF_FALL,in_downtrend,184,72.8,72.0,0.8
+RSI crosses UP through 30,END_OF_FALL,in_downtrend,186,71.5,72.0,-0.5
+RSI crosses UP through 35,END_OF_FALL,in_downtrend,180,70.0,72.0,-2.0
+RSI crosses UP through 40,END_OF_FALL,in_downtrend,173,69.9,72.0,-2.1
+RSI crosses ABOVE its MA,END_OF_FALL,in_downtrend,173,71.1,72.0,-0.9
+Stoch %K <= 5,END_OF_FALL,in_downtrend,215,68.8,72.0,-3.2
+Stoch %K <= 10,END_OF_FALL,in_downtrend,374,71.1,72.0,-0.9
+Stoch %K <= 15,END_OF_FALL,in_downtrend,543,69.8,72.0,-2.3
+Stoch %K <= 20,END_OF_FALL,in_downtrend,684,71.8,72.0,-0.3
+Stoch %K crosses UP %D in oversold (<30),END_OF_FALL,in_downtrend,111,66.7,72.0,-5.4
+Stoch %K crosses UP %D in oversold (<20),END_OF_FALL,in_downtrend,66,69.7,72.0,-2.4
+Close crosses ABOVE Short-exit (Supertrend BUY),END_OF_FALL,in_downtrend,48,87.5,72.0,15.5

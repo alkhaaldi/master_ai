@@ -1,0 +1,109 @@
+indicator,signal,trigger,lookahead,samples,hit_up%,hit_dn%,avg_ret%
+RSI cross up,RSI crosses UP through 20,20,3,716,29.2,38.4,-0.02
+RSI cross up,RSI crosses UP through 20,20,5,716,32.8,40.2,0.01
+RSI cross up,RSI crosses UP through 20,20,10,710,37.7,44.4,0.89
+RSI cross up,RSI crosses UP through 25,25,3,833,29.7,37.6,-0.05
+RSI cross up,RSI crosses UP through 25,25,5,833,34.1,39.9,0.01
+RSI cross up,RSI crosses UP through 25,25,10,826,37.5,44.4,0.74
+RSI cross up,RSI crosses UP through 30,30,3,926,30.0,37.8,0.11
+RSI cross up,RSI crosses UP through 30,30,5,926,35.1,39.8,0.18
+RSI cross up,RSI crosses UP through 30,30,10,918,37.3,44.0,0.86
+RSI cross up,RSI crosses UP through 35,35,3,1010,30.8,37.1,0.26
+RSI cross up,RSI crosses UP through 35,35,5,1010,35.1,39.6,0.28
+RSI cross up,RSI crosses UP through 35,35,10,1002,37.6,43.5,0.89
+RSI cross down,RSI crosses DOWN through 65,65,3,928,32.7,32.8,0.28
+RSI cross down,RSI crosses DOWN through 65,65,5,928,36.6,38.8,0.65
+RSI cross down,RSI crosses DOWN through 65,65,10,926,41.5,42.4,1.23
+RSI cross down,RSI crosses DOWN through 70,70,3,827,31.8,33.6,0.22
+RSI cross down,RSI crosses DOWN through 70,70,5,827,35.7,39.1,0.51
+RSI cross down,RSI crosses DOWN through 70,70,10,825,41.1,42.3,1.25
+RSI cross down,RSI crosses DOWN through 75,75,3,694,32.3,33.4,0.33
+RSI cross down,RSI crosses DOWN through 75,75,5,694,37.3,38.0,0.75
+RSI cross down,RSI crosses DOWN through 75,75,10,692,43.1,39.5,1.54
+RSI cross down,RSI crosses DOWN through 80,80,3,590,32.7,33.4,0.37
+RSI cross down,RSI crosses DOWN through 80,80,5,590,37.5,37.3,0.88
+RSI cross down,RSI crosses DOWN through 80,80,10,589,43.6,40.2,1.84
+RSI cross down,RSI crosses DOWN through 85,85,3,478,32.4,34.9,0.28
+RSI cross down,RSI crosses DOWN through 85,85,5,478,36.8,37.9,0.66
+RSI cross down,RSI crosses DOWN through 85,85,10,477,44.2,38.8,1.93
+RSI cross down,RSI crosses DOWN through 90,90,3,361,32.4,35.2,0.48
+RSI cross down,RSI crosses DOWN through 90,90,5,361,36.6,36.3,0.83
+RSI cross down,RSI crosses DOWN through 90,90,10,360,45.6,38.1,2.31
+RSI low,RSI <= 10,10,3,877,32.8,35.0,0.44
+RSI low,RSI <= 10,10,5,872,33.5,40.0,0.32
+RSI low,RSI <= 10,10,10,861,37.0,46.5,0.13
+RSI low,RSI <= 15,15,3,1260,33.7,34.9,0.31
+RSI low,RSI <= 15,15,5,1254,35.0,39.2,0.44
+RSI low,RSI <= 15,15,10,1242,37.8,45.4,0.15
+RSI low,RSI <= 20,20,3,1596,34.0,34.0,0.37
+RSI low,RSI <= 20,20,5,1589,36.2,38.0,0.52
+RSI low,RSI <= 20,20,10,1576,39.7,43.9,0.64
+RSI low,RSI <= 25,25,3,1900,33.7,33.4,0.36
+RSI low,RSI <= 25,25,5,1893,36.2,37.6,0.47
+RSI low,RSI <= 25,25,10,1878,39.6,44.2,0.55
+RSI low,RSI <= 30,30,3,2191,34.0,33.1,0.43
+RSI low,RSI <= 30,30,5,2183,36.6,37.4,0.62
+RSI low,RSI <= 30,30,10,2167,39.7,43.7,0.84
+RSI high,RSI >= 70,70,3,1887,33.3,38.4,0.61
+RSI high,RSI >= 70,70,5,1884,36.8,38.8,0.82
+RSI high,RSI >= 70,70,10,1878,41.7,42.9,1.62
+RSI high,RSI >= 75,75,3,1594,34.5,37.6,0.74
+RSI high,RSI >= 75,75,5,1592,38.1,37.8,0.99
+RSI high,RSI >= 75,75,10,1586,42.9,41.1,1.88
+RSI high,RSI >= 80,80,3,1353,35.6,37.4,0.8
+RSI high,RSI >= 80,80,5,1351,38.4,38.2,0.99
+RSI high,RSI >= 80,80,10,1346,43.4,41.1,1.95
+RSI high,RSI >= 85,85,3,1090,36.1,37.8,0.89
+RSI high,RSI >= 85,85,5,1088,38.5,38.9,0.94
+RSI high,RSI >= 85,85,10,1083,43.2,41.5,1.85
+RSI high,RSI >= 90,90,3,802,35.8,37.7,0.88
+RSI high,RSI >= 90,90,5,800,37.0,40.6,0.81
+RSI high,RSI >= 90,90,10,795,42.8,42.5,1.63
+RSI high,RSI >= 95,95,3,504,34.7,39.7,0.81
+RSI high,RSI >= 95,95,5,502,35.9,44.0,0.52
+RSI high,RSI >= 95,95,10,498,41.8,43.4,1.42
+Stoch,Stoch %K crosses %D in oversold (<30),30,3,256,31.2,37.5,-0.55
+Stoch,Stoch %K crosses %D in oversold (<30),30,5,256,31.2,40.2,-0.28
+Stoch,Stoch %K crosses %D in oversold (<30),30,10,255,32.2,49.4,-0.04
+Stoch,Stoch %K crosses %D in overbought (>70),70,3,192,30.2,34.4,0.3
+Stoch,Stoch %K crosses %D in overbought (>70),70,5,192,37.0,38.0,0.84
+Stoch,Stoch %K crosses %D in overbought (>70),70,10,191,44.5,37.7,2.04
+Stoch low,Stoch %K <= 10,10,3,701,34.0,31.7,0.63
+Stoch low,Stoch %K <= 10,10,5,695,34.4,37.0,0.49
+Stoch low,Stoch %K <= 10,10,10,689,37.7,45.6,0.64
+Stoch low,Stoch %K <= 15,15,3,1067,32.2,34.4,0.14
+Stoch low,Stoch %K <= 15,15,5,1060,34.5,40.2,0.14
+Stoch low,Stoch %K <= 15,15,10,1050,36.1,47.8,0.18
+Stoch low,Stoch %K <= 20,20,3,1431,32.4,34.1,0.17
+Stoch low,Stoch %K <= 20,20,5,1421,34.4,39.5,0.17
+Stoch low,Stoch %K <= 20,20,10,1408,36.0,47.1,0.15
+Stoch high,Stoch %K >= 80,80,3,1129,35.9,34.4,0.79
+Stoch high,Stoch %K >= 80,80,5,1127,40.3,36.4,1.07
+Stoch high,Stoch %K >= 80,80,10,1121,45.4,39.1,2.06
+Stoch high,Stoch %K >= 85,85,3,839,35.6,34.3,0.72
+Stoch high,Stoch %K >= 85,85,5,837,40.4,36.4,0.87
+Stoch high,Stoch %K >= 85,85,10,832,44.1,40.4,1.94
+Stoch high,Stoch %K >= 90,90,3,546,37.0,32.1,0.86
+Stoch high,Stoch %K >= 90,90,5,544,41.2,34.7,1.07
+Stoch high,Stoch %K >= 90,90,10,542,44.6,38.6,2.22
+Stoch high,Stoch %K >= 95,95,3,301,38.5,32.2,1.32
+Stoch high,Stoch %K >= 95,95,5,300,40.3,36.7,1.4
+Stoch high,Stoch %K >= 95,95,10,298,45.6,38.3,2.75
+MACD,MACD hist crosses ABOVE 0,0,3,247,25.9,45.7,-0.61
+MACD,MACD hist crosses ABOVE 0,0,5,247,32.4,47.0,-0.57
+MACD,MACD hist crosses ABOVE 0,0,10,247,40.9,44.5,0.93
+MACD,MACD hist crosses BELOW 0,0,3,246,29.7,35.8,-0.09
+MACD,MACD hist crosses BELOW 0,0,5,246,35.8,40.7,-0.05
+MACD,MACD hist crosses BELOW 0,0,10,245,40.0,41.6,0.94
+MACD/Sig,MACD crosses ABOVE Signal,cross,3,247,25.9,45.7,-0.61
+MACD/Sig,MACD crosses ABOVE Signal,cross,5,247,32.4,47.0,-0.57
+MACD/Sig,MACD crosses ABOVE Signal,cross,10,247,40.9,44.5,0.93
+MACD/Sig,MACD crosses BELOW Signal,cross,3,246,29.7,35.8,-0.09
+MACD/Sig,MACD crosses BELOW Signal,cross,5,246,35.8,40.7,-0.05
+MACD/Sig,MACD crosses BELOW Signal,cross,10,245,40.0,41.6,0.94
+Supertrend,Close crosses ABOVE Short-exit (Supertrend BUY),cross,3,550,30.4,40.9,0.3
+Supertrend,Close crosses ABOVE Short-exit (Supertrend BUY),cross,5,549,33.9,42.4,0.28
+Supertrend,Close crosses ABOVE Short-exit (Supertrend BUY),cross,10,547,39.5,44.6,0.71
+Supertrend,Close crosses BELOW Long-exit (Supertrend SELL),cross,3,612,32.2,32.5,0.23
+Supertrend,Close crosses BELOW Long-exit (Supertrend SELL),cross,5,612,36.6,37.4,0.3
+Supertrend,Close crosses BELOW Long-exit (Supertrend SELL),cross,10,610,39.7,43.1,0.74
