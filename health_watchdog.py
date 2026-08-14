@@ -189,7 +189,11 @@ def should_alert(conn, name, ok):
     return age_hours(parse_ts(last_alert_at)) >= RENOTIFY_HOURS
 
 
-def record(conn, name, ok, detail, alerted, now_iso):
+def record(conn, name, ok, detail, alerted, now_iso, dry_run=False):
+    """Persist check outcome. Under --dry-run the alert state is left untouched,
+    so a rehearsal never consumes the real first alert."""
+    if dry_run:
+        return
     conn.execute(
         "INSERT INTO health_status (check_name, ok, detail, checked_at) VALUES (?,?,?,?) "
         "ON CONFLICT(check_name) DO UPDATE SET ok=excluded.ok, detail=excluded.detail, "
@@ -257,7 +261,7 @@ def main():
         if alert:
             mark = "✅ RECOVERED" if ok else "🔴 FAIL"
             to_send.append(f"{mark} {name}\n   {detail}")
-        record(conn, name, ok, detail, alert, now_iso)
+        record(conn, name, ok, detail, alert, now_iso, dry_run=args.dry_run)
         if args.verbose:
             print(f"{'OK  ' if ok else 'FAIL'} {name}: {detail}{'  [alert]' if alert else ''}")
 
