@@ -13,34 +13,27 @@ carrying the exception text; a watchdog-level failure exits non-zero.
 import argparse
 import json
 import os
-import re
 import sqlite3
 import sys
 import traceback
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 LIFE_DB = os.path.join(BASE, "data", "life.db")
 AUDIT_DB = os.path.join(BASE, "data", "audit.db")
 HEALTH_DB = os.path.join(BASE, "data", "health.db")
-SERVER_LOG = os.path.join(BASE, "server.log")
 ENV_FILE = os.path.join(BASE, ".env")
 
 # thresholds
 DATA_FETCH_MAX_AGE_H = 48
 RADAR_DAILY_MAX_AGE_H = 48
 APPROVAL_BACKLOG_MAX = 10
-BRIDGE_WINDOW_H = 24
-BRIDGE_MAX_OFFLINE_LINES = 0   # bridge is manual-only: any retry loop is a bug
-BRIDGE_TRIP_PHRASES = (
-    "Bridge offline",        # wording before 2026-08-14, still in rotated logs
-    "Bridge unreachable",
-    "Bridge circuit open",
-)
+# Roughly two breaker trips. The breaker latches at MAX_FAILURES (15), so a
+# healthy idle system settles at ~16 attempts and never moves. Materially more
+# means something keeps re-arming it - a timer passing force=True, most likely.
+BRIDGE_MAX_ATTEMPTS = 30
 RENOTIFY_HOURS = 24            # still-failing reminder interval
 NOTIFY_RECOVERY = True         # also announce FAIL -> OK
-
-LOG_TS = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
 
 
 # ---------------------------------------------------------------- helpers
@@ -133,52 +126,33 @@ def _bridge_counters():
 
 
 def check_bridge_quiet():
-    """2. Bridge is manual-only, so any retry-loop chatter is a bug.
+    """2. The bridge is started by hand, so nothing should reach it on a timer.
 
-    Caveat worth knowing when reading this: server.log is a RotatingFileHandler
-    capped at 2MB, so the 24h window is really "since the last rotation". The
-    check therefore errs toward silence, never toward a false alarm.
+    Reads the in-process counters instead of grepping server.log. The log was
+    the wrong source twice over: it is a RotatingFileHandler capped at 2MB, so
+    any time window is really "since the last rotation", and a quiet log cannot
+    tell "the breaker held" apart from "nobody called at all".
+
+    blocked climbing is the breaker doing its job and is not a fault - it was
+    over a thousand in the first hour. attempts climbing past a couple of trips
+    is the fault, because it means something keeps re-arming the breaker.
+
+    A failure to reach /bridge/status propagates as a FAIL: if the service is
+    not answering, that is worth an alert on its own.
     """
-    if not os.path.exists(SERVER_LOG):
-        return False, f"server.log missing at {SERVER_LOG} — cannot verify bridge quiet"
-    # server.log timestamps come from logging's %(asctime)s, which is LOCAL time
-    # (Asia/Kuwait) — unlike the DB columns, which are UTC. Compare like with like.
-    cutoff = datetime.now() - timedelta(hours=BRIDGE_WINDOW_H)
-    hits = 0
-    last_seen = None
-    with open(SERVER_LOG, "r", encoding="utf-8", errors="replace") as fh:
-        for line in fh:
-            # all three phrasings: "Bridge offline" is the pre-2026-08-14 wording
-            # still present in rotated history, the other two are current.
-            if not any(p in line for p in BRIDGE_TRIP_PHRASES):
-                continue
-            m = LOG_TS.match(line)
-            if not m:
-                continue
-            ts = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S")
-            if ts >= cutoff:
-                hits += 1
-                last_seen = m.group(1)
-    ok = hits <= BRIDGE_MAX_OFFLINE_LINES
-    detail = f"{hits} breaker-trip lines in last {BRIDGE_WINDOW_H}h (limit {BRIDGE_MAX_OFFLINE_LINES})"
-    if last_seen:
-        detail += f", last {last_seen}"
-
-    # A flat line count also stays flat when nothing is calling the bridge, so
-    # report what actually reached the socket next to it.
-    try:
-        status = _bridge_counters()
-        circuits = status.get("circuit", {})
-        attempts = sum(c.get("attempts", 0) for c in circuits.values())
-        blocked = sum(c.get("blocked", 0) for c in circuits.values())
-        up = int(status.get("uptime_seconds", 0))
-        detail += f"; attempts={attempts} blocked={blocked} over {up // 3600}h{up % 3600 // 60}m uptime"
-        if hits == 0 and attempts == 0:
-            detail += " — nothing called the bridge, so a zero count proves nothing"
-    except Exception as e:
-        detail += f"; counters unavailable ({e!r})"
-
-    return ok, detail
+    status = _bridge_counters()
+    circuits = status.get("circuit", {})
+    if not circuits:
+        return True, "no bridge client constructed since restart - nothing has called it"
+    attempts = sum(c.get("attempts", 0) for c in circuits.values())
+    blocked = sum(c.get("blocked", 0) for c in circuits.values())
+    open_now = [url for url, c in circuits.items() if c.get("open")]
+    up = int(status.get("uptime_seconds", 0))
+    ok = attempts <= BRIDGE_MAX_ATTEMPTS
+    return ok, (
+        f"attempts={attempts} (limit {BRIDGE_MAX_ATTEMPTS}) blocked={blocked} "
+        f"circuit_open={open_now or 'none'} over {up // 3600}h{up % 3600 // 60}m uptime"
+    )
 
 
 def check_approval_backlog():

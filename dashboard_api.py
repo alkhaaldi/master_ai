@@ -10,7 +10,8 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta
 from collections import deque
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import JSONResponse
 
 from priority_engine import (
     build_priority_engine, build_assistant_surface,
@@ -2766,17 +2767,58 @@ async def api_data_freshness():
         return {"error": str(e)}
 
 
+def _require_api_key(request: Request) -> None:
+    """Endpoint-level key check.
+
+    APIKeyMiddleware skips the whole /api/ prefix, and narrowing that would
+    break seven dashboard pages (table 0.4 in _tools/ARCHITECTURE_MAP.md), so
+    state-changing endpoints under /api/ that no page calls enforce the key
+    themselves. Fails closed when the server has no key configured.
+    """
+    expected = os.getenv("MASTER_AI_API_KEY", "")
+    if not expected:
+        logger.warning("MASTER_AI_API_KEY is empty - refusing %s", request.url.path)
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    supplied = request.headers.get("X-API-Key")
+    if supplied is None:
+        supplied = request.query_params.get("api_key")
+        if supplied is not None:
+            logger.warning(
+                "api_key passed in the query string for %s - move it to the "
+                "X-API-Key header", request.url.path,
+            )
+    if supplied != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
 @router.post("/api/collect-now")
-async def api_collect_now():
-    """Trigger manual data collection (on-demand)."""
+async def api_collect_now(request: Request):
+    """Trigger manual data collection (on-demand).
+
+    Requires the API key: no dashboard page calls this, and it starts a long
+    outbound job. A second request while one is running gets 409 rather than
+    queueing for an executor worker.
+    """
+    _require_api_key(request)
     try:
-        from kse_data_collector import collect_and_refresh
+        from kse_data_collector import collect_and_refresh, is_collecting
+        if is_collecting():
+            return JSONResponse(
+                {"success": False, "error": "collection already running"},
+                status_code=409,
+            )
         # collect_and_refresh() is sync and talks to the bridge over raw
         # requests. Called directly it held the event loop for the whole
         # batch walk - every other request on the server stalled behind it,
         # and this endpoint sits under the /api/ prefix that skips the API
         # key, so any caller could trigger that.
         result = await asyncio.to_thread(collect_and_refresh)
+        if result.get("status") == "busy":
+            # lost the race between is_collecting() and the lock
+            return JSONResponse(
+                {"success": False, "error": "collection already running"},
+                status_code=409,
+            )
         return {"success": True, "result": result}
     except Exception as e:
         logger.error("collect-now error: %s", e, exc_info=True)

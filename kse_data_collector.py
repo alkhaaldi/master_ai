@@ -14,6 +14,7 @@ import json
 import sqlite3
 import logging
 import time
+import threading
 from datetime import datetime, date, timedelta
 
 logger = logging.getLogger("kse_data_collector")
@@ -226,8 +227,35 @@ def _log_run(run_date, source, status, fetched, expected, duration, error):
         logger.warning("Failed to log run: %s", e)
 
 
+# One collection at a time. asyncio.to_thread runs on the default executor,
+# which on this 4-core Pi has 8 workers; eight overlapping collections would
+# occupy all of them and every other to_thread caller on the server would
+# queue behind them - reintroducing exactly the stall that moving this call
+# off the event loop was meant to remove.
+_collect_lock = threading.Lock()
+
+
+def is_collecting() -> bool:
+    """True while a collection holds the lock. Lets a caller reject a second
+    request before it consumes an executor worker."""
+    return _collect_lock.locked()
+
+
 def collect_and_refresh() -> dict:
-    """Collect daily bars, then trigger indicator refresh."""
+    """Collect daily bars, then trigger indicator refresh.
+
+    Returns {"status": "busy"} immediately if another collection is running.
+    """
+    if not _collect_lock.acquire(blocking=False):
+        logger.info("collect_and_refresh: already running, refusing second run")
+        return {"status": "busy", "msg": "collection already running"}
+    try:
+        return _collect_and_refresh_locked()
+    finally:
+        _collect_lock.release()
+
+
+def _collect_and_refresh_locked() -> dict:
     # 1. Collect bars
     result = collect_daily_bars()
 
