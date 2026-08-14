@@ -159,18 +159,29 @@ def step5():
 
 
 def step6():
-    """A flat trip count only means something when something actually called."""
+    """A flat trip count only means something when something actually called.
+
+    Scoped to the current process. The counters live in memory and start at zero
+    on every restart, so counting log lines since midnight mixes in every
+    restart of the day - which is exactly how this step read FAIL on 2026-08-14
+    after eight of them, with the counters themselves perfectly healthy.
+
+    One breaker trip writes two lines: "Bridge unreachable" then "Bridge circuit
+    open".
+    """
     status = get_json("/bridge/status")
     circuits = status.get("circuit", {})
     attempts = sum(c.get("attempts", 0) for c in circuits.values())
     blocked = sum(c.get("blocked", 0) for c in circuits.values())
-    trips = len(log_lines_today(*TRIP_PHRASES))
     up = int(status.get("uptime_seconds", 0))
-    ok = attempts > 0 and trips <= 1
+    since = (datetime.now() - timedelta(seconds=up)).strftime("%Y-%m-%d %H:%M:%S")
+    trips = sum(1 for ln in log_lines_today(*TRIP_PHRASES) if ln[:19] >= since)
+    ok = attempts > 0 and trips <= 2
     return report(6, ok,
-                  f"attempts={attempts} blocked={blocked} trip_lines_today={trips} "
-                  f"uptime={up // 3600}h{up % 3600 // 60}m "
-                  f"(want attempts>0 and at most the single trip from the first outage)")
+                  f"attempts={attempts} blocked={blocked} trip_lines={trips} "
+                  f"since {since} (uptime {up // 3600}h{up % 3600 // 60}m). "
+                  f"Want attempts>0, and at most one trip (two lines) from the "
+                  f"first outage after start.")
 
 
 def step7():

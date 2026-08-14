@@ -146,3 +146,15 @@ Any query that compares or subtracts the two is off by three hours. Nothing is
 known to do so today, but the table invites it, and the same pairing has already
 produced two live faults elsewhere - see the timezone rule in
 `CLAUDE_CONTEXT.md`.
+
+---
+
+## C-16. quick_check.py is unreliable for its first ~2 minutes after a restart
+
+Its endpoint probes hit the service before startup completes, so it reports
+failures that clear on their own. Observed twice on 2026-08-14: 9/13 and 10/13
+immediately after a restart, both 13/13 once uptime passed roughly two minutes.
+
+Cost so far is wasted investigation, twice. A settle-wait or a readiness probe
+before the endpoint section would remove a real source of false alarms in the
+one tool that is supposed to tell you whether a change was safe.
