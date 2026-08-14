@@ -3099,6 +3099,35 @@ import os as _os
 
 TRADING_HTML_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "www", "trading")
 
+@app.post("/daily-snapshot/refresh")
+async def refresh_daily_snapshot_manual(force: bool = False):
+    """Pull a daily snapshot on demand.
+
+    Deliberately not under /trading/, /api/ or /webhook/: those prefixes skip
+    the API-key middleware, and this endpoint starts outbound work and rewrites
+    the table the daily tab reads. Re-arms the bridge circuit first, since the
+    bridge is brought up by hand immediately before this is called.
+
+    force=true overrides the market-hours guard for a deliberate intraday pull.
+    """
+    import asyncio as _aio
+    try:
+        from bridge_client import reset_circuit
+        circuit = reset_circuit()
+    except Exception as e:
+        logger.warning("bridge circuit reset failed: %r", e)
+        circuit = {"reset": [], "error": repr(e)}
+    try:
+        from stock_radar import refresh_daily_snapshot
+        result = await _aio.to_thread(refresh_daily_snapshot, None, force)
+    except Exception as e:
+        logger.error("manual daily snapshot failed: %r", e, exc_info=True)
+        # HTTP 200 with the error in the body: Cloudflare replaces any origin
+        # 5xx with its own HTML page, so resp.json() would throw in the browser.
+        return {"ok": 0, "errors": 0, "msg": "refresh_failed", "error": repr(e)}
+    return {"circuit": circuit, "result": result}
+
+
 @app.get("/trading/{page}")
 async def serve_trading_page(page: str):
     """Serve trading HTML pages with or without .html extension."""
