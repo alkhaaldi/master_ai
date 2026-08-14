@@ -4435,20 +4435,27 @@ async def win_jobs(status: str = Query(default=None), limit: int = Query(default
 
 @app.get("/stats/daily")
 async def stats_daily(date: str = Query(default=None)):
-    try:
-        from daily_stats import get_daily_stats
-        return get_daily_stats(date)
-    except ImportError:
-        return {"error": "daily_stats module not available"}
+    """Gone. daily_stats.py was deleted by commit 651b154 on 2026-03-02,
+    while this endpoint kept importing it - the ImportError was swallowed
+    and the caller got an error dict with HTTP 200 for five months. The
+    daily_stats table in audit.db still holds its last 7 rows, frozen at
+    2026-03-02.
+    """
+    return JSONResponse(
+        {"error": "daily_stats was removed in 651b154 (2026-03-02)",
+         "status": "gone"},
+        status_code=410,
+    )
 
 
 @app.post("/stats/capture")
 async def stats_capture():
-    try:
-        from daily_stats import capture_stats
-        return capture_stats()
-    except ImportError:
-        return {"error": "daily_stats module not available"}
+    """Gone with its module - see GET /stats/daily above."""
+    return JSONResponse(
+        {"error": "daily_stats was removed in 651b154 (2026-03-02)",
+         "status": "gone"},
+        status_code=410,
+    )
 
 
 SHIFT_PATTERN = ["A", "A", "B", "B", "C", "C", "D", "D"]

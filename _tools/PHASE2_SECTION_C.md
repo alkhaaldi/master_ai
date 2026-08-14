@@ -217,3 +217,69 @@ if every caller goes through that helper. Section B found two private token
 readers behind one gate; this is the third.
 
 Recorded 2026-08-14, not fixed - dead code, does not block Sunday.
+
+---
+
+## C-19. brain_core.reload() calls two functions that no longer exist
+
+`brain_core.py:342`, inside `reload()`:
+
+```python
+try:
+    _ensure_memory_table()
+    _apply_confidence_decay()
+except Exception as e:
+    logger.error(f"Brain reload failed: {e}")
+```
+
+Neither name is defined in `brain_core.py` or imported into it.
+`_apply_confidence_decay` survives only in `_deprecated/brain_backup.py:209`;
+`_ensure_memory_table` is gone entirely. The call raises `NameError` on the
+first line, so **`_apply_confidence_decay()` has never run** - the except catches
+it, logs one line, and carries on.
+
+Surfaced by the C-8 import test on 2026-08-14, which printed "Brain reload
+failed: name '_ensure_memory_table' is not defined" before its own summary.
+`reload` is imported into `server.py:53` as `brain_reload`, so this fires at
+every startup.
+
+The same shape as commit 651b154 and as `_check_api_key` in `/anomalies`: code
+was moved or archived and its callers were left behind, with a try/except
+turning a hard failure into a log line nobody reads. Confidence decay on brain
+memories has been silently off for however long that has been true.
+
+Not fixed: restoring decay changes stored confidence values across
+`memory`, `memory_archive` and `structured_memory.memories`, which is a data
+decision, not a syntax one. Does not block Sunday.
+
+---
+
+## C-20. every `logger.info` in this codebase has always been invisible
+
+The root logger sits at WARNING. Before it was configured at all, module loggers
+fell through to `logging.lastResort`, which is also WARNING. Either way, no
+`logger.info` from any module has ever reached `server.log`.
+
+Confirmed on 2026-08-14: `grep -c "Next daily collection" server.log` returns 0,
+even though `daily_collection_scheduler` logs it on every cycle at INFO. The
+same is true of the "Bridge daily cache refreshed", "Confluence scan loop
+started" and "Daily trading summary scheduler started" lines, among others.
+
+Two consequences already met in one day:
+
+- verify_sunday step 5 could never have passed. It looks for the scheduler's
+  skip line, which was logged at INFO. Raised to WARNING as part of that
+  verification, since a deliberate skip leaving no trace is indistinguishable
+  from the scheduler dying.
+- the Google integrations notice had the same fault and was raised for the same
+  reason.
+
+Fixing this properly is a judgement call, not a sweep. Setting root to INFO
+would surface hundreds of lines a day and re-flood the 2MB rotation the logging
+work was meant to fix. The likely shape is a named list of operational loggers
+raised to INFO while third-party libraries stay at WARNING - but that is a
+decision about what is worth recording, and it should be made deliberately
+rather than by flipping one level.
+
+Recorded 2026-08-14. Two specific lines fixed where they blocked verification;
+the rest untouched.

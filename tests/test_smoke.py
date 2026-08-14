@@ -111,8 +111,11 @@ class TestShift:
         assert r.status_code == 200
 
     def test_daily_stats(self, client, auth_headers):
+        # 410, not 200: daily_stats.py was deleted in 651b154 and the
+        # endpoint now says so instead of returning an error dict with a
+        # success code.
         r = client.get("/stats/daily", headers=auth_headers)
-        assert r.status_code == 200
+        assert r.status_code == 410
 
 class TestRateLimit:
     def test_webhook_rate_limit(self, client):

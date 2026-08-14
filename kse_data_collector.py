@@ -520,7 +520,12 @@ async def daily_collection_scheduler():
             # Checked after waking rather than at startup, so flipping the
             # flag takes effect without a restart.
             if not _daily_refresh_enabled():
-                _log.info("daily_refresh flag off - skipping automatic collection")
+                # WARNING, not INFO: the root logger sits at WARNING, so an INFO
+                # line here is dropped and the skip leaves no trace at all. That
+                # is the difference between "it skipped, as designed" and "the
+                # scheduler died silently", which is exactly what
+                # verify_sunday step 5 has to tell apart.
+                _log.warning("daily_refresh flag off - skipping automatic collection")
                 await asyncio.sleep(23 * 3600)
                 continue
 
