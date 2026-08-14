@@ -39,7 +39,17 @@ LIFE_DB = os.path.join(BASE, "data", "life.db")
 SERVER_LOG = os.path.join(BASE, "server.log")
 ENV_FILE = os.path.join(BASE, ".env")
 
-TRIP_PHRASES = ("Bridge offline", "Bridge unreachable", "Bridge circuit open")
+# Anchored deliberately. "Bridge circuit open" alone also prefixes
+# bridge_client's debug "skipping request" line and its info "force=True"
+# line, neither of which is a trip. They are below the root level today, so
+# they never emit - but a phrase that only works because of the current log
+# level is a trap for whoever lowers it. "Bridge offline" is the pre-
+# 2026-08-14 wording, kept for rotated history.
+TRIP_PHRASES = (
+    "Bridge offline after",
+    "Bridge unreachable,",
+    "Bridge circuit open after",
+)
 
 
 def utc_now():

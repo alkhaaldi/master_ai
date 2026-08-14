@@ -536,7 +536,13 @@ async def daily_collection_scheduler():
                 await asyncio.sleep(3600)
                 continue
 
-            _log.info("Starting daily collection...")
+            # WARNING to match the skip line above. The root logger sits at
+            # WARNING, so an INFO here never reaches server.log - and
+            # verify_sunday steps 2 and 5 both look for this exact phrase to
+            # tell "it ran" apart from "it skipped". One branch visible and
+            # the other silent is worse than neither, because the check then
+            # looks like it passed.
+            _log.warning("Starting daily collection...")
 
             # Run collection in executor (sync → async)
             import asyncio as _aio
