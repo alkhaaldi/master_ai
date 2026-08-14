@@ -108,10 +108,18 @@ class BridgeClient:
             return True
         return False
 
-    async def _request(self, path: str, params: dict = None) -> Optional[dict]:
+    async def _request(
+        self, path: str, params: dict = None, force: bool = False
+    ) -> Optional[dict]:
+        # force=True is a human asking for fresh data - they start the bridge
+        # by hand immediately before. Probe past an open breaker instead of
+        # latching the bridge off permanently after its first outage.
         if self._is_circuit_open():
-            logger.debug("Bridge circuit breaker open, skipping request")
-            return None
+            if not force:
+                logger.debug("Bridge circuit open, skipping request")
+                return None
+            logger.info("Bridge circuit open, force=True - re-arming and probing")
+            _circuit(self.base_url).update(failures=0, open=False, opened_at=0.0)
 
         try:
             client = await self._get_client()
@@ -154,7 +162,9 @@ class BridgeClient:
             if cached:
                 return {**cached, "source": "cache", "stale": False}
 
-        data = await self._request("/quote", {"symbol": symbol, "exchange": exchange})
+        data = await self._request(
+            "/quote", {"symbol": symbol, "exchange": exchange}, force=force
+        )
         if data:
             normalized = self._normalize_quote(data)
             self._cache_set(cache_key, normalized)
@@ -173,7 +183,11 @@ class BridgeClient:
             if cached:
                 return {**cached, "source": "cache", "stale": False}
 
-        data = await self._request("/analysis", {"symbol": symbol, "exchange": exchange, "interval": "1D", "bars": 300})
+        data = await self._request(
+            "/analysis",
+            {"symbol": symbol, "exchange": exchange, "interval": "1D", "bars": 300},
+            force=force,
+        )
         if data:
             normalized = self._normalize_analysis(data)
             self._cache_set(cache_key, normalized)
@@ -203,7 +217,11 @@ class BridgeClient:
         for i in range(0, len(to_fetch), BATCH_SIZE):
             batch = to_fetch[i:i + BATCH_SIZE]
             tasks = [
-                self._request("/analysis", {"symbol": sym, "exchange": exchange, "interval": "1D", "bars": 300})
+                self._request(
+                    "/analysis",
+                    {"symbol": sym, "exchange": exchange, "interval": "1D", "bars": 300},
+                    force=force,
+                )
                 for sym in batch
             ]
             responses = await asyncio.gather(*tasks, return_exceptions=True)
@@ -238,7 +256,7 @@ class BridgeClient:
         data = await self._request("/analysis", {
             "symbol": symbol, "exchange": exchange,
             "interval": "30", "bars": 60
-        })
+        }, force=force)
         if data:
             normalized = self._normalize_analysis(data)
             normalized["timeframe"] = "30m"
