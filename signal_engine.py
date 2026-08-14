@@ -1164,6 +1164,15 @@ def _get_bridge_data_safe() -> dict:
     now = _time.time()
     if _bridge_cache.get("daily") and (now - _bridge_cache_ts.get("daily", 0)) < _BRIDGE_DAILY_TTL:
         return _bridge_cache["daily"]
+    # The bridge is started by hand. If its breaker is already open there is
+    # nothing to gain from fanning out 128 symbols that will each be refused;
+    # back off and serve what we have.
+    try:
+        from bridge_client import circuit_stats
+        if any(c.get("open") for c in circuit_stats().values()):
+            return _bridge_cache.get("daily") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
+    except Exception as _e:
+        logger.debug("circuit check unavailable (%r) - continuing", _e)
     # If another fetch is already running, return stale immediately
     if not _bridge_daily_lock.acquire(blocking=False):
         return _bridge_cache.get("daily") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
@@ -1201,7 +1210,11 @@ def _get_bridge_data_safe() -> dict:
             _bridge_cache_ts["daily"] = _time.time()
             logger.info("Bridge daily cache refreshed: %d symbols", result.get("symbols_count", 0))
         except Exception as e:
-            logger.warning("Bridge daily fetch failed: %s", e)
+            # stamp on failure as well: without this the timestamp stays 0,
+            # the TTL test never passes, and every sensor poll starts another
+            # full fan-out
+            _bridge_cache_ts["daily"] = _time.time()
+            logger.warning("Bridge daily fetch failed: %r", e)
         finally:
             _bridge_daily_lock.release()
 
@@ -1216,6 +1229,15 @@ def _get_bridge_data_30m_safe() -> dict:
     now = _time.time()
     if _bridge_cache.get("30m") and (now - _bridge_cache_ts.get("30m", 0)) < _BRIDGE_30M_TTL:
         return _bridge_cache["30m"]
+    # The bridge is started by hand. If its breaker is already open there is
+    # nothing to gain from fanning out 128 symbols that will each be refused;
+    # back off and serve what we have.
+    try:
+        from bridge_client import circuit_stats
+        if any(c.get("open") for c in circuit_stats().values()):
+            return _bridge_cache.get("30m") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
+    except Exception as _e:
+        logger.debug("circuit check unavailable (%r) - continuing", _e)
     if not _bridge_30m_lock.acquire(blocking=False):
         return _bridge_cache.get("30m") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
     import threading as _thr
@@ -1251,7 +1273,9 @@ def _get_bridge_data_30m_safe() -> dict:
             _bridge_cache_ts["30m"] = _time.time()
             logger.info("Bridge 30m cache refreshed: %d symbols", result.get("symbols_count", 0))
         except Exception as e:
-            logger.warning("Bridge 30m fetch failed: %s", e)
+            # stamp on failure too - see the daily twin above
+            _bridge_cache_ts["30m"] = _time.time()
+            logger.warning("Bridge 30m fetch failed: %r", e)
         finally:
             _bridge_30m_lock.release()
 
