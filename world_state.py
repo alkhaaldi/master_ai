@@ -274,7 +274,7 @@ async def _refresh():
         _last_refresh = time.time()
         logger.debug(f"World state refreshed: {data['counts']}")
     except Exception as e:
-        logger.error(f"World state refresh failed: {e}")
+        logger.error(f"World state refresh failed: {e!r}")
 
 
 async def _refresh_loop():

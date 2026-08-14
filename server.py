@@ -707,16 +707,26 @@ START_TIME = time.time()
 _dashboard_jobs = deque(maxlen=10)  # last 10 command results
 
 from logging.handlers import RotatingFileHandler as _RFH
-_log_fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+_log_fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 _file_h = _RFH("server.log", maxBytes=2*1024*1024, backupCount=3, encoding="utf-8")
 _file_h.setFormatter(_log_fmt)
-_console_h = logging.StreamHandler()
-_console_h.setFormatter(_log_fmt)
+# The root logger was never configured, so module loggers (bridge_client,
+# world_state, ...) fell through to logging.lastResort, which writes the bare
+# message to stderr - systemd then appended it to server.log with no timestamp
+# and no level. Configure root once, here. WARNING keeps exactly the set of
+# messages lastResort already let through, so third-party libraries do not
+# start flooding the file at INFO.
+_root = logging.getLogger()
+_root.setLevel(logging.WARNING)
+if _file_h not in _root.handlers:
+    _root.addHandler(_file_h)
+for _noisy in ("httpx", "httpcore", "urllib3", "google", "googleapiclient", "asyncio"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 logger = logging.getLogger("master_ai")
 logger.setLevel(logging.INFO)
-logger.addHandler(_file_h)
-logger.addHandler(_console_h)
-logger.propagate = False  # prevent duplicate log entries
+logger.propagate = True  # emit through the root file handler configured above
+# No StreamHandler: systemd redirects stdout/stderr into server.log too, so a
+# console handler wrote every line into the same file a second time.
 _load_router_stats()
 logger.info(f"Stats loaded: prev_total={_router_stats.get('_prev_total', 0)}, session #{_router_stats.get('_sessions', 1)}")
 import atexit; atexit.register(_save_router_stats)
@@ -1167,7 +1177,7 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
             text = resp.content[0].text
             _cb_llm.record_success()
             if trace:
-                trace.llm("claude-sonnet-4", time.time() - t0,
+                trace.llm("claude-opus-4-6", time.time() - t0,
                           tokens_in=resp.usage.input_tokens, tokens_out=resp.usage.output_tokens)
             return text
         except Exception as e:

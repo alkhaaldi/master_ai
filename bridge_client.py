@@ -92,7 +92,7 @@ class BridgeClient:
             self._last_failure_time = time.time()
             if self._failure_count == MAX_FAILURES:
                 self._online = False
-                logger.warning("Bridge offline after %d failures: %s", MAX_FAILURES, e)
+                logger.warning("Bridge offline after %d failures: %r", MAX_FAILURES, e)
                 if self._health_hub:
                     self._health_hub.mark_down("bridge", reason=f"offline after {MAX_FAILURES} failures: {e}")
             else:

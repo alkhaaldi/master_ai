@@ -486,7 +486,7 @@ async def execute_tool(name, args, executors):
                 def _sync_advisor():
                     _client = _anth.Anthropic(api_key=_os.getenv("ANTHROPIC_API_KEY", ""))
                     return _client.messages.create(
-                        model="claude-sonnet-4-20250514", max_tokens=500,
+                        model="claude-sonnet-5", max_tokens=500,
                         messages=[{"role": "user", "content": advisor_prompt}])
                 _resp = await _aio.to_thread(_sync_advisor)
                 _advice = _resp.content[0].text
