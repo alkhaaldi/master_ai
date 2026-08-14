@@ -22,7 +22,37 @@ CACHE_TTL_OHLCV = 300
 
 # Circuit breaker
 MAX_FAILURES = 15
-COOLDOWN_SECONDS = 60
+COOLDOWN_SECONDS = 60  # retained for callers that still import it
+
+# The breaker state lives at module level, keyed by base_url, because
+# BridgeClient is constructed ad-hoc in seven places (signal_engine x2,
+# kairos, server.py x3) instead of through get_bridge_client(). A
+# per-instance counter therefore never held: each fresh object started at
+# zero and hammered an offline bridge again. Once open the breaker latches
+# until reset_circuit() is called explicitly - the bridge is started by
+# hand for technical analysis, so nothing should be probing it on a timer.
+_CIRCUIT: dict = {}
+
+
+def _circuit(base_url: str) -> dict:
+    return _CIRCUIT.setdefault(
+        base_url, {"failures": 0, "open": False, "opened_at": 0.0}
+    )
+
+
+def reset_circuit(base_url: str = None) -> dict:
+    """Re-arm the bridge after it has been brought up deliberately.
+
+    Called by the manual snapshot endpoint, never on a timer.
+    """
+    keys = [base_url.rstrip("/")] if base_url else list(_CIRCUIT)
+    for key in keys:
+        entry = _circuit(key)
+        was_open = entry["open"]
+        entry.update(failures=0, open=False, opened_at=0.0)
+        if was_open:
+            logger.info("Bridge circuit reset for %s", key)
+    return {"reset": keys}
 
 
 class BridgeClient:
@@ -62,13 +92,20 @@ class BridgeClient:
         return None
 
     def _is_circuit_open(self) -> bool:
-        if self._failure_count >= MAX_FAILURES:
-            if (time.time() - self._last_failure_time) < COOLDOWN_SECONDS:
-                return True
-            # Cooldown expired, allow retry
-            self._failure_count = 0
+        entry = _circuit(self.base_url)
+        if entry["open"]:
+            return True
+        if entry["failures"] >= MAX_FAILURES:
+            entry["open"] = True
+            entry["opened_at"] = time.time()
+            self._online = False
+            logger.warning(
+                "Bridge circuit open after %d failures - no further attempts "
+                "until reset_circuit()", MAX_FAILURES,
+            )
             if self._health_hub:
-                self._health_hub.mark_up("bridge", details={"circuit_reset": True})
+                self._health_hub.mark_down("bridge", reason="circuit open")
+            return True
         return False
 
     async def _request(self, path: str, params: dict = None) -> Optional[dict]:
@@ -82,6 +119,7 @@ class BridgeClient:
             resp.raise_for_status()
             data = resp.json()
             self._failure_count = 0
+            _circuit(self.base_url).update(failures=0, open=False, opened_at=0.0)
             self._online = True
             self._last_success = time.time()
             if self._health_hub:
@@ -90,13 +128,17 @@ class BridgeClient:
         except Exception as e:
             self._failure_count += 1
             self._last_failure_time = time.time()
-            if self._failure_count == MAX_FAILURES:
-                self._online = False
-                logger.warning("Bridge offline after %d failures: %r", MAX_FAILURES, e)
-                if self._health_hub:
-                    self._health_hub.mark_down("bridge", reason=f"offline after {MAX_FAILURES} failures: {e}")
+            entry = _circuit(self.base_url)
+            entry["failures"] += 1
+            if entry["failures"] == MAX_FAILURES:
+                logger.warning(
+                    "Bridge unreachable, %d consecutive failures: %r", MAX_FAILURES, e
+                )
             else:
-                logger.debug("Bridge request failed (%d/%d): %s", self._failure_count, MAX_FAILURES, e)
+                logger.debug(
+                    "Bridge request failed (%d/%d): %r",
+                    entry["failures"], MAX_FAILURES, e,
+                )
             return None
 
     # --- Public API ---

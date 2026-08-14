@@ -256,3 +256,34 @@ Full analysis: _tools/CLAUDE_CODE_SOURCE_ANALYSIS_ROUND2.md
 - **KAIROS role:** Detects stale daily_snapshot during market hours, sends alert (does NOT auto-refresh)
 - **Gemini fallback (commit 4305324):** 3 retries with backoff (10s, 20s). If Pro 503 × 3 → auto-fallback to Flash
 - **Logging:** Result logged after each step + final summary in server.log
+
+## Timezone Rule (2026-08-14) — read before touching any schedule or age check
+
+The Pi's clock is **Asia/Kuwait (+03)**. It ran UTC when much of this code was
+written, and several comments still claim so. Wall-clock and storage disagree:
+
+| Source | Timezone |
+|---|---|
+| `datetime.now()` | local (+03) |
+| `datetime.utcnow()` | UTC — used by stock_radar, tv_data, signal_engine |
+| SQLite `DEFAULT CURRENT_TIMESTAMP` | **UTC** |
+| `server.log` `%(asctime)s` | **local** |
+
+**Convention: every DB timestamp is UTC.** Compare with `datetime.utcnow()`,
+never `datetime.now()` — the 3h skew silently inflates every age calculation.
+`server.log` is the one exception: it is local, so compare it against local now.
+
+**Damage this already caused:**
+
+- `daily_collection_scheduler` used `hour=10` under a comment reading "Pi runs in
+  UTC, 1:30 PM KWT = 10:30 UTC". After the box moved to local time it fired at
+  10:30 KWT — mid-session, three hours before the 13:00 close — so every "daily"
+  snapshot stored intraday prices as closing values. Now `hour=13, minute=30`.
+- `data_fetch_runs.created_at` shows `07:30` for a job that fires at 10:30 local,
+  because SQLite wrote UTC. For a while this looked like a third scheduler that
+  does not exist.
+- `health_watchdog.py` initially compared UTC columns against `datetime.now()`,
+  inflating every age by 3h and risking a false alarm near its 48h thresholds.
+
+**Rule:** schedules use local time and say so; stored timestamps are compared in
+UTC; `server.log` is compared in local.

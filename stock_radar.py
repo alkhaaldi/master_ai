@@ -144,6 +144,8 @@ def init_radar_db():
         "ALTER TABLE stock_radar_daily ADD COLUMN ema_slow REAL",
         "ALTER TABLE stock_radar_daily ADD COLUMN bb_squeeze BOOLEAN DEFAULT 0",
         "ALTER TABLE stock_radar_daily ADD COLUMN bb_bandwidth REAL",
+        "ALTER TABLE stock_radar_daily ADD COLUMN captured_at TEXT",
+        "ALTER TABLE stock_radar_daily ADD COLUMN market_was_open BOOLEAN DEFAULT 0",
     ]:
         try:
             conn.execute(col_sql)
@@ -1154,6 +1156,20 @@ def tg_radar_toggle():
 _daily_refresh_lock = False
 
 
+def _market_open_safe() -> bool:
+    """True if KSE is trading.
+
+    On error assume open. Refusing a snapshot is recoverable; recording
+    mid-session prices as if they were closing values is not.
+    """
+    try:
+        from tv_data import _is_market_open
+        return _is_market_open()
+    except Exception as e:
+        logger.warning("market-hours check failed (%r) - assuming open", e)
+        return True
+
+
 def _fetch_bridge_daily(symbols: list) -> dict:
     """Fetch 1D analysis for all symbols from Bridge API (sync, batched).
     Returns dict: {symbol: normalized_data} or {} on failure."""
@@ -1180,9 +1196,18 @@ def _fetch_bridge_daily(symbols: list) -> dict:
     return results
 
 
-def refresh_daily_snapshot(symbols=None):
-    """Compute daily (1D) analysis for watchlist via Bridge API, store in stock_radar_daily."""
+def refresh_daily_snapshot(symbols=None, force=False):
+    """Compute daily (1D) analysis for watchlist via Bridge API, store in stock_radar_daily.
+
+    Refuses while KSE is open unless force=True: a snapshot taken mid-session
+    stores intraday prices in the columns the daily tab presents as closing
+    values. The manual endpoint passes force for deliberate intraday pulls.
+    """
     global _daily_refresh_lock
+    market_open = _market_open_safe()
+    if market_open and not force:
+        logger.warning("daily_snapshot: KSE still open - refusing (pass force=True to override)")
+        return {"ok": 0, "errors": 0, "msg": "market_open", "market_was_open": True}
     if _daily_refresh_lock:
         return {"ok": 0, "errors": 0, "msg": "refresh already running"}
     _daily_refresh_lock = True
@@ -1340,10 +1365,10 @@ def refresh_daily_snapshot(symbols=None):
                      confluence_score, confluence_direction,
                      avg_volume, volume_spike, macd_above_zero,
                      stoch_k, adx, rsi_divergence, atr,
-                     bb_squeeze, bb_bandwidth)
+                     bb_squeeze, bb_bandwidth, captured_at, market_was_open)
                     VALUES (?, 'KSE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '1D', ?, ?, ?,
                             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?, ?, ?)
+                            ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (sym, price, trend_ar, rsi, support, resistance,
                       score, score_class, verdict, volume, vol_ratio, change_pct, now,
                       ema9, ema21,
@@ -1352,7 +1377,7 @@ def refresh_daily_snapshot(symbols=None):
                       confluence["confluence_score"], confluence["direction"],
                       0, 1 if vol_ratio >= 2 else 0, 1 if macd_above_zero else 0,
                       stoch_k_val, adx_val, rsi_div_val, atr_val,
-                      bb_squeeze_val, bb_bandwidth_val))
+                      bb_squeeze_val, bb_bandwidth_val, now, 1 if market_open else 0))
                 ok_count += 1
             except Exception as e:
                 logger.warning(f"daily_snapshot skip {sym}: {e}")

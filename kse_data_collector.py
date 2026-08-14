@@ -444,6 +444,22 @@ def _read_file(path: str) -> str:
 # DAILY SCHEDULER
 # ═══════════════════════════════════════════════════
 
+def _daily_refresh_enabled() -> bool:
+    """Feature-flag gate for the automatic daily collection.
+
+    Fails closed: if the flag store cannot be read we skip the run rather
+    than fall back to probing a bridge that is meant to be off.
+    """
+    try:
+        from feature_flags import FeatureFlags
+        return FeatureFlags("data/life.db").is_enabled("daily_refresh")
+    except Exception as e:
+        logger.warning(
+            "feature flag check failed (%r) - treating daily_refresh as off", e
+        )
+        return False
+
+
 async def daily_collection_scheduler():
     """
     Async scheduler: runs collect_and_refresh() + position monitor daily at 2 PM Kuwait.
@@ -457,15 +473,28 @@ async def daily_collection_scheduler():
     while True:
         try:
             now = datetime.now()
-            # Target: 1:30 PM KWT (after market close at 1:00 PM)
-            # Pi runs in UTC, 1:30 PM KWT = 10:30 UTC
-            target = now.replace(hour=10, minute=30, second=0, microsecond=0)
+            # Target 13:30, after the 13:00 KSE close. The Pi's clock is
+            # Asia/Kuwait (+03), so datetime.now() is already local time. An
+            # earlier comment claimed the Pi ran UTC and chose hour=10 to mean
+            # 13:30 KWT; once the box moved to local time that fired at 10:30
+            # - mid-session, three hours before the close, so every "daily"
+            # snapshot captured intraday prices.
+            target = now.replace(hour=13, minute=30, second=0, microsecond=0)
             if now >= target:
                 target += timedelta(days=1)
 
             wait_secs = (target - now).total_seconds()
             _log.info("Next daily collection in %.1f hours", wait_secs / 3600)
             await asyncio.sleep(wait_secs)
+
+            # The bridge is started by hand for technical analysis, so the
+            # automatic pull stays off unless daily_refresh is switched on.
+            # Checked after waking rather than at startup, so flipping the
+            # flag takes effect without a restart.
+            if not _daily_refresh_enabled():
+                _log.info("daily_refresh flag off - skipping automatic collection")
+                await asyncio.sleep(23 * 3600)
+                continue
 
             # Skip Fri(4) and Sat(5) — KSE closed
             kwt_now = datetime.utcnow() + timedelta(hours=3)
