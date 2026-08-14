@@ -1174,10 +1174,25 @@ def _market_open_safe() -> bool:
 
 def _fetch_bridge_daily(symbols: list) -> dict:
     """Fetch 1D analysis for all symbols from Bridge API (sync, batched).
-    Returns dict: {symbol: normalized_data} or {} on failure."""
+    Returns dict: {symbol: normalized_data} or {} on failure.
+
+    Probes /health for 2s before starting the batch walk. Without it, an
+    unreachable bridge costs one full timeout per batch - 26 batches, six
+    and a half minutes, measured 2026-08-14 - and every one of them was
+    always going to fail. The probe is the same one stock_analyzer uses.
+    """
     import requests as _req
     BRIDGE = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
     BATCH = 5   # smaller batches — daily data is slower to fetch
+    try:
+        _hc = _req.get(f"{BRIDGE}/health", timeout=2)
+        if _hc.status_code != 200:
+            logger.warning("daily_snapshot: bridge health returned %s - not fetching",
+                           _hc.status_code)
+            return {}
+    except Exception as _he:
+        logger.warning("daily_snapshot: bridge unreachable (%r) - not fetching", _he)
+        return {}
     results = {}
     for i in range(0, len(symbols), BATCH):
         batch = symbols[i:i + BATCH]
@@ -1185,8 +1200,9 @@ def _fetch_bridge_daily(symbols: list) -> dict:
             r = _req.get(
                 f"{BRIDGE}/multi-analysis",
                 params={"symbols": ",".join(batch), "exchange": "KSE", "interval": "1D", "bars": 60},
-                timeout=15,  # was 90s: against a dead bridge that is 26 batches
-                             # x 90s = ~30 min of hanging before giving up
+                timeout=75,  # a real daily TradingView fetch is slow; the health
+                             # probe above is what keeps a dead bridge cheap, not
+                             # a short timeout here
             )
             if r.status_code == 200:
                 data = r.json()
