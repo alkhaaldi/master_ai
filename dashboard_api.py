@@ -1572,7 +1572,8 @@ async def dashboard_bridge(
 
     selected = selected[:15]
     result = await client.get_multi_analysis(selected, force=force_refresh)
-    return {"status": "ok", **result}
+    from bridge_client import circuit_stats
+    return {"status": "ok", **result, "circuit": circuit_stats()}
 
 
 @router.get("/dashboard/bridge/{symbol}")
@@ -2770,7 +2771,12 @@ async def api_collect_now():
     """Trigger manual data collection (on-demand)."""
     try:
         from kse_data_collector import collect_and_refresh
-        result = collect_and_refresh()
+        # collect_and_refresh() is sync and talks to the bridge over raw
+        # requests. Called directly it held the event loop for the whole
+        # batch walk - every other request on the server stalled behind it,
+        # and this endpoint sits under the /api/ prefix that skips the API
+        # key, so any caller could trigger that.
+        result = await asyncio.to_thread(collect_and_refresh)
         return {"success": True, "result": result}
     except Exception as e:
         logger.error("collect-now error: %s", e, exc_info=True)

@@ -35,9 +35,27 @@ _CIRCUIT: dict = {}
 
 
 def _circuit(base_url: str) -> dict:
-    return _CIRCUIT.setdefault(
-        base_url, {"failures": 0, "open": False, "opened_at": 0.0}
+    entry = _CIRCUIT.setdefault(
+        base_url,
+        {"failures": 0, "open": False, "opened_at": 0.0,
+         "attempts": 0, "blocked": 0},
     )
+    entry.setdefault("attempts", 0)
+    entry.setdefault("blocked", 0)
+    return entry
+
+
+def circuit_stats() -> dict:
+    """Snapshot of the breaker counters, per bridge URL. Touches no network.
+
+    attempts = calls that actually reached the socket; blocked = calls the
+    open breaker short-circuited. A flat "Bridge offline" line count proves
+    nothing on its own - it also stays flat when nobody is calling at all,
+    so read it together with attempts.
+
+    Counters live in memory and start from zero on every service restart.
+    """
+    return {url: dict(entry) for url, entry in _CIRCUIT.items()}
 
 
 def reset_circuit(base_url: str = None) -> dict:
@@ -114,13 +132,16 @@ class BridgeClient:
         # force=True is a human asking for fresh data - they start the bridge
         # by hand immediately before. Probe past an open breaker instead of
         # latching the bridge off permanently after its first outage.
+        entry = _circuit(self.base_url)
         if self._is_circuit_open():
             if not force:
+                entry["blocked"] += 1
                 logger.debug("Bridge circuit open, skipping request")
                 return None
             logger.info("Bridge circuit open, force=True - re-arming and probing")
-            _circuit(self.base_url).update(failures=0, open=False, opened_at=0.0)
+            entry.update(failures=0, open=False, opened_at=0.0)
 
+        entry["attempts"] += 1
         try:
             client = await self._get_client()
             resp = await client.get(path, params=params or {})
@@ -365,6 +386,8 @@ class BridgeClient:
             "circuit_open": self._is_circuit_open(),
             "cached_symbols": len(self._cache),
             "base_url": self.base_url,
+            "attempts": _circuit(self.base_url)["attempts"],
+            "blocked_by_circuit": _circuit(self.base_url)["blocked"],
         }
 
     async def close(self):

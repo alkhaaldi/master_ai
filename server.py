@@ -3099,6 +3099,24 @@ import os as _os
 
 TRADING_HTML_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "www", "trading")
 
+@app.get("/bridge/status")
+async def bridge_circuit_status():
+    """Breaker counters only - deliberately makes no bridge call.
+
+    /dashboard/bridge carries the same numbers, but reading them there fetches
+    analysis from the bridge, so anything polling it would manufacture the very
+    attempts it is trying to measure. Counters are in-memory and restart at zero,
+    hence uptime_seconds alongside them.
+
+    Outside /trading/, /api/ and /webhook/, so the API key is required.
+    """
+    from bridge_client import circuit_stats
+    return {
+        "circuit": circuit_stats(),
+        "uptime_seconds": int(time.time() - START_TIME),
+    }
+
+
 @app.post("/daily-snapshot/refresh")
 async def refresh_daily_snapshot_manual(force: bool = False):
     """Pull a daily snapshot on demand.

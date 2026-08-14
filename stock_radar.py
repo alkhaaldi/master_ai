@@ -1183,7 +1183,8 @@ def _fetch_bridge_daily(symbols: list) -> dict:
             r = _req.get(
                 f"{BRIDGE}/multi-analysis",
                 params={"symbols": ",".join(batch), "exchange": "KSE", "interval": "1D", "bars": 60},
-                timeout=90,  # daily TradingView fetch is slow — allow 90s per batch
+                timeout=15,  # was 90s: against a dead bridge that is 26 batches
+                             # x 90s = ~30 min of hanging before giving up
             )
             if r.status_code == 200:
                 data = r.json()

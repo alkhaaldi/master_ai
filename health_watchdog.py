@@ -32,6 +32,11 @@ RADAR_DAILY_MAX_AGE_H = 48
 APPROVAL_BACKLOG_MAX = 10
 BRIDGE_WINDOW_H = 24
 BRIDGE_MAX_OFFLINE_LINES = 0   # bridge is manual-only: any retry loop is a bug
+BRIDGE_TRIP_PHRASES = (
+    "Bridge offline",        # wording before 2026-08-14, still in rotated logs
+    "Bridge unreachable",
+    "Bridge circuit open",
+)
 RENOTIFY_HOURS = 24            # still-failing reminder interval
 NOTIFY_RECOVERY = True         # also announce FAIL -> OK
 
@@ -108,8 +113,32 @@ def check_data_fetch_success():
     return ok, f"last success id={row[0]} at {row[1]} ({age:.1f}h ago, limit {DATA_FETCH_MAX_AGE_H}h)"
 
 
+def _bridge_counters():
+    """Breaker counters from the running service.
+
+    Uses /bridge/status, which makes no bridge call - polling /dashboard/bridge
+    would manufacture the very attempts we are trying to measure.
+    """
+    import httpx
+
+    env = load_env(ENV_FILE)
+    resp = httpx.get(
+        "http://127.0.0.1:9000/bridge/status",
+        headers={"X-API-Key": env.get("MASTER_AI_API_KEY", "")},
+        timeout=10,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"HTTP {resp.status_code}")
+    return resp.json()
+
+
 def check_bridge_quiet():
-    """2. Bridge is manual-only, so any retry-loop chatter is a bug."""
+    """2. Bridge is manual-only, so any retry-loop chatter is a bug.
+
+    Caveat worth knowing when reading this: server.log is a RotatingFileHandler
+    capped at 2MB, so the 24h window is really "since the last rotation". The
+    check therefore errs toward silence, never toward a false alarm.
+    """
     if not os.path.exists(SERVER_LOG):
         return False, f"server.log missing at {SERVER_LOG} — cannot verify bridge quiet"
     # server.log timestamps come from logging's %(asctime)s, which is LOCAL time
@@ -119,7 +148,9 @@ def check_bridge_quiet():
     last_seen = None
     with open(SERVER_LOG, "r", encoding="utf-8", errors="replace") as fh:
         for line in fh:
-            if "Bridge offline" not in line:
+            # all three phrasings: "Bridge offline" is the pre-2026-08-14 wording
+            # still present in rotated history, the other two are current.
+            if not any(p in line for p in BRIDGE_TRIP_PHRASES):
                 continue
             m = LOG_TS.match(line)
             if not m:
@@ -129,9 +160,24 @@ def check_bridge_quiet():
                 hits += 1
                 last_seen = m.group(1)
     ok = hits <= BRIDGE_MAX_OFFLINE_LINES
-    detail = f"{hits} 'Bridge offline' lines in last {BRIDGE_WINDOW_H}h (limit {BRIDGE_MAX_OFFLINE_LINES})"
+    detail = f"{hits} breaker-trip lines in last {BRIDGE_WINDOW_H}h (limit {BRIDGE_MAX_OFFLINE_LINES})"
     if last_seen:
         detail += f", last {last_seen}"
+
+    # A flat line count also stays flat when nothing is calling the bridge, so
+    # report what actually reached the socket next to it.
+    try:
+        status = _bridge_counters()
+        circuits = status.get("circuit", {})
+        attempts = sum(c.get("attempts", 0) for c in circuits.values())
+        blocked = sum(c.get("blocked", 0) for c in circuits.values())
+        up = int(status.get("uptime_seconds", 0))
+        detail += f"; attempts={attempts} blocked={blocked} over {up // 3600}h{up % 3600 // 60}m uptime"
+        if hits == 0 and attempts == 0:
+            detail += " — nothing called the bridge, so a zero count proves nothing"
+    except Exception as e:
+        detail += f"; counters unavailable ({e!r})"
+
     return ok, detail
 
 
