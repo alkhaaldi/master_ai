@@ -66,7 +66,10 @@ def _google_integrations_enabled() -> bool:
     if enabled:
         _integrations_off_logged = False
     elif not _integrations_off_logged:
-        logger.info(
+        # WARNING, not INFO: the root logger sits at WARNING, so an INFO line
+        # here is silently dropped and nothing in the log would ever say why
+        # Gmail and Calendar return nothing. Once per process is not noise.
+        logger.warning(
             "Google integrations are off (feature flag google_integrations). "
             "Gmail and Calendar will return no data until it is re-enabled."
         )

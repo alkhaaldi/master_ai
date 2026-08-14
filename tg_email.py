@@ -22,9 +22,17 @@ _PRIORITY_SENDERS = {"knpc", "kipic", "petrochemical", "maximo", "sap"}
 
 
 def _gmail_service():
-    """Get authenticated Gmail API service (uses unified google_auth_ext)."""
+    """Get authenticated Gmail API service (uses unified google_auth_ext).
+
+    The legacy fallback below reads the token file directly and refreshes it
+    itself, so it bypasses google_auth_ext entirely - including its feature
+    gate. That is how invalid_grant kept appearing after the integration was
+    switched off. Check the gate here too before falling through.
+    """
     try:
-        from google_auth_ext import build_gmail_service
+        from google_auth_ext import build_gmail_service, _google_integrations_enabled
+        if not _google_integrations_enabled():
+            return None
         svc = build_gmail_service()
         if svc:
             return svc

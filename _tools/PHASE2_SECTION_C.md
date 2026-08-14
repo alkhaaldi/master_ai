@@ -197,3 +197,23 @@ before the endpoint section would remove a real source of false alarms in the
 one tool that is supposed to tell you whether a change was safe.
 
 ---
+
+---
+
+## C-18. tg_logbook reads the Gmail token directly, bypassing the feature gate
+
+`tg_logbook.py:33` does its own `Credentials.from_authorized_user_file(...)` and
+`creds.refresh(Request())`, exactly like the fallback in
+`tg_email._gmail_service` that had to be gated during Section B. It therefore
+ignores `google_integrations` entirely.
+
+It cannot fire today: `tg_logbook` is one of the ten modules with zero importers
+and it is not in cron, so nothing reaches it. Recorded because the moment anyone
+wires it up, the invalid_grant loop returns and the flag will look like it is
+lying.
+
+The general shape is worth naming: a feature gate on a shared helper only holds
+if every caller goes through that helper. Section B found two private token
+readers behind one gate; this is the third.
+
+Recorded 2026-08-14, not fixed - dead code, does not block Sunday.
