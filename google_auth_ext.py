@@ -38,12 +38,51 @@ def load_credentials() -> dict | None:
     return data.get("web") or data.get("installed")
 
 
+_integrations_off_logged = False
+
+
+def _google_integrations_enabled() -> bool:
+    """Feature gate for every Google path.
+
+    Gmail and Calendar were switched off rather than re-authorised: the
+    refresh token was revoked, so each attempt returned invalid_grant - 35
+    google_auth errors and 11 Gmail errors over six days, retried forever
+    because a revoked token never becomes valid again. No code was removed;
+    re-enabling is a flag flip plus a fresh consent at /google/auth.
+
+    Fails closed. If the flag store cannot be read we treat Google as off,
+    because the alternative is resuming a retry loop that cannot succeed.
+
+    Logs the disabled state once rather than per call, so turning the
+    integration off does not just trade one kind of log noise for another.
+    """
+    global _integrations_off_logged
+    try:
+        from feature_flags import FeatureFlags
+        enabled = FeatureFlags("data/life.db").is_enabled("google_integrations")
+    except Exception as e:
+        logger.warning("feature flag check failed (%r) - treating Google as off", e)
+        return False
+    if enabled:
+        _integrations_off_logged = False
+    elif not _integrations_off_logged:
+        logger.info(
+            "Google integrations are off (feature flag google_integrations). "
+            "Gmail and Calendar will return no data until it is re-enabled."
+        )
+        _integrations_off_logged = True
+    return enabled
+
+
 def get_google_creds():
     """Get valid Google credentials with all required scopes.
-    
-    Returns Credentials object or None if token missing/invalid.
-    Auto-refreshes expired tokens.
+
+    Returns a Credentials object, or None if the integration is switched
+    off or the token is missing/invalid. Auto-refreshes expired tokens.
     """
+    if not _google_integrations_enabled():
+        return None
+
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
 
@@ -113,7 +152,11 @@ def build_calendar_service():
     """Get authenticated Google Calendar API service."""
     creds = get_google_creds()
     if not creds:
-        logger.warning("No valid Google credentials for Calendar")
+        # Only a real problem when the integration is meant to be running.
+        # Switched off deliberately, this warning would just replace one kind
+        # of log noise with another.
+        if _google_integrations_enabled():
+            logger.warning("No valid Google credentials for Calendar")
         return None
 
     # Check if calendar scope is present

@@ -20,6 +20,7 @@ _SEED_FLAGS = [
     ("telegram_queue", 0, "Offline message buffer (Phase 4)"),
     ("chat_compaction", 0, "Chat context compression (Phase 5)"),
     ("hooks", 0, "Event hook system (Phase 6)"),
+    ("google_integrations", 0, "Gmail + Google Calendar (off: refresh token revoked)"),
     ("tool_registry", 0, "Central tool catalog (Phase 6)"),
     # Trading feature flags (Layer 4)
     ("radar_enabled", 1, "Stock radar 128-stock monitoring"),
