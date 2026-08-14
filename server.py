@@ -8993,9 +8993,14 @@ async def confluence_scan_loop():
     _sent_today = {}  # {date_str: set(symbol|signal_type)}
     while True:
         try:
-            now = datetime.now()
-            # KSE: Sun(6) Mon(0) Tue(1) Wed(2) Thu(3), 9:00-13:00 KWT = 6:00-10:00 UTC
-            if now.weekday() in (6, 0, 1, 2, 3) and 6 <= now.hour <= 10:
+            now = datetime.now()  # Asia/Kuwait - see the timezone rule in CLAUDE_CONTEXT.md
+            # KSE trades Sun-Thu, 09:00-13:00 local. weekday(): Mon=0 .. Sun=6,
+            # so (6,0,1,2,3) is Sun-Thu and is correct.
+            # The hour gate was not: it read 6 <= hour <= 10 under a comment
+            # converting 09:00-13:00 KWT to UTC, but this box runs Asia/Kuwait,
+            # so the scan actually ran 06:00-10:59 local - starting three hours
+            # before the open and stopping two hours before the close.
+            if now.weekday() in (6, 0, 1, 2, 3) and 9 <= now.hour < 13:
                 if CONFLUENCE_OK:
                     actionable = run_confluence_scan()
                     if actionable:
