@@ -12,8 +12,9 @@ The steps are tied to clock times, so run them one at a time:
     venv/bin/python3 _tools/verify_sunday.py --step 7     # after 13:00, bridge up
     venv/bin/python3 _tools/verify_sunday.py --step 8     # ~12:50, before the close
     venv/bin/python3 _tools/verify_sunday.py --step 9     # ~13:45
+    venv/bin/python3 _tools/verify_sunday.py --step 10    # ~13:15, after the close
 
-Steps 1, 2, 5, 6, 8, 9 only observe. Steps 3, 4 and 7 deliberately call
+Steps 1, 2, 5, 6, 8, 9, 10 only observe. Steps 3, 4 and 7 deliberately call
 refresh_daily_snapshot and will write to stock_radar_daily when they succeed.
 
 Step 7 is the real test: the first successful pull since 2026-04-02.
@@ -254,8 +255,40 @@ def step9():
                   f"caught two 10-minute ticks and evaluation ran twice - C-14.")
 
 
+def step10():
+    """confluence_scan_loop, now that its window is corrected.
+
+    Until 2026-08-14 it gated on 6 <= hour <= 10 under a comment converting
+    09:00-13:00 KWT to UTC, so it ran 06:00-10:59 local. 7,112 of the table's
+    15,474 rows sit at exactly 06:00 as a result. Zero rows before 09:00 today
+    is the whole point of the fix.
+
+    created_at is written with datetime.now().isoformat(), so it is local.
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    rows = q("SELECT created_at FROM confluence_signals WHERE created_at LIKE ?",
+             (today + "%",))
+    if not rows:
+        return report(10, False,
+                      "no confluence rows today - either the 09:00 window has not "
+                      "opened yet, or the loop is not firing at all")
+    hours = {}
+    for (t,) in rows:
+        try:
+            h = int(str(t)[11:13])
+        except ValueError:
+            continue
+        hours[h] = hours.get(h, 0) + 1
+    early = {h: n for h, n in sorted(hours.items()) if h < 9}
+    late = {h: n for h, n in sorted(hours.items()) if h >= 13}
+    ok = not early and not late
+    return report(10, ok,
+                  f"{len(rows)} rows today by hour {dict(sorted(hours.items()))}; "
+                  f"before 09:00: {early or 'none'}; 13:00 or later: {late or 'none'}")
+
+
 STEPS = {1: step1, 2: step2, 3: step3, 4: step4, 5: step5, 6: step6, 7: step7,
-         8: step8, 9: step9}
+         8: step8, 9: step9, 10: step10}
 
 
 def main():
