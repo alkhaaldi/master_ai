@@ -2978,16 +2978,23 @@ async def lifespan(app):
                 try:
                     from trading_brain import snapshot_signals, evaluate_pending_signals, generate_weekly_report, format_weekly_tg
                     from datetime import datetime as _dt
-                    now = _dt.now()
-                    hour, minute, weekday = now.hour, now.minute, now.isoweekday()
-                    # Snapshot signals every 2 hours during market hours (Sun-Thu 9-13 KWT = 6-10 UTC)
-                    if weekday <= 4 and 6 <= hour <= 10:
+                    now = _dt.now()  # Asia/Kuwait - see the timezone rule in CLAUDE_CONTEXT.md
+                    hour, minute, wd = now.hour, now.minute, now.weekday()
+                    # weekday(): Mon=0 .. Sun=6, so KSE's Sun-Thu is this set. The
+                    # previous code read isoweekday() <= 4, which is Mon-Thu - Sunday
+                    # is a trading day and was getting no snapshot and no evaluation
+                    # at all. Every window below is local time; the old comments
+                    # converted to UTC while the code did not, so each fired three
+                    # hours early.
+                    _KSE_DAYS = (6, 0, 1, 2, 3)
+                    # Snapshot during market hours, Sun-Thu 09:00-12:59 local
+                    if wd in _KSE_DAYS and 9 <= hour < 13:
                         snapshot_signals()
-                    # Evaluate daily at 13:30 KWT (10:30 UTC) Sun-Thu
-                    if weekday <= 4 and hour == 10 and 25 <= minute <= 35:
+                    # Evaluate daily at 13:30 local, after the 13:00 close
+                    if wd in _KSE_DAYS and hour == 13 and 25 <= minute <= 35:
                         evaluate_pending_signals()
-                    # Weekly report Friday 14:00 KWT (11:00 UTC)
-                    if weekday == 5 and hour == 11 and minute <= 10:
+                    # Weekly report Friday 14:00 local
+                    if wd == 4 and hour == 14 and minute <= 10:
                         report = generate_weekly_report()
                         try:
                             _cid = ADMIN_TELEGRAM_ID or "669769765"

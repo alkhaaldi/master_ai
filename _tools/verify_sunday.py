@@ -10,11 +10,19 @@ The steps are tied to clock times, so run them one at a time:
     venv/bin/python3 _tools/verify_sunday.py --step 5     # ~13:35
     venv/bin/python3 _tools/verify_sunday.py --step 6     # any time
     venv/bin/python3 _tools/verify_sunday.py --step 7     # after 13:00, bridge up
+    venv/bin/python3 _tools/verify_sunday.py --step 8     # ~12:50, before the close
+    venv/bin/python3 _tools/verify_sunday.py --step 9     # ~13:45
 
-Steps 1, 2, 5, 6 only observe. Steps 3, 4 and 7 deliberately call
+Steps 1, 2, 5, 6, 8, 9 only observe. Steps 3, 4 and 7 deliberately call
 refresh_daily_snapshot and will write to stock_radar_daily when they succeed.
 
 Step 7 is the real test: the first successful pull since 2026-04-02.
+
+Steps 8 and 9 watch the trading-brain scheduler, which was corrected on
+2026-08-14. Until then isoweekday() <= 4 meant Mon-Thu, so snapshot_signals and
+evaluate_pending_signals had never once run on a Sunday, and both windows fired
+three hours early. This is their first Sunday, on live data - nobody knows yet
+what they do with it.
 """
 import argparse
 import os
@@ -182,7 +190,61 @@ def step7():
                   f"previous captured_at {before}")
 
 
-STEPS = {1: step1, 2: step2, 3: step3, 4: step4, 5: step5, 6: step6, 7: step7}
+def step8():
+    """snapshot_signals on a Sunday - it has never run on one before.
+
+    isoweekday() <= 4 meant Mon-Thu, so Sunday got no snapshot at all. This is
+    the first Sunday it fires, and on live intraday data. signal_time is written
+    in local time.
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    rows = q("SELECT signal_time, COUNT(*) FROM signal_snapshots "
+             "WHERE signal_time LIKE ? GROUP BY substr(signal_time, 1, 13) "
+             "ORDER BY signal_time", (today + "%",))
+    if not rows:
+        return report(8, False,
+                      "no snapshot rows for today - either the window has not opened "
+                      "yet (09:00) or the scheduler is not firing on Sunday")
+    hours = sorted({int(t[11:13]) for t, _ in rows})
+    total = sum(n for _, n in rows)
+    outside = [h for h in hours if not (9 <= h < 13)]
+    ok = not outside
+    return report(8, ok,
+                  f"{total} snapshot rows today across hours {hours}"
+                  f"{'; OUTSIDE the window: ' + str(outside) if outside else ''}. "
+                  f"Note: the loop ticks every 10 min and has no 2-hour gate despite "
+                  f"its old comment, so a full session is roughly 24 ticks, not 2 "
+                  f"(recorded as C-13).")
+
+
+def step9():
+    """evaluate_pending_signals at 13:30, and whether it fires twice.
+
+    The gate is 13:25-13:35, an 11-minute window, while the loop ticks every 10
+    minutes - two ticks can land inside it. outcome_evaluated_at is written with
+    SQLite CURRENT_TIMESTAMP, which is UTC, unlike signal_time.
+    """
+    today_utc = utc_now().strftime("%Y-%m-%d")
+    rows = q("SELECT outcome_evaluated_at, COUNT(*) FROM signal_snapshots "
+             "WHERE outcome_evaluated_at LIKE ? "
+             "GROUP BY substr(outcome_evaluated_at, 1, 16) "
+             "ORDER BY outcome_evaluated_at", (today_utc + "%",))
+    if not rows:
+        return report(9, False,
+                      "nothing evaluated today - either 13:30 local has not passed "
+                      "yet, or the evaluation branch did not fire")
+    minutes = [t[:16] for t, _ in rows]
+    total = sum(n for _, n in rows)
+    distinct_runs = len({m for m in minutes})
+    ok = distinct_runs <= 1
+    return report(9, ok,
+                  f"{total} rows evaluated across {distinct_runs} distinct minute(s) "
+                  f"{minutes} (UTC). More than one cluster means the 11-minute gate "
+                  f"caught two 10-minute ticks and evaluation ran twice - C-14.")
+
+
+STEPS = {1: step1, 2: step2, 3: step3, 4: step4, 5: step5, 6: step6, 7: step7,
+         8: step8, 9: step9}
 
 
 def main():
