@@ -17,7 +17,7 @@ import re
 import sqlite3
 import sys
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 LIFE_DB = os.path.join(BASE, "data", "life.db")
@@ -67,8 +67,20 @@ def parse_ts(value):
     return datetime.strptime(text, "%Y-%m-%d %H:%M:%S")
 
 
+def utc_now():
+    """Naive UTC, matching this codebase's storage convention.
+
+    Every timestamp we read is UTC: data_fetch_runs.created_at comes from
+    SQLite CURRENT_TIMESTAMP, and stock_radar_daily.updated_at from
+    datetime.utcnow().isoformat() (stock_radar.py:1205). The Pi's clock is
+    Asia/Kuwait (+03), so comparing against local now() would overstate every
+    age by 3h and false-alarm near the 48h thresholds.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 def age_hours(ts):
-    return (datetime.now() - ts).total_seconds() / 3600.0
+    return (utc_now() - ts).total_seconds() / 3600.0
 
 
 def query_one(db_path, sql, params=()):
@@ -100,6 +112,8 @@ def check_bridge_quiet():
     """2. Bridge is manual-only, so any retry-loop chatter is a bug."""
     if not os.path.exists(SERVER_LOG):
         return False, f"server.log missing at {SERVER_LOG} — cannot verify bridge quiet"
+    # server.log timestamps come from logging's %(asctime)s, which is LOCAL time
+    # (Asia/Kuwait) — unlike the DB columns, which are UTC. Compare like with like.
     cutoff = datetime.now() - timedelta(hours=BRIDGE_WINDOW_H)
     hits = 0
     last_seen = None
@@ -242,7 +256,10 @@ def main():
 
     env = load_env(ENV_FILE)
     conn = init_db()
-    now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # stored timestamps are UTC (see utc_now); the Telegram header shows local
+    # time because a human reads it
+    now_iso = utc_now().strftime("%Y-%m-%d %H:%M:%S")
+    now_local = datetime.now().strftime("%Y-%m-%d %H:%M:%S %Z").strip()
 
     results = []
     for name, fn in CHECKS:
@@ -266,7 +283,7 @@ def main():
             print(f"{'OK  ' if ok else 'FAIL'} {name}: {detail}{'  [alert]' if alert else ''}")
 
     if to_send:
-        body = "master_ai health watchdog — " + now_iso + "\n\n" + "\n\n".join(to_send)
+        body = "master_ai health watchdog — " + now_local + "\n\n" + "\n\n".join(to_send)
         send_telegram(env, body, args.dry_run)
 
     conn.close()
