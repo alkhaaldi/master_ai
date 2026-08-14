@@ -38,11 +38,37 @@ def _circuit(base_url: str) -> dict:
     entry = _CIRCUIT.setdefault(
         base_url,
         {"failures": 0, "open": False, "opened_at": 0.0,
-         "attempts": 0, "blocked": 0},
+         "attempts": 0, "blocked": 0, "callers": {}},
     )
     entry.setdefault("attempts", 0)
     entry.setdefault("blocked", 0)
+    entry.setdefault("callers", {})
     return entry
+
+
+def _caller_tag() -> str:
+    """Nearest stack frame outside this module - whoever wanted bridge data."""
+    import traceback
+
+    for frame in reversed(traceback.extract_stack()[:-1]):
+        if not frame.filename.endswith("bridge_client.py"):
+            return f"{os.path.basename(frame.filename)}:{frame.name}"
+    return "unknown"
+
+
+def _note_caller(base_url: str, symbols: int = 1) -> None:
+    """Record who asked, and for how many symbols.
+
+    A multi-symbol call fans out to one request per symbol, so a caller
+    asking for 128 symbols every few minutes accounts for far more traffic
+    than the call count alone suggests.
+    """
+    callers = _circuit(base_url)["callers"]
+    tag = _caller_tag()
+    seen = callers.get(tag, {"calls": 0, "symbols": 0})
+    seen["calls"] += 1
+    seen["symbols"] += symbols
+    callers[tag] = seen
 
 
 def circuit_stats() -> dict:
@@ -177,6 +203,7 @@ class BridgeClient:
         return data or {"status": "offline"}
 
     async def get_quote(self, symbol: str, exchange: str = DEFAULT_EXCHANGE, force: bool = False) -> dict:
+        _note_caller(self.base_url)
         cache_key = f"quote:{exchange}:{symbol}"
         if not force:
             cached = self._cache_get(cache_key, CACHE_TTL_QUOTE)
@@ -198,6 +225,7 @@ class BridgeClient:
         return {"symbol": symbol, "exchange": exchange, "source": "none", "stale": True, "error": "bridge_unreachable"}
 
     async def get_analysis(self, symbol: str, exchange: str = DEFAULT_EXCHANGE, force: bool = False) -> dict:
+        _note_caller(self.base_url)
         cache_key = f"analysis:{exchange}:{symbol}"
         if not force:
             cached = self._cache_get(cache_key, CACHE_TTL_ANALYSIS)
@@ -220,6 +248,7 @@ class BridgeClient:
         return {"symbol": symbol, "exchange": exchange, "source": "none", "stale": True, "error": "bridge_unreachable"}
 
     async def get_multi_analysis(self, symbols: list[str], exchange: str = DEFAULT_EXCHANGE, force: bool = False) -> dict:
+        _note_caller(self.base_url, len(symbols))
         """Get daily analysis for multiple symbols via concurrent individual /analysis calls."""
         results = {}
         errors = []
@@ -267,6 +296,7 @@ class BridgeClient:
         }
 
     async def get_analysis_30m(self, symbol: str, exchange: str = DEFAULT_EXCHANGE, force: bool = False) -> dict:
+        _note_caller(self.base_url)
         """Get 30m analysis for a symbol."""
         cache_key = f"analysis_30m:{exchange}:{symbol}"
         if not force:
@@ -290,6 +320,7 @@ class BridgeClient:
         return {"symbol": symbol, "exchange": exchange, "source": "none", "stale": True, "error": "bridge_unreachable"}
 
     async def get_multi_analysis_30m(self, symbols: list[str], exchange: str = DEFAULT_EXCHANGE) -> dict:
+        _note_caller(self.base_url, len(symbols))
         """Get 30m analysis for multiple symbols via concurrent individual calls."""
         results = {}
         errors = []
@@ -334,6 +365,7 @@ class BridgeClient:
         }
 
     async def get_multi_analysis_30m_bulk(self, symbols: list[str], exchange: str = DEFAULT_EXCHANGE, batch_size: int = 25, delay: float = 1.0) -> dict:
+        _note_caller(self.base_url, len(symbols))
         """Get 30m analysis for many symbols via Bridge /multi-analysis (single WebSocket per batch).
 
         Unlike get_multi_analysis_30m which opens one HTTP request per symbol,

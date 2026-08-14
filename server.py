@@ -3160,7 +3160,7 @@ async def serve_trading_page(page: str):
         return FileResponse(exact)
     return JSONResponse({"detail": "Not Found"}, status_code=404)
 
-from dashboard_api import router as dashboard_router
+from dashboard_api import router as dashboard_router, _require_api_key
 app.include_router(dashboard_router)
 
 # Event Engine (v5.1)
@@ -3664,8 +3664,9 @@ async def dashboard_reviews(date: str = None):
     return get_reviews_for_dashboard(date)
 
 @app.post("/api/review-now")
-async def manual_review(date: str = None, all: bool = False):
+async def manual_review(request: Request, date: str = None, all: bool = False):
     """Manually trigger signal review. Use ?all=true to review all pending days."""
+    _require_api_key(request)
     if not REVIEW_OK:
         return {"error": "signal_review not loaded"}
     if all:
@@ -4046,7 +4047,7 @@ async def patterns_suggestions_endpoint():
 
 @app.get("/anomalies")
 async def get_anomalies_ep(request: Request):
-    _check_api_key(request)
+    _require_api_key(request)
     if not LEARNING_OK:
         return {"error": "brain_learning not loaded"}
     anomalies = await bl_anomalies()
@@ -8288,7 +8289,8 @@ async def api_news(category: str = None, sub: str = None,
     return {"items": items, "counts": counts, "last_boursa_refresh": lb, "last_gemini_refresh": lg}
 
 @app.post("/api/news/refresh-boursa")
-async def api_news_refresh_boursa():
+async def api_news_refresh_boursa(request: Request):
+    _require_api_key(request)
     if not NEWS_ENGINE_OK:
         return {"ok": False, "error": "news_engine not loaded"}
     # Task tracking (Integration 7)
@@ -8310,7 +8312,8 @@ async def api_news_refresh_boursa():
         return {"ok": False, "error": str(e)}
 
 @app.post("/api/news/refresh-gemini")
-async def api_news_refresh_gemini():
+async def api_news_refresh_gemini(request: Request):
+    _require_api_key(request)
     if not NEWS_ENGINE_OK:
         return {"ok": False, "error": "news_engine not loaded"}
     try:

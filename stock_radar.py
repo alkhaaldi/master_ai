@@ -145,7 +145,9 @@ def init_radar_db():
         "ALTER TABLE stock_radar_daily ADD COLUMN bb_squeeze BOOLEAN DEFAULT 0",
         "ALTER TABLE stock_radar_daily ADD COLUMN bb_bandwidth REAL",
         "ALTER TABLE stock_radar_daily ADD COLUMN captured_at TEXT",
-        "ALTER TABLE stock_radar_daily ADD COLUMN market_was_open BOOLEAN DEFAULT 0",
+        # no DEFAULT on purpose: NULL means "provenance unknown", 0 must only
+        # ever mean "verified captured after the close"
+        "ALTER TABLE stock_radar_daily ADD COLUMN market_was_open BOOLEAN",
     ]:
         try:
             conn.execute(col_sql)

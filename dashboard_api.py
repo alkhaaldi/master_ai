@@ -565,6 +565,8 @@ async def ha_dashboard_radar():
                 "updated_at": d.get("updated_at", ""),
                 "data_age_hours": d.get("data_age_hours", 999),
                 "is_stale": d.get("is_stale", True),
+                "market_was_open": d.get("market_was_open"),
+                "captured_at": d.get("captured_at"),
                 "freshness": d.get("freshness", "stale"),
                 "source_timeframe": d.get("source_timeframe", "1D"),
                 "action": _action,
@@ -598,9 +600,31 @@ async def ha_dashboard_radar():
                 "bb_bandwidth": d.get("bb_bandwidth"),
             })
         data["radar_daily_context"] = daily_clean
-        data["daily_context_stale"] = all(d.get("is_stale", True) for d in daily) if daily else True
+
+        def _untrusted(d):
+            """Daily context is only trustworthy if it is fresh AND was taken
+            after the close. A mid-session capture stores intraday prices in
+            the columns this tab presents as closing values, and a NULL means
+            we never recorded which side of the close it came from - unknown
+            provenance is not trust.
+            """
+            if d.get("is_stale", True):
+                return True
+            return d.get("market_was_open") != 0
+
+        _mid = [d for d in daily if d.get("market_was_open") == 1]
+        _unknown = [d for d in daily if d.get("market_was_open") is None]
+        data["daily_context_stale"] = all(_untrusted(d) for d in daily) if daily else True
+        data["daily_context_mid_session"] = len(_mid)
+        data["daily_context_unknown_provenance"] = len(_unknown)
         if not daily_clean:
             data["daily_context_reason"] = "daily context not initialized yet"
+        elif len(_mid) == len(daily):
+            data["daily_context_reason"] = (
+                "captured while the market was open - intraday prices, not closing values"
+            )
+        elif len(_unknown) == len(daily):
+            data["daily_context_reason"] = "capture time not recorded - provenance unknown"
         elif data["daily_context_stale"]:
             data["daily_context_reason"] = "data available but stale"
         else:
@@ -1922,6 +1946,7 @@ def dashboard_paper_trading():
 @router.post("/api/paper-trade/open")
 async def api_paper_trade_open(request: Request):
     """Open a paper trade from signal data."""
+    _require_api_key(request)
     try:
         body = await request.json()
         from paper_trading import open_paper_trade
@@ -1933,6 +1958,7 @@ async def api_paper_trade_open(request: Request):
 @router.post("/api/paper-trade/close")
 async def api_paper_trade_close(request: Request):
     """Close a paper trade."""
+    _require_api_key(request)
     try:
         body = await request.json()
         from paper_trading import close_paper_trade
@@ -2860,8 +2886,9 @@ async def api_portfolio_status():
 
 
 @router.post("/api/portfolio-monitor")
-async def api_portfolio_monitor():
+async def api_portfolio_monitor(request: Request):
     """Trigger daily position monitoring scan (on-demand)."""
+    _require_api_key(request)
     try:
         from position_engine import run_daily_monitor
         result = run_daily_monitor()
@@ -2874,6 +2901,7 @@ async def api_portfolio_monitor():
 @router.post("/api/portfolio-alert-ack")
 async def api_portfolio_alert_ack(request: Request):
     """Acknowledge a position alert."""
+    _require_api_key(request)
     try:
         body = await request.json()
         alert_id = body.get("alert_id")
