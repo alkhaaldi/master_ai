@@ -648,8 +648,13 @@ async def ha_dashboard_radar():
                     try:
                         from tv_data import resolve_symbol, _normalize_price_to_fils
                         _rsym = resolve_symbol(_t["symbol"])
+                        # captured_at, not rowid: rowid is insertion order, which is
+                        # only accidentally the newest price. Identical result while
+                        # the table is frozen; correct once data returns.
                         _dr = _rdb.execute(
-                            "SELECT price FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1",
+                            "SELECT price, captured_at, updated_at, market_was_open "
+                            "FROM stock_radar_daily WHERE symbol=? "
+                            "ORDER BY captured_at DESC LIMIT 1",
                             (_rsym,)
                         ).fetchone()
                         if _dr:
@@ -662,8 +667,52 @@ async def ha_dashboard_radar():
                             else:
                                 _t["pnl_pct"] = round((_cur / _entry - 1) * 100, 2) if _entry else 0
                                 _t["pnl_fils"] = round((_cur - _entry) * _qty) if _qty else 0
-                    except Exception:
-                        pass
+
+                            # --- provenance (additive; nothing above is changed) ---
+                            # This reference price comes from stock_radar_daily, which
+                            # has not moved since 2026-04-02. The P&L above was being
+                            # published to two decimal places, with broker fees, on top
+                            # of it. Output precision must not exceed input reliability,
+                            # so the page is given what it needs to refuse the number.
+                            _as_of = _dr["captured_at"] or _dr["updated_at"]
+                            _t["price_as_of"] = _as_of
+                            _t["price_source"] = "stock_radar_daily"
+                            _mid = bool(_dr["market_was_open"])
+                            _t["price_captured_mid_session"] = _mid
+                            _age = None
+                            if _as_of:
+                                try:
+                                    _age = (datetime.utcnow()
+                                            - datetime.fromisoformat(str(_as_of))).days
+                                except (ValueError, TypeError) as _ae:
+                                    logging.getLogger("master_ai").warning(
+                                        "radar: unparseable price_as_of %r for %s (%s)",
+                                        _as_of, _rsym, _ae)
+                            _t["price_age_days"] = _age
+                            if _age is None:
+                                _t["price_state"] = "unknown"
+                                _t["pnl_valid"] = False
+                                _t["pnl_invalid_reason"] = "price has no as_of"
+                            elif _age > 1:
+                                _t["price_state"] = "stale"
+                                _t["pnl_valid"] = False
+                                _t["pnl_invalid_reason"] = (
+                                    f"price_as_of is {_age} days old")
+                            elif _mid:
+                                # captured while the session was running, so it is not
+                                # a valid close even on its own day
+                                _t["price_state"] = "intraday"
+                                _t["pnl_valid"] = False
+                                _t["pnl_invalid_reason"] = "price captured mid-session"
+                            else:
+                                _t["price_state"] = "live"
+                                _t["pnl_valid"] = True
+                                _t["pnl_invalid_reason"] = None
+                    except Exception as _pe:
+                        # the fifth silent swallow of the day
+                        logging.getLogger("master_ai").warning(
+                            "radar: price lookup failed for %s: %r",
+                            _t.get("symbol"), _pe)
                 _rdb.close()
             except Exception:
                 pass
