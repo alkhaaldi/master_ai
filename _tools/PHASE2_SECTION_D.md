@@ -360,3 +360,110 @@ committed. Two different questions; only one is being asked.
 - `positions.html` / `radar.html` — claude.ai, canonical fields are on the wire.
 - ~36 remaining price paths → `get_price`.
 - D-5 counter review (one week from 2026-08-15).
+
+---
+
+## D-11 — Two clocks in one row, in a column created today
+
+Verified on the wire, `id=10`:
+
+```
+created_at        = 2026-08-15 18:59:50
+user_confirmed_at = 2026-08-15 16:31:11
+```
+
+The confirmation appears to happen **2h28m before the row existed**. It did
+not. The row was created ~19:00 Kuwait time and confirmed ~19:31 Kuwait time.
+So:
+
+- `created_at` is being written in **local** (+03)
+- `user_confirmed_at` is being written in **UTC**
+
+`user_confirmed_at` is the correct one — it follows the project convention
+that every stored timestamp is UTC. `created_at` is the pre-existing offender
+already named in `mixed_clock_census.md`. The new column did nothing wrong;
+it landed next to an old bug and made the contradiction visible.
+
+But the pair is now unusable: any check of the form "was this row confirmed
+after it was created?" returns a negative interval and will either fire
+falsely or be silently swallowed. This is precisely the case the census rule
+covers — *a column read alongside another written by a different path gets
+both paths audited together before either is trusted.*
+
+**Change:**
+1. Do not "fix" this by writing `user_confirmed_at` in local to match.
+   The convention is UTC; move `created_at` onto it.
+2. Audit every consumer that compares `created_at` to anything, including the
+   D-7 checker rule `created_at::date == exit_date` — that comparison mixes a
+   local date against a UTC one and can misclassify rows near midnight.
+3. Add both columns to `mixed_clock_census.md` with their proven clock.
+
+## D-12 — The gate that closed does not say why
+
+`can_open_new = false` is now correct, and `concentration_note` explains the
+99%. But nothing on the wire states the rule that produced the false: the
+"below 1% of book is noise, not a position" floor is applied in code and
+described only in a commit message.
+
+Add `can_open_new_reason` naming the binding constraint (heat / capital floor
+/ slots). A gate whose reasoning is invisible is a gate nobody can audit —
+rule 11 of the project's own strict list.
+
+---
+
+## Section D closed — verified on the wire 2026-08-15 (post `a54c508`)
+
+D-11: `created_at = 15:59:50 UTC`, `user_confirmed_at = 16:31:11 UTC` —
++31 min, the real interval. Spot-checked the migrated rows: no row crossed a
+calendar boundary under the -3h shift (earliest `created_at` is 06:06, so the
+00:00–02:59 local danger window is empty). `entry_date` / `exit_date` were
+correctly left alone.
+
+D-12: `can_open_new_reason = "capital floor: 1,295 KWD available < 1,440 KWD
+(1% of capital) - below that is noise, not a position"`. The rule is on the
+wire where it can be argued with.
+
+D-1..D-12 all green.
+
+---
+
+## C-27 — two preconditions before it starts
+
+**1. Seven closed trades carry `entry_date_precision = NULL`.**
+ids 1,3,4,5,6,7,8. In every one, `date(created_at) == entry_date`, which is
+good evidence the dates are real — but *evidence* is not *stated*, and NULL
+is not `exact`. C-27 will otherwise score seven rows as if their dates were
+confirmed. Either backfill precision with the derivation recorded in `notes`
+(derived from same-day logging, not user-stated), or have C-27 report the
+count of rows it scored at unknown precision. Do not let NULL read as exact —
+that is the whole disease in one field.
+
+**2. C-27 must emit a run manifest, or it cannot be trusted either.**
+The reason we are here is that the system's previous learning was measured
+with a broken ruler and *nobody could tell from the output*. If C-27
+re-derives weights and does not record how, we get a fresh set of numbers
+that are equally unfalsifiable — better numbers, same epistemics.
+
+Each run writes, versioned and stored:
+- run timestamp **and its clock**, code commit
+- window definition used, in words
+- counts included / excluded with the reason per exclusion bucket
+  (`trade_kind=void`, `entry_basis=consolidated_restart`, precision unknown)
+- weights before and after, side by side
+- the input row/signal ids, or a hash of them
+
+Acceptance: a second run on unchanged inputs reproduces the first exactly,
+and a human can read the manifest and say *why* a weight moved.
+
+**3. C-27 must read `signal_reviews.graded_mode` and treat the four values
+differently.** (Added by Section E follow-up, 2026-08-15.) The column is
+never NULL: `live` = graded on the first session after the decision,
+`backfill` = graded later from Yahoo history (E-1 backfill, 20 rows),
+`legacy` = graded in Mar-Apr 2026 by the pre-E-1 loop on bridge bars
+(5 rows), `ungraded` = `no_data`, nothing measured (currently today's 6,
+replaced next session). C-27's hit-rate basis may use `live` and `backfill`
+rows; `legacy` rows were measured on the old price path and belong in the
+same suspicion bucket as everything else C-27 exists to re-measure;
+`ungraded` rows are not outcomes at all and must be counted as coverage
+gaps, never as neutral results. The manifest's exclusion buckets
+(precondition 2) gain one axis: counts per `graded_mode`.
