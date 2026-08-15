@@ -258,6 +258,7 @@ class PositionEngine:
         today_date = date.today()
         all_alerts = []
         positions_checked = 0
+        stale_skipped = 0
         errors = 0
 
         for trade in open_trades:
@@ -271,6 +272,23 @@ class PositionEngine:
                 price = price_info.get("price")
                 if not price:
                     logger.debug("No price for %s — skipping", sym)
+                    continue
+
+                # get_fresh_price already tells us when it fell back to
+                # stock_radar_daily, which has not moved since 2026-04-02.
+                # Acting on that would move a stop, mark a target hit or
+                # close a position on a price four months old. Everything
+                # below this point mutates the trade, so stop here: the
+                # monitor does less when it knows less, not more.
+                # _mark_monitored is below too, deliberately - a run that
+                # could not evaluate should not claim it monitored.
+                if price_info.get("stale"):
+                    logger.warning(
+                        "position monitor: %s price is stale (source=%s) - "
+                        "no stop moves, no target marks, no close this run",
+                        sym, price_info.get("source"),
+                    )
+                    stale_skipped += 1
                     continue
 
                 price = float(price)
@@ -378,6 +396,7 @@ class PositionEngine:
         summary = {
             "monitored_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "positions_checked": positions_checked,
+            "stale_skipped": stale_skipped,
             "total_open": len(open_trades),
             "alerts_generated": len(all_alerts),
             "errors": errors,
