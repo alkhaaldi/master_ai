@@ -203,3 +203,38 @@ Files changed, validation output, what still fails, and — specifically —
 **why the reviewer stopped on 2026-04-23**. That answer matters more than the
 fix: a loop that died silently for 114 days is a monitoring failure, and if
 the cause is still present it will kill the next loop too.
+
+---
+
+## E-6 — `reviews.lifetime` (Claude Code) — small, blocks the E-3 headline
+
+`/dashboard/reviews` returns a single day's slice (`date`, `total`,
+`success_rate`, `results`, `reviews[]`). E-3 replaces the confidence badge
+with the loop's **lifetime** record, and that aggregate is not on the wire.
+
+The new `decisions.html` is already built against this contract and degrades
+honestly without it — it names the missing field on screen rather than
+showing a zero.
+
+Add to `GET /dashboard/reviews`:
+
+```json
+"lifetime": {
+  "graded_total": 31,
+  "resolved_total": 25,
+  "results": {"success":2,"fail":5,"partial":15,"ongoing":3,"no_data":6},
+  "hit_target_1": 2,
+  "hit_stop": 5,
+  "by_graded_mode": {"live":0,"backfill":20,"legacy":5,"ungraded":6},
+  "first_review_date": "2026-03-30",
+  "last_review_date": "2026-08-15",
+  "sessions_since_last_review": 0
+}
+```
+
+Rules: counts come from `signal_reviews` with no filtering of inconvenient
+buckets — `no_data` and `ungraded` are part of the record, not omissions.
+Keep the existing day-slice keys unchanged (backward compatible).
+
+**Acceptance:** the numbers match a direct `GROUP BY` on the table, and the
+decisions page renders the record instead of the missing-field notice.

@@ -2,294 +2,450 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>قرارات الآن — KSE</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>قرارات الدخول</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Noto+Kufi+Arabic:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--n9:#070D17;--n8:#0C1525;--n7:#111E32;--n6:#162840;--n5:#1C334F;--gold:#C6974B;--gold-b:#D4A95C;--gold-bg:rgba(198,151,75,.06);--gold-br:rgba(198,151,75,.25);--grn:#4CAF82;--grn-bg:rgba(76,175,130,.08);--grn-br:rgba(76,175,130,.3);--red:#D94452;--red-bg:rgba(217,68,82,.08);--red-br:rgba(217,68,82,.3);--amb:#E8A838;--amb-bg:rgba(232,168,56,.08);--amb-br:rgba(232,168,56,.3);--cyn:#38BDF8;--cyn-bg:rgba(56,189,248,.08);--cyn-br:rgba(56,189,248,.3);--t:#E8ECF0;--t2:#A0ADBC;--t3:#6B7D90;--t4:#405060;--card:#0E1929;--card-h:#132137;--cb:#1A2E45;--f:'Tajawal','Noto Kufi Arabic',sans-serif;--fd:'Noto Kufi Arabic','Tajawal',sans-serif;--fm:'IBM Plex Mono',monospace}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--f);background:var(--n9);color:var(--t);min-height:100vh;-webkit-font-smoothing:antialiased}
-.ltr{direction:ltr;unicode-bidi:isolate}
+:root{
+  --navy-900:#071528; --navy-800:#0B1E3A; --navy-700:#0F2A4F;
+  --line:#1E3A5F; --line-soft:#182F4D;
+  --gold:#C9A227; --gold-bright:#E3BE4A; --gold-dim:#8A7220;
+  --txt:#E8EEF6; --txt-2:#A9BBD1; --txt-3:#6B819C;
+  --up:#2FAE6E; --down:#E05252; --warn:#E8A33D;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(180deg,var(--navy-900),var(--navy-800) 40%);color:var(--txt);
+     font-family:'Tajawal',system-ui,sans-serif;min-height:100vh;padding:14px;font-size:15px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto}
+h1,h2{font-family:'Noto Kufi Arabic',sans-serif;font-weight:700;letter-spacing:-.01em}
+.m{font-family:'IBM Plex Mono',monospace;direction:ltr;display:inline-block;font-variant-numeric:tabular-nums}
+
+.head{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.head h1{font-size:22px;color:var(--gold)}
+.head .sub{color:var(--txt-3);font-size:13px}
+.grow{flex:1;min-width:10px}
+
+.banner{border-radius:var(--r);padding:13px 18px;margin-bottom:14px;display:flex;align-items:center;
+        gap:14px;flex-wrap:wrap;border:1px solid transparent;position:relative;overflow:hidden}
+.banner::before{content:'';position:absolute;inset:0 auto 0 0;width:4px}
+.banner .ic{font-size:20px;line-height:1}
+.banner .main{flex:1;min-width:190px}
+.banner .t{font-weight:700;font-size:15px;font-family:'Noto Kufi Arabic',sans-serif}
+.banner .s{font-size:12.5px;opacity:.85;margin-top:1px}
+.b-ok{background:rgba(47,174,110,.08);border-color:rgba(47,174,110,.32)} .b-ok::before{background:var(--up)}
+.b-warn{background:rgba(232,163,61,.1);border-color:rgba(232,163,61,.4)} .b-warn::before{background:var(--warn)}
+.b-bad{background:rgba(178,58,58,.13);border-color:rgba(224,82,82,.45)} .b-bad::before{background:var(--down)}
+.chip{font-family:'IBM Plex Mono',monospace;direction:ltr;font-size:11.5px;background:rgba(0,0,0,.3);
+      border:1px solid rgba(255,255,255,.12);padding:5px 10px;border-radius:8px;white-space:nowrap}
+.btn{background:linear-gradient(180deg,var(--gold-bright),var(--gold));color:#1A1206;border:0;
+     border-radius:10px;padding:9px 18px;font-family:'Tajawal',sans-serif;font-weight:700;font-size:14px;
+     cursor:pointer;white-space:nowrap;transition:.15s}
+.btn:hover{filter:brightness(1.08)} .btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.5;cursor:wait}
+
+/* سجل الحلقة - يحل محل شارة الثقة */
+.rec{background:linear-gradient(135deg,#14304f,#0d2340);border:1px solid rgba(201,162,39,.42);
+     border-radius:var(--r);padding:16px 20px;margin-bottom:14px}
+.rec .cap{color:var(--gold-dim);font-size:12px;letter-spacing:.04em;margin-bottom:10px}
+.rec .row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end}
+.rec .u{min-width:74px}
+.rec .n{font-family:'IBM Plex Mono',monospace;direction:ltr;font-size:28px;font-weight:600;line-height:1.1}
+.rec .k{font-size:12px;color:var(--txt-3);margin-top:2px}
+.rec .why{font-size:12.5px;color:var(--txt-2);margin-top:11px;padding-top:10px;
+          border-top:1px solid rgba(255,255,255,.09);line-height:1.65}
+
+.pulse{background:linear-gradient(135deg,#14304f,#0d2340);border:1px solid rgba(201,162,39,.42);
+       border-radius:var(--r);padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;
+       gap:18px;flex-wrap:wrap}
+.pulse .lbl{color:var(--gold-dim);font-size:12px;letter-spacing:.04em;margin-bottom:4px}
+.pulse .sym{font-family:'IBM Plex Mono',monospace;direction:ltr;font-size:30px;font-weight:600;color:var(--gold-bright)}
+.pulse .co{color:var(--txt-2);font-size:13px}
+.pulse .none{color:var(--txt-3);font-size:15px;font-family:'Noto Kufi Arabic',sans-serif}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.card{background:linear-gradient(160deg,var(--navy-700),var(--navy-800));border:1px solid var(--line);
+      border-radius:var(--r);padding:15px}
+.card .lbl{color:var(--txt-3);font-size:12px;margin-bottom:7px}
+.card .val{font-family:'IBM Plex Mono',monospace;direction:ltr;font-size:26px;font-weight:600;line-height:1.15}
+.card .note{font-size:11.5px;color:var(--txt-3);margin-top:5px}
+.up{color:var(--up)} .down{color:var(--down)} .muted{color:var(--txt-3)} .warn{color:var(--warn)}
+
+.sec{background:rgba(11,30,58,.55);border:1px solid var(--line-soft);border-radius:var(--r);
+     margin-bottom:14px;overflow:hidden}
+.sec>h2{font-size:15px;padding:12px 16px;border-bottom:1px solid var(--line-soft);color:var(--txt-2)}
+.sec>h2 .hint{float:left;font-size:11.5px;color:var(--txt-3);font-weight:400;font-family:'Tajawal',sans-serif}
+.sec .bd{padding:6px 16px 14px}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:right;color:var(--txt-3);font-weight:500;font-size:12px;padding:9px 8px;
+   border-bottom:1px solid var(--line-soft);white-space:nowrap}
+td{padding:10px 8px;border-bottom:1px solid rgba(30,58,95,.42);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.sym{font-family:'IBM Plex Mono',monospace;direction:ltr;font-weight:600;color:var(--gold-bright)}
+.tag{font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.07);
+     border:1px solid rgba(255,255,255,.12);color:var(--txt-2);white-space:nowrap;display:inline-block;margin:1px 0 1px 3px}
+
+/* المقاييس المعلّقة */
+.susp{border:1px dashed rgba(232,163,61,.5);background:rgba(232,163,61,.06);border-radius:var(--r);
+      margin-bottom:14px;overflow:hidden}
+.susp summary{padding:13px 18px;cursor:pointer;list-style:none;font-family:'Noto Kufi Arabic',sans-serif;
+              font-weight:700;font-size:14.5px;color:var(--warn);display:flex;gap:10px;align-items:center}
+.susp summary::-webkit-details-marker{display:none}
+.susp .why{padding:0 18px 14px;font-size:13px;color:var(--txt-2);line-height:1.7}
+.susp .why code{font-family:'IBM Plex Mono',monospace;direction:ltr;font-size:11.5px;
+                background:rgba(0,0,0,.35);padding:2px 7px;border-radius:6px;display:inline-block}
+.susp .bd{padding:0 18px 16px}
+
+.empty{color:var(--txt-3);text-align:center;padding:26px 14px;font-size:14px;line-height:1.8}
+.foot{color:var(--txt-3);font-size:11.5px;padding:12px 4px 24px;line-height:1.9;
+      border-top:1px solid var(--line-soft);margin-top:6px}
+.foot .m{color:var(--txt-2)}
 </style>
-<link rel="stylesheet" href="indicator-tooltips.css">
 </head>
 <body>
-<style>
-.topbar{position:sticky;top:0;z-index:100;background:rgba(7,13,23,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--cb);padding:0 1.25rem;height:56px;display:flex;align-items:center;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:.75rem}
-.brand-m{background:linear-gradient(135deg,var(--gold),#9E7A3D);color:var(--n9);font-family:var(--fm);font-weight:700;font-size:.85rem;padding:.25rem .6rem;border-radius:4px}
-.brand-t{font-family:var(--fd);font-weight:700;font-size:1rem}
-.nav{display:flex;gap:.15rem}
-.nav a{font-size:.75rem;padding:.3rem .6rem;border-radius:6px;color:var(--t3);text-decoration:none;transition:.2s}
-.nav a:hover{color:var(--t);background:var(--n7)}
-.nav a.on{color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br)}
-.clock{font-family:var(--fm);font-size:.85rem;color:var(--gold);direction:ltr}
-/* HERO PULSE */
-.pulse{margin:1.25rem;background:linear-gradient(135deg,rgba(198,151,75,.08),rgba(198,151,75,.02));border:1px solid var(--gold-br);border-radius:14px;padding:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
-.pulse-icon{font-size:2.5rem;animation:glow 2s ease-in-out infinite}
-@keyframes glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
-.pulse-main{flex:1;min-width:200px}
-.pulse-title{font-family:var(--fd);font-size:1.3rem;font-weight:700;color:var(--gold)}
-.pulse-sub{font-size:.82rem;color:var(--t2);margin-top:.25rem}
-.pulse-stats{display:flex;gap:1.5rem;flex-wrap:wrap}
-.ps{text-align:center}
-.ps-v{font-family:var(--fm);font-size:1.6rem;font-weight:700}
-.ps-l{font-size:.68rem;color:var(--t3)}
-/* CARDS */
-.main{padding:0 1.25rem 2rem}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem;margin-top:1rem}
-.opp-card{background:var(--card);border:1px solid var(--cb);border-radius:12px;overflow:hidden;transition:border-color .2s,transform .15s}
-.opp-card:hover{border-color:var(--gold-br);transform:translateY(-2px)}
-.opp-card.golden{border-color:var(--gold-br);box-shadow:0 0 20px rgba(198,151,75,.08)}
-.opp-card.candidate{border-color:var(--grn-br)}
-.opp-card.watch{border-color:var(--amb-br)}
-.opp-head{padding:.85rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--cb)}
-.opp-sym{font-family:var(--fm);font-size:1.1rem;font-weight:700;color:var(--gold);cursor:pointer}
-.opp-sym:hover{text-decoration:underline}
-.opp-badge{font-size:.7rem;padding:3px 10px;border-radius:8px;font-weight:600}
-.opp-badge.golden{color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-br)}
-.opp-badge.candidate{color:var(--grn);background:var(--grn-bg);border:1px solid var(--grn-br)}
-.opp-badge.watch{color:var(--amb);background:var(--amb-bg);border:1px solid var(--amb-br)}
-.opp-body{padding:1rem}
-.opp-conf{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
-.conf-bar{flex:1;height:8px;background:var(--n7);border-radius:4px;overflow:hidden}
-.conf-fill{height:100%;border-radius:4px;transition:width .6s}
-.conf-val{font-family:var(--fm);font-size:1rem;font-weight:700;min-width:40px;text-align:left}
-.opp-pattern{background:var(--n8);border-radius:8px;padding:.6rem .8rem;margin-bottom:.65rem;font-size:.8rem;color:var(--cyn);line-height:1.7}
-.opp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.65rem}
-.os{text-align:center;background:var(--n8);border-radius:6px;padding:.4rem}
-.os-v{font-family:var(--fm);font-size:.95rem;font-weight:700}
-.os-l{font-size:.62rem;color:var(--t3)}
-.opp-stop{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;background:var(--red-bg);border:1px solid var(--red-br);border-radius:8px;font-size:.78rem}
-.opp-footer{padding:.5rem 1rem;border-top:1px solid var(--cb);display:flex;justify-content:space-between;align-items:center}
-.opp-driver{font-size:.72rem;color:var(--t3)}
-.opp-link{font-size:.72rem;color:var(--gold);text-decoration:none}
-/* FILTER */
-.filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:1rem}
-.filter-btn{font-size:.75rem;padding:.35rem .75rem;border-radius:8px;border:1px solid var(--cb);background:var(--n8);color:var(--t3);cursor:pointer;transition:.2s}
-.filter-btn:hover,.filter-btn.on{color:var(--gold);border-color:var(--gold-br);background:var(--gold-bg)}
-.empty{text-align:center;padding:4rem;color:var(--t3);font-size:.9rem}
-.loading{display:flex;align-items:center;justify-content:center;padding:4rem;gap:1rem}
-.spinner{width:36px;height:36px;border:3px solid var(--n6);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.footer{text-align:center;padding:1.5rem;font-size:.65rem;color:var(--t4);border-top:1px solid var(--cb);margin-top:2rem}
-@media(max-width:768px){.cards{grid-template-columns:1fr}.pulse-stats{gap:.75rem}.nav{display:none}.pulse{padding:1rem}}
-</style>
+<div class="wrap">
 
-<header class="topbar">
-  <div class="brand"><span class="brand-m">KSE</span><span class="brand-t">&#1602;&#1585;&#1575;&#1585;&#1575;&#1578; &#1575;&#1604;&#1570;&#1606;</span></div>
-  <nav class="nav">
-    <a href="swing">&#x0633;&#x0648;&#x064A;&#x0646;&#x0642;</a>
-    <a href="analysis">&#x062A;&#x062D;&#x0644;&#x064A;&#x0644; &#x0641;&#x0646;&#x064A;</a>
-    <a href="positions">&#x0627;&#x0644;&#x0645;&#x0631;&#x0627;&#x0643;&#x0632;</a>
-    <a href="decisions" class="on">Gemini</a>
-    <a href="radar">&#x0627;&#x0644;&#x0633;&#x0648;&#x0642;</a>
-    <a href="journal">&#x0627;&#x0644;&#x0633;&#x062C;&#x0644;</a>
-    <a href="brain">&#x0627;&#x0644;&#x0639;&#x0642;&#x0644;</a>
-  </nav>
-  <span class="clock" id="ck"></span>
-</header>
+  <div class="head">
+    <h1>قرارات الدخول</h1>
+    <span class="sub" id="scanSub">جارٍ التحميل…</span>
+    <span class="grow"></span>
+    <button class="btn" id="rf" onclick="load()">تحديث</button>
+  </div>
 
-<!-- PULSE HERO -->
-<div class="pulse" id="pulseHero">
-  <span class="pulse-icon">&#128293;</span>
-  <div class="pulse-main">
-    <div class="pulse-title" id="pulseTitle">&#1580;&#1575;&#1585;&#1610; &#1575;&#1604;&#1601;&#1581;&#1589;...</div>
-    <div class="pulse-sub" id="pulseSub"></div>
+  <!-- 1. حالة البيانات -->
+  <div class="banner b-warn" id="banner">
+    <div class="ic">…</div>
+    <div class="main"><div class="t">جارٍ قراءة حالة البيانات</div>
+      <div class="s">لا تُتخذ قرارات قبل ظهور الحالة</div></div>
   </div>
-  <div class="pulse-stats">
-    <div class="ps"><div class="ps-v" style="color:var(--grn)" id="pGolden">-</div><div class="ps-l">&#128994; &#1575;&#1583;&#1582;&#1604;</div></div>
-    <div class="ps"><div class="ps-v" style="color:var(--amb)" id="pCand">-</div><div class="ps-l">&#9203; &#1575;&#1606;&#1578;&#1592;&#1585;</div></div>
-    <div class="ps"><div class="ps-v" style="color:var(--t3)" id="pWatch">-</div><div class="ps-l">&#9197;&#65039; &#1578;&#1580;&#1575;&#1608;&#1586;</div></div>
-    <div class="ps"><div class="ps-v" style="color:var(--t3)" id="pTotal">-</div><div class="ps-l">&#1601;&#1581;&#1589;</div></div>
+
+  <!-- 2. سجل الحلقة - يحل محل شارة الثقة -->
+  <div class="rec" id="rec">
+    <div class="cap">سجل قرارات هذه الصفحة — النتائج المقيسة فعلاً</div>
+    <div id="recBody" class="empty" style="padding:10px 0">جارٍ القراءة…</div>
   </div>
+
+  <!-- 3. أعلى فرصة - وقائع فقط -->
+  <div class="pulse" id="pulse">
+    <div><div class="lbl">أعلى الفرص المرصودة</div>
+      <div class="none">جارٍ التحميل…</div></div>
+  </div>
+
+  <!-- 4. البطاقات -->
+  <div class="cards" id="cards"></div>
+
+  <!-- 5. الفرص -->
+  <div class="sec">
+    <h2>الفرص المرصودة <span class="hint" id="oppHint"></span></h2>
+    <div class="bd" id="oppWrap"><div class="empty">جارٍ التحميل…</div></div>
+  </div>
+
+  <!-- 6. المقاييس المعلّقة -->
+  <details class="susp" id="susp">
+    <summary><span>⏸</span><span>مقاييس معلّقة — لا تُستخدم للقرار</span></summary>
+    <div class="why" id="suspWhy"></div>
+    <div class="bd" id="suspBody"></div>
+  </details>
+
+  <div class="foot" id="foot"></div>
 </div>
 
-<main class="main">
-  <div class="filter-bar" id="filterBar">
-    <button class="filter-btn on" data-f="all">&#1575;&#1604;&#1603;&#1604;</button>
-    <button class="filter-btn" data-f="enter">&#128994; &#1575;&#1583;&#1582;&#1604;</button>
-    <button class="filter-btn" data-f="wait">&#9203; &#1575;&#1606;&#1578;&#1592;&#1585;</button>
-    <button class="filter-btn" data-f="skip">&#9197;&#65039; &#1578;&#1580;&#1575;&#1608;&#1586;</button>
-    <button class="filter-btn" onclick="loadData()" style="margin-right:auto">&#8635; &#1578;&#1581;&#1583;&#1610;&#1579;</button>
-  </div>
-  <div class="loading" id="loadState"><div class="spinner"></div><span style="color:var(--t3)">&#1580;&#1575;&#1585;&#1610; &#1605;&#1587;&#1581; 128 &#1587;&#1607;&#1605;...</span></div>
-  <div class="cards" id="cardsGrid" style="display:none"></div>
-  <div class="empty" id="emptyState" style="display:none">&#1604;&#1575; &#1578;&#1608;&#1580;&#1583; &#1601;&#1585;&#1589; &#1581;&#1575;&#1604;&#1610;&#1575;&#1611;</div>
-</main>
-<footer class="footer">&#1607;&#1584;&#1607; &#1575;&#1604;&#1605;&#1593;&#1604;&#1608;&#1605;&#1575;&#1578; &#1604;&#1604;&#1571;&#1594;&#1585;&#1575;&#1590; &#1575;&#1604;&#1578;&#1593;&#1604;&#1610;&#1605;&#1610;&#1577; &#1601;&#1602;&#1591; &#1608;&#1604;&#1575; &#1578;&#1605;&#1579;&#1604; &#1606;&#1589;&#1610;&#1581;&#1577; &#1575;&#1587;&#1578;&#1579;&#1605;&#1575;&#1585;&#1610;&#1577;</footer>
-
+<script src="nav.js"></script>
 <script>
-(function(){
-const ck=document.getElementById('ck');
-function tick(){ck.textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
-tick();setInterval(tick,1000);
+const API   = '/api/decisions-now';
+const REV   = '/dashboard/reviews';
+const SUSPEND_REASON = 'C-27: hit-rate basis was measured with broken evaluation windows';
 
-const L=s=>'<span class="ltr">'+s+'</span>';
-let allData=[];
-let activeFilter='all';
+const $ = id => document.getElementById(id);
+const has = v => v !== null && v !== undefined && v !== '';
+const num = (v, d) => has(v) && isFinite(v) ? Number(v).toFixed(d === undefined ? 2 : d) : '—';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-/* FILTER */
-document.getElementById('filterBar').addEventListener('click',function(e){
-  if(e.target.dataset.f){
-    activeFilter=e.target.dataset.f;
-    document.querySelectorAll('.filter-btn[data-f]').forEach(b=>b.classList.toggle('on',b.dataset.f===activeFilter));
-    renderCards();
+/* ---- حالة البيانات: خمس حالات، بعمر الجلسات لا الساعات ---- */
+const STATES = {
+  normal:   {c:'b-ok',   ic:'✓', t:'البيانات سليمة',
+             s:'آخر جلسة مغلقة مقروءة بالكامل'},
+  live:     {c:'b-ok',   ic:'●', t:'بيانات حيّة',
+             s:'الجلسة مفتوحة والأسعار تتحدث'},
+  degraded: {c:'b-warn', ic:'▲', t:'البيانات متأخرة',
+             s:'مضت جلسات دون تحديث — الأرقام أقدم مما تبدو'},
+  broken:   {c:'b-bad',  ic:'✕', t:'البيانات مكسورة',
+             s:'المصدر يرد بما لا يصلح للقياس'},
+  blind:    {c:'b-bad',  ic:'∅', t:'لا توجد بيانات',
+             s:'هذا ليس غياب فرص — هذا غياب قياس'}
+};
+
+/* data_freshness يتكلم بالأيام (stale_1d) بينما بقية النظام يتكلم
+   بالجلسات. نترجم هنا حتى تُقرأ الصفحة بنفس لغة swing/radar. */
+function mapFreshness(f, generatedAt){
+  if (!has(f)) return {key:'blind', extra:'لا حقل حالة في الحمولة'};
+  const s = String(f).toLowerCase();
+  if (s === 'live' || s === 'fresh')  return {key:'live',   extra:''};
+  if (s === 'normal' || s === 'ok')   return {key:'normal', extra:''};
+  const md = s.match(/stale[_-](\d+)d/);
+  if (md){
+    const d = parseInt(md[1], 10);
+    return d <= 1
+      ? {key:'normal',   extra:'آخر إغلاق متاح — لا جلسة فاتت'}
+      : {key:'degraded', extra:'أقدم من جلسة واحدة (' + d + ' يوماً)'};
   }
-});
-
-function getSmartClass(sd){return sd==='ENTER'?'golden':sd==='WAIT'?'candidate':'watch'}
-function sdColor(sd){return sd==='ENTER'?'var(--grn)':sd==='WAIT'?'var(--amb)':'var(--t3)'}
-const V2_WHITELIST=["INOVEST","URC","ACICO","AAYANRE","OOREDOO","ALFTAQA","NINV","MUBARRAD","NRE","RASIYAT"];
-
-function renderCards(){
-  const grid=document.getElementById('cardsGrid');
-  const empty=document.getElementById('emptyState');
-  let items=allData;
-  if(activeFilter==='enter') items=items.filter(o=>o.smart_decision==='ENTER');
-  else if(activeFilter==='wait') items=items.filter(o=>o.smart_decision==='WAIT');
-  else if(activeFilter==='skip') items=items.filter(o=>o.smart_decision==='SKIP');
-
-  if(!items.length){grid.style.display='none';empty.style.display='';return}
-  empty.style.display='none';grid.style.display='';
-
-  grid.innerHTML=items.map(function(o){
-    const sd=o.smart_decision||'SKIP';
-    const t=getSmartClass(sd);
-    const sdAr=o.smart_decision_ar||'\u23ED\uFE0F \u062A\u062C\u0627\u0648\u0632';
-    const sdClr=sdColor(sd);
-    const reason=o.smart_reason_ar||'';
-    const cp=o.chosen_plan||{};
-    const wr=o.win_rate||0;
-    const wrC=wr>=60?'var(--grn)':wr>=40?'var(--amb)':'var(--red)';
-    const tp=o.trade_plan||{};
-    const sm=o.strategy_match||null;
-    const reasons=o.reasoning_ar||[];
-
-    return '<div class="opp-card '+t+'">'
-      +'<div class="opp-head">'
-      +'<span class="opp-sym" onclick="window.open(\'personality?symbol='+o.symbol+'\',\'_blank\')">'+L('#'+o.rank+' '+o.symbol)+'</span>'
-      +'<div style="display:flex;gap:.4rem;align-items:center">'
-      +(V2_WHITELIST.includes(o.symbol)?'<span style="font-size:.58rem;padding:2px 6px;border-radius:4px;background:var(--gold-bg);border:1px solid var(--gold-br);color:var(--gold)">V2 Whitelist</span>':'<span style="font-size:.58rem;padding:2px 6px;border-radius:4px;background:var(--n7);color:var(--t4)">&#x062E;&#x0627;&#x0631;&#x062C; V2</span>')
-      +'<span style="font-size:.78rem;padding:4px 12px;border-radius:8px;font-weight:700;color:'+sdClr+';background:rgba(0,0,0,.4);border:1px solid '+sdClr+'">'+sdAr+'</span>'
-      +'</div></div>'
-      +'<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem">'
-      +(o.daily_trend?'<span style="font-size:.6rem;padding:2px 8px;border-radius:4px;background:'+(o.daily_trend==='UP'?'var(--grn-bg)':o.daily_trend==='DOWN'?'var(--red-bg)':'var(--amb-bg)')+';border:1px solid '+(o.daily_trend==='UP'?'var(--grn-br)':o.daily_trend==='DOWN'?'var(--red-br)':'var(--amb-br)')+';color:'+(o.daily_trend==='UP'?'var(--grn)':o.daily_trend==='DOWN'?'var(--red)':'var(--amb)')+'">&#x0627;&#x062A;&#x062C;&#x0627;&#x0647;: '+o.daily_trend+'</span>':'')
-      +(o.swing_confluence_pct!=null?'<span style="font-size:.6rem;padding:2px 8px;border-radius:4px;background:var(--cyn-bg);border:1px solid var(--cyn-br);color:var(--cyn)">V2: '+Math.round(o.swing_confluence_pct)+'%</span>':'')
-      +'</div>'
-      +'<div class="opp-body">'
-      /* Smart reason */
-      +'<div style="font-size:.82rem;color:'+sdClr+';font-weight:600;margin-bottom:.6rem;line-height:1.6">'+(reason)+'</div>'
-      /* Chosen Plan — the ONE plan */
-      +(cp.entry?
-        '<div style="background:'+(sd==='ENTER'?'var(--grn-bg)':'var(--n8)')+';border:1px solid '+(sd==='ENTER'?'var(--grn-br)':'var(--cb)')+';border-radius:10px;padding:.75rem;margin-bottom:.7rem">'
-        +'<div style="display:flex;justify-content:space-between;margin-bottom:.5rem">'
-        +'<span style="font-size:.72rem;font-weight:700;color:'+(sd==='ENTER'?'var(--grn)':'var(--t2)')+'">\u{1F3AF} '+(cp.source==='strategy'?'\u062E\u0637\u0629 \u0627\u0644\u0627\u0633\u062A\u0631\u0627\u062A\u064A\u062C\u064A\u0629':'\u062E\u0637\u0629 \u0627\u0644\u062F\u0639\u0645/\u0627\u0644\u0645\u0642\u0627\u0648\u0645\u0629')+'</span>'
-        +'<span style="font-family:var(--fm);font-size:.8rem;font-weight:700;color:'+(cp.rr>=2?'var(--grn)':cp.rr>=1.5?'var(--amb)':'var(--red)')+'">R/R '+L((cp.rr||0).toFixed(1))+'x</span>'
-        +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem">'
-        +'<div style="text-align:center;background:var(--n7);border-radius:6px;padding:.4rem">'
-        +'<div style="font-family:var(--fm);font-size:.9rem;font-weight:700;color:var(--cyn)">'+L(cp.entry)+'</div>'
-        +'<div style="font-size:.58rem;color:var(--t3)">\u0627\u0644\u062F\u062E\u0648\u0644</div></div>'
-        +'<div style="text-align:center;background:var(--n7);border-radius:6px;padding:.4rem">'
-        +'<div style="font-family:var(--fm);font-size:.9rem;font-weight:700;color:var(--grn)">'+L(cp.target1)+'</div>'
-        +'<div style="font-size:.58rem;color:var(--t3)">\u0627\u0644\u0647\u062F\u0641</div></div>'
-        +'<div style="text-align:center;background:var(--n7);border-radius:6px;padding:.4rem">'
-        +'<div style="font-family:var(--fm);font-size:.9rem;font-weight:700;color:var(--red)">'+L(cp.stop)+'</div>'
-        +'<div style="font-size:.58rem;color:var(--t3)">\u0627\u0644\u0633\u062A\u0648\u0628</div></div>'
-        +'</div>'
-        +(cp.target2?'<div style="font-size:.65rem;color:var(--t3);margin-top:.35rem;text-align:center">\u0647\u062F\u0641 2: '+L(cp.target2)+' \u2022 \u0633\u062A\u0648\u0628 '+L((cp.stop_pct||0).toFixed(1))+'%</div>':'')
-        +'</div>'
-      :'')
-      /* Pattern */
-      +'<div class="opp-pattern" style="font-size:.75rem">\u{1F3AF} '+(o.pattern_ar||o.pattern_atoms||'')+'</div>'
-      /* Stats row */
-      +'<div class="opp-stats">'
-      +'<div class="os"><div class="os-v" style="color:'+wrC+'">'+L(wr.toFixed(0)+'%')+'</div><div class="os-l">\u0646\u0633\u0628\u0629 \u0646\u062C\u0627\u062D</div></div>'
-      +'<div class="os"><div class="os-v" style="color:var(--grn)">'+L('+'+(o.avg_gain_pct||0).toFixed(1)+'%')+'</div><div class="os-l">\u0645\u062A\u0648\u0633\u0637 \u0631\u0628\u062D</div></div>'
-      +'<div class="os"><div class="os-v" style="color:var(--cyn)">'+L(o.occurrences||0)+'</div><div class="os-l">\u062A\u0643\u0631\u0627\u0631</div></div>'
-      +'</div>'
-      /* S/R */
-      +(o.key_support||o.key_resistance?
-        '<div style="display:flex;gap:.5rem;margin-bottom:.5rem;font-size:.72rem">'
-        +(o.key_support?'<span style="padding:2px 8px;border-radius:4px;background:var(--grn-bg);border:1px solid var(--grn-br);color:var(--grn)">\u{1F6E1}\uFE0F \u062F\u0639\u0645: '+L(o.key_support)+'</span>':'')
-        +(o.key_resistance?'<span style="padding:2px 8px;border-radius:4px;background:var(--red-bg);border:1px solid var(--red-br);color:var(--red)">\u{1F9F1} \u0645\u0642\u0627\u0648\u0645\u0629: '+L(o.key_resistance)+'</span>':'')
-        +'</div>'
-      :'')
-      /* Indicators */
-      +'<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem">'
-      +(o.current_rsi?'<span data-tip="RSI" style="font-size:.65rem;padding:2px 6px;border-radius:4px;background:var(--n7);color:var(--t2)">RSI '+L(o.current_rsi.toFixed(0))+'</span>':'')
-      +(o.current_adx?'<span data-tip="ADX" style="font-size:.65rem;padding:2px 6px;border-radius:4px;background:var(--n7);color:var(--t2)">ADX '+L(o.current_adx.toFixed(0))+'</span>':'')
-      +(o.current_vol?'<span data-tip="Vol" style="font-size:.65rem;padding:2px 6px;border-radius:4px;background:var(--n7);color:var(--t2)">Vol '+L(o.current_vol.toFixed(1))+'x</span>':'')
-      +(o.current_stoch?'<span data-tip="Stoch" style="font-size:.65rem;padding:2px 6px;border-radius:4px;background:var(--n7);color:var(--t2)">Stoch '+L(o.current_stoch.toFixed(0))+'</span>':'')
-      +'</div>'
-      /* Strategy Match badge */
-      +(sm?
-        '<div style="display:flex;gap:.4rem;align-items:center;padding:.4rem .6rem;background:var(--gold-bg);border:1px solid var(--gold-br);border-radius:6px;margin-bottom:.5rem;font-size:.68rem">'
-        +'<span style="color:var(--gold);font-weight:700">\u{1F4CA}</span>'
-        +'<span style="color:var(--gold)">EV '+L((sm.ev||0).toFixed(1))+'</span>'
-        +'<span style="color:var(--t3)">\u2022</span>'
-        +'<span style="color:var(--t2)">'+L(((sm.profitable_rate||0)*100).toFixed(0))+'% \u0646\u062C\u0627\u062D</span>'
-        +'<span style="color:var(--t3)">\u2022</span>'
-        +'<span style="color:var(--t2)">'+L(sm.sample_size||0)+' \u0625\u0634\u0627\u0631\u0629</span>'
-        +(sm.stability>=0.75?'<span style="color:var(--grn)">\u2022 \u0645\u0633\u062A\u0642\u0631</span>':'')
-        +'</div>'
-      :'')
-      +'</div>'
-      /* Footer */
-      +'<div class="opp-footer">'
-      +'<span class="opp-driver">\u0645\u0624\u0634\u0631: '+(o.dominant_driver||'-')+' \u2022 '+L(o.price)+' \u2022 '+L((o.change_pct||0).toFixed(1))+'%</span>'
-      +'<div style="display:flex;gap:.75rem">'
-      +'<a class="opp-link" href="personality?symbol='+o.symbol+'">\u0627\u0644\u0634\u062E\u0635\u064A\u0629 \u2192</a>'
-      +'<a class="opp-link" href="analysis" onclick="localStorage.setItem(\'analysis_symbol\',\''+o.symbol+'\');return true" style="color:var(--cyn)">\u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0641\u0646\u064A \u2192</a>'
-      +'</div>'
-      +'</div></div>';
-  }).join('');
+  if (s.indexOf('stale') >= 0)  return {key:'degraded', extra:'الحمولة تقول ' + esc(f)};
+  if (s.indexOf('no') === 0 || s.indexOf('missing') >= 0) return {key:'blind', extra:''};
+  return {key:'degraded', extra:'حالة غير معروفة: ' + esc(f)};
 }
 
-async function loadData(){
-  document.getElementById('loadState').style.display='flex';
-  document.getElementById('cardsGrid').style.display='none';
-  document.getElementById('emptyState').style.display='none';
-  try{
-    const r=await fetch('/api/decisions-now');
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const d=await r.json();
-    allData=d.all_opportunities||d.top_10||[];
+/* ---- سجل الحلقة ---- */
+function renderRecord(rv){
+  const el = $('recBody');
+  const lt = rv && rv.lifetime ? rv.lifetime : null;
 
-    /* Pulse */
-    document.getElementById('pGolden').textContent=d.enter_count||d.golden_count||0;
-    document.getElementById('pCand').textContent=d.wait_count||d.candidate_count||0;
-    document.getElementById('pWatch').textContent=d.skip_count||d.watch_count||0;
-    document.getElementById('pTotal').textContent=d.total_scanned||0;
-
-    const ec=d.enter_count||d.golden_count||0;
-    if(ec>0){
-      document.getElementById('pulseTitle').textContent='\u{1F7E2} '+ec+' \u0641\u0631\u0635\u0629 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u062F\u062E\u0648\u0644!';
-      document.getElementById('pulseTitle').style.color='var(--grn)';
-    }else if((d.wait_count||d.candidate_count||0)>0){
-      document.getElementById('pulseTitle').textContent='\u23F3 '+(d.wait_count||d.candidate_count)+' \u0641\u0631\u0635\u0629 \u0628\u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631';
-      document.getElementById('pulseTitle').style.color='var(--grn)';
-    }else{
-      document.getElementById('pulseTitle').textContent='\u26AA \u0644\u0627 \u0641\u0631\u0635 \u062D\u0627\u0644\u064A\u0627\u064B';
-      document.getElementById('pulseTitle').style.color='var(--t3)';
-    }
-    var ts=d.generated_at?new Date(d.generated_at+'Z').toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'';
-    document.getElementById('pulseSub').textContent='\u0622\u062E\u0631 \u0641\u062D\u0635: '+ts+' \u2022 '+d.total_scanned+' \u0633\u0647\u0645 \u2022 '+(d.total_opportunities||0)+' \u0641\u0631\u0635\u0629';
-
-    renderCards();
-    document.getElementById('loadState').style.display='none';
-  }catch(e){
-    document.getElementById('loadState').style.display='none';
-    document.getElementById('emptyState').style.display='';
-    document.getElementById('emptyState').textContent='\u274C '+e.message;
+  if (!lt){
+    /* لا نخترع رقماً. نقول ما ينقص بالاسم. */
+    const last = rv && has(rv.last_review_date) ? esc(rv.last_review_date) : '—';
+    const sess = rv && has(rv.sessions_since_last_review) ? rv.sessions_since_last_review : '—';
+    el.className = '';
+    el.innerHTML =
+      '<div class="empty" style="padding:6px 0;text-align:right">' +
+      'السجل التراكمي غير متاح على الخادم بعد — ينقص الحقل ' +
+      '<span class="chip">reviews.lifetime</span><br>' +
+      'المتاح الآن: آخر مراجعة <span class="m">' + last + '</span> · ' +
+      'جلسات منذ آخر مراجعة <span class="m">' + sess + '</span>' +
+      '</div>';
+    return;
   }
+
+  const r = lt.results || {};
+  const graded   = has(lt.graded_total)   ? lt.graded_total   : '—';
+  const resolved = has(lt.resolved_total) ? lt.resolved_total : '—';
+  const win  = has(r.success) ? r.success : 0;
+  const lose = has(r.fail)    ? r.fail    : 0;
+  const t1   = has(lt.hit_target_1) ? lt.hit_target_1 : 0;
+  const st   = has(lt.hit_stop)     ? lt.hit_stop     : 0;
+  const nd   = has(r.no_data) ? r.no_data : 0;
+
+  el.className = '';
+  el.innerHTML =
+    '<div class="row">' +
+      '<div class="u"><div class="n">' + graded + '</div><div class="k">قرار مُقيَّم</div></div>' +
+      '<div class="u"><div class="n">' + resolved + '</div><div class="k">محسوم</div></div>' +
+      '<div class="u"><div class="n up">' + win + '</div><div class="k">نجاح</div></div>' +
+      '<div class="u"><div class="n down">' + lose + '</div><div class="k">فشل</div></div>' +
+      '<div class="u"><div class="n up">' + t1 + '</div><div class="k">بلغ الهدف</div></div>' +
+      '<div class="u"><div class="n down">' + st + '</div><div class="k">ضرب الوقف</div></div>' +
+      '<div class="u"><div class="n muted">' + nd + '</div><div class="k">بلا بيانات</div></div>' +
+    '</div>' +
+    '<div class="why">' + recordNote(lt, win, lose, t1, st) + '</div>';
 }
 
-loadData();
-setInterval(loadData,120000);
-})();
+function recordNote(lt, win, lose, t1, st){
+  const bits = [];
+  if ((win + lose) === 0){
+    bits.push('لم يُحسم أي قرار بعد. أي رقم ثقة هنا لن يكون مسنوداً بنتيجة مقيسة.');
+  } else {
+    bits.push('نسبة صغيرة العيّنة — تُقرأ كمؤشر لا كحكم.');
+    if (st > t1) bits.push('حتى الآن ضربات الوقف أكثر من بلوغ الأهداف.');
+  }
+  const bm = lt.by_graded_mode || {};
+  if (has(bm.legacy) && bm.legacy > 0)
+    bits.push(bm.legacy + ' منها قِيست بالمسطرة القديمة وتدخل سلة إعادة القياس.');
+  if (has(bm.ungraded) && bm.ungraded > 0)
+    bits.push(bm.ungraded + ' بلا قياس إطلاقاً — فجوة تغطية لا نتيجة محايدة.');
+  if (has(lt.sessions_since_last_review) && lt.sessions_since_last_review > 1)
+    bits.push('مضت ' + lt.sessions_since_last_review + ' جلسات دون مراجعة.');
+  return bits.join(' ');
+}
+
+/* ---- الوقف: قيمة واحدة معتمدة + مصدرها ---- */
+function stopCell(o){
+  const cp = o.chosen_plan || {};
+  if (!has(cp.stop)) return '<span class="muted">—</span>';
+  const src = has(o.stop_source) ? o.stop_source : (has(cp.source) ? cp.source : '');
+  const pct = has(cp.stop_pct) ? ' <span class="muted m">' + num(cp.stop_pct, 1) + '%</span>' : '';
+  return '<span class="m">' + num(cp.stop, 3) + '</span>' + pct +
+         (src ? '<br><span class="tag">' + esc(src) + '</span>' : '');
+}
+
+/* ---- الشروط المتحققة: وقائع، لا أوزان ---- */
+function atomsCell(o){
+  const a = Array.isArray(o.live_atoms) ? o.live_atoms.slice(0, 5) : [];
+  if (!a.length) return '<span class="muted">—</span>';
+  const more = (o.live_atoms.length > 5) ? '<span class="tag">+' + (o.live_atoms.length - 5) + '</span>' : '';
+  return a.map(x => '<span class="tag">' + esc(x) + '</span>').join('') + more;
+}
+
+/* ---- الرسم الرئيسي ---- */
+function render(d, rv){
+  const opps = Array.isArray(d.all_opportunities) ? d.all_opportunities : [];
+  const f0   = opps.length ? opps[0].data_freshness : null;
+  const st   = mapFreshness(f0, d.generated_at);
+  const S    = STATES[st.key] || STATES.blind;
+  const bad  = (st.key === 'broken' || st.key === 'blind');
+
+  /* لافتة الحالة */
+  const b = $('banner');
+  b.className = 'banner ' + S.c;
+  b.innerHTML =
+    '<div class="ic">' + S.ic + '</div>' +
+    '<div class="main"><div class="t">' + S.t + '</div>' +
+    '<div class="s">' + S.s + (st.extra ? ' — ' + st.extra : '') + '</div></div>' +
+    (has(f0) ? '<span class="chip">' + esc(f0) + '</span>' : '') +
+    (has(d.generated_at) ? '<span class="chip">' + esc(d.generated_at) + '</span>' : '');
+
+  $('scanSub').textContent = 'مسح ' + (has(d.total_scanned) ? d.total_scanned : '—') + ' سهماً';
+
+  renderRecord(rv);
+
+  /* أعلى فرصة — وقائع فقط، بلا ثقة ولا حكم */
+  const p = $('pulse');
+  if (!opps.length || bad){
+    p.innerHTML = '<div><div class="lbl">أعلى الفرص المرصودة</div>' +
+      '<div class="none">' + (bad ? 'لا يُعرض ترتيب على بيانات غير سليمة'
+                                  : 'لا فرص مطابقة للشروط') + '</div></div>';
+  } else {
+    const o = opps[0];
+    const ch = has(o.change_pct) ? Number(o.change_pct) : null;
+    p.innerHTML =
+      '<div><div class="lbl">أعلى الفرص المرصودة</div>' +
+        '<div class="sym">' + esc(o.symbol) + '</div>' +
+        '<div class="co">' + esc(o.sector || '') + '</div></div>' +
+      '<div><div class="lbl">السعر</div><div class="sym">' + num(o.price, 1) + '</div>' +
+        (ch === null ? '' : '<div class="co ' + (ch >= 0 ? 'up' : 'down') + '">' +
+          '<span class="m">' + num(ch, 2) + '%</span> آخر إغلاق</div>') + '</div>' +
+      '<div><div class="lbl">الوقف المعتمد</div><div class="co" style="font-size:15px">' +
+        stopCell(o) + '</div></div>' +
+      '<div class="grow"></div>' +
+      '<div style="max-width:290px"><div class="lbl">الشروط المتحققة</div>' +
+        '<div>' + atomsCell(o) + '</div></div>';
+  }
+
+  /* البطاقات */
+  $('cards').innerHTML =
+    card('سهماً في المسح', d.total_scanned, '') +
+    card('فرصة مطابقة', d.total_opportunities, '') +
+    card('سقف المركز', has(opps[0] && opps[0].max_position_kwd) ? opps[0].max_position_kwd : null,
+         'دينار — لأعلى فرصة') +
+    card('حالة السوق', null, '', d.market_status || (has(d.generated_at) ? 'حسب آخر مسح' : '—'));
+
+  /* الجدول */
+  $('oppHint').textContent = 'المصدر: 1D — آخر إغلاق مخزّن';
+  const w = $('oppWrap');
+  if (bad){
+    w.innerHTML = '<div class="empty">الترتيب محجوب.<br>' +
+      'البيانات في حالة «' + S.t + '» — عرض ترتيب فوقها يصنع ثقة بلا أساس.</div>';
+  } else if (!opps.length){
+    w.innerHTML = '<div class="empty">لا فرص مطابقة اليوم.<br>' +
+      'هذا غياب فرص، لا غياب بيانات — الحالة أعلاه سليمة.</div>';
+  } else {
+    let h = '<table><thead><tr><th>الرمز</th><th>السعر</th><th>التغير</th>' +
+            '<th>الوقف المعتمد</th><th>دعم / مقاومة</th><th>السيولة</th>' +
+            '<th>الشروط المتحققة</th></tr></thead><tbody>';
+    opps.forEach(o => {
+      const ch = has(o.change_pct) ? Number(o.change_pct) : null;
+      h += '<tr>' +
+        '<td><span class="sym">' + esc(o.symbol) + '</span>' +
+          (has(o.sector) ? '<br><span class="tag">' + esc(o.sector) + '</span>' : '') + '</td>' +
+        '<td><span class="m">' + num(o.price, 1) + '</span></td>' +
+        '<td>' + (ch === null ? '<span class="muted">—</span>' :
+          '<span class="m ' + (ch >= 0 ? 'up' : 'down') + '">' + num(ch, 2) + '%</span>') + '</td>' +
+        '<td>' + stopCell(o) + '</td>' +
+        '<td><span class="m">' + num(o.key_support, 1) + '</span> / ' +
+            '<span class="m">' + num(o.key_resistance, 1) + '</span></td>' +
+        '<td>' + (has(o.max_position_kwd)
+            ? '<span class="m">' + o.max_position_kwd + '</span>' : '<span class="muted">—</span>') + '</td>' +
+        '<td>' + atomsCell(o) + '</td>' +
+      '</tr>';
+    });
+    w.innerHTML = h + '</tbody></table>';
+  }
+
+  renderSuspended(opps);
+  $('foot').innerHTML =
+    'المصدر: <span class="m">' + API + '</span> — تحديث يدوي فقط.<br>' +
+    'وقت التوليد: <span class="m">' + esc(d.generated_at || '—') + '</span> ' +
+    '<span class="muted">(بلا منطقة زمنية معلنة — بند E-4)</span><br>' +
+    'الوقف المعروض هو <span class="m">chosen_plan.stop</span> وحده؛ ' +
+    'المرشحات الأخرى تشخيصية في <span class="m">stop_candidates</span>.';
+}
+
+function card(lbl, val, note, txt){
+  return '<div class="card"><div class="lbl">' + lbl + '</div>' +
+    '<div class="val">' + (txt !== undefined ? '<span style="font-size:17px">' + esc(txt) + '</span>'
+                                             : (has(val) ? val : '—')) + '</div>' +
+    (note ? '<div class="note">' + note + '</div>' : '') + '</div>';
+}
+
+/* ---- المقاييس المعلّقة: كل رقم مشتق من hit/miss خلف باب واحد ---- */
+const SUSPENDED_FIELDS = [
+  ['confidence',      'الثقة'],
+  ['win_rate',        'نسبة النجاح'],
+  ['pattern_score',   'درجة النمط'],
+  ['baseline_wr',     'خط الأساس'],
+  ['entry_score',     'درجة الدخول'],
+  ['smart_decision',  'القرار الذكي'],
+  ['entry_status',    'حالة الدخول']
+];
+
+function renderSuspended(opps){
+  $('suspWhy').innerHTML =
+    'كل رقم هنا مشتق من نوافذ تقييم hit/miss التي وُجد <span class="m">C-27</span> ' +
+    'لإعادة قياسها. هذا هو نفس السبب المكتوب على السلك لإيقاف القائمة البيضاء:<br>' +
+    '<code>' + esc(SUSPEND_REASON) + '</code><br>' +
+    'يُرفع الحجب من هذا المكان وحده حين تنتهي إعادة القياس — ' +
+    'ولا يُرفع لأن الرقم بدا معقولاً.';
+
+  if (!opps.length){ $('suspBody').innerHTML = ''; return; }
+  let h = '<table><thead><tr><th>الرمز</th>' +
+          SUSPENDED_FIELDS.map(f => '<th>' + f[1] + '</th>').join('') +
+          '<th>عيّنة</th></tr></thead><tbody>';
+  opps.slice(0, 10).forEach(o => {
+    h += '<tr><td><span class="sym">' + esc(o.symbol) + '</span></td>';
+    SUSPENDED_FIELDS.forEach(f => {
+      const v = o[f[0]];
+      h += '<td class="muted">' + (has(v) ? (isFinite(v) ? '<span class="m">' + num(v, 1) + '</span>'
+                                                         : esc(v)) : '—') + '</td>';
+    });
+    const sm = o.strategy_match || {};
+    const samples = [o.occurrences, sm.sample_size, sm.total_matches]
+      .map(x => has(x) ? x : '—').join(' / ');
+    h += '<td class="muted"><span class="m">' + samples + '</span></td></tr>';
+  });
+  h += '</tbody></table>' +
+       '<div class="note" style="color:var(--txt-3);font-size:11.5px;margin-top:9px">' +
+       'عمود العيّنة: occurrences / sample_size / total_matches — ثلاثة أعداد مختلفة ' +
+       'في السجل الواحد، ولم يُبيَّن أيها بُنيت عليه الثقة.</div>';
+  $('suspBody').innerHTML = h;
+}
+
+/* ---- التحميل: يدوي فقط. الحركة التلقائية توهم بالطزاجة. ---- */
+async function load(){
+  const btn = $('rf'); btn.disabled = true; btn.textContent = 'جارٍ…';
+  let d = null, rv = null;
+  try {
+    const r = await fetch(API + '?t=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    d = await r.json();
+  } catch (e) {
+    $('banner').className = 'banner b-bad';
+    $('banner').innerHTML = '<div class="ic">✕</div><div class="main">' +
+      '<div class="t">تعذّر جلب القرارات</div>' +
+      '<div class="s">' + esc(e.message) + ' — لا يُعرض شيء بدل البيانات</div></div>';
+    $('oppWrap').innerHTML = '<div class="empty">لا اتصال بالمصدر.</div>';
+    btn.disabled = false; btn.textContent = 'تحديث';
+    return;
+  }
+  try {
+    const r2 = await fetch(REV + '?t=' + Date.now(), {cache:'no-store'});
+    if (r2.ok) rv = await r2.json();
+  } catch (e) { rv = null; }
+
+  render(d, rv);
+  btn.disabled = false; btn.textContent = 'تحديث';
+}
+
+load();
 </script>
-<script src="indicator-tooltips.js"></script>
-<script src="nav.js?v=1"></script></body>
+</body>
 </html>
