@@ -44,6 +44,10 @@ class RiskEngine:
     LIQUIDITY_FLOOR_KWD = 1000        # median session value, KWD
     MAX_POSITION_LIQ_SHARE = 0.20     # consume at most 20% of a session
     MAX_POSITION_EXIT_SESSIONS = 3    # and be able to exit inside 3
+    # D-10: the smallest slice worth calling "available to open with" -
+    # below 1 percent of the book, can_open_new says no. 1,295 KWD left
+    # of 144,000 is not an openable position, it is noise.
+    MIN_OPEN_CAPITAL_PCT = 1.0
 
     def apply_risk_gate(self, opportunities: list, open_positions: list = None) -> list:
         """
@@ -429,8 +433,11 @@ def get_risk_status() -> dict:
                          # new risk is refused (PHASE2_SECTION_D, D-2)
                          and heat.get("heat_complete", False)
                          # and a heat figure is not a cash balance: with no
-                         # capital left there is nothing to open with (D-10)
-                         and _capital_deployment(positions, cfg)["capital_available_kwd"] > 0),
+                         # meaningful capital left there is nothing to open
+                         # with (D-10; declared floor RiskEngine.MIN_OPEN_CAPITAL_PCT)
+                         and (_capital_deployment(positions, cfg)["capital_available_kwd"]
+                              >= (cfg.get("account_capital") or 0)
+                              * RiskEngine.MIN_OPEN_CAPITAL_PCT / 100)),
         "portfolio_heat_pct": heat["heat_pct"],
         "max_heat_pct": heat["max_heat_pct"],
         "heat_complete": heat.get("heat_complete"),
