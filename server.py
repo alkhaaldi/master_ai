@@ -3692,7 +3692,10 @@ async def dashboard_ema_crosses(hours: int = 4, signal_type: str = "all"):
     conn = sqlite3.connect(os.path.join(BASE_DIR, "data", "life.db"))
     conn.row_factory = sqlite3.Row
 
-    cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+    # Column format (space), not isoformat (T): on same-date strings the
+    # space sorts before T, so every row of today compared below a T cutoff
+    # and the endpoint returned empty for the whole trading session.
+    cutoff = (datetime.utcnow() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
 
     where_signal = ""
     if signal_type == "bullish":
