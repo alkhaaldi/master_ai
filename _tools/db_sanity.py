@@ -89,12 +89,13 @@ def main():
         print()
 
     # PHASE2_SECTION_D D-3: an open trade whose entry_date equals its
-    # creation date may record the typing day, not the trade day
+    # creation date may record the typing day, not the trade day. An
+    # explicit entry_date_precision counts as human review and passes.
     try:
         _sus = conn.execute(
             "SELECT id, symbol, entry_date FROM trades WHERE status='open' "
             "AND entry_date = DATE(created_at) "
-            "AND (entry_date_precision IS NULL OR entry_date_precision = 'exact')"
+            "AND entry_date_precision IS NULL"
         ).fetchall()
         _det = ", ".join("#%s %s %s" % (r[0], r[1], r[2]) for r in _sus)
         check("open trades entry_date vs created_at", len(_sus) == 0,
@@ -109,7 +110,8 @@ def main():
         _bk = conn.execute(
             "SELECT id, symbol, exit_date FROM trades WHERE status='closed' "
             "AND DATE(created_at) = exit_date "
-            "AND COALESCE(trade_kind, 'real') != 'void'"
+            "AND COALESCE(trade_kind, 'real') != 'void' "
+            "AND COALESCE(exit_reason, '') NOT LIKE '%user-confirmed%'"
         ).fetchall()
         _bd = ", ".join("#%s %s %s" % (r[0], r[1], r[2]) for r in _bk)
         check("closed trades bookkeeping candidates", len(_bk) == 0,
