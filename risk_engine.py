@@ -328,18 +328,37 @@ def get_portfolio_heat() -> dict:
     cfg = _get_risk_config()
     capital = cfg["account_capital"]
     positions = _get_open_positions()
-    total_risk = 0
+    total_risk_fils = 0.0
+    no_stop = 0
     for p in positions:
         entry = p.get("entry_price", 0)
         stop = p.get("stop_loss", 0)
         qty = p.get("quantity", 0)
-        if entry and stop and qty and entry > stop:
-            total_risk += (entry - stop) * qty
-    heat_pct = (total_risk / capital) * 100 if capital > 0 else 0
+        if not entry or not qty:
+            continue
+        if stop and entry > stop:
+            total_risk_fils += (entry - stop) * qty
+        else:
+            # No usable stop: the FULL position value is at risk. The old
+            # code contributed 0 here, converting absence into "no risk"
+            # inside a decision engine (PHASE2_SECTION_D, D-2).
+            total_risk_fils += entry * qty
+            no_stop += 1
+    # Prices are fils, capital is KWD. The old code divided fils by KWD -
+    # a 1000x overstatement that never fired only because no open trade
+    # ever had a stop. total_risk_kwd now means what its name says.
+    total_risk_kwd = total_risk_fils / 1000.0
+    heat_pct = (total_risk_kwd / capital) * 100 if capital > 0 else 0
+    heat_complete = no_stop == 0
     return {
-        "capital": capital, "total_risk_kwd": round(total_risk, 3),
+        "capital": capital, "total_risk_kwd": round(total_risk_kwd, 3),
         "heat_pct": round(heat_pct, 1), "max_heat_pct": cfg["max_portfolio_heat_pct"],
         "within_limit": heat_pct <= cfg["max_portfolio_heat_pct"],
+        "heat_complete": heat_complete,
+        "positions_without_stop": no_stop,
+        "heat_note": None if heat_complete else (
+            "%d position(s) have no stop_loss; their full value is counted"
+            " as at risk" % no_stop),
     }
 
 
@@ -400,8 +419,16 @@ def get_risk_status() -> dict:
         "risk_per_trade_pct": cfg["risk_per_trade_pct"],
         "open_positions": len(positions),
         "max_positions": int(cfg["max_open_positions"]),
-        "can_open_new": len(positions) < int(cfg["max_open_positions"]) and heat["within_limit"],
+        "can_open_new": (len(positions) < int(cfg["max_open_positions"])
+                         and heat["within_limit"]
+                         # a slot count is not a risk assessment: while any
+                         # position lacks a stop, heat is incomplete and
+                         # new risk is refused (PHASE2_SECTION_D, D-2)
+                         and heat.get("heat_complete", False)),
         "portfolio_heat_pct": heat["heat_pct"],
         "max_heat_pct": heat["max_heat_pct"],
+        "heat_complete": heat.get("heat_complete"),
+        "positions_without_stop": heat.get("positions_without_stop"),
+        "heat_note": heat.get("heat_note"),
         "sector_exposure": sectors,
     }

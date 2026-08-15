@@ -6295,7 +6295,9 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 _reason = " ".join(parts[3:]) if len(parts) > 3 else ""
             except ValueError:
                 _reason = " ".join(parts[2:])
-        _tid = open_trade(symbol=_sym, entry_price=_price, quantity=_qty, entry_reason=_reason)
+        # D-3: /trade logs an execution reported now - today IS the trade date
+        _tid = open_trade(symbol=_sym, entry_price=_price, quantity=_qty, entry_reason=_reason,
+                          entry_date=datetime.now().strftime("%Y-%m-%d"), entry_date_precision="exact")
         _msg = "\u2705 \u0635\u0641\u0642\u0629 #" + str(_tid) + " \u0645\u0641\u062a\u0648\u062d\u0629: " + _sym + " @ " + str(_price)
         if _qty:
             _msg += " \u00d7 " + str(_qty)
@@ -7204,6 +7206,8 @@ async def tg_handle_callback(callback_query: dict):
                         symbol=_tc_sym, entry_price=_tc_price_f, quantity=_tc_qty_i,
                         entry_reason=f"TradingView (confirmed)",
                         strategy=_tc_strat, entry_signal_id=_tc_saved or None,
+                        entry_date=datetime.now().strftime("%Y-%m-%d"),
+                        entry_date_precision="exact",
                     )
                     await tg_send(chat_id, f"\u2705 \u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0634\u0631\u0627\u0621 {_tc_sym} @ {_tc_price} (#{_tc_tid})")
                     logger.info(f"Trade confirmed: BUY {_tc_sym} @ {_tc_price} tid={_tc_tid}")
@@ -7249,6 +7253,8 @@ async def tg_handle_callback(callback_query: dict):
                     entry_reason="Confluence Engine (confirmed)",
                     strategy="confluence",
                     entry_signal_id=_cb_sig_id or None,
+                    entry_date=datetime.now().strftime("%Y-%m-%d"),
+                    entry_date_precision="exact",
                 )
                 if CONFLUENCE_OK and _cb_sig_id:
                     confluence_record_decision(int(_cb_sig_id), _cb_sym, "buy", _cb_price)

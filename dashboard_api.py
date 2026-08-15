@@ -377,6 +377,7 @@ async def dashboard_jobs_list():
 @router.get("/dashboard/radar")
 async def ha_dashboard_radar():
     """Dedicated radar data for HA radar sensor -- lightweight, read-only from DB."""
+    _count_endpoint_hit("/dashboard/radar")
     import sqlite3
     from datetime import date as _d
     data = {}
@@ -563,11 +564,11 @@ async def ha_dashboard_radar():
                 "vol_ratio": round(_vr, 2) if _vr else 0,
                 "change_pct": d.get("change_pct", 0),
                 "updated_at": d.get("updated_at", ""),
-                "data_age_hours": d.get("data_age_hours", 999),
-                "is_stale": d.get("is_stale", True),
+                # D-4: session-aged state; 999 is dead - absence is null
+                # plus a reason. Old keys ride as aliases for one release.
+                **_session_freshness(d.get("captured_at"), d.get("market_was_open")),
                 "market_was_open": d.get("market_was_open"),
                 "captured_at": d.get("captured_at"),
-                "freshness": d.get("freshness", "stale"),
                 "source_timeframe": d.get("source_timeframe", "1D"),
                 "action": _action,
                 "action_ar": _action_ar,
@@ -732,6 +733,98 @@ async def ha_dashboard_radar():
 # /dashboard/portfolio — Portfolio + Journal data
 # ═══════════════════════════════════════════════════
 
+def _apply_price_contract(t: dict, fp: dict):
+    """Canonical price fields on a position dict (PHASE2_SECTION_D, D-1) -
+    the same vocabulary journal_open in /dashboard/radar uses. Returns the
+    current price or None. quote_* stay as deprecated aliases; readers
+    should migrate to price_* (see _tools/PHASE2_SECTION_D.md)."""
+    cur = None
+    if fp.get("price"):
+        cur = float(fp["price"])
+        t["current_price"] = cur
+    as_of = fp.get("as_of")
+    mid = bool(fp.get("captured_mid_session"))
+    age = fp.get("age_days")
+    if age is None and as_of:
+        try:
+            _d = datetime.fromisoformat(str(as_of))
+            if _d.tzinfo:
+                _d = _d.replace(tzinfo=None)
+            age = (datetime.utcnow() - _d).days
+        except (ValueError, TypeError):
+            age = None
+    t["price_as_of"] = as_of
+    t["price_source"] = fp.get("source")
+    t["price_age_days"] = age
+    t["price_captured_mid_session"] = mid
+    if cur and fp.get("state") == "live" and not mid:
+        t["price_state"], t["pnl_valid"], t["pnl_invalid_reason"] = "live", True, None
+    elif cur and fp.get("state") == "live":
+        t["price_state"], t["pnl_valid"] = "intraday", False
+        t["pnl_invalid_reason"] = "price captured mid-session"
+    elif cur is None or as_of is None:
+        t["price_state"], t["pnl_valid"] = "unknown", False
+        t["pnl_invalid_reason"] = fp.get("reason") or "no dated price"
+    else:
+        t["price_state"], t["pnl_valid"] = "stale", False
+        t["pnl_invalid_reason"] = (f"price_as_of is {age} days old"
+                                   if age is not None else "price is stale")
+    t["quote_as_of"] = t["price_as_of"]
+    t["quote_state"] = t["price_state"]
+    t["quote_source"] = t["price_source"]
+    t["quote_stale"] = t["price_state"] != "live"
+    return cur
+
+
+def _session_freshness(as_of, was_open) -> dict:
+    """Session-aged freshness block (PHASE2_SECTION_D, D-4). The 999
+    sentinel is dead: an age that cannot be computed is null plus a
+    reason, never a number someone will average."""
+    from price_source import classify_data_state
+    ds = classify_data_state(as_of, bool(was_open))
+    out = {"data_state": ds["data_state"], "data_state_ar": ds["data_state_ar"],
+           "sessions_old": ds["sessions_old"],
+           "data_age_hours": None, "age_reason": None}
+    if as_of:
+        try:
+            _d = datetime.fromisoformat(str(as_of))
+            if _d.tzinfo:
+                _d = _d.replace(tzinfo=None)
+            out["data_age_hours"] = round(
+                (datetime.utcnow() - _d).total_seconds() / 3600, 1)
+        except (ValueError, TypeError):
+            out["age_reason"] = "unparseable capture time"
+    else:
+        out["age_reason"] = "capture time not recorded"
+    # old vocabulary, kept as aliases for one release
+    out["is_stale"] = ds["data_state"] not in ("normal", "live")
+    out["freshness"] = ("fresh" if ds["data_state"] in ("normal", "live")
+                        else "aging" if ds["data_state"] == "degraded" else "stale")
+    return out
+
+
+def _count_endpoint_hit(name: str) -> None:
+    """PHASE2_SECTION_D, D-5: /dashboard/radar may have no consumer - count
+    for a week, then decide. A file, not a log line, because INFO from this
+    module never reaches server.log (C-20)."""
+    try:
+        import json as _j, time as _t
+        p = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "data", "endpoint_hits.json")
+        d = {}
+        if os.path.exists(p):
+            with open(p) as f:
+                d = _j.load(f)
+        e = d.setdefault(name, {"count": 0, "first": None})
+        e["count"] += 1
+        e["first"] = e["first"] or _t.strftime("%Y-%m-%dT%H:%M:%SZ", _t.gmtime())
+        e["last"] = _t.strftime("%Y-%m-%dT%H:%M:%SZ", _t.gmtime())
+        with open(p, "w") as f:
+            _j.dump(d, f, indent=1)
+    except Exception:
+        pass
+
+
 @router.get("/dashboard/portfolio")
 async def ha_dashboard_portfolio():
     """Portfolio data for HA dashboard — open positions, closed trades, stats."""
@@ -755,33 +848,14 @@ async def ha_dashboard_portfolio():
             for t in open_trades:
                 _entry = float(t.get("entry_price", 0) or 0)
                 _qty = int(t.get("quantity", 0) or 0)
-                _cur = None
-                _src = "unknown"
-                _stale = True
                 sym = t.get("symbol", "").upper()
-
-                # Layer 1: Bridge cache (freshest)
+                fp = {}
                 try:
                     fp = get_fresh_price(sym)
-                    if fp.get("price"):
-                        _cur = float(fp["price"])
-                        _src = fp.get("source", "bridge")
-                        _stale = fp.get("stale", False)
-                        t["quote_as_of"] = fp.get("as_of")
-                        t["quote_state"] = fp.get("state")
                 except Exception:
                     pass
-
-                # Layer 2 removed 2026-08-15: get_fresh_price already ends
-                # at this same table through price_source, so this direct
-                # rowid-DESC read could only run when that path had nothing -
-                # and then this read had nothing either. Dead, not stale.
-
-                # Set current price + source
-                if _cur:
-                    t["current_price"] = _cur
-                t["quote_source"] = _src
-                t["quote_stale"] = _stale
+                # D-1: canonical contract + deprecated quote_* aliases
+                _cur = _apply_price_contract(t, fp)
 
                 # ALWAYS compute P&L when we have entry + current price
                 if _entry and _cur:
@@ -954,23 +1028,14 @@ async def ha_dashboard_journal():
         for t in open_trades:
             _entry = float(t.get("entry_price", 0) or 0)
             _qty = int(t.get("quantity", 0) or 0)
-            _cur = None
             sym = t.get("symbol", "").upper()
-            # Layer 1: Bridge
+            fp = {}
             try:
                 fp = get_fresh_price(sym)
-                if fp.get("price"):
-                    _cur = float(fp["price"])
-                    t["quote_source"] = fp.get("source", "bridge")
-                    t["quote_stale"] = fp.get("stale", False)
-                    t["quote_as_of"] = fp.get("as_of")
-                    t["quote_state"] = fp.get("state")
             except Exception:
                 pass
-            # Layer 2 removed 2026-08-15: same reasoning as the portfolio
-            # path - get_fresh_price already ends at this table.
-            if _cur:
-                t["current_price"] = _cur
+            # D-1: canonical contract + deprecated quote_* aliases
+            _cur = _apply_price_contract(t, fp)
             # Always compute P&L
             if _entry and _cur:
                 t["pnl_pct"] = round((_cur / _entry - 1) * 100, 2)
@@ -2653,7 +2718,9 @@ async def api_trade_open(data: dict = Body(...)):
     """Open a new trade."""
     try:
         from journal_engine import open_trade
-        required = ["symbol", "entry_price", "quantity"]
+        # D-3: the broker execution date is required - defaulting to today
+        # forged same-day entries on backdated logs
+        required = ["symbol", "entry_price", "quantity", "entry_date"]
         for f in required:
             if f not in data:
                 return {"success": False, "error": f"Missing field: {f}"}
@@ -2668,6 +2735,8 @@ async def api_trade_open(data: dict = Body(...)):
             name_ar=data.get("name_ar", ""),
             stop_loss=float(data["stop_loss"]) if data.get("stop_loss") else None,
             take_profit=float(data["take_profit"]) if data.get("take_profit") else None,
+            entry_date=str(data["entry_date"])[:10],
+            entry_date_precision=data.get("entry_date_precision", "exact"),
         )
         return {"success": True, "trade_id": trade_id, "message": "Trade opened"}
     except Exception as e:
@@ -2806,18 +2875,11 @@ async def api_data_freshness():
         ).fetchone()
         last_update = row["last_update"] if row else None
 
-        age_hours = 999
-        is_stale = True
-        freshness = "stale"
-        if last_update:
-            try:
-                from datetime import datetime as _dt
-                updated = _dt.fromisoformat(last_update)
-                age_hours = round((_dt.utcnow() - updated).total_seconds() / 3600, 1)
-                is_stale = age_hours > 18
-                freshness = "fresh" if age_hours < 6 else "aging" if age_hours < 18 else "stale"
-            except Exception:
-                pass
+        # D-4: session-aged, no sentinel
+        _fr = _session_freshness(last_update, None)
+        age_hours = _fr.get("data_age_hours")
+        is_stale = _fr["is_stale"]
+        freshness = _fr["freshness"]
 
         # Total and stale counts
         total_row = conn.execute("SELECT COUNT(*) as cnt FROM stock_radar_daily").fetchone()
@@ -2858,6 +2920,10 @@ async def api_data_freshness():
         return {
             "last_radar_update": last_update,
             "age_hours": age_hours,
+            "age_reason": _fr.get("age_reason"),
+            "data_state": _fr.get("data_state"),
+            "data_state_ar": _fr.get("data_state_ar"),
+            "sessions_old": _fr.get("sessions_old"),
             "is_stale": is_stale,
             "freshness": freshness,
             "bridge_online": bridge_online,

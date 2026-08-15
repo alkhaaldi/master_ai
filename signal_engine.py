@@ -345,7 +345,10 @@ def build_signals() -> dict:
         # V2 feature flags (Phase 8)
         "flags": get_trading_flags(),
         "market_regime": check_market_regime(),
-        "whitelist": sorted(WHITELIST),
+        # D-6: suspended list stays off the wire - a populated array
+        # will be treated as authoritative by the next consumer (C-27)
+        "whitelist": [],
+        "whitelist_suspended_reason": "C-27: hit-rate basis was measured with broken evaluation windows",
     }
 
     # 1. Get open trades from journal

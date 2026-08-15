@@ -88,6 +88,21 @@ def main():
 
         print()
 
+    # PHASE2_SECTION_D D-3: an open trade whose entry_date equals its
+    # creation date may record the typing day, not the trade day
+    try:
+        _sus = conn.execute(
+            "SELECT id, symbol, entry_date FROM trades WHERE status='open' "
+            "AND entry_date = DATE(created_at) "
+            "AND (entry_date_precision IS NULL OR entry_date_precision = 'exact')"
+        ).fetchall()
+        _det = ", ".join("#%s %s %s" % (r[0], r[1], r[2]) for r in _sus)
+        check("open trades entry_date vs created_at", len(_sus) == 0,
+              ("suspect typed-date: " + _det) if _sus
+              else "no open trade dated by its typing day")
+    except Exception as _e:
+        check("open trades entry_date vs created_at", False, str(_e))
+
     conn.close()
 
     print("=" * 60)

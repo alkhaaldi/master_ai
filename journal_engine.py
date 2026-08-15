@@ -60,6 +60,10 @@ def init_schema():
             c.execute("ALTER TABLE trades ADD COLUMN stop_loss REAL")
         if "take_profit" not in cols:
             c.execute("ALTER TABLE trades ADD COLUMN take_profit REAL")
+        if "entry_date_precision" not in cols:
+            # PHASE2_SECTION_D D-3: exact|approx - a backdated manual entry
+            # must never carry a confident date it does not have
+            c.execute("ALTER TABLE trades ADD COLUMN entry_date_precision TEXT")
     c.execute("""CREATE TABLE IF NOT EXISTS trade_transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trade_id INTEGER NOT NULL,
@@ -143,19 +147,29 @@ def calculate_real_pnl(entry_price_fils, current_price_fils, quantity, broker_fe
 
 def open_trade(symbol, entry_price, quantity=0, entry_reason="",
                strategy="manual", timeframe="1D", direction="long",
-               name_ar="", entry_signal_id=None, stop_loss=None, take_profit=None):
-    """Open a new trade. Returns trade_id."""
+               name_ar="", entry_signal_id=None, stop_loss=None, take_profit=None,
+               entry_date=None, entry_date_precision=None):
+    """Open a new trade. Returns trade_id.
+
+    entry_date is the date of the ACTUAL trade at the broker, not the day
+    the row is typed - trades are logged after the fact, and defaulting to
+    today forged same-day entries (PHASE2_SECTION_D, D-3). Required, with
+    entry_date_precision "exact" or "approx".
+    """
+    if not entry_date:
+        raise ValueError("entry_date required: the trade date, not the typing date (D-3)")
+    if entry_date_precision not in ("exact", "approx"):
+        raise ValueError("entry_date_precision must be exact or approx (D-3)")
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    today = date.today().isoformat()
     with _conn() as c:
         c.execute("""INSERT INTO trades
             (symbol, name_ar, direction, status, entry_price, entry_date,
              entry_reason, entry_signal_id, quantity, strategy, timeframe,
-             stop_loss, take_profit, created_at)
-            VALUES (?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (symbol.upper(), name_ar, direction, entry_price, today,
+             stop_loss, take_profit, entry_date_precision, created_at)
+            VALUES (?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (symbol.upper(), name_ar, direction, entry_price, str(entry_date)[:10],
              entry_reason, entry_signal_id, quantity, strategy, timeframe,
-             stop_loss, take_profit, now))
+             stop_loss, take_profit, entry_date_precision, now))
         trade_id = c.execute("SELECT last_insert_rowid()").fetchone()[0]
     logger.info("Opened trade #%d: %s @ %s", trade_id, symbol, entry_price)
     return trade_id
