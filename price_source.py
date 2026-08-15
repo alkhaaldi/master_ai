@@ -35,6 +35,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -52,6 +53,13 @@ BRIDGE_TIMEOUT = 3
 YAHOO_TIMEOUT = 12
 
 STATE_RANK = {"live": 0, "stale": 1, "missing": 2}
+
+logger = logging.getLogger("price_source")
+
+# Last line of defence for symbol identity. The name heuristic is a mark,
+# not a gate (kse_symbol_map name_match); what actually catches a wrong
+# ticker is its price landing far from the last stored one.
+PRICE_DEVIATION_GUARD = 0.30
 
 _UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -260,6 +268,31 @@ def _from_db(symbol: str) -> dict | None:
 _SOURCES = {"yahoo": _from_yahoo, "bridge": _from_bridge, "db": _from_db}
 
 
+def _guard_against_wrong_symbol(sym: str, quote: dict) -> None:
+    """Mark a live price sitting >30% from the last stored one - and say so.
+
+    Never blocks and never mutates the price: a silent block would just
+    rebuild the review gate this guard replaced. Consumers see
+    db_deviation_flag / db_deviation_pct and decide; the WARNING makes it
+    reach server.log.
+    """
+    try:
+        ref = _from_db(sym)
+    except Exception:
+        return
+    if not ref or not ref.get("close"):
+        return
+    dev = abs(quote["close"] - ref["close"]) / ref["close"]
+    if dev > PRICE_DEVIATION_GUARD:
+        quote["db_deviation_pct"] = round(dev * 100.0, 1)
+        quote["db_deviation_flag"] = True
+        logger.warning(
+            "price guard: %s live %.1f fils vs stored %.1f (%s%%, stored as of %s)"
+            " - possible wrong symbol or real move, marked not blocked",
+            sym, quote["close"], ref["close"], quote["db_deviation_pct"],
+            str(ref.get("as_of"))[:10])
+
+
 # ----------------------------------------------------------------- public
 def get_quote(symbol: str, use_cache: bool = True) -> dict:
     """OHLCV for one symbol, with the time it was measured and an honest state."""
@@ -282,6 +315,8 @@ def get_quote(symbol: str, use_cache: bool = True) -> dict:
             continue
         if got:
             got["tried"] = tried
+            if got.get("state") == "live" and got.get("close"):
+                _guard_against_wrong_symbol(sym, got)
             with _lock:
                 _cache[sym] = (time.time(), dict(got))
             return got
@@ -295,7 +330,8 @@ def get_price(symbol: str, use_cache: bool = True) -> dict:
     q = get_quote(symbol, use_cache=use_cache)
     out = {"price": q.get("close"), "as_of": q.get("as_of"),
            "source": q.get("source"), "state": q.get("state")}
-    for k in ("currency", "age_days", "captured_mid_session", "reason", "tried"):
+    for k in ("currency", "age_days", "captured_mid_session", "reason", "tried",
+              "db_deviation_pct", "db_deviation_flag"):
         if k in q:
             out[k] = q[k]
     return out
