@@ -392,8 +392,12 @@ def run_confluence_scan():
                 })
 
         # Store signals in DB (only HIGH and MEDIUM) — with dedup
-        now = datetime.now().isoformat()
-        expires = (datetime.now() + timedelta(hours=24)).isoformat()
+        # UTC, column format: every reader compares these against SQLite
+        # datetime("now") (UTC, space). The old local isoformat stamps
+        # gave every signal a 27h lifetime instead of 24 (C-11), plus the
+        # same-date T-vs-space sort quirk on top.
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        expires = (datetime.utcnow() + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
         stored = 0
         for r in results:
             if r["conviction"] in ("HIGH", "MEDIUM"):

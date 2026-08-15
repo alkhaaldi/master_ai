@@ -322,7 +322,9 @@ class CorrectionsLoop:
     def decay_corrections(self, days_inactive: int = 30, decay_rate: float = 0.05):
         """Decay confidence of corrections not used recently."""
         conn = self._get_conn()
-        cutoff = (datetime.now() - timedelta(days=days_inactive)).isoformat()
+        # UTC space like the columns (created_at/last_applied are SQLite
+        # datetime("now")); the local T cutoff decayed corrections 3h early
+        cutoff = (datetime.utcnow() - timedelta(days=days_inactive)).strftime("%Y-%m-%d %H:%M:%S")
 
         old_corrections = conn.execute(
             """SELECT id, confidence FROM corrections

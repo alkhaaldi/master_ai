@@ -544,7 +544,7 @@ def generate_weekly_report():
         import sqlite3 as _sq3
         _conn2 = _sq3.connect(DB_PATH, timeout=5)
         _conn2.row_factory = _sq3.Row
-        cutoff_dt = (date.today() - timedelta(days=7)).isoformat()
+        cutoff_dt = (datetime.utcnow().date() - timedelta(days=7)).isoformat()  # events are stamped UTC
         sig_rows = _conn2.execute(
             "SELECT signal_type, COUNT(*) as cnt FROM stock_radar_events "
             "WHERE created_at >= ? GROUP BY signal_type", (cutoff_dt,)

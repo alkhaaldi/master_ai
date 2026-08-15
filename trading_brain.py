@@ -727,7 +727,9 @@ def get_optimal_thresholds() -> dict:
 
 def generate_weekly_report() -> dict:
     """Generate weekly performance report. Called Friday 14:00 KWT."""
-    today = date.today()
+    # UTC date: signal_time is UTC, and a local date boundary shifted
+    # the week window by 3h at each edge
+    today = datetime.utcnow().date()
     week_start = (today - timedelta(days=7)).isoformat()
     week_end = today.isoformat()
 

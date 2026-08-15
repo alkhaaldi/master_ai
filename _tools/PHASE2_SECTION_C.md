@@ -90,7 +90,7 @@ snapshot stays a deliberate act: the daily scheduler, or `POST
 
 ## C-11. confluence_engine expiry compares local timestamps to a UTC threshold
 
-**الحالة:** مُتحقَّق 2026-08-15 — المسار مقيس: الكاتب confluence_engine.py:395 يكتب `datetime.now().isoformat()` محلياً بصيغة T، والقيمة المخزَّنة شاهدة (`2026-08-13T06:01:53`)، والقارئات الخمس تقارن بـ`datetime("now")` UTC. العمر 27 ساعة مؤكَّد، ويضاف إليه عطب الصيغة (المسافة قبل T في ترتيب اليوم نفسه). انظر `_tools/mixed_clock_census.md` بند 10.
+**الحالة:** مُصلَح 2026-08-15 — الكاتب صار يختم UTC بصيغة العمود (`confluence_engine.py`, رقعة تشوهات النوافذ). برهان بصفّين مزروعين عمرهما 25 ساعة: ختم قديم محلي بقي نشطاً (علّة الـ27 ساعة)، ختم جديد انتهى في موعده. الصفوف القديمة لم تُهاجَر — كلها منتهية الصلاحية أصلاً (آخرها 2026-08-13). 2026-08-15 — المسار مقيس: الكاتب confluence_engine.py:395 يكتب `datetime.now().isoformat()` محلياً بصيغة T، والقيمة المخزَّنة شاهدة (`2026-08-13T06:01:53`)، والقارئات الخمس تقارن بـ`datetime("now")` UTC. العمر 27 ساعة مؤكَّد، ويضاف إليه عطب الصيغة (المسافة قبل T في ترتيب اليوم نفسه). انظر `_tools/mixed_clock_census.md` بند 10.
 
 `confluence_engine.py:271`:
 

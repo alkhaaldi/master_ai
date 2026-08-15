@@ -2,8 +2,9 @@
 
 Every comparison between a Python-built timestamp and a stored column, swept
 after the C-17 correction. Scope: all runtime .py (venv, _archive,
-_deprecated, examples excluded). Read-only sweep; nothing below was fixed
-except trading_brain.py:174/:277 (committed separately).
+_deprecated, examples excluded). Read-only sweep at first writing; findings #1-#14 were then fixed on
+2026-08-15 (see git log), each with a planted-row before/after proof.
+#15/#17 were corrected instead - see below. #16, #18, #19 remain open.
 
 The two fault axes:
 - **clock**: datetime.now() is Kuwait local (+03); CURRENT_TIMESTAMP /
@@ -64,17 +65,25 @@ The two fault axes:
     stock_radar_events.created_at: 3h edge on the 7d stats window.
 14. dashboard_api.py:3051 - local date-only week_ago vs UTC "Z" column:
     3h edge.
-15. domain_kpis.py:82 - local date-only vs tasks.updated_at: see #17;
-    that column cannot be reasoned about until its two writers agree.
+15. domain_kpis.py:82 - WITHDRAWN as a clock finding, 2026-08-15. The
+    tasks table domain_kpis reads (life.db) has 0 rows - its only writer,
+    task_engine.py, apparently never ran - so "done/week" counts an empty
+    table. The clocks are irrelevant; the defect is a dead table. Recorded,
+    not fixed: reviving or retiring task_engine is its own decision.
 
 ## C. Two-writer columns (the rule in CLAUDE_CONTEXT.md)
 
 16. memory (audit.db): created_at written UTC isoformat+"Z"
     (memory_db.py:17) while dream_consolidator.py:114 writes updated_at
     local isoformat, no Z - two clocks and two formats inside one table.
-17. tasks.updated_at (life.db): INSERT default datetime("now") = UTC;
-    server.py:2534 UPDATE sets datetime("now","localtime") = local.
-    Same column, two clocks, indistinguishable after the fact.
+17. CORRECTED 2026-08-15: the original entry conflated two different
+    tables that share the name tasks. server.py:2534 (localtime UPDATE)
+    writes audit.db tasks (task_id/goal schema, 1,381 rows); the life.db
+    tasks (title/status schema, UTC default) is a separate, empty table.
+    No column has two writers here - the earlier claim was itself a
+    single-name-two-things error, the same shape as radar_enabled.
+    audit.db tasks IS written in two clocks though: its INSERT path needs
+    checking before anything windows on its updated_at.
 18. signal_snapshots.signal_time and stock_radar_events.candle_time -
     already recorded (C-17 correction, C-26).
 

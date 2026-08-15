@@ -434,7 +434,9 @@ def get_urgent_items():
     """Get urgent/breaking news items (last 24h)."""
     try:
         conn = _conn()
-        cutoff = (datetime.now() - timedelta(hours=24)).isoformat()
+        # column format (space, local) - a T cutoff dropped every row
+        # sharing the cutoff date, truncating the 24h window at midnight
+        cutoff = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
         rows = conn.execute(
             "SELECT * FROM news_digests WHERE created_at >= ? ORDER BY created_at DESC LIMIT 10",
             (cutoff,)
@@ -449,7 +451,7 @@ def cleanup_old(days=30):
     """Remove news digests older than N days."""
     try:
         conn = _conn()
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")  # space, not T: a T cutoff deleted boundary-day rows early
         cur = conn.execute("DELETE FROM news_digests WHERE created_at < ?", (cutoff,))
         deleted = cur.rowcount
         conn.commit()

@@ -923,7 +923,9 @@ async def ha_dashboard_portfolio():
             "SELECT COUNT(*) FROM stock_radar_events WHERE created_at > datetime('now', '-7 days')"
         ).fetchone()[0]
         confirmed_7d = conn.execute(
-            "SELECT COUNT(*) FROM trades WHERE created_at > datetime('now', '-7 days')"
+            # trades.created_at is local (journal_engine datetime.now());
+            # a UTC threshold ran this window 3h long
+            "SELECT COUNT(*) FROM trades WHERE created_at > datetime('now', '-7 days', 'localtime')"
         ).fetchone()[0]
         data["signal_vs_trade"] = {
             "signals_7d": signals_7d,
@@ -3041,14 +3043,14 @@ async def api_memory_extraction_stats():
         by_scope = {r["s"]: r["c"] for r in scope_rows}
 
         # Extracted today (auto_extract source)
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.utcnow().strftime("%Y-%m-%d")  # memory.created_at is UTC
         today_count = conn.execute(
             "SELECT COUNT(*) as c FROM memory WHERE source='auto_extract' AND created_at LIKE ?",
             (today + "%",)
         ).fetchone()["c"]
 
         # This week
-        week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        week_ago = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
         week_count = conn.execute(
             "SELECT COUNT(*) as c FROM memory WHERE source='auto_extract' AND created_at >= ?",
             (week_ago,)

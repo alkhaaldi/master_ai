@@ -1151,7 +1151,9 @@ def tg_radar_top(n=10):
     """Top N signals from recent radar events, scored and ranked."""
     conn = _db()
     # Get unique latest signal per symbol from recent events (last 24h)
-    cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+    # column format (space): with a T cutoff, "last 24h" behaved as
+    # "since midnight of the cutoff date"
+    cutoff = (datetime.utcnow() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
     rows = conn.execute("""
         SELECT symbol, signal_type, price, ema_fast, ema_slow, created_at,
                MAX(created_at) as latest

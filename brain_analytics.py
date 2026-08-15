@@ -95,7 +95,7 @@ def log_request(user_id: str, goal: str, actions_count: int, success: bool, resp
 
 def get_analytics(days: int = 7) -> dict:
     """Get performance analytics for the last N days."""
-    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")  # column format (space); T dropped the boundary day
     analytics = {
         "period_days": days,
         "requests": {},

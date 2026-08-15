@@ -117,7 +117,9 @@ async def run_dream_consolidation():
             logger.debug(f"[dream] Merged {len(delete_ids)} dupes in {row['category']}")
 
         # Gate 3: Archive old low-usage memories (>90 days, use_count<2)
-        cutoff = (datetime.now() - timedelta(days=MAX_MEMORY_AGE_DAYS)).isoformat()
+        # UTC: memory.created_at is written utcnow isoformat+Z; a local
+        # cutoff archived memories 3h before their 90 days were up
+        cutoff = (datetime.utcnow() - timedelta(days=MAX_MEMORY_AGE_DAYS)).isoformat()
         old_rows = conn.execute("""
             SELECT id, category FROM memory
             WHERE active=1 AND created_at < ? AND use_count < 2
@@ -206,7 +208,7 @@ async def get_dream_status():
             "SELECT category, COUNT(*) FROM memory WHERE active=1 GROUP BY category ORDER BY COUNT(*) DESC"
         ).fetchall())
 
-        now = datetime.now()
+        now = datetime.utcnow()  # memory.created_at is UTC (isoformat+Z)
         fresh = conn.execute(
             "SELECT COUNT(*) FROM memory WHERE active=1 AND created_at > ?",
             ((now - timedelta(days=1)).isoformat(),),
