@@ -247,6 +247,8 @@ def choose_best_plan(opp):
             "target2": round(s_t2, 3) if s_t2 else None,
             "rr": s_rr,
             "stop_pct": round(s_stop_pct, 1),
+            # E-2: which method produced the authoritative stop
+            "stop_source": "strategy_backtest",
         }
     elif g_rr and g_rr > 0 and g_stop > 0:
         return {
@@ -257,6 +259,8 @@ def choose_best_plan(opp):
             "target2": round(g_t2, 3) if g_t2 else None,
             "rr": g_rr,
             "stop_pct": round(g_stop_pct, 1),
+            # E-2: which method produced the authoritative stop
+            "stop_source": "golden_support_atr",
         }
     else:
         return None
@@ -947,6 +951,34 @@ def scan_opportunities(live_data: list) -> dict:
                 log_decision(opp)
     except Exception as e:
         logger.warning("Decision audit logging failed: %s", e)
+
+    # ── E-2: one authoritative stop per record ────────────────
+    # chosen_plan.stop is the only stop a renderer may use. The other
+    # candidates are demoted to clearly-labelled diagnostics so no consumer
+    # grabs them by default. Must run AFTER telegram alerts + decision audit,
+    # which still read trade_plan internally.
+    for opp in all_opportunities:
+        advisory = opp.pop("stop_loss", None) or {}
+        tp = opp.get("trade_plan") or {}
+        sm = opp.get("strategy_match") or {}
+        cp = opp.get("chosen_plan") or {}
+        opp["stop_source"] = cp.get("stop_source")
+        opp["stop_candidates"] = {
+            "advisory_support_atr": {
+                "stop_price": advisory.get("stop_price"),
+                "method": advisory.get("method"),
+                "distance_pct": advisory.get("distance_pct"),
+            },
+            "golden_trade_plan": {
+                "stop_price": tp.pop("stop_loss", None),
+                "distance_pct": tp.pop("stop_distance_pct", None),
+            },
+            "strategy_backtest": {
+                "stop_price": sm.get("stop_price"),
+                "distance_pct": sm.get("stop_pct"),
+            },
+            "chosen": cp.get("stop"),
+        }
 
     enter_list = [o for o in all_opportunities if o.get("smart_decision") == "ENTER"]
     wait_list  = [o for o in all_opportunities if o.get("smart_decision") == "WAIT"]

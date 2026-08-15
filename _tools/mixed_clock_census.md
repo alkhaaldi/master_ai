@@ -5,6 +5,9 @@ after the C-17 correction. Scope: all runtime .py (venv, _archive,
 _deprecated, examples excluded). Read-only sweep at first writing; findings #1-#14 were then fixed on
 2026-08-15 (see git log), each with a planted-row before/after proof.
 #15/#17 were corrected instead - see below. #16, #18, #19 remain open.
+Section F (E-4): #20 decision_audit.decision_time writer now UTC but
+historical rows still local (conversion awaiting approval); #21
+signal_reviews.review_date resolved to UTC dates.
 
 The two fault axes:
 - **clock**: datetime.now() is Kuwait local (+03); CURRENT_TIMESTAMP /
@@ -107,3 +110,37 @@ The two fault axes:
 - context_compactor.py:189; dashboard_api.py:923
 - server.py:2261 (local vs local); kairos.py:85 (UTC vs UTC)
 - journal_engine.py:319,516 (local date vs local-date entry_date column)
+
+## F. Section E additions (E-4, 2026-08-15)
+
+20. decision_audit.decision_time — PROVEN local +03, space format, at
+    conversion time. Single writer: kse_data_collector.log_decision
+    (was datetime.now()). Proof: rows id 29-31 stored "2026-08-15
+    20:29:20" while the wall clock at that write was 20:29 +03 =
+    17:29 UTC. Writer converted to utcnow() on 2026-08-15 (E-4).
+    Rows written before 2026-08-15 ~17:30 UTC still hold LOCAL +03
+    values — historical-row conversion (-3h, D-11 style) was prepared
+    but NOT executed (blocked pending user approval); until then the
+    column is two-clocked at the 2026-08-15 boundary. Comparators
+    audited: dashboard_api.py:2567 ORDER BY only — months separate the
+    local-era rows from the UTC-era rows, so the 3h skew cannot reorder
+    anything. No WHERE/window reads this column. market_date in the
+    same table is a KSE session date (local calendar), not a timestamp.
+
+21. signal_reviews.review_date — PROVEN local calendar date (was
+    date.today()). Single writer: signal_review.review_signals:333.
+    Writer converted to utcnow().date() on 2026-08-15 (E-4); existing
+    values needed no conversion because every historical run happened
+    ~14:00-20:00 KWT, where local and UTC dates coincide (verified:
+    review_date range 2026-03-30..2026-08-15, all written afternoon).
+    Comparators audited, all date-vs-date within one convention:
+    - signal_review.py:381 graded_mode vs daily_bars.trading_date
+      (UTC-derived session date, backfill_daily_bars fetch_bars) — KSE
+      sessions run 06:00-10:00 UTC so both dates always agree;
+    - review_liveness() MAX(review_date) vs daily_bars.trading_date;
+    - review_scheduler fallback guard :663 — converted to utcnow date
+      in the same change (write path and comparator moved together).
+    Same table carries created_at/updated_at as CURRENT_TIMESTAMP (UTC
+    space) and outcome_date (decision_audit) = review_date — one
+    declared clock family after E-4. decision_time_pre_e4 does NOT
+    exist (the prepared migration column was never created).

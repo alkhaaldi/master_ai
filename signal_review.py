@@ -96,6 +96,12 @@ def init_review_schema():
             CREATE INDEX IF NOT EXISTS idx_sr_result ON signal_reviews(result);
             CREATE INDEX IF NOT EXISTS idx_sr_symbol ON signal_reviews(symbol);
         """)
+        # E-1: 'live' = graded on the first session after market_date,
+        # 'backfill' = graded later from history. NULL = never graded (no_data).
+        try:
+            c.execute("ALTER TABLE signal_reviews ADD COLUMN graded_mode TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
     logger.info("signal_reviews schema initialized")
 
 
@@ -324,7 +330,11 @@ def review_signals(target_date: str = None) -> dict:
 
     if not target_date:
         target_date = _last_trading_day()
-    review_date = date.today().isoformat()
+    # E-4: review_date is a UTC calendar date (runs at ~14:20 KWT = ~11:20
+    # UTC, so it matches the local session date; existing rows needed no
+    # conversion — see _tools/mixed_clock_census.md). Compared against
+    # daily_bars.trading_date, which is also a UTC-derived session date.
+    review_date = datetime.utcnow().date().isoformat()
 
     decisions = _get_pending_decisions(target_date)
     if not decisions:
@@ -370,10 +380,15 @@ def review_signals(target_date: str = None) -> dict:
             classification = _classify_result(dec, bar)
             analysis = _analyze_reason(dec, bar, classification["result"])
 
+            # E-1: live = graded on the very session the bar belongs to;
+            # anything later is a backfill and must say so (C-27 reads this).
+            graded_mode = "live" if bar["trading_date"] == review_date else "backfill"
+
             review = {
                 "symbol": dec["symbol"],
                 **classification,
                 **analysis,
+                "graded_mode": graded_mode,
             }
 
             c.execute("""
@@ -387,8 +402,8 @@ def review_signals(target_date: str = None) -> dict:
                  hit_target_1, hit_stop,
                  error_type, reason_ar, lesson_ar,
                  confidence, data_quality, rr_ratio, risk_flags, sector,
-                 decision_audit_id, days_tracked, updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,CURRENT_TIMESTAMP)
+                 decision_audit_id, graded_mode, days_tracked, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,CURRENT_TIMESTAMP)
             """, (review_date, target_date, dec["symbol"],
                   dec["smart_decision"], dec.get("chosen_plan_source"),
                   dec.get("strategy_id"), dec.get("entry_price"),
@@ -403,7 +418,7 @@ def review_signals(target_date: str = None) -> dict:
                   analysis["lesson_ar"],
                   dec.get("confidence"), dec.get("data_quality"),
                   dec.get("rr_ratio"), dec.get("risk_flags"),
-                  dec.get("sector"), dec["id"]))
+                  dec.get("sector"), dec["id"], graded_mode))
 
             # Update decision_audit outcome
             c.execute("""
@@ -442,6 +457,21 @@ def review_signals(target_date: str = None) -> dict:
 #  Dashboard helper
 # ---------------------------------------------------------------------------
 
+def review_liveness() -> dict:
+    """E-1: loop liveness — a review loop that dies silently for 114 days
+    must never be able to do that again. sessions_since_last_review counts
+    daily_bars sessions strictly after the last review_date."""
+    with _conn() as c:
+        last = c.execute("SELECT MAX(review_date) FROM signal_reviews").fetchone()[0]
+        if last:
+            sessions = c.execute(
+                "SELECT COUNT(DISTINCT trading_date) FROM daily_bars WHERE trading_date > ?",
+                (last,)).fetchone()[0]
+        else:
+            sessions = None
+    return {"last_review_date": last, "sessions_since_last_review": sessions}
+
+
 def get_reviews_for_dashboard(date_str: str = None) -> dict:
     """Return reviews formatted for dashboard HTML page."""
     init_review_schema()
@@ -454,7 +484,7 @@ def get_reviews_for_dashboard(date_str: str = None) -> dict:
             date_str = row[0] if row and row[0] else None
 
     if not date_str:
-        return {"reviews": [], "summary": {}, "date": None}
+        return {"reviews": [], "summary": {}, "date": None, **review_liveness()}
 
     with _conn() as c:
         rows = c.execute("""
@@ -507,6 +537,7 @@ def get_reviews_for_dashboard(date_str: str = None) -> dict:
         "best": {"symbol": best["symbol"], "pnl": best["pnl_pct"]} if best else None,
         "worst": {"symbol": worst["symbol"], "pnl": worst["pnl_pct"]} if worst else None,
         "reviews": reviews,
+        **review_liveness(),
     }
 
 
@@ -605,7 +636,11 @@ def _send_review_telegram(summary: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 async def review_scheduler():
-    """Async scheduler: runs signal review daily at 2:00 PM KWT (11:00 UTC)."""
+    """Async fallback scheduler: 2:45 PM KWT (11:45 UTC), i.e. AFTER the
+    14:00 close-backfill cron and the 14:20 daily_signal_review cron.
+    Primary path is _tools/daily_signal_review.py; this only catches the
+    case where the server is up but cron did not run. At 11:00 UTC it used
+    to race the close job and grade against yesterday's bars → no_data."""
     _log = logging.getLogger("review_scheduler")
     _log.info("Signal review scheduler started")
     await asyncio.sleep(60)  # let startup complete
@@ -613,8 +648,8 @@ async def review_scheduler():
     while True:
         try:
             now = datetime.utcnow()
-            # Target: 2:00 PM KWT = 11:00 UTC
-            target = now.replace(hour=11, minute=0, second=0, microsecond=0)
+            # Target: 2:45 PM KWT = 11:45 UTC
+            target = now.replace(hour=11, minute=45, second=0, microsecond=0)
             if now >= target:
                 target += timedelta(days=1)
 
@@ -627,6 +662,13 @@ async def review_scheduler():
             wait_secs = (target - now).total_seconds()
             _log.info("Next signal review in %.1f hours", wait_secs / 3600)
             await asyncio.sleep(wait_secs)
+
+            # Fallback only: skip when the 14:20 cron already reviewed today.
+            # E-4: review_date is a UTC date, so compare against a UTC date.
+            if review_liveness().get("last_review_date") == datetime.utcnow().date().isoformat():
+                _log.info("Signal review already ran today (cron) — fallback skipped")
+                await asyncio.sleep(23 * 3600)
+                continue
 
             _log.info("Starting signal review...")
             loop = asyncio.get_event_loop()

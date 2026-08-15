@@ -280,7 +280,10 @@ def _collect_and_refresh_locked() -> dict:
 def log_decision(opp: dict):
     """Log an ENTER decision to decision_audit table."""
     init_collector_schema()
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # E-4: decision_time is stored UTC, space format (existing rows were
+    # local +03 and were converted -3h on 2026-08-15 — see
+    # _tools/mixed_clock_census.md). market_date stays a KSE session date.
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     today = date.today().isoformat()
 
     plan = opp.get("chosen_plan") or {}
