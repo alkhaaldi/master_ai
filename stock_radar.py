@@ -145,6 +145,25 @@ def init_radar_db():
         "ALTER TABLE stock_radar_daily ADD COLUMN bb_squeeze BOOLEAN DEFAULT 0",
         "ALTER TABLE stock_radar_daily ADD COLUMN bb_bandwidth REAL",
         "ALTER TABLE stock_radar_daily ADD COLUMN captured_at TEXT",
+        # Real multi-session average volume, from full-day history. The existing
+        # `volume` column is a mid-session snapshot - captured_at is 10:40 local
+        # on a 09:00-13:00 session - so it understates a day by 2-6x. avg_volume,
+        # avg_daily_volume and avg_daily_value are all zero in every row and were
+        # never populated. New columns, nothing overwritten.
+        "ALTER TABLE stock_radar_daily ADD COLUMN avg_vol_20 REAL",
+        "ALTER TABLE stock_radar_daily ADD COLUMN avg_vol_60 REAL",
+        "ALTER TABLE stock_radar_daily ADD COLUMN avg_vol_sessions_20 INTEGER",
+        "ALTER TABLE stock_radar_daily ADD COLUMN avg_vol_sessions_60 INTEGER",
+        "ALTER TABLE stock_radar_daily ADD COLUMN avg_vol_as_of TEXT",
+        "ALTER TABLE stock_radar_daily ADD COLUMN avg_vol_source TEXT",
+        # Median, not mean: one block trade lies to a mean and barely moves a
+        # median. liq_vol takes the smaller of the two windows because liquidity
+        # risk is always on the low side - if the stock has gone quiet lately,
+        # that is the number you will actually be trading against.
+        "ALTER TABLE stock_radar_daily ADD COLUMN med_vol_20 REAL",
+        "ALTER TABLE stock_radar_daily ADD COLUMN med_vol_60 REAL",
+        "ALTER TABLE stock_radar_daily ADD COLUMN liq_vol REAL",
+        "ALTER TABLE stock_radar_daily ADD COLUMN liq_value_kwd REAL",
         # no DEFAULT on purpose: NULL means "provenance unknown", 0 must only
         # ever mean "verified captured after the close"
         "ALTER TABLE stock_radar_daily ADD COLUMN market_was_open BOOLEAN",
