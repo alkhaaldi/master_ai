@@ -121,6 +121,118 @@ def _parse_as_of(value) -> datetime | None:
     return dt.replace(tzinfo=None) if dt.tzinfo else dt
 
 
+# ---------------------------------------------------------------- sessions
+# Data age is measured in TRADING SESSIONS, not hours, by user decision
+# (2026-08-15): a last close while the market is closed is the freshest
+# truth that can exist - normal, not stale. KSE trades Sun-Thu 09:00-13:00
+# Kuwait (+03, no DST). The exchange calendar has two witnesses: the
+# weekday rule, and daily_bars itself - a Sun-Thu date with no bars while
+# later bars exist is a verified holiday and does not count as a missed
+# session; dates beyond the last stored bar DO count (pessimistic, so
+# staleness can never hide behind an unrefreshed table).
+
+_KSE_TRADING_WEEKDAYS = (6, 0, 1, 2, 3)      # datetime.weekday(): Sun-Thu
+_KSE_UTC_OFFSET = 3
+_SESSION_OPEN_H, _SESSION_CLOSE_H = 9, 13
+
+DATA_STATE_RANK = {"live": 0, "normal": 0, "degraded": 1, "broken": 2, "blind": 3}
+
+_session_dates = {"ts": 0.0, "dates": frozenset(), "max": None}
+
+
+def _known_session_dates():
+    """Distinct trading dates present in daily_bars, cached one hour."""
+    now = time.time()
+    if now - _session_dates["ts"] < 3600:
+        return _session_dates["dates"], _session_dates["max"]
+    dates, mx = frozenset(), None
+    try:
+        conn = sqlite3.connect(f"file:{LIFE_DB}?mode=ro", uri=True, timeout=5)
+        rows = conn.execute("SELECT DISTINCT trading_date FROM daily_bars").fetchall()
+        conn.close()
+        dates = frozenset(str(r[0]) for r in rows if r[0])
+        mx = max(dates) if dates else None
+    except sqlite3.Error:
+        pass
+    _session_dates.update(ts=now, dates=dates, max=mx)
+    return dates, mx
+
+
+def _kse_local(dt_utc):
+    from datetime import timedelta as _td
+    return dt_utc + _td(hours=_KSE_UTC_OFFSET)
+
+
+def market_open_now(now_utc=None) -> bool:
+    loc = _kse_local(now_utc or datetime.utcnow())
+    return (loc.weekday() in _KSE_TRADING_WEEKDAYS
+            and _SESSION_OPEN_H <= loc.hour < _SESSION_CLOSE_H)
+
+
+def _sessions_since(as_of_utc, now_utc):
+    """Trading sessions strictly after as_of, up to now. Verified holidays
+    excluded; today counts only once its session has opened."""
+    from datetime import timedelta as _td
+    known, mx = _known_session_dates()
+    loc_now = _kse_local(now_utc)
+    d = _kse_local(as_of_utc).date() + _td(days=1)
+    n = 0
+    while d <= loc_now.date():
+        if d.weekday() in _KSE_TRADING_WEEKDAYS:
+            iso = d.isoformat()
+            if mx and iso <= mx and iso not in known:
+                pass                       # verified holiday
+            elif d == loc_now.date() and loc_now.hour < _SESSION_OPEN_H:
+                pass                       # today, session not yet open
+            else:
+                n += 1
+        d += _td(days=1)
+    return n
+
+
+def classify_data_state(as_of, mid_session=False, now_utc=None) -> dict:
+    """The five-state model, session-aged:
+
+      closed + last close present        -> normal   (green)
+      open   + price from this session   -> live     (green)
+      open   + latest is a past close    -> degraded (yellow)
+      last close older than 3 sessions   -> broken   (red)
+      no data at all                     -> blind    (red)
+
+    mid_session marks an intraday capture, which is never a close: it
+    stays live while its own session runs, and degrades once it is all
+    the market left behind.
+    """
+    now_utc = now_utc or datetime.utcnow()
+    dt = _parse_as_of(as_of)
+    if dt is None:
+        return {"data_state": "blind", "data_state_ar": "أعمى · لا بيانات",
+                "sessions_old": None, "market_open": market_open_now(now_utc)}
+    is_open = market_open_now(now_utc)
+    n = _sessions_since(dt, now_utc)
+    loc_as_of, loc_now = _kse_local(dt), _kse_local(now_utc)
+    same_session = (loc_as_of.date() == loc_now.date()
+                    and loc_as_of.hour >= _SESSION_OPEN_H)
+    date_str = loc_as_of.date().isoformat()
+
+    if n > 3:
+        st, ar = "broken", f"معطّل · آخر بيانات قبل {n} جلسات ({date_str})"
+    elif is_open:
+        if same_session:
+            st, ar = "live", f"حي · جلسة {date_str}"
+        else:
+            st, ar = "degraded", "متدهور · السوق مفتوح وآخر بيانات من جلسة سابقة"
+    elif n == 0:
+        if mid_session:
+            st, ar = "degraded", f"متدهور · التقاط أثناء جلسة {date_str}، ليس إغلاقاً"
+        else:
+            st, ar = "normal", f"مقفل · آخر إغلاق {date_str}"
+    elif n <= 3:
+        st, ar = "degraded", f"متدهور · آخر إغلاق قبل {n} جلسة ({date_str})"
+    return {"data_state": st, "data_state_ar": ar,
+            "sessions_old": n, "market_open": is_open}
+
+
 def combine(*parts: dict, source: str | None = None, **extra) -> dict:
     """Worst state, oldest as_of. Use whenever two dated numbers are multiplied,
     divided or otherwise mixed into one answer."""
@@ -315,6 +427,19 @@ def get_quote(symbol: str, use_cache: bool = True) -> dict:
             continue
         if got:
             got["tried"] = tried
+            # session-aged truth: the five-state model decides, and the
+            # binary state every existing consumer compares against is
+            # aligned with it - a last close while the market is closed
+            # reads live, an old "live" feed answer reads stale.
+            _ds = classify_data_state(got.get("as_of"),
+                                      got.get("captured_mid_session", False))
+            got.update(_ds)
+            if _ds["data_state"] in ("normal", "live"):
+                got["state"] = "live"
+            elif _ds["data_state"] == "blind":
+                got["state"] = "missing"
+            else:
+                got["state"] = "stale"
             if got.get("state") == "live" and got.get("close"):
                 _guard_against_wrong_symbol(sym, got)
             with _lock:
@@ -331,7 +456,8 @@ def get_price(symbol: str, use_cache: bool = True) -> dict:
     out = {"price": q.get("close"), "as_of": q.get("as_of"),
            "source": q.get("source"), "state": q.get("state")}
     for k in ("currency", "age_days", "captured_mid_session", "reason", "tried",
-              "db_deviation_pct", "db_deviation_flag"):
+              "db_deviation_pct", "db_deviation_flag",
+              "data_state", "data_state_ar", "sessions_old", "market_open"):
         if k in q:
             out[k] = q[k]
     return out

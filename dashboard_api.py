@@ -1961,11 +1961,30 @@ def dashboard_swing():
     # Market regime from signal engine
     regime = raw.get("market_regime", check_market_regime())
 
+    # Page-level data state, session-aged (swing.html falls back to
+    # bridge_online only while this field is absent). The page's snapshot
+    # age is the age of the newest radar row.
+    _page_state = {"data_state": "blind", "data_state_ar": "أعمى · لا بيانات",
+                   "sessions_old": None, "market_open": False}
+    try:
+        import sqlite3 as _sq5
+        from price_source import classify_data_state
+        _c5 = _sq5.connect("data/life.db", timeout=3)
+        _mx = _c5.execute(
+            "SELECT MAX(captured_at) FROM stock_radar_daily").fetchone()[0]
+        _c5.close()
+        _page_state = classify_data_state(_mx)
+    except Exception as _dse:
+        logging.getLogger("master_ai").warning("swing data_state error: %r", _dse)
+
     return {
         "flags": get_trading_flags(),
         "scan_time": _dt.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "market_status": "open" if raw.get("market_open") else "closed",
         "bridge_online": bridge_online,
+        "data_state": _page_state.get("data_state"),
+        "data_state_ar": _page_state.get("data_state_ar"),
+        "data_sessions_old": _page_state.get("sessions_old"),
         "market_regime": regime,
         "market_trend": {
             "up": trend_up,
