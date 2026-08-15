@@ -76,7 +76,9 @@ def _save_alert(alert_type, entity_id, message, severity="low", sent=True):
 def _get_recent_alerts(alert_type, entity_id, hours=6):
     try:
         conn = sqlite3.connect(str(DB_PATH))
-        cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+        # column format (space), not isoformat (T): same-date rows sorted
+        # below a T cutoff, so this gate counted 0 nearly always
+        cutoff = (datetime.utcnow() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
         row = conn.execute(
             "SELECT COUNT(*) FROM proactive_alerts WHERE alert_type=? AND entity_id=? AND created_at>?",
             (alert_type, entity_id, cutoff)
@@ -103,7 +105,7 @@ def _count_alerts_today():
 def _count_alerts_last_hour():
     try:
         conn = sqlite3.connect(str(DB_PATH))
-        cutoff = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+        cutoff = (datetime.utcnow() - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
         row = conn.execute(
             "SELECT COUNT(*) FROM proactive_alerts WHERE created_at >= ? AND sent=1", (cutoff,)
         ).fetchone()
