@@ -5,8 +5,8 @@ after the C-17 correction. Scope: all runtime .py (venv, _archive,
 _deprecated, examples excluded). Read-only sweep at first writing; findings #1-#14 were then fixed on
 2026-08-15 (see git log), each with a planted-row before/after proof.
 #15/#17 were corrected instead - see below. #16, #18, #19 remain open.
-Section F (E-4): #20 decision_audit.decision_time writer now UTC but
-historical rows still local (conversion awaiting approval); #21
+Section F (E-4): #20 decision_audit.decision_time resolved — writer UTC
+and all 31 pre-fix rows converted -3h on 2026-08-15; #21
 signal_reviews.review_date resolved to UTC dates.
 
 The two fault axes:
@@ -113,19 +113,21 @@ The two fault axes:
 
 ## F. Section E additions (E-4, 2026-08-15)
 
-20. decision_audit.decision_time — PROVEN local +03, space format, at
-    conversion time. Single writer: kse_data_collector.log_decision
-    (was datetime.now()). Proof: rows id 29-31 stored "2026-08-15
-    20:29:20" while the wall clock at that write was 20:29 +03 =
-    17:29 UTC. Writer converted to utcnow() on 2026-08-15 (E-4).
-    Rows written before 2026-08-15 ~17:30 UTC still hold LOCAL +03
-    values — historical-row conversion (-3h, D-11 style) was prepared
-    but NOT executed (blocked pending user approval); until then the
-    column is two-clocked at the 2026-08-15 boundary. Comparators
-    audited: dashboard_api.py:2567 ORDER BY only — months separate the
-    local-era rows from the UTC-era rows, so the 3h skew cannot reorder
-    anything. No WHERE/window reads this column. market_date in the
-    same table is a KSE session date (local calendar), not a timestamp.
+20. decision_audit.decision_time — RESOLVED 2026-08-15: single clock,
+    UTC, space format. Single writer: kse_data_collector.log_decision
+    (was datetime.now() local). Proof of the old clock: rows id 30-32
+    stored "2026-08-15 20:29:20" while the wall clock at that write was
+    20:29 +03 = 17:29 UTC. Writer converted to utcnow(); then ALL 31
+    pre-fix rows converted -3h (D-11 style). The conversion boundary is
+    the TIMESTAMP of the writer fix (~17:35 UTC on 2026-08-15), not the
+    calendar date — the six 2026-08-15 rows predate the fix and were
+    local too, so they were converted with the rest. Post-conversion
+    proof: id 32 now reads 17:29:20 = the known UTC wall time.
+    Safety copy: table decision_audit_bak_e4_20260815 (31 rows,
+    pre-conversion values). Comparators audited:
+    dashboard_api.py:2567 ORDER BY only — single clock now, ordering
+    exact. No WHERE/window reads this column. market_date in the same
+    table is a KSE session date (local calendar), not a timestamp.
 
 21. signal_reviews.review_date — PROVEN local calendar date (was
     date.today()). Single writer: signal_review.review_signals:333.
@@ -142,5 +144,4 @@ The two fault axes:
       in the same change (write path and comparator moved together).
     Same table carries created_at/updated_at as CURRENT_TIMESTAMP (UTC
     space) and outcome_date (decision_audit) = review_date — one
-    declared clock family after E-4. decision_time_pre_e4 does NOT
-    exist (the prepared migration column was never created).
+    declared clock family after E-4.

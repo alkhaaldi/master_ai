@@ -97,7 +97,10 @@ def init_review_schema():
             CREATE INDEX IF NOT EXISTS idx_sr_symbol ON signal_reviews(symbol);
         """)
         # E-1: 'live' = graded on the first session after market_date,
-        # 'backfill' = graded later from history. NULL = never graded (no_data).
+        # 'backfill' = graded later from history, 'ungraded' = no_data rows
+        # (nothing measured yet), 'legacy' = graded by the pre-E-1 loop on
+        # bridge bars (Mar-Apr 2026). Never NULL — NULL would read as
+        # "unknown provenance" and C-27 must be able to trust this field.
         try:
             c.execute("ALTER TABLE signal_reviews ADD COLUMN graded_mode TEXT")
         except sqlite3.OperationalError:
@@ -363,8 +366,8 @@ def review_signals(target_date: str = None) -> dict:
                      entry_price, stop_price, target_1, target_2,
                      result, confidence, data_quality, rr_ratio,
                      risk_flags, sector, decision_audit_id, reason_ar,
-                     updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+                     graded_mode, updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'ungraded',CURRENT_TIMESTAMP)
                 """, (review_date, target_date, dec["symbol"],
                       dec["smart_decision"], dec.get("chosen_plan_source"),
                       dec.get("strategy_id"), dec.get("entry_price"),
