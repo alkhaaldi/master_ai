@@ -2,8 +2,8 @@
  "generated_at": "2026-08-15T07:43:49.423324+00:00",
  "source": "query2.finance.yahoo.com/v8/finance/chart, cookie-primed",
  "suffix_tested": ".KW",
- "watchlist_size": 128,
- "scanned": 128,
+ "watchlist_size": 132,
+ "scanned": 132,
  "aborted": false,
  "abort_reason": null,
  "records": [
@@ -1269,10 +1269,9 @@
    "market_time": "2026-08-13T10:14:53+00:00",
    "full_exchange": "Kuwait",
    "instrument_type": "EQUITY",
-   "flags": [
-    "name_token_mismatch"
-   ],
-   "verdict": "review"
+   "flags": [],
+   "verdict": "confirmed",
+   "confirmed_by": "user 2026-08-14: Agility renamed to Makhazen. Our Arabic name still reads Agility and is out of date."
   },
   {
    "our_symbol": "UNICAP",
@@ -2042,6 +2041,67 @@
    "instrument_type": "EQUITY",
    "flags": [],
    "verdict": "confirmed"
+  },
+  {
+   "our_symbol": "WARBABANK",
+   "tried": "WARBABANK.KW",
+   "status": "ok",
+   "our_name_ar": "بنك وربة",
+   "longName": "Warba Bank K.S.C.P.",
+   "shortName": "Warba Bank",
+   "price": 280.0,
+   "currency": "KWF",
+   "market_time": "2026-08-13T10:12:15+00:00",
+   "full_exchange": "Kuwait",
+   "instrument_type": "EQUITY",
+   "flags": [],
+   "verdict": "confirmed"
+  },
+  {
+   "our_symbol": "SECH",
+   "tried": "SECH.KW",
+   "status": "ok",
+   "our_name_ar": "بيت الأوراق المالية",
+   "longName": "The Securities House K.S.C.P.",
+   "shortName": "The Securities House K.S.C",
+   "price": 83.2,
+   "currency": "KWF",
+   "market_time": "2026-08-13T10:13:26+00:00",
+   "full_exchange": "Kuwait",
+   "instrument_type": "EQUITY",
+   "flags": [],
+   "verdict": "confirmed"
+  },
+  {
+   "our_symbol": "ENERGYH",
+   "tried": "ENERGYH.KW",
+   "status": "ok",
+   "our_name_ar": "بيت الطاقة القابضة",
+   "longName": "The Energy House Holding Company K.S.C.P.",
+   "shortName": "The Energy House Holding",
+   "price": 269.0,
+   "currency": "KWF",
+   "market_time": "2026-08-13T09:14:23+00:00",
+   "full_exchange": "Kuwait",
+   "instrument_type": "EQUITY",
+   "flags": [],
+   "verdict": "confirmed"
+  },
+  {
+   "our_symbol": "UPAC",
+   "tried": "UPAC.KW",
+   "status": "ok",
+   "our_name_ar": "المشاريع المتحدة للخدمات الجوية",
+   "longName": "United Projects Company For Aviation Services K.S.C.P.",
+   "shortName": "United Projects Co for Aviation",
+   "price": 205.0,
+   "currency": "KWF",
+   "market_time": "2026-08-13T10:09:38+00:00",
+   "full_exchange": "Kuwait",
+   "instrument_type": "EQUITY",
+   "flags": [],
+   "verdict": "confirmed"
   }
- ]
+ ],
+ "records_note": "verdict 'review' means only that the crude name-token heuristic did not match. Every reviewed record still returned Kuwait-exchange EQUITY data in KWF with a price and a timestamp."
 }
