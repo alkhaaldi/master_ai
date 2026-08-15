@@ -36,7 +36,14 @@ class RiskEngine:
 
     MAX_SAME_SECTOR = 2
     MAX_TOTAL_POSITIONS = 8
-    MIN_LIQUIDITY_VALUE = 5000  # KWD daily average
+    # Liquidity is a property of (stock, position size), so the flat
+    # MIN_LIQUIDITY_VALUE = 5000 average is gone - checked 2026-08-15,
+    # zero importers outside this class. What stays absolute is a floor
+    # under which a stock is untradeable at any size; above it, the
+    # per-position cap decides.
+    LIQUIDITY_FLOOR_KWD = 1000        # median session value, KWD
+    MAX_POSITION_LIQ_SHARE = 0.20     # consume at most 20% of a session
+    MAX_POSITION_EXIT_SESSIONS = 3    # and be able to exit inside 3
 
     def apply_risk_gate(self, opportunities: list, open_positions: list = None) -> list:
         """
@@ -101,20 +108,30 @@ class RiskEngine:
                 continue
 
             # ── Check 4: Liquidity ───────────────────────
-            liq = self._get_avg_daily_value(sym)
+            liq = self._get_session_liq_value(sym)
             avg_value = liq.get("value_kwd")
             if liq.get("state") == "missing" or avg_value is None:
                 # no dated liquidity figure: say so rather than let the symbol
                 # through as if it had passed a check that never ran
                 logger.warning("liquidity unknown for %s (%s) - not gating on it",
                                sym, liq.get("reason") or liq.get("source"))
-            elif avg_value < self.MIN_LIQUIDITY_VALUE:
+            elif avg_value < self.LIQUIDITY_FLOOR_KWD:
                 _age = ""
                 if liq.get("state") == "stale":
                     _age = f" (بيانات {liq.get('as_of', '')[:10]})"
-                self._downgrade(opp, "low_liquidity",
-                                f"سيولة ضعيفة — متوسط التداول {avg_value:,.0f} د.ك/يوم{_age}")
+                self._downgrade(opp, "illiquid",
+                                f"سيولة غائبة — وسيط الجلسة {avg_value:,.0f} د.ك{_age}")
                 continue
+            else:
+                # Attach the cap for the sizing layer - no downgrade here,
+                # because position size is unknown at this gate. state and
+                # as_of ride along: a cap built on a stale price reads
+                # stale, not confident.
+                opp["max_position_kwd"] = round(
+                    avg_value * self.MAX_POSITION_LIQ_SHARE
+                    * self.MAX_POSITION_EXIT_SESSIONS)
+                opp["max_position_state"] = liq.get("state")
+                opp["max_position_as_of"] = liq.get("as_of")
 
             # ✅ Passed all checks — allow ENTER
             enter_by_sector[sec] = enter_by_sector.get(sec, 0) + 1
@@ -132,58 +149,79 @@ class RiskEngine:
         logger.info("Risk gate: %s downgraded to WAIT (%s): %s",
                      opp.get("symbol"), flag, reason_ar)
 
-    def _get_avg_daily_value(self, symbol: str) -> dict:
-        """Average daily traded value in KWD, with the age of the answer.
+    def _get_session_liq_value(self, symbol: str) -> dict:
+        """Median session traded value in KWD, with the age of the answer.
 
-        Two numbers of different vintage meet here. The price can be live -
-        price_source reaches the bridge or Yahoo. The average volume cannot:
-        it is a computed average that only exists in stock_radar_daily, and
-        Yahoo's volume field is one session's turnover, not an average, so
-        substituting it would answer a different question.
+        Two numbers of different vintage meet here. The price is live when a
+        source answers - price_source reaches the bridge or Yahoo. The volume
+        is liq_vol = min(median_20, median_60) from the stored census: a slow
+        statistic, acceptable while under a week old, so it does not degrade
+        the verdict by itself. combine() still enforces the contract - worst
+        state, oldest as_of - because a value built on a stale price must
+        read stale, or we rebuild the -2.51% lie from fresher parts.
 
-        A live price times a four-month-old average volume is a four-month-old
-        answer. combine() enforces that: worst state, oldest as_of. Returning
-        a bare float here is what let a stale figure look fresh.
-
-        Returns {value_kwd, price, avg_volume, as_of, source, state}. value_kwd
-        is None when either input is missing.
+        Returns {value_kwd, price, liq_vol, as_of, source, state}. value_kwd
+        is None only when an input is truly absent; a genuine zero median
+        passes through as 0 and fails the floor honestly.
         """
         from price_source import get_quote, combine
 
         quote = get_quote(symbol)
 
-        avg_vol, vol_part = None, {"as_of": None, "source": "db", "state": "missing"}
+        liq_vol, vol_part = None, {"as_of": None, "source": "db", "state": "missing"}
         try:
             with _conn() as c:
                 row = c.execute(
-                    "SELECT avg_volume, volume, captured_at, updated_at "
+                    "SELECT liq_vol, avg_vol_as_of "
                     "FROM stock_radar_daily WHERE symbol=? "
                     "ORDER BY captured_at DESC LIMIT 1",
                     (symbol.upper(),),
                 ).fetchone()
-            if row:
-                # avg_volume is 0 in all 128 rows - the column was added and never
-                # populated, as were avg_daily_volume and avg_daily_value. The
-                # original code used `or`, which skipped the zero and silently fell
-                # through to `volume`. Keeping that behaviour rather than changing
-                # it mid-conversion, but note what it means: `volume` is one
-                # session's turnover, not an average, so this check has always been
-                # measuring something other than its name. Recorded, not changed here.
-                raw = row["avg_volume"] or row["volume"]
-                stamp = row["captured_at"] or row["updated_at"]
-                if raw is not None and stamp:
-                    avg_vol = float(raw)
-                    vol_part = {"as_of": str(stamp), "source": "db", "state": "stale"}
+            if row and row["liq_vol"] is not None and row["avg_vol_as_of"]:
+                # liq_vol = min(median_20, median_60) from the volume census.
+                # The old fallback `avg_volume or volume` is gone with the old
+                # threshold: it substituted one session turnover for an average
+                # that was 0 in every row, so the check measured something
+                # other than its name. A symbol without a census row now reads
+                # missing - and says so - instead of borrowing a wrong number.
+                liq_vol = float(row["liq_vol"])
+                stamp = str(row["avg_vol_as_of"])
+                # A median over 20-60 sessions moves slowly: a census under a
+                # week old does not degrade the verdict; the price decides.
+                _age_days = None
+                try:
+                    _dt = _iso(stamp)
+                    if _dt is not None:
+                        _age_days = (datetime.utcnow() - _dt).days
+                except Exception:
+                    pass
+                vol_part = {"as_of": stamp, "source": "db",
+                            "state": "live" if (_age_days is not None and _age_days <= 7)
+                                     else "stale"}
         except Exception as e:
-            logger.warning("avg volume lookup failed for %s: %r", symbol, e)
+            logger.warning("liq_vol lookup failed for %s: %r", symbol, e)
 
         price = quote.get("close")
-        out = combine(quote, vol_part, price=price, avg_volume=avg_vol)
-        # price is in fils; 1 KWD = 1000 fils
-        out["value_kwd"] = ((price * avg_vol) / 1000.0
-                            if price and avg_vol and price > 0 and avg_vol > 0
+        out = combine(quote, vol_part, price=price, liq_vol=liq_vol)
+        # price is in fils; 1 KWD = 1000 fils. liq_vol == 0 is a real
+        # measurement (a median of zero-volume sessions) and must reach the
+        # floor check as 0.0, not vanish into None.
+        out["value_kwd"] = ((price * liq_vol) / 1000.0
+                            if price and price > 0 and liq_vol is not None
                             else None)
         return out
+
+
+def _iso(stamp):
+    """Census as_of parser: ISO string (tz-aware or not) -> naive UTC."""
+    from datetime import datetime, timezone
+    try:
+        dt = datetime.fromisoformat(str(stamp))
+    except (ValueError, TypeError):
+        return None
+    if dt.tzinfo:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
 
 
 def calculate_position_risk(entry_price: float, stop_loss: float, target: float = 0,
