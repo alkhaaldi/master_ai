@@ -989,6 +989,7 @@ async def ha_dashboard_portfolio():
             # trades.created_at is local (journal_engine datetime.now());
             # a UTC threshold ran this window 3h long
             "SELECT COUNT(*) FROM trades WHERE created_at > datetime('now', '-7 days', 'localtime')"
+            " AND COALESCE(trade_kind, 'real') != 'void'"
         ).fetchone()[0]
         data["signal_vs_trade"] = {
             "signals_7d": signals_7d,
@@ -1098,6 +1099,7 @@ async def ha_dashboard_journal():
                        SUM(pnl_fils) as total_pnl_fils,
                        AVG(pnl_pct) as avg_pnl_pct
                 FROM trades WHERE status='closed'
+                  AND COALESCE(trade_kind, 'real') != 'void'
                 GROUP BY month ORDER BY month DESC LIMIT 6
             """).fetchall()
             data["monthly_stats"] = [{
@@ -1374,7 +1376,8 @@ async def ha_dashboard_analysis():
         ).fetchone()[0]
         # Today's trades
         _trades_today = conn.execute(
-            "SELECT COUNT(*) FROM trades WHERE date(created_at)=?", (_today,)
+            "SELECT COUNT(*) FROM trades WHERE date(created_at)=? "
+            "AND COALESCE(trade_kind, 'real') != 'void'", (_today,)
         ).fetchone()[0]
         data["daily_summary"] = {
             "date": _today,

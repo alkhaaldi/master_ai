@@ -60,6 +60,11 @@ def init_schema():
             c.execute("ALTER TABLE trades ADD COLUMN stop_loss REAL")
         if "take_profit" not in cols:
             c.execute("ALTER TABLE trades ADD COLUMN take_profit REAL")
+        if "trade_kind" not in cols:
+            # PHASE2_SECTION_D D-7: real|void. A bookkeeping close (position
+            # restated, not exited) must never be learned from as an outcome.
+            # Rows are marked, never deleted - deleting hides the correction.
+            c.execute("ALTER TABLE trades ADD COLUMN trade_kind TEXT DEFAULT 'real'")
         if "entry_date_precision" not in cols:
             # PHASE2_SECTION_D D-3: exact|approx - a backdated manual entry
             # must never carry a confident date it does not have
@@ -239,7 +244,8 @@ def get_recent_trades(limit=20):
     """Get recent trades (all statuses). Returns list of dicts."""
     with _conn() as c:
         rows = c.execute(
-            "SELECT * FROM trades ORDER BY created_at DESC LIMIT ?", (limit,)
+            "SELECT * FROM trades WHERE COALESCE(trade_kind, 'real') != 'void' "
+            "ORDER BY created_at DESC LIMIT ?", (limit,)
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -311,7 +317,9 @@ def get_trade_stats(days=30):
     cutoff = (date.today() - timedelta(days=days)).isoformat()
     with _conn() as c:
         all_trades = c.execute(
-            "SELECT * FROM trades WHERE entry_date >= ?", (cutoff,)
+            # D-7: void rows are bookkeeping, not outcomes
+            "SELECT * FROM trades WHERE entry_date >= ? "
+            "AND COALESCE(trade_kind, 'real') != 'void'", (cutoff,)
         ).fetchall()
 
     trades = [dict(r) for r in all_trades]
@@ -324,8 +332,16 @@ def get_trade_stats(days=30):
     avg_profit = (sum(t["pnl_pct"] for t in wins) / len(wins)) if wins else 0
     avg_loss = (sum(t["pnl_pct"] for t in losses) / len(losses)) if losses else 0
 
-    best = max(closed, key=lambda t: t.get("pnl_pct", 0)) if closed else None
-    worst = min(closed, key=lambda t: t.get("pnl_pct", 0)) if closed else None
+    # D-7: with fewer than 2 closed trades there is no "best" to name -
+    # a single row crowned best_trade AND worst_trade at once
+    if len(closed) >= 2:
+        best = max(closed, key=lambda t: t.get("pnl_pct", 0))
+        worst = min(closed, key=lambda t: t.get("pnl_pct", 0))
+        stats_note = None
+    else:
+        best = worst = None
+        stats_note = ("fewer than 2 closed trades in window - "
+                      "best/worst not named") if closed else None
 
     return {
         "days": days,
@@ -340,6 +356,7 @@ def get_trade_stats(days=30):
         "total_pnl_fils": round(total_pnl, 2),
         "best_trade": {"symbol": best["symbol"], "pnl_pct": best["pnl_pct"]} if best else None,
         "worst_trade": {"symbol": worst["symbol"], "pnl_pct": worst["pnl_pct"]} if worst else None,
+        "stats_note": stats_note,
     }
 
 
@@ -508,7 +525,8 @@ def generate_weekly_report():
     cutoff = (date.today() - timedelta(days=7)).isoformat()
     with _conn() as c:
         rows = c.execute(
-            "SELECT * FROM trades WHERE exit_date >= ? AND status='closed' ORDER BY exit_date DESC",
+            "SELECT * FROM trades WHERE exit_date >= ? AND status='closed' "
+            "AND COALESCE(trade_kind, 'real') != 'void' ORDER BY exit_date DESC",
             (cutoff,)
         ).fetchall()
     closed_this_week = [dict(r) for r in rows]

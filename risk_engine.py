@@ -430,5 +430,23 @@ def get_risk_status() -> dict:
         "heat_complete": heat.get("heat_complete"),
         "positions_without_stop": heat.get("positions_without_stop"),
         "heat_note": heat.get("heat_note"),
+        "capital_note": _capital_note(positions, cfg["account_capital"]),
         "sector_exposure": sectors,
     }
+
+
+def _capital_note(positions, capital):
+    """PHASE2_SECTION_D D-8: a single position larger than stated capital
+    means the capital figure is stale or sizing has no ceiling - either
+    way, say it instead of sizing silently past it."""
+    if not capital or capital <= 0:
+        return "account_capital is not set"
+    for p in positions:
+        entry, qty = p.get("entry_price") or 0, p.get("quantity") or 0
+        val = entry * qty / 1000.0
+        if val > capital:
+            return ("position %s is %s KWD = %d%% of stated capital %s KWD - "
+                    "capital figure stale or sizing unchecked"
+                    % (p.get("symbol"), format(round(val), ","),
+                       round(val / capital * 100), format(round(capital), ",")))
+    return None

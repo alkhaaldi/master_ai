@@ -103,6 +103,21 @@ def main():
     except Exception as _e:
         check("open trades entry_date vs created_at", False, str(_e))
 
+    # PHASE2_SECTION_D D-7: a closed row created and exited the same day
+    # is a candidate bookkeeping close, not a trade outcome
+    try:
+        _bk = conn.execute(
+            "SELECT id, symbol, exit_date FROM trades WHERE status='closed' "
+            "AND DATE(created_at) = exit_date "
+            "AND COALESCE(trade_kind, 'real') != 'void'"
+        ).fetchall()
+        _bd = ", ".join("#%s %s %s" % (r[0], r[1], r[2]) for r in _bk)
+        check("closed trades bookkeeping candidates", len(_bk) == 0,
+              ("candidate bookkeeping close: " + _bd) if _bk
+              else "no same-day create-and-exit rows unmarked")
+    except Exception as _e:
+        check("closed trades bookkeeping candidates", False, str(_e))
+
     conn.close()
 
     print("=" * 60)
