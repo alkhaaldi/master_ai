@@ -205,7 +205,7 @@ def snapshot_signals(signals: list = None):
 
             c.execute(
                 """INSERT INTO signal_snapshots
-                (symbol, trade_state, verdict, verdict_key, confluence_score,
+                (symbol, signal_time, trade_state, verdict, verdict_key, confluence_score,
                  price_at_signal, rsi_14, macd_state, macd_momentum, ema_state,
                  adx, vol_ratio, stoch_k, bb_squeeze, rsi_divergence,
                  ema_cross_type, ema_cross_bars_ago, support, resistance, atr_14,
@@ -213,9 +213,14 @@ def snapshot_signals(signals: list = None):
                  daily_pp, daily_s1, daily_s2, daily_r1, daily_r2,
                  pdh, pdl, distance_to_support_pct, distance_to_resistance_pct,
                  near_support, daily_sma20, daily_trend)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     sym,
+                    # UTC on purpose, same clock and format as brain_backfill's
+                    # candle stamps. CURRENT_TIMESTAMP filled the same value
+                    # implicitly; explicit here so the column's clock is stated
+                    # in code, not in a schema default nobody reads.
+                    datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
                     sig.get("trade_state"),
                     sig.get("verdict"),
                     sig.get("verdict_key"),
