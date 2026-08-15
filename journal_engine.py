@@ -272,46 +272,24 @@ def update_trade_levels(trade_id, stop_loss=None, take_profit=None):
 
 
 def get_fresh_price(symbol):
-    """Get freshest price: bridge cache → stock_radar_daily fallback."""
-    import time as _t
-    # 1. Try bridge cache
-    try:
-        from bridge_client import get_bridge_client
-        client = get_bridge_client()
-        for key, entry in client._cache.items():
-            if key.startswith("analysis:") and key.split(":")[-1] == symbol.upper():
-                age = _t.time() - entry.get("ts", 0)
-                data = entry.get("data", {})
-                price = data.get("price")
-                if price:
-                    return {"price": price, "source": "bridge", "stale": age > 300}
-    except Exception:
-        pass
-    # 1b. Direct Bridge HTTP quote (live)
-    try:
-        import urllib.request as _urlreq, json as _json
-        _quote_url = f"{os.getenv('BRIDGE_URL', 'http://192.168.111.214:8059')}/quote?symbol={symbol.upper()}"
-        with _urlreq.urlopen(_quote_url, timeout=5) as _resp:
-            _qdata = _json.loads(_resp.read().decode())
-        _qprice = _qdata.get("price")
-        if _qprice:
-            return {"price": float(_qprice), "source": "bridge_live", "stale": False}
-    except Exception:
-        pass
-    # 2. Fallback: stock_radar_daily
-    try:
-        db = sqlite3.connect(DB_PATH, timeout=3)
-        db.row_factory = sqlite3.Row
-        row = db.execute(
-            "SELECT price FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1",
-            (symbol.upper(),)
-        ).fetchone()
-        db.close()
-        if row:
-            return {"price": float(row["price"]), "source": "radar_daily", "stale": True}
-    except Exception:
-        pass
-    return {"price": None, "source": "none", "stale": True}
+    """Freshest dated price via price_source (bridge -> yahoo -> db).
+
+    Contract kept for the four consumers: price / source / stale. state and
+    as_of ride along so nobody has to guess what stale means. Gone with the
+    old body: a private bridge probe with its own 5s timeout on a dead host
+    outside the circuit breaker, and a rowid-DESC read of the frozen
+    stock_radar_daily that surfaced April prices as the "fresh" answer.
+    """
+    from price_source import get_price
+    q = get_price(symbol)
+    out = {"price": q.get("price"), "source": q.get("source"),
+           "stale": q.get("state") != "live",
+           "state": q.get("state"), "as_of": q.get("as_of")}
+    for k in ("age_days", "captured_mid_session",
+              "db_deviation_flag", "db_deviation_pct", "reason"):
+        if k in q:
+            out[k] = q[k]
+    return out
 
 
 def get_trade_stats(days=30):
