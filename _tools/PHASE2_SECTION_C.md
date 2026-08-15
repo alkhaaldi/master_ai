@@ -283,3 +283,73 @@ rather than by flipping one level.
 
 Recorded 2026-08-14. Two specific lines fixed where they blocked verification;
 the rest untouched.
+
+---
+
+## C-21. two independent switches both called radar_enabled
+
+`stock_radar.py:798-812` gates the radar loop on both, in sequence:
+
+```python
+if not _ff.is_enabled("radar_enabled"):   # feature flag, currently True
+    continue
+cfg = _get_config()
+if not cfg.get("enabled", True):          # data/ema_radar.json, currently False
+    continue                              # <- the loop actually stops here
+```
+
+`/dashboard/radar` publishes `cfg["enabled"]`, and that is the switch genuinely
+stopping the loop, so the published value is truthful. The hazard is for
+readers: anyone checking `FeatureFlags.is_enabled("radar_enabled")` - the
+obvious place to look, and the one the name suggests - concludes the radar is
+running. It is not.
+
+The radar was switched off on **2026-03-26 01:29**, the mtime of
+`data/ema_radar.json`. `data/` is gitignored, so there is no commit, no message
+and no recorded reason. `stock_radar_state` stops updating on 2026-03-25, which
+is consistent. Why it was disabled is not recoverable from the repository.
+
+Fixing this means deciding which switch keeps the name - the argument is that
+`radar_enabled` should belong to the one that governs the loop - and renaming
+the other explicitly. That changes a published field's value from false to true,
+which is a value correction rather than a contract break, but it must be its own
+commit and clearly announced, or it reads as a behaviour change.
+
+Consumers, for whoever does it:
+- feature flag: `stock_radar.py:804` only
+- config `enabled`: `stock_radar.py:810`, `dashboard_api.py:178` and `:389`,
+  `priority_engine.py:86`
+- the published field: `www/trading/home.html:355` and the HA dashboard YAML
+
+Recorded 2026-08-14, not fixed.
+
+---
+
+## C-22. journal_stats.open_trades is a state metric inside a 30-day window
+
+`journal_engine.get_trade_stats(days=30)` filters `WHERE entry_date >= cutoff`
+and then reports `open_trades: len(open_t)` from that filtered set. EQUIPMENT
+was entered 2026-03-26, 142 days ago, so it falls outside the window and the
+dashboard says zero open trades while one is open.
+
+Every other field in that function is legitimately windowed activity -
+total_trades, closed_trades, wins, losses, win_rate, avg_profit, avg_loss,
+total_pnl, best and worst trade. `open_trades` is the only state field among
+them. A position is open regardless of when it was entered.
+
+An AST sweep over every function taking a days/since/window argument found no
+other genuine case; `feedback_learner.get_stats` matched only because
+"proactive" contains "active".
+
+Not fixed because it fails the isolation test. `get_trade_stats` is called from
+eight places: `dashboard_api.py` five times across the radar, journal and
+portfolio paths, `server.py:2847` with days=1, `server.py:6343` with days=30,
+`tg_stocks.py:143` for Telegram, and `journal_engine.py:513` internally. It is
+also registered as the agent tool `trade_stats` at `server.py:3061`. Changing
+the semantics changes all of them at once.
+
+Worth noting for that decision: the correction looks right in all eight. None of
+those callers wants "how many opened inside the window and are still open" -
+they all want "how many are open now".
+
+Recorded 2026-08-14.
