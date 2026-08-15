@@ -234,9 +234,13 @@ def check_market_regime() -> dict:
         ).fetchall()
         if not rows or len(rows) < 50:
             # Fallback: compute regime from whitelist stock trends
+            # trend holds Arabic labels, so trend='UP' matched nothing and
+            # up_pct was 0 forever - a BEARISH regime manufactured from a
+            # vocabulary mismatch. daily_ema_cross is bullish/bearish and is
+            # refreshed by the daily_bars backfill.
             row = conn.execute("""
                 SELECT COUNT(*) as total,
-                       SUM(CASE WHEN trend='UP' THEN 1 ELSE 0 END) as up_count,
+                       SUM(CASE WHEN daily_ema_cross='bullish' THEN 1 ELSE 0 END) as up_count,
                        AVG(adx) as avg_adx
                 FROM stock_radar_daily
             """).fetchone()
@@ -256,7 +260,7 @@ def check_market_regime() -> dict:
                           "index_close": None, "index_sma50": None,
                           "index_adx": round(avg_adx, 1),
                           "up_pct": round(up_pct, 1),
-                          "reason": f"{up_pct:.0f}% stocks UP, ADX={avg_adx:.0f}"}
+                          "reason": f"{up_pct:.0f}% stocks bullish (EMA9>EMA21), ADX={avg_adx:.0f}"}
             _regime_cache["data"] = result
             _regime_cache["ts"] = now
             return result
@@ -349,6 +353,12 @@ def build_signals() -> dict:
     result["bridge_online"] = bridge_data.get("bridge_online", False)
     result["bridge_cached_count"] = bridge_data.get("symbols_count", 0)
     bridge_symbols = bridge_data.get("symbols", {})
+    # C-10 shape: the loop walks the stored snapshot (stock_radar_daily,
+    # dated rows) and the hand-started bridge only enriches it. Before this,
+    # a dashboard read produced zero signals whenever the bridge was off -
+    # which is most of the time, by user decision.
+    universe = _get_snapshot_symbols()
+    universe.update(bridge_symbols)
 
     # 3. Get radar watchlist for discovery context
     radar_syms = _get_radar_watchlist_safe()
@@ -356,7 +366,7 @@ def build_signals() -> dict:
     # 4. Build signal for each bridge-enriched symbol
     signals = []
     _skipped_blacklist = 0
-    for sym, bd in bridge_symbols.items():
+    for sym, bd in universe.items():
         sym_upper = sym.upper()
 
         # Phase 3: Whitelist/Blacklist filter
@@ -478,16 +488,35 @@ def build_signals() -> dict:
     result["all_signals"] = signals
     result["filtered_out"] = _skipped_blacklist
 
-    # 8. Open positions with live P&L
+    # 8. Open positions with live P&L. current comes from the one price
+    # path (bridge -> yahoo -> db); state says "manage" only when that price
+    # is a live market price, so the old fallback - current silently set to
+    # entry and dressed as a quote - cannot happen again.
     for sym, trade in open_syms.items():
-        bd = bridge_symbols.get(sym, {})
         entry_price = trade.get("entry_price", 0)
-        current_price = bd.get("price") or entry_price
+        current_price, price_state, price_as_of = None, "missing", None
+        if sym in bridge_symbols and bridge_symbols[sym].get("price"):
+            current_price = bridge_symbols[sym]["price"]
+            price_state, price_as_of = "live", None
+        else:
+            try:
+                from journal_engine import get_fresh_price
+                _q = get_fresh_price(sym)
+                if _q.get("price"):
+                    current_price = float(_q["price"])
+                    price_state = _q.get("state")
+                    price_as_of = _q.get("as_of")
+            except Exception as _qe:
+                logger.warning("open position price lookup failed for %s: %r", sym, _qe)
+        if current_price is None:
+            # no source anywhere: keep the old entry-as-current shape so the
+            # row is not dropped, but the state says exactly what it is
+            current_price = entry_price
         pnl_pct = ((current_price / entry_price) - 1) * 100 if entry_price else 0
         qty = trade.get("quantity", 0)
         pnl_kwd = ((current_price - entry_price) * qty) / 1000 if entry_price else 0
 
-        state = "manage" if sym in bridge_symbols else "entered"
+        state = "manage" if price_state == "live" else "entered"
 
         result["open_positions"].append({
             "symbol": sym,
@@ -497,6 +526,8 @@ def build_signals() -> dict:
             "pnl_pct": round(pnl_pct, 2),
             "pnl_kwd": round(pnl_kwd, 3),
             "state": state,
+            "price_state": price_state,
+            "price_as_of": price_as_of,
             "quantity": qty,
             "entry_date": trade.get("entry_date", ""),
             "id": trade.get("id"),
@@ -517,6 +548,59 @@ def build_signals() -> dict:
 
 
 # --- Trade State Assignment ---
+
+def _get_snapshot_symbols() -> dict:
+    """bd-shaped entries from stock_radar_daily - the stored, dated snapshot.
+
+    Only fields the snapshot really has are mapped; signals/confluence stay
+    empty rather than fabricated, so a snapshot-only symbol can reach
+    discovery/avoid but never a manufactured buy. Rows older than 3 days
+    are flagged stale.
+    """
+    out = {}
+    try:
+        conn = _sqlite3.connect(_LIFE_DB, timeout=3)
+        conn.row_factory = _sqlite3.Row
+        rows = conn.execute(
+            "SELECT symbol, price, change_pct, rsi, adx, atr, stoch_k,"
+            " vol_ratio, support, resistance, macd_cross, daily_ema_cross,"
+            " captured_at, updated_at FROM stock_radar_daily").fetchall()
+        conn.close()
+    except Exception as e:
+        logger.debug("snapshot universe unavailable: %r", e)
+        return out
+    from datetime import datetime as _dtu
+    for r in rows:
+        as_of = r["captured_at"] or r["updated_at"]
+        age_days = None
+        if as_of:
+            try:
+                d = _dtu.fromisoformat(str(as_of))
+                if d.tzinfo:
+                    d = d.replace(tzinfo=None)
+                age_days = (_dtu.utcnow() - d).days
+            except (ValueError, TypeError):
+                pass
+        out[str(r["symbol"]).upper()] = {
+            "price": r["price"] or 0,
+            "change_pct": r["change_pct"] or 0,
+            "rsi_14": r["rsi"],
+            "adx": r["adx"],
+            "atr_14": r["atr"],
+            "vol_ratio": r["vol_ratio"],
+            "support": [r["support"]] if r["support"] else [],
+            "resistance": [r["resistance"]] if r["resistance"] else [],
+            "macd": {"state": r["macd_cross"] or ""},
+            "ema": {"stack": r["daily_ema_cross"] or ""},
+            "stoch_rsi": {"k": r["stoch_k"]},
+            "bb": {},
+            "signals": {},
+            "source": "radar_daily",
+            "stale": age_days is None or age_days > 3,
+            "as_of": str(as_of) if as_of else None,
+        }
+    return out
+
 
 def _assign_trade_state(symbol: str, bridge: dict, radar: dict, trade: dict) -> str:
     """Assign trade state based on rules."""
