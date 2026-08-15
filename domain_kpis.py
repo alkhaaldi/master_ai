@@ -103,8 +103,11 @@ def build_kpi_report():
 
     # News
     try:
-        nd = _q1("SELECT COUNT(*) as c FROM news_digests WHERE created_at>=?", (today+'T00:00:00',))
-        nw = _q1("SELECT COUNT(*) as c FROM news_digests WHERE created_at>=?", (week_ago+'T00:00:00',))
+        # news_digests.created_at is space-separated (news_engine writes
+        # strftime, not isoformat). With a T separator the same-date rows
+        # sorted below the param and "today" was permanently 0.
+        nd = _q1("SELECT COUNT(*) as c FROM news_digests WHERE created_at>=?", (today+' 00:00:00',))
+        nw = _q1("SELECT COUNT(*) as c FROM news_digests WHERE created_at>=?", (week_ago+' 00:00:00',))
         lines.append(f"\U0001f4f0 News: {nd.get('c',0)} today | {nw.get('c',0)}/week")
     except Exception:
         lines.append("\U0001f4f0 News: N/A")
