@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""Backfill daily_bars from Yahoo history and refresh stock_radar_daily.
+
+Per symbol (131 mapped; PAPER has no Yahoo listing and is skipped):
+- fetch 1y of daily bars (the extra months are indicator warm-up only)
+- INSERT OR REPLACE sessions 2026-04-02..today into daily_bars, source
+  "yahoo", is_final=1 - these are completed-session closes
+- UPDATE the symbol's single stock_radar_daily row (PK symbol+exchange):
+  price/volume/change_pct + RSI14, EMA9/21, MACD(12,26,9) computed over
+  the full series, captured_at = the bar's own timestamp from the source,
+  market_was_open=0 (verified closing values). Columns outside that list
+  - trend, verdict, score, the liquidity census - are not touched.
+- the four recovered symbols with no row yet are INSERTed, their
+  liquidity census columns filled from _tools/liquidity_median.json with
+  that census's own as_of.
+
+Sweep rules honoured: sentinel (EQUIPMENT) every 10 requests - on sentinel
+failure the sweep STOPS and later symbols are recorded as not_scanned,
+never as failures; errors are classified by name; one commit per symbol.
+"""
+import json
+import sqlite3
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
+
+sys.path.insert(0, "/home/pi/master_ai")
+from price_source import _yahoo_opener, _UA, YAHOO_TIMEOUT
+
+BASE = "/home/pi/master_ai"
+DB = BASE + "/data/life.db"
+FROM_DATE = "2026-04-02"
+
+
+def fetch_bars(symbol):
+    """1y of daily bars. Returns (bars, error_name). bars = list of
+    (trading_date, ts_iso, open, high, low, close, volume)."""
+    url = ("https://query2.finance.yahoo.com/v8/finance/chart/"
+           + urllib.parse.quote(symbol + ".KW") + "?range=1y&interval=1d")
+    try:
+        with _yahoo_opener().open(urllib.request.Request(url, headers=_UA),
+                                  timeout=YAHOO_TIMEOUT) as f:
+            res = json.loads(f.read().decode())["chart"]["result"][0]
+    except urllib.error.HTTPError as e:
+        return None, ("not_found" if e.code == 404
+                      else "rate_limited" if e.code == 429
+                      else "forbidden" if e.code in (401, 403)
+                      else "http_%d" % e.code)
+    except urllib.error.URLError:
+        return None, "timeout"
+    except (OSError, json.JSONDecodeError, KeyError, IndexError, TypeError):
+        return None, "bad_payload"
+    stamps = res.get("timestamp") or []
+    q = ((res.get("indicators") or {}).get("quote") or [{}])[0]
+    if not stamps:
+        return None, "empty_result"
+    bars = []
+    for i, ts in enumerate(stamps):
+        c = (q.get("close") or [])[i] if i < len(q.get("close") or []) else None
+        if c is None:
+            continue
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        bars.append((dt.strftime("%Y-%m-%d"), dt.isoformat(),
+                     (q.get("open") or [])[i], (q.get("high") or [])[i],
+                     (q.get("low") or [])[i], float(c),
+                     (q.get("volume") or [])[i]))
+    return (bars, None) if bars else (None, "empty_result")
+
+
+def ema_series(vals, n):
+    if len(vals) < n:
+        return [None] * len(vals)
+    out = [None] * (n - 1)
+    seed = sum(vals[:n]) / n
+    out.append(seed)
+    k = 2.0 / (n + 1)
+    for v in vals[n:]:
+        seed = v * k + seed * (1 - k)
+        out.append(seed)
+    return out
+
+
+def rsi14(vals):
+    n = 14
+    if len(vals) < n + 1:
+        return None
+    gains = losses = 0.0
+    for i in range(1, n + 1):
+        d = vals[i] - vals[i - 1]
+        gains += max(d, 0)
+        losses += max(-d, 0)
+    ag, al = gains / n, losses / n
+    for i in range(n + 1, len(vals)):
+        d = vals[i] - vals[i - 1]
+        ag = (ag * (n - 1) + max(d, 0)) / n
+        al = (al * (n - 1) + max(-d, 0)) / n
+    if al == 0:
+        return 100.0
+    return round(100 - 100 / (1 + ag / al), 2)
+
+
+def indicators(closes):
+    """RSI14, EMA9/21, MACD(12,26,9) at the last bar. None-safe."""
+    if len(closes) < 35:
+        return {}
+    e9 = ema_series(closes, 9)
+    e21 = ema_series(closes, 21)
+    e12 = ema_series(closes, 12)
+    e26 = ema_series(closes, 26)
+    macd_s = [a - b for a, b in zip(e12[25:], e26[25:]) if a is not None and b is not None]
+    sig_s = ema_series(macd_s, 9)
+    macd_v = macd_s[-1] if macd_s else None
+    sig_v = sig_s[-1] if sig_s and sig_s[-1] is not None else None
+    out = {
+        "rsi": rsi14(closes),
+        "ema_fast": round(e9[-1], 6) if e9[-1] is not None else None,
+        "ema_slow": round(e21[-1], 6) if e21[-1] is not None else None,
+    }
+    out["daily_ema9"] = out["ema_fast"]
+    out["daily_ema21"] = out["ema_slow"]
+    if out["ema_fast"] is not None and out["ema_slow"] is not None:
+        out["daily_ema_cross"] = "bullish" if out["ema_fast"] > out["ema_slow"] else "bearish"
+    if macd_v is not None and sig_v is not None:
+        out["macd"] = round(macd_v, 6)
+        out["macd_signal"] = round(sig_v, 6)
+        out["macd_histogram"] = round(macd_v - sig_v, 6)
+        out["macd_cross"] = "bullish" if macd_v > sig_v else "bearish"
+        out["macd_above_zero"] = 1 if macd_v > 0 else 0
+    return out
+
+
+def main():
+    m = json.load(open(BASE + "/_tools/kse_symbol_map.json"))
+    symbols = sorted(r["our_symbol"] for r in m["records"]
+                     if r.get("verdict") == "confirmed")
+    med = {r["symbol"]: r for r in
+           json.load(open(BASE + "/_tools/liquidity_median.json"))["rows"]}
+    conn = sqlite3.connect(DB, timeout=30)
+    conn.row_factory = sqlite3.Row
+
+    stats = {"ok": 0, "bars_inserted": 0, "snapshot_updated": 0,
+             "snapshot_inserted": 0}
+    errors = {}
+    not_scanned = []
+    aborted = None
+    req = 0
+
+    for idx, sym in enumerate(symbols):
+        if req and req % 10 == 0:
+            sb, se = fetch_bars("EQUIPMENT")
+            req += 1
+            if not sb:
+                aborted = ("sentinel EQUIPMENT failed (%s) after %d symbols - "
+                           "STOPPED; remaining recorded as not_scanned" % (se, idx))
+                not_scanned = symbols[idx:]
+                break
+        bars, err = fetch_bars(sym)
+        req += 1
+        if err:
+            errors.setdefault(err, []).append(sym)
+            continue
+
+        ins = 0
+        for d, ts, o, h, l, c, v in bars:
+            if d < FROM_DATE:
+                continue
+            val = round(c * v / 1000.0, 3) if v else None
+            conn.execute(
+                "INSERT OR REPLACE INTO daily_bars "
+                "(symbol, trading_date, open, high, low, close, volume,"
+                " value_kwd, source, is_final) "
+                "VALUES (?,?,?,?,?,?,?,?,'yahoo',1)",
+                (sym, d, o, h, l, c, v, val))
+            ins += 1
+        closes = [b[5] for b in bars]
+        ind = indicators(closes)
+        last = bars[-1]
+        chg = (round((closes[-1] / closes[-2] - 1) * 100, 2)
+               if len(closes) >= 2 and closes[-2] else None)
+
+        row = conn.execute(
+            "SELECT symbol FROM stock_radar_daily WHERE symbol=?", (sym,)
+        ).fetchone()
+        fields = {"price": last[5], "volume": last[6], "change_pct": chg,
+                  "source_timeframe": "1D", "captured_at": last[1],
+                  "updated_at": last[1], "market_was_open": 0}
+        fields.update(ind)
+        if row:
+            sets = ", ".join("%s=?" % k for k in fields)
+            conn.execute("UPDATE stock_radar_daily SET %s WHERE symbol=?" % sets,
+                         (*fields.values(), sym))
+            stats["snapshot_updated"] += 1
+        else:
+            lm = med.get(sym) or {}
+            if lm.get("status") == "ok":
+                fields.update({"med_vol_20": lm.get("med20"),
+                               "med_vol_60": lm.get("med60"),
+                               "liq_vol": lm.get("liq_vol"),
+                               "liq_value_kwd": lm.get("liq_value_kwd"),
+                               "avg_vol_as_of": lm.get("as_of"),
+                               "avg_vol_source": "yahoo-median"})
+            cols = ", ".join(fields)
+            ph = ", ".join("?" * len(fields))
+            conn.execute(
+                "INSERT INTO stock_radar_daily (symbol, exchange, %s) "
+                "VALUES (?, 'KSE', %s)" % (cols, ph),
+                (sym, *fields.values()))
+            stats["snapshot_inserted"] += 1
+        conn.commit()          # one commit per symbol - a crash keeps the done ones
+        stats["ok"] += 1
+        stats["bars_inserted"] += ins
+
+    conn.close()
+    print("symbols ok      :", stats["ok"], "/", len(symbols))
+    print("bars inserted   :", stats["bars_inserted"])
+    print("snapshot updated:", stats["snapshot_updated"],
+          "| inserted:", stats["snapshot_inserted"])
+    for name, syms in errors.items():
+        print("error[%s]: %d -> %s" % (name, len(syms), ",".join(syms)))
+    if aborted:
+        print("ABORTED:", aborted)
+        print("not_scanned:", ",".join(not_scanned))
+    print("requests:", req)
+
+
+if __name__ == "__main__":
+    main()
