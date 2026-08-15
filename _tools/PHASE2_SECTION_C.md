@@ -543,3 +543,46 @@ Two faults the moment path two fires:
 Recorded under the two-path rule in CLAUDE_CONTEXT.md (extension
 2026-08-15). Not fixed, deliberately: the fallback has never produced a
 row, and the radar loop that reaches it is off (C-21).
+
+---
+
+## C-27. Re-evaluate every learned judgement - the measurement it stands on was broken
+
+**الحالة:** مقرَّر 2026-08-15 بقرار المستخدم — لم يُنفَّذ. الأهم بعد اليوم.
+
+Everything the system "learned" was scored by an evaluator whose own
+windows were broken until 2026-08-14/15: the snapshot loop ran on the
+wrong hours and skipped Sundays entirely (C-12), the dedup window was
+21h with a format quirk on top (fixed 0f04e0f), evaluate_pending
+compared a local cutoff to a UTC column, and 78 percent of the "training
+data" turned out to be UTC candle stamps misread as pre-open captures
+(C-17 correction). On that measurement stand:
+
+- indicator_performance.current_weight - trained on exactly the 41,068
+  suspect hit/miss rows;
+- get_optimal_thresholds() - the brain-learned state thresholds;
+- WHITELIST and BLACKLIST in signal_engine.py - top/bottom 10 by that
+  same hit rate. The symptoms that exposed them: KFH blacklisted at 2.8
+  percent while being among the most liquid names on the exchange, and
+  EQUIPMENT - the one profitable open position, +26 percent - on
+  neither list.
+
+**Suspended 2026-08-15, by user decision: both lists** (should_trade
+returns True; WHITELIST_MODE off; the sets stay in the source for the
+record). **معلّقتان — أساسهما مكسور.** Liquidity is the filter now: the
+risk_engine floor (1,000 KWD median session) and the per-position cap.
+Confluence is computed at the 14:00 run with simple declared weights
+written in backfill_daily_bars.py - deliberately NOT the learned
+weights, same reason.
+
+The work, in order, when taken up:
+1. re-run outcome evaluation over signal_snapshots with the corrected
+   windows and clocks - hit/miss/expired recomputed, not trusted;
+2. re-derive indicator weights and thresholds from the re-evaluated
+   outcomes;
+3. re-derive (or retire) the two lists from the same;
+4. only then let the learned weights back into confluence.
+
+Until that happens, every number the learning layer hands out is a
+conclusion from a broken ruler, and nothing new should be trained on
+the existing outcome labels.

@@ -23,7 +23,7 @@ logger = logging.getLogger("signal_engine")
 # ═══════════════════════════════════════════════════
 SWING_MODE = True           # True = daily swing logic (V2)
 SCALPING_MODE = True        # True = 30m scalping logic (V1, runs alongside swing for 30m)
-WHITELIST_MODE = True       # True = trade whitelist only, False = all except blacklist
+WHITELIST_MODE = False      # suspended 2026-08-15 (C-27): list basis is broken hit/miss
 DAILY_TREND_FILTER = True   # True = block buys when daily trend DOWN/SIDEWAYS
 SWING_CONFLUENCE = True     # True = VOL+ADX only, False = old RSI+MACD+all
 MARKET_REGIME_FILTER = True  # True = block buys when KWSE index is bearish/choppy
@@ -168,41 +168,45 @@ MIN_AVG_DAILY_VOLUME = 100000     # 20-day avg volume
 MAX_SPREAD_PCT = 1.5              # max bid-ask spread %
 
 def check_liquidity(symbol: str) -> dict:
+    """Liquidity from the stored median census: liq_vol x snapshot price,
+    against the risk_engine floor, with the per-position cap attached.
+
+    Replaces a 20-session MEAN (the census proved block trades lie to a
+    mean) that also compared fils x shares against a threshold labelled
+    KWD - a 1000x unit slip that made the 50,000 threshold behave as 50.
+    Store-only on purpose: this runs 132 times per scan, and a network
+    price per symbol here would rebuild C-10. The risk_engine gate still
+    prices actual entries live.
     """
-    Check stock liquidity from daily_bars (20-day averages).
-    Returns pass/fail + details.
-    """
-    result = {"passed": True, "avg_daily_volume": 0, "avg_daily_value_kwd": 0,
-              "spread_pct": 0, "reasons": []}
+    result = {"passed": True, "liq_value_kwd": None, "state": "missing",
+              "as_of": None, "reasons": [],
+              # legacy keys kept for shape compatibility; the mean is dead
+              "avg_daily_volume": None, "avg_daily_value_kwd": None,
+              "spread_pct": 0}
     try:
-        import sqlite3 as _sq
-        conn = _sq.connect("data/life.db", timeout=3)
-        rows = conn.execute(
-            "SELECT close, volume FROM daily_bars WHERE symbol=? ORDER BY trading_date DESC LIMIT 20",
-            (symbol.upper(),)
-        ).fetchall()
+        from risk_engine import RiskEngine
+        conn = _sqlite3.connect(_LIFE_DB, timeout=3)
+        conn.row_factory = _sqlite3.Row
+        row = conn.execute(
+            "SELECT price, liq_vol, captured_at, updated_at"
+            " FROM stock_radar_daily WHERE symbol=?",
+            (symbol.upper(),)).fetchone()
         conn.close()
-        if not rows or len(rows) < 5:
-            result["reasons"].append("insufficient daily data")
-            return result  # pass by default if no data
-
-        volumes = [r[1] for r in rows if r[1]]
-        values = [r[0] * r[1] for r in rows if r[0] and r[1]]
-
-        if volumes:
-            avg_vol = sum(volumes) / len(volumes)
-            result["avg_daily_volume"] = int(avg_vol)
-            if avg_vol < MIN_AVG_DAILY_VOLUME:
-                result["passed"] = False
-                result["reasons"].append(f"avg volume {avg_vol:.0f} < {MIN_AVG_DAILY_VOLUME}")
-
-        if values:
-            avg_val = sum(values) / len(values)
-            result["avg_daily_value_kwd"] = round(avg_val, 0)
-            if avg_val < MIN_AVG_DAILY_VALUE_KWD:
-                result["passed"] = False
-                result["reasons"].append(f"avg daily value {avg_val:.0f} < {MIN_AVG_DAILY_VALUE_KWD}")
-
+        if not row or row["price"] is None or row["liq_vol"] is None:
+            result["reasons"].append("liquidity unknown - not gated")
+            return result
+        v = row["price"] * row["liq_vol"] / 1000.0
+        result.update(liq_value_kwd=round(v, 1), state="stored",
+                      as_of=str(row["captured_at"] or row["updated_at"]))
+        if v < RiskEngine.LIQUIDITY_FLOOR_KWD:
+            result["passed"] = False
+            result["reasons"].append(
+                "median session %d KWD < floor %d"
+                % (v, RiskEngine.LIQUIDITY_FLOOR_KWD))
+        else:
+            result["max_position_kwd"] = round(
+                v * RiskEngine.MAX_POSITION_LIQ_SHARE
+                * RiskEngine.MAX_POSITION_EXIT_SESSIONS)
     except Exception as e:
         import logging
         logging.getLogger("signal_engine").debug(f"check_liquidity error for {symbol}: {e}")
@@ -564,6 +568,7 @@ def _get_snapshot_symbols() -> dict:
         rows = conn.execute(
             "SELECT symbol, price, change_pct, rsi, adx, atr, stoch_k,"
             " vol_ratio, support, resistance, macd_cross, daily_ema_cross,"
+            " confluence_score, confluence_direction,"
             " captured_at, updated_at FROM stock_radar_daily").fetchall()
         conn.close()
     except Exception as e:
@@ -594,7 +599,9 @@ def _get_snapshot_symbols() -> dict:
             "ema": {"stack": r["daily_ema_cross"] or ""},
             "stoch_rsi": {"k": r["stoch_k"]},
             "bb": {},
-            "signals": {},
+            "signals": ({"confluence": {"score": r["confluence_score"],
+                                        "direction": r["confluence_direction"] or "unknown"}}
+                        if r["confluence_score"] is not None else {}),
             "source": "radar_daily",
             "stale": age_days is None or age_days > 3,
             "as_of": str(as_of) if as_of else None,
@@ -794,12 +801,14 @@ def _get_sector_name_ar(sector: str) -> str:
     return _SECTOR_AR.get(sector, sector)
 
 def should_trade(symbol: str) -> bool:
-    """Check if a symbol should be traded based on whitelist/blacklist."""
-    sym = symbol.upper()
-    if sym in BLACKLIST:
-        return False
-    if WHITELIST_MODE and sym not in WHITELIST:
-        return False
+    """Both lists suspended 2026-08-15, by user decision (Section C, C-27):
+    their hit rates were computed with the evaluation windows fixed only
+    yesterday - KFH sat blacklisted at 2.8 percent while being among the
+    most liquid names, and the one profitable open position was on neither
+    list. Liquidity is the filter now: the risk_engine floor and the
+    per-position cap. The lists stay defined below for the record and for
+    C-27 to re-derive from re-evaluated outcomes.
+    """
     return True
 
 
@@ -1204,6 +1213,13 @@ def _get_vwap_for_symbol(sym: str, bridge_data: dict) -> dict:
 
 def _extract_confluence(bridge: dict) -> dict:
     """Extract confluence — uses brain's adaptive weights if available, else raw bridge confluence."""
+    # Snapshot entries carry the declared-weight score computed at the
+    # 14:00 run. The brain's learned weights never touch them - their
+    # training basis is the suspect hit/miss sample (C-27).
+    if bridge.get("source") == "radar_daily":
+        conf = (bridge.get("signals") or {}).get("confluence")
+        if isinstance(conf, dict) and conf.get("score") is not None:
+            return conf
     try:
         from trading_brain import get_adjusted_confluence
         adjusted = get_adjusted_confluence(bridge)

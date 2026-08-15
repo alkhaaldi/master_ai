@@ -102,6 +102,104 @@ def rsi14(vals):
     return round(100 - 100 / (1 + ag / al), 2)
 
 
+def _wilder(seed_vals, rest, n):
+    a = sum(seed_vals) / n
+    out = [a]
+    for v in rest:
+        a = (a * (n - 1) + v) / n
+        out.append(a)
+    return out
+
+
+def full_indicators(bars):
+    """ADX(14), ATR(14), Stoch %K(14), BB(20,2) bandwidth+squeeze,
+    rolling 20-bar support/resistance. All from daily_bars OHLC -
+    mathematics, zero tokens. None-safe."""
+    H = [b[3] for b in bars]
+    L = [b[4] for b in bars]
+    C = [b[5] for b in bars]
+    out = {}
+    if len(C) < 30 or any(v is None for v in H[-30:]) or any(v is None for v in L[-30:]):
+        return out
+    n = 14
+    trs, pdms, ndms = [], [], []
+    for i in range(1, len(C)):
+        hi, lo, pc = H[i], L[i], C[i - 1]
+        if hi is None or lo is None or pc is None:
+            hi, lo, pc = C[i], C[i], pc or C[i]
+        trs.append(max(hi - lo, abs(hi - pc), abs(lo - pc)))
+        up = (H[i] or 0) - (H[i - 1] or 0)
+        dn = (L[i - 1] or 0) - (L[i] or 0)
+        pdms.append(up if up > dn and up > 0 else 0.0)
+        ndms.append(dn if dn > up and dn > 0 else 0.0)
+    if len(trs) < n * 2:
+        return out
+    atr_s = _wilder(trs[:n], trs[n:], n)
+    out["atr"] = round(atr_s[-1], 6)
+    pdm_s = _wilder(pdms[:n], pdms[n:], n)
+    ndm_s = _wilder(ndms[:n], ndms[n:], n)
+    dxs = []
+    for a, p, m in zip(atr_s, pdm_s, ndm_s):
+        if a <= 0:
+            dxs.append(0.0)
+            continue
+        pdi, ndi = 100 * p / a, 100 * m / a
+        dxs.append(100 * abs(pdi - ndi) / (pdi + ndi) if (pdi + ndi) else 0.0)
+    if len(dxs) >= n * 2:
+        adx_s = _wilder(dxs[:n], dxs[n:], n)
+        out["adx"] = round(adx_s[-1], 6)
+    hh, ll = max(h for h in H[-n:] if h is not None), min(l for l in L[-n:] if l is not None)
+    if hh > ll:
+        out["stoch_k"] = round(100 * (C[-1] - ll) / (hh - ll), 6)
+    w = [c for c in C[-20:] if c is not None]
+    if len(w) == 20:
+        mid = sum(w) / 20
+        sd = (sum((c - mid) ** 2 for c in w) / 20) ** 0.5
+        if mid > 0:
+            bw = round(400 * sd / mid, 6)      # (upper-lower)/mid*100 = 4*sd/mid*100
+            out["bb_bandwidth"] = bw
+            # squeeze threshold declared here: bandwidth under 12 percent
+            out["bb_squeeze"] = 1 if bw < 12 else 0
+    lows20 = [l for l in L[-21:-1] if l is not None]
+    highs20 = [h for h in H[-21:-1] if h is not None]
+    if lows20 and highs20:
+        out["support"] = round(min(lows20), 6)
+        out["resistance"] = round(max(highs20), 6)
+    return out
+
+
+def declared_confluence(ind, vol_ratio):
+    """Confluence from the store with SIMPLE DECLARED weights - written
+    here and nowhere else, by user decision 2026-08-15. NOT the learned
+    indicator_performance weights: their basis is the suspect hit/miss
+    sample (Section C, C-27). Six equal votes, one rule each:
+
+        ema9 > ema21 . macd > signal . macd > 0
+        rsi > 50 . stoch_k > 50 . vol_ratio > 1
+
+    score = 100 * bullish_votes / votes_present (absent indicators do not
+    vote and are not fabricated). direction: >=60 bullish, <=40 bearish.
+    """
+    votes = []
+    if ind.get("ema_fast") is not None and ind.get("ema_slow") is not None:
+        votes.append(1 if ind["ema_fast"] > ind["ema_slow"] else 0)
+    if ind.get("macd") is not None and ind.get("macd_signal") is not None:
+        votes.append(1 if ind["macd"] > ind["macd_signal"] else 0)
+    if ind.get("macd") is not None:
+        votes.append(1 if ind["macd"] > 0 else 0)
+    if ind.get("rsi") is not None:
+        votes.append(1 if ind["rsi"] > 50 else 0)
+    if ind.get("stoch_k") is not None:
+        votes.append(1 if ind["stoch_k"] > 50 else 0)
+    if vol_ratio is not None:
+        votes.append(1 if vol_ratio > 1 else 0)
+    if not votes:
+        return {}
+    score = round(100 * sum(votes) / len(votes))
+    direction = "bullish" if score >= 60 else ("bearish" if score <= 40 else "neutral")
+    return {"confluence_score": score, "confluence_direction": direction}
+
+
 def indicators(closes):
     """RSI14, EMA9/21, MACD(12,26,9) at the last bar. None-safe."""
     if len(closes) < 35:
@@ -180,6 +278,7 @@ def main():
             ins += 1
         closes = [b[5] for b in bars]
         ind = indicators(closes)
+        ind.update(full_indicators(bars))
         last = bars[-1]
         chg = (round((closes[-1] / closes[-2] - 1) * 100, 2)
                if len(closes) >= 2 and closes[-2] else None)
@@ -191,6 +290,15 @@ def main():
                   "source_timeframe": "1D", "captured_at": last[1],
                   "updated_at": last[1], "market_was_open": 0}
         fields.update(ind)
+        # vol_ratio against the median census, never a mean
+        med20 = conn.execute(
+            "SELECT med_vol_20 FROM stock_radar_daily WHERE symbol=?",
+            (sym,)).fetchone()
+        vr = None
+        if med20 and med20["med_vol_20"] and last[6]:
+            vr = round(last[6] / med20["med_vol_20"], 3)
+            fields["vol_ratio"] = vr
+        fields.update(declared_confluence(ind, vr))
         if row:
             sets = ", ".join("%s=?" % k for k in fields)
             conn.execute("UPDATE stock_radar_daily SET %s WHERE symbol=?" % sets,

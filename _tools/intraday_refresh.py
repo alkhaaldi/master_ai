@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Intraday price refresh - every 15 minutes during the KSE session (cron).
 
-Scope, by user decision 2026-08-15: open positions + the whitelist only.
+Scope, updated by user decision 2026-08-15 (whitelist suspended, C-27):
+open positions + every symbol clearing the liquidity floor.
 Yahoo serves session prices at a 15-minute delay, free and token-less;
 without this the whole session sits yellow (degraded) unless a human
 presses refresh. The bridge is NEVER touched here - it is manual-only.
@@ -43,11 +44,19 @@ def scope_symbols():
         syms |= {t["symbol"].upper() for t in get_open_trades() if t.get("symbol")}
     except Exception as e:
         print("scope: open trades unavailable: %r" % e)
+    # whitelist suspended 2026-08-15 (C-27): scope is now every symbol
+    # that clears the liquidity floor, straight from the store
     try:
-        from signal_engine import WHITELIST
-        syms |= {s.upper() for s in WHITELIST}
+        from risk_engine import RiskEngine
+        conn = sqlite3.connect(DB, timeout=15)
+        for r in conn.execute(
+                "SELECT symbol, price, liq_vol FROM stock_radar_daily"):
+            if (r[1] and r[2]
+                    and r[1] * r[2] / 1000.0 >= RiskEngine.LIQUIDITY_FLOOR_KWD):
+                syms.add(str(r[0]).upper())
+        conn.close()
     except Exception as e:
-        print("scope: whitelist unavailable: %r" % e)
+        print("scope: liquidity universe unavailable: %r" % e)
     return sorted(syms)
 
 
