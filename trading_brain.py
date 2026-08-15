@@ -171,7 +171,10 @@ def snapshot_signals(signals: list = None):
     if not signals:
         return 0
 
-    cutoff = (datetime.now() - timedelta(hours=24)).isoformat()
+    # UTC with the column format (space, seconds), like the insert below.
+    # The old local isoformat() cutoff made this window 21h, not 24h, and
+    # its T separator sorted after the space on same-day comparisons.
+    cutoff = (datetime.utcnow() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
     count = 0
 
     with _conn() as c:
@@ -275,7 +278,7 @@ def snapshot_signals(signals: list = None):
 
 def evaluate_pending_signals():
     """Evaluate signals that are old enough (>= 7 days). Called daily after market close."""
-    cutoff = (datetime.now() - timedelta(days=DEFAULT_EVAL_DAYS)).isoformat()
+    cutoff = (datetime.utcnow() - timedelta(days=DEFAULT_EVAL_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
 
     with _conn() as c:
         pending = c.execute(
