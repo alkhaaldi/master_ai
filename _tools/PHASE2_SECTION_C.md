@@ -90,7 +90,7 @@ snapshot stays a deliberate act: the daily scheduler, or `POST
 
 ## C-11. confluence_engine expiry compares local timestamps to a UTC threshold
 
-**الحالة:** مزعوم
+**الحالة:** مُتحقَّق 2026-08-15 — المسار مقيس: الكاتب confluence_engine.py:395 يكتب `datetime.now().isoformat()` محلياً بصيغة T، والقيمة المخزَّنة شاهدة (`2026-08-13T06:01:53`)، والقارئات الخمس تقارن بـ`datetime("now")` UTC. العمر 27 ساعة مؤكَّد، ويضاف إليه عطب الصيغة (المسافة قبل T في ترتيب اليوم نفسه). انظر `_tools/mixed_clock_census.md` بند 10.
 
 `confluence_engine.py:271`:
 
@@ -510,3 +510,36 @@ symbol that never has a price.
 The full map is in `_tools/kse_symbol_map.json`.
 
 Recorded 2026-08-14.
+
+---
+
+## C-26. stock_radar_events.candle_time is one column fed by two clocks and two formats
+
+**الحالة:** مُتحقَّق — بقرار المستخدم 2026-08-15: يُسجَّل ولا يُلمَس.
+
+Two write paths feed the column:
+
+- the bridge candle path: exchange-local (Kuwait) candle stamps, length 19,
+  on a strict 30m grid — **all 74 rows in the table today**.
+- stock_radar.py:793: `candle_time = datetime.utcnow().strftime("%Y-%m-%d %H:%M")`
+  — UTC, length 16, no seconds. **Zero rows so far.**
+
+Measured 2026-08-15: 74/74 rows are length 19 and grid-aligned; the
+created_at-minus-candle_time distribution sits at -2h/-1h for 52 rows
+(the +03 offset against a UTC created_at), with 20 rows at +18..21h and
+2 at +137/138h — old candles alerted after a gap; not investigated further.
+
+Two faults the moment path two fires:
+
+1. The value is not a candle time at all — it is a **capture time written
+   into a column named candle_time**. The absence of the real candle stamp
+   becomes a confident value: the same disease class as C-17 and the
+   avg_daily_value lie.
+2. Post-hoc distinction between the paths currently works via
+   LENGTH(candle_time) — but only because the fallback happens to use a
+   different format. That is a coincidence, not a guarantee; nothing stops
+   a future edit aligning the formats and erasing the only marker.
+
+Recorded under the two-path rule in CLAUDE_CONTEXT.md (extension
+2026-08-15). Not fixed, deliberately: the fallback has never produced a
+row, and the radar loop that reaches it is off (C-21).
