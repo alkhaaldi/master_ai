@@ -648,17 +648,15 @@ async def ha_dashboard_radar():
                     try:
                         from tv_data import resolve_symbol, _normalize_price_to_fils
                         _rsym = resolve_symbol(_t["symbol"])
-                        # captured_at, not rowid: rowid is insertion order, which is
-                        # only accidentally the newest price. Identical result while
-                        # the table is frozen; correct once data returns.
-                        _dr = _rdb.execute(
-                            "SELECT price, captured_at, updated_at, market_was_open "
-                            "FROM stock_radar_daily WHERE symbol=? "
-                            "ORDER BY captured_at DESC LIMIT 1",
-                            (_rsym,)
-                        ).fetchone()
-                        if _dr:
-                            _cur = _normalize_price_to_fils(float(_dr["price"]), _rsym)
+                        # One price path for the whole system now:
+                        # price_source (bridge -> yahoo -> db) through
+                        # get_fresh_price. The provenance vocabulary below is
+                        # unchanged - the page still gets what it needs to
+                        # refuse a number.
+                        from journal_engine import get_fresh_price
+                        _q = get_fresh_price(_rsym)
+                        if _q.get("price") is not None:
+                            _cur = float(_q["price"])
                             _entry = float(_t.get("entry_price", 0))
                             _qty = int(_t.get("quantity", 0))
                             _t["current_price"] = _cur
@@ -668,46 +666,48 @@ async def ha_dashboard_radar():
                                 _t["pnl_pct"] = round((_cur / _entry - 1) * 100, 2) if _entry else 0
                                 _t["pnl_fils"] = round((_cur - _entry) * _qty) if _qty else 0
 
-                            # --- provenance (additive; nothing above is changed) ---
-                            # This reference price comes from stock_radar_daily, which
-                            # has not moved since 2026-04-02. The P&L above was being
-                            # published to two decimal places, with broker fees, on top
-                            # of it. Output precision must not exceed input reliability,
-                            # so the page is given what it needs to refuse the number.
-                            _as_of = _dr["captured_at"] or _dr["updated_at"]
+                            _as_of = _q.get("as_of")
                             _t["price_as_of"] = _as_of
-                            _t["price_source"] = "stock_radar_daily"
-                            _mid = bool(_dr["market_was_open"])
+                            _t["price_source"] = _q.get("source")
+                            _mid = bool(_q.get("captured_mid_session"))
                             _t["price_captured_mid_session"] = _mid
-                            _age = None
-                            if _as_of:
+                            _age = _q.get("age_days")
+                            if _age is None and _as_of:
                                 try:
-                                    _age = (datetime.utcnow()
-                                            - datetime.fromisoformat(str(_as_of))).days
+                                    _aged = datetime.fromisoformat(str(_as_of))
+                                    if _aged.tzinfo:
+                                        _aged = _aged.replace(tzinfo=None)
+                                    _age = (datetime.utcnow() - _aged).days
                                 except (ValueError, TypeError) as _ae:
                                     logging.getLogger("master_ai").warning(
                                         "radar: unparseable price_as_of %r for %s (%s)",
                                         _as_of, _rsym, _ae)
                             _t["price_age_days"] = _age
-                            if _age is None:
-                                _t["price_state"] = "unknown"
-                                _t["pnl_valid"] = False
-                                _t["pnl_invalid_reason"] = "price has no as_of"
-                            elif _age > 1:
-                                _t["price_state"] = "stale"
-                                _t["pnl_valid"] = False
-                                _t["pnl_invalid_reason"] = (
-                                    f"price_as_of is {_age} days old")
-                            elif _mid:
-                                # captured while the session was running, so it is not
-                                # a valid close even on its own day
-                                _t["price_state"] = "intraday"
-                                _t["pnl_valid"] = False
-                                _t["pnl_invalid_reason"] = "price captured mid-session"
-                            else:
+                            if _q.get("state") == "live" and not _mid:
                                 _t["price_state"] = "live"
                                 _t["pnl_valid"] = True
                                 _t["pnl_invalid_reason"] = None
+                            elif _q.get("state") == "live":
+                                # captured while the session was running, so it
+                                # is not a valid close even on its own day
+                                _t["price_state"] = "intraday"
+                                _t["pnl_valid"] = False
+                                _t["pnl_invalid_reason"] = "price captured mid-session"
+                            elif _as_of is None:
+                                _t["price_state"] = "unknown"
+                                _t["pnl_valid"] = False
+                                _t["pnl_invalid_reason"] = "price has no as_of"
+                            else:
+                                _t["price_state"] = "stale"
+                                _t["pnl_valid"] = False
+                                _t["pnl_invalid_reason"] = (
+                                    f"price_as_of is {_age} days old"
+                                    if _age is not None else "price is stale")
+                        else:
+                            _t["price_state"] = "unknown"
+                            _t["pnl_valid"] = False
+                            _t["pnl_invalid_reason"] = (
+                                _q.get("reason") or "no source had a price")
                     except Exception as _pe:
                         # the fifth silent swallow of the day
                         logging.getLogger("master_ai").warning(
@@ -767,26 +767,15 @@ async def ha_dashboard_portfolio():
                         _cur = float(fp["price"])
                         _src = fp.get("source", "bridge")
                         _stale = fp.get("stale", False)
+                        t["quote_as_of"] = fp.get("as_of")
+                        t["quote_state"] = fp.get("state")
                 except Exception:
                     pass
 
-                # Layer 2: Radar daily DB (fallback)
-                if _cur is None and _rdb:
-                    try:
-                        from tv_data import resolve_symbol, _normalize_price_to_fils
-                        _rsym = resolve_symbol(sym)
-                        _dr = _rdb.execute(
-                            "SELECT price, support, resistance FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1",
-                            (_rsym,)
-                        ).fetchone()
-                        if _dr and _dr["price"]:
-                            _cur = _normalize_price_to_fils(float(_dr["price"]), _rsym)
-                            _src = "radar_daily"
-                            _stale = True
-                            t["support"] = _dr["support"]
-                            t["resistance"] = _dr["resistance"]
-                    except Exception:
-                        pass
+                # Layer 2 removed 2026-08-15: get_fresh_price already ends
+                # at this same table through price_source, so this direct
+                # rowid-DESC read could only run when that path had nothing -
+                # and then this read had nothing either. Dead, not stale.
 
                 # Set current price + source
                 if _cur:
@@ -974,24 +963,12 @@ async def ha_dashboard_journal():
                     _cur = float(fp["price"])
                     t["quote_source"] = fp.get("source", "bridge")
                     t["quote_stale"] = fp.get("stale", False)
+                    t["quote_as_of"] = fp.get("as_of")
+                    t["quote_state"] = fp.get("state")
             except Exception:
                 pass
-            # Layer 2: Radar daily
-            if _cur is None and _rdb2:
-                try:
-                    _rsym = resolve_symbol(sym)
-                    _dr = _rdb2.execute(
-                        "SELECT price, support, resistance FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1",
-                        (_rsym,)
-                    ).fetchone()
-                    if _dr and _dr["price"]:
-                        _cur = _normalize_price_to_fils(float(_dr["price"]), _rsym)
-                        t["quote_source"] = "radar_daily"
-                        t["quote_stale"] = True
-                        t["support"] = _dr["support"]
-                        t["resistance"] = _dr["resistance"]
-                except Exception:
-                    pass
+            # Layer 2 removed 2026-08-15: same reasoning as the portfolio
+            # path - get_fresh_price already ends at this table.
             if _cur:
                 t["current_price"] = _cur
             # Always compute P&L
