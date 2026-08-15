@@ -15,6 +15,10 @@ from typing import Optional
 from collections import Counter
 
 logger = logging.getLogger("signal_review")
+# Explicit INFO: the root logger sits at WARNING (server.py), which silently
+# dropped this module's liveness lines — "scheduler started", "review
+# complete" — for months. A loop whose heartbeat is invisible reads as dead.
+logger.setLevel(logging.INFO)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "life.db")
 
@@ -677,6 +681,7 @@ async def review_scheduler():
     case where the server is up but cron did not run. At 11:00 UTC it used
     to race the close job and grade against yesterday's bars → no_data."""
     _log = logging.getLogger("review_scheduler")
+    _log.setLevel(logging.INFO)  # same reason as signal_review above
     _log.info("Signal review scheduler started")
     await asyncio.sleep(60)  # let startup complete
 
