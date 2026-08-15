@@ -519,16 +519,6 @@ async def daily_collection_scheduler():
             # automatic pull stays off unless daily_refresh is switched on.
             # Checked after waking rather than at startup, so flipping the
             # flag takes effect without a restart.
-            if not _daily_refresh_enabled():
-                # WARNING, not INFO: the root logger sits at WARNING, so an INFO
-                # line here is dropped and the skip leaves no trace at all. That
-                # is the difference between "it skipped, as designed" and "the
-                # scheduler died silently", which is exactly what
-                # verify_sunday step 5 has to tell apart.
-                _log.warning("daily_refresh flag off - skipping automatic collection")
-                await asyncio.sleep(23 * 3600)
-                continue
-
             # Skip Fri(4) and Sat(5) — KSE closed
             kwt_now = datetime.utcnow() + timedelta(hours=3)
             if kwt_now.weekday() in (4, 5):
@@ -536,23 +526,28 @@ async def daily_collection_scheduler():
                 await asyncio.sleep(3600)
                 continue
 
-            # WARNING to match the skip line above. The root logger sits at
-            # WARNING, so an INFO here never reaches server.log - and
-            # verify_sunday steps 2 and 5 both look for this exact phrase to
-            # tell "it ran" apart from "it skipped". One branch visible and
-            # the other silent is worse than neither, because the check then
-            # looks like it passed.
-            _log.warning("Starting daily collection...")
-
-            # Run collection in executor (sync → async)
             import asyncio as _aio
             loop = _aio.get_event_loop()
-            result = await loop.run_in_executor(None, collect_and_refresh)
 
-            _log.info("Daily collection result: %s", result.get("status"))
-            _send_collection_alert(result)
+            # daily_refresh gates the data pull and nothing else. It used to sit
+            # above this whole block with a `continue`, which meant switching it
+            # off also silently switched off the position monitor below - two
+            # unrelated things behind one flag.
+            if _daily_refresh_enabled():
+                # WARNING, not INFO: the root logger sits at WARNING, so an INFO
+                # here never reaches server.log, and verify_sunday steps 2 and 5
+                # both look for these exact phrases to tell "it ran" apart from
+                # "it skipped". One branch visible and the other silent is worse
+                # than neither, because the check then looks like it passed.
+                _log.warning("Starting daily collection...")
+                result = await loop.run_in_executor(None, collect_and_refresh)
+                _log.info("Daily collection result: %s", result.get("status"))
+                _send_collection_alert(result)
+            else:
+                _log.warning("daily_refresh flag off - skipping automatic collection")
 
-            # Also run position monitor
+            # Position monitor runs either way: it watches positions that are
+            # open regardless of whether we are pulling fresh market data.
             try:
                 from position_engine import run_daily_monitor
                 monitor_result = await loop.run_in_executor(None, run_daily_monitor)
