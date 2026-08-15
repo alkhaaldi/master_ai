@@ -5,9 +5,18 @@ implemented yet. Each needs its own commit and its own approval.
 
 Ordered by priority, not by number. C-13 leads because C-17 shows what it cost.
 
+> **Status field (added 2026-08-15, by user decision):** every item carries
+> one of three states. **مُتحقَّق** = re-verified against the live system with
+> recorded evidence. **مزعوم** = recorded in a past session, not independently
+> re-verified. **مُصلَح** = fixed and committed. **No مزعوم item may be
+> implemented before it is verified** — C-17 below is the standing proof of
+> why: acting on it as recorded would have destroyed 32,283 valid rows.
+
 ---
 
 ## C-13. snapshot_signals runs every tick, not every two hours
+
+**الحالة:** مزعوم
 
 `server.py` `_brain_scheduler` sleeps 600s and its snapshot branch has no
 interval gate:
@@ -30,6 +39,8 @@ this loop on a trading day at all.
 ---
 
 ## C-10. build_signals() must read from the DB, not the bridge
+
+**الحالة:** مزعوم
 
 **Rule this violates.** `_tools/OPERATIONAL_ACCESS_MATRIX.md` already prohibits
 it, under Prohibited: *"Heavy operations inside request path — causes timeout on
@@ -79,6 +90,8 @@ snapshot stays a deliberate act: the daily scheduler, or `POST
 
 ## C-11. confluence_engine expiry compares local timestamps to a UTC threshold
 
+**الحالة:** مزعوم
+
 `confluence_engine.py:271`:
 
 ```sql
@@ -95,6 +108,8 @@ hours rather than 24. Same fault class as the timezone rule in
 
 ## C-14. the evaluation window can catch two ticks
 
+**الحالة:** مزعوم
+
 Same loop. The gate is `hour == 13 and 25 <= minute <= 35` - eleven minutes wide
 - while the loop ticks every ten. Two ticks can land inside it, running
 `evaluate_pending_signals()` twice in one day.
@@ -109,6 +124,8 @@ evaluation clusters precisely so this can be observed rather than assumed.
 
 ## C-15. signal_snapshots mixes two clocks in one table
 
+**الحالة:** مزعوم
+
 `signal_time` is written from `datetime.now()` (Asia/Kuwait local).
 `outcome_evaluated_at` is written by SQLite `CURRENT_TIMESTAMP` (UTC).
 
@@ -120,6 +137,8 @@ produced two live faults elsewhere - see the timezone rule in
 ---
 
 ## C-17. 78% of the brain's training data was captured before the market opened
+
+**الحالة:** مُتحقَّق — والاستنتاج الأصلي مدحوض، انظر تصحيح 2026-08-15 أدناه
 
 `signal_snapshots` holds 67,109 rows. By hour of `signal_time` (local):
 
@@ -152,9 +171,39 @@ learned weights derived from them are already in `indicator_performance`.
 
 Nothing pruned, nothing recomputed. Recorded 2026-08-14.
 
+**Correction 2026-08-15 — the 78% figure was a clock misread, and executing
+this item as written would have destroyed 32,283 correct training rows.**
+
+signal_time is UTC, not local. 99.74% of the table is backfill
+(historical_backfill_30m 50,790 rows + historical_backfill 16,147), and its
+signal_time is the candle timestamp built by
+datetime.utcfromtimestamp(bar_time) — brain_backfill.py:223 and :350. The
+supposed pre-open hours are the session itself: the 30m rows sit on a strict
+06:00–10:00 UTC half-hour grid = 09:00–13:00 Kuwait, every second zero.
+
+Measured 2026-08-15:
+
+- training subset (outcome hit/miss): 41,068 rows.
+  indicator_performance.total_signals = 41,068 — the weights are trained on
+  exactly this set (last_updated 2026-08-14 08:04).
+- genuinely pre-open rows in the training subset: **75** (03:xx/05:xx UTC),
+  all from source=auto — the live capture path, 172 rows in the whole table,
+  the only rows the old 6<=hour<=10 gate actually mislabelled.
+- excluding everything before 09:00 read as local, as this item implied:
+  32,358 rows gone. Excluding the genuinely pre-open ones: 75. The gap —
+  **32,283 correct rows** — is what the fix would have destroyed.
+- even under the wrong reading, hit rate pre-open vs in-session is
+  35.05% vs 32.58% — no cliff.
+
+What survives of the original item: the brain trains almost entirely on
+backfill (only 102 hit/miss rows are live), and the table still mixes two
+clocks per C-15 (outcome_evaluated_at is CURRENT_TIMESTAMP).
+
 ---
 
 ## C-12. server.py signal snapshot loop: wrong hours and a missing trading day
+
+**الحالة:** مُصلَح
 
 `server.py` around line 2981, in the loop that calls `snapshot_signals()` and
 `evaluate_pending_signals()`:
@@ -188,6 +237,8 @@ loop will run on a trading day - watched by verify_sunday.py steps 8 and 9.
 
 ## C-16. quick_check.py is unreliable for its first ~2 minutes after a restart
 
+**الحالة:** مزعوم
+
 Its endpoint probes hit the service before startup completes, so it reports
 failures that clear on their own. Observed twice on 2026-08-14: 9/13 and 10/13
 immediately after a restart, both 13/13 once uptime passed roughly two minutes.
@@ -201,6 +252,8 @@ one tool that is supposed to tell you whether a change was safe.
 ---
 
 ## C-18. tg_logbook reads the Gmail token directly, bypassing the feature gate
+
+**الحالة:** مزعوم
 
 `tg_logbook.py:33` does its own `Credentials.from_authorized_user_file(...)` and
 `creds.refresh(Request())`, exactly like the fallback in
@@ -221,6 +274,8 @@ Recorded 2026-08-14, not fixed - dead code, does not block Sunday.
 ---
 
 ## C-19. brain_core.reload() calls two functions that no longer exist
+
+**الحالة:** مزعوم
 
 `brain_core.py:342`, inside `reload()`:
 
@@ -256,6 +311,8 @@ decision, not a syntax one. Does not block Sunday.
 
 ## C-20. every `logger.info` in this codebase has always been invisible
 
+**الحالة:** مُتحقَّق — بآلية مصحَّحة، انظر تصحيح 2026-08-15 أدناه
+
 The root logger sits at WARNING. Before it was configured at all, module loggers
 fell through to `logging.lastResort`, which is also WARNING. Either way, no
 `logger.info` from any module has ever reached `server.log`.
@@ -284,9 +341,34 @@ rather than by flipping one level.
 Recorded 2026-08-14. Two specific lines fixed where they blocked verification;
 the rest untouched.
 
+**Correction 2026-08-15 — the claim and the mechanism were both wrong.**
+
+server.log carries 1,356 INFO lines, 948 of them from the master_ai logger,
+the latest written minutes before measurement. So not every logger.info was
+invisible — every logger.info **except through a logger whose own level is
+INFO** was. The mechanism: a logger filters at emission by its own effective
+level; parent LEVELS are never consulted afterwards, only parent HANDLERS
+receive the record. Root at WARNING therefore does not suppress a child
+explicitly set to INFO — and server.py:726 sets master_ai to INFO, which is
+why its lines pass. The ~110 bare module loggers (getLogger with no
+setLevel) inherit WARNING as their effective level and their INFO dies at
+emission — the example in this item, the daily_collection_scheduler logger
+in kse_data_collector.py:497, is one of those, and its Next daily collection
+line indeed appears 0 times.
+
+Also verified: the root file handler is level NOTSET (passes everything),
+no module in the tree sets propagate=False, and WARNING+ reaches server.log
+from every module. The double-write (every line twice, no logger name)
+ended at the 2026-08-14 08:02 restart; the current config writes once.
+
+The closing judgement of this item stands: which loggers deserve INFO is a
+decision, not a sweep.
+
 ---
 
 ## C-21. two independent switches both called radar_enabled
+
+**الحالة:** مزعوم
 
 `stock_radar.py:798-812` gates the radar loop on both, in sequence:
 
@@ -327,6 +409,8 @@ Recorded 2026-08-14, not fixed.
 
 ## C-22. journal_stats.open_trades is a state metric inside a 30-day window
 
+**الحالة:** مزعوم
+
 `journal_engine.get_trade_stats(days=30)` filters `WHERE entry_date >= cutoff`
 and then reports `open_trades: len(open_t)` from that filtered set. EQUIPMENT
 was entered 2026-03-26, 142 days ago, so it falls outside the window and the
@@ -358,6 +442,8 @@ Recorded 2026-08-14.
 
 ## C-23. the trailing stop is locked inside a target-hit branch
 
+**الحالة:** مزعوم
+
 `position_engine.py`, in `daily_monitor`, the only call to
 `_update_trailing_stop` sits here:
 
@@ -387,6 +473,8 @@ does to live positions.
 
 ## C-24. nothing stops a trade being opened with no stop loss
 
+**الحالة:** مزعوم
+
 Seven of the eight trades ever recorded have `stop_loss = NULL`. The single
 exception is CLEANING on 2026-04-04 with `stop=140.0`. The one currently open
 position, EQUIPMENT (entered 2026-03-26, 507,586 shares), has all six risk
@@ -407,6 +495,8 @@ Recorded 2026-08-14.
 ---
 
 ## C-25. PAPER has no symbol on Yahoo
+
+**الحالة:** مزعوم
 
 Of the 128 watchlist symbols probed against Yahoo with the `.KW` suffix, 127
 returned Kuwait-exchange equity data in KWF. `PAPER.KW` returned a clean 404 -

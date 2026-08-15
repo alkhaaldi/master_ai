@@ -271,6 +271,19 @@ written, and several comments still claim so. Wall-clock and storage disagree:
 
 **Convention: every DB timestamp is UTC.** Compare with `datetime.utcnow()`,
 never `datetime.now()` — the 3h skew silently inflates every age calculation.
+
+**Extension (2026-08-15, by user decision):**
+
+- Every stored timestamp is UTC. Conversion to Kuwait time happens at
+  display only — never at write, never inside a query.
+- Any column written by more than one code path gets **both paths audited
+  together** before either is trusted or changed. Two proven cases:
+  `signal_snapshots.signal_time` (backfill candle stamps + the live
+  default, both UTC — but read as local, which produced the false C-17
+  conclusion) and `stock_radar_events.candle_time` (exchange-local candle
+  stamps, length 19, all 74 rows — plus a `utcnow %Y-%m-%d %H:%M` fallback
+  at stock_radar.py:793, length 16, zero rows so far: two clocks AND two
+  formats in one column the moment it fires).
 `server.log` is the one exception: it is local, so compare it against local now.
 
 **Damage this already caused:**
