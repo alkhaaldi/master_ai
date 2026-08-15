@@ -421,30 +421,40 @@ def get_risk_status() -> dict:
     positions = _get_open_positions()
     heat = get_portfolio_heat()
     sectors = get_sector_exposure(positions)
+    deploy = _capital_deployment(positions, cfg)
+    # D-12: a gate whose reasoning is invisible is a gate nobody can
+    # audit. Every failing constraint is named; the wire carries them.
+    _blockers = []
+    if len(positions) >= int(cfg["max_open_positions"]):
+        _blockers.append("slots: %d of %d positions open"
+                         % (len(positions), int(cfg["max_open_positions"])))
+    if not heat["within_limit"]:
+        _blockers.append("heat: %.1f%% over the %.1f%% cap"
+                         % (heat["heat_pct"], heat["max_heat_pct"]))
+    if not heat.get("heat_complete", False):
+        _blockers.append("heat incomplete: %s position(s) without a stop"
+                         % heat.get("positions_without_stop"))
+    _floor_kwd = (cfg.get("account_capital") or 0) * RiskEngine.MIN_OPEN_CAPITAL_PCT / 100
+    if deploy["capital_available_kwd"] < _floor_kwd:
+        _blockers.append(
+            "capital floor: %s KWD available < %s KWD (%.0f%% of capital) - "
+            "below that is noise, not a position"
+            % (format(round(deploy["capital_available_kwd"]), ","),
+               format(round(_floor_kwd), ","), RiskEngine.MIN_OPEN_CAPITAL_PCT))
     return {
         "capital": cfg["account_capital"],
         "risk_per_trade_pct": cfg["risk_per_trade_pct"],
         "open_positions": len(positions),
         "max_positions": int(cfg["max_open_positions"]),
-        "can_open_new": (len(positions) < int(cfg["max_open_positions"])
-                         and heat["within_limit"]
-                         # a slot count is not a risk assessment: while any
-                         # position lacks a stop, heat is incomplete and
-                         # new risk is refused (PHASE2_SECTION_D, D-2)
-                         and heat.get("heat_complete", False)
-                         # and a heat figure is not a cash balance: with no
-                         # meaningful capital left there is nothing to open
-                         # with (D-10; declared floor RiskEngine.MIN_OPEN_CAPITAL_PCT)
-                         and (_capital_deployment(positions, cfg)["capital_available_kwd"]
-                              >= (cfg.get("account_capital") or 0)
-                              * RiskEngine.MIN_OPEN_CAPITAL_PCT / 100)),
+        "can_open_new": not _blockers,
+        "can_open_new_reason": "; ".join(_blockers) if _blockers else None,
         "portfolio_heat_pct": heat["heat_pct"],
         "max_heat_pct": heat["max_heat_pct"],
         "heat_complete": heat.get("heat_complete"),
         "positions_without_stop": heat.get("positions_without_stop"),
         "heat_note": heat.get("heat_note"),
         "capital_note": _capital_note(positions, cfg["account_capital"]),
-        **_capital_deployment(positions, cfg),
+        **deploy,
         "sector_exposure": sectors,
     }
 

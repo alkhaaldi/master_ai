@@ -56,9 +56,15 @@ The two fault axes:
     (datetime.now().isoformat(), local T) - C-11, now verified: UTC
     threshold vs local column = 27h lifetime instead of 24h, plus the
     same-date T quirk. Stored proof: created_at "2026-08-13T06:01:53".
-11. dashboard_api.py:926 - trades.created_at is local space
-    (journal_engine.py:148 datetime.now()); threshold datetime("now")
-    UTC: the 7d window runs 3h long.
+11. RESOLVED 2026-08-15 (D-11): trades.created_at moved to UTC - the
+    writer (journal open_trade) now stamps utcnow and the 10 existing
+    rows were migrated -3h. Proven clocks: created_at UTC,
+    user_confirmed_at UTC, entry_date/exit_date Kuwait calendar days -
+    every comparison of a date column against created_at localises
+    (+3, no DST) first. The dashboard 7d threshold went back to plain
+    datetime("now"). Found because the D-9 column landed beside the old
+    local stamp and a confirmation appeared to precede its row by 2h28m
+    - the two-writer rule catching a one-day-old column.
 12. trading_brain.py:733-736 weekly report - date.today() local date-only
     vs UTC signal_time: 3h edge error at week boundaries.
 13. journal_engine.py:547 - local date-only vs UTC

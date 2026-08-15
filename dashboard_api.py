@@ -986,9 +986,9 @@ async def ha_dashboard_portfolio():
             "SELECT COUNT(*) FROM stock_radar_events WHERE created_at > datetime('now', '-7 days')"
         ).fetchone()[0]
         confirmed_7d = conn.execute(
-            # trades.created_at is local (journal_engine datetime.now());
-            # a UTC threshold ran this window 3h long
-            "SELECT COUNT(*) FROM trades WHERE created_at > datetime('now', '-7 days', 'localtime')"
+            # trades.created_at moved to UTC on 2026-08-15 (D-11), so the
+            # threshold is plain UTC now again
+            "SELECT COUNT(*) FROM trades WHERE created_at > datetime('now', '-7 days')"
             " AND COALESCE(trade_kind, 'real') != 'void'"
         ).fetchone()[0]
         data["signal_vs_trade"] = {
@@ -1376,7 +1376,8 @@ async def ha_dashboard_analysis():
         ).fetchone()[0]
         # Today's trades
         _trades_today = conn.execute(
-            "SELECT COUNT(*) FROM trades WHERE date(created_at)=? "
+            # created_at is UTC (D-11); _today is a Kuwait calendar day
+            "SELECT COUNT(*) FROM trades WHERE date(datetime(created_at, '+3 hours'))=? "
             "AND COALESCE(trade_kind, 'real') != 'void'", (_today,)
         ).fetchone()[0]
         data["daily_summary"] = {

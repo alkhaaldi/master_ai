@@ -175,7 +175,10 @@ def open_trade(symbol, entry_price, quantity=0, entry_reason="",
         raise ValueError("entry_date required: the trade date, not the typing date (D-3)")
     if entry_date_precision not in ("exact", "approx"):
         raise ValueError("entry_date_precision must be exact or approx (D-3)")
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # UTC, project convention (D-11): this column sat local since March and
+    # made every pairing with a UTC column - user_confirmed_at first -
+    # return negative intervals. Existing rows migrated -3h on 2026-08-15.
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     with _conn() as c:
         c.execute("""INSERT INTO trades
             (symbol, name_ar, direction, status, entry_price, entry_date,

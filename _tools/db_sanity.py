@@ -90,12 +90,14 @@ def main():
 
     # PHASE2_SECTION_D D-3: an open trade whose entry_date equals its
     # creation date may record the typing day, not the trade day.
+    # created_at is UTC (D-11); entry/exit dates are Kuwait calendar
+    # days, so the comparison localises (+3, no DST) first.
     # user_confirmed_at is the review that silences this (D-9) -
     # precision only says how well a date is known.
     try:
         _sus = conn.execute(
             "SELECT id, symbol, entry_date FROM trades WHERE status='open' "
-            "AND entry_date = DATE(created_at) "
+            "AND entry_date = DATE(datetime(created_at, '+3 hours')) "
             "AND user_confirmed_at IS NULL"
         ).fetchall()
         _det = ", ".join("#%s %s %s" % (r[0], r[1], r[2]) for r in _sus)
@@ -110,7 +112,7 @@ def main():
     try:
         _bk = conn.execute(
             "SELECT id, symbol, exit_date FROM trades WHERE status='closed' "
-            "AND DATE(created_at) = exit_date "
+            "AND DATE(datetime(created_at, '+3 hours')) = exit_date "
             "AND COALESCE(trade_kind, 'real') != 'void' "
             "AND user_confirmed_at IS NULL"
         ).fetchall()
