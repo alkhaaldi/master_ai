@@ -213,6 +213,49 @@ def remove_from_watchlist(symbol):
     return {"ok": True, "ticker": ticker, "removed": n > 0}
 
 
+UNIVERSE_DEFAULTS = {"exchange": "KSE", "timeframe": "30m",
+                     "fast_len": 9, "slow_len": 21, "is_active": 1}
+
+
+def sync_watchlist_from_universe(dry_run: bool = False) -> dict:
+    """Make stock_radar_watchlist match KSE_STOCKS, which is the universe.
+
+    KSE_STOCKS is loaded from data/kse_stocks.csv and is the single definition
+    of what exists. The watchlist table is a per-symbol settings row, not a
+    second opinion about which symbols there are - but the two had drifted:
+    four rows in the csv had lost a newline, so four symbols never reached
+    either, and the table kept 128 while the universe was repaired to 132.
+
+    Adds missing symbols with the defaults every existing row already uses.
+    Never deletes: a symbol in the table but not the universe is reported and
+    left alone, because that is a question about the csv, not an answer.
+    """
+    from tv_data import KSE_STOCKS
+    conn = _db()
+    have = {r["symbol"] for r in
+            conn.execute("SELECT symbol FROM stock_radar_watchlist").fetchall()}
+    universe = set(KSE_STOCKS)
+    missing = sorted(universe - have)
+    extra = sorted(have - universe)
+    if missing and not dry_run:
+        conn.executemany(
+            "INSERT INTO stock_radar_watchlist "
+            "(symbol, exchange, timeframe, fast_len, slow_len, is_active) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [(s, UNIVERSE_DEFAULTS["exchange"], UNIVERSE_DEFAULTS["timeframe"],
+              UNIVERSE_DEFAULTS["fast_len"], UNIVERSE_DEFAULTS["slow_len"],
+              UNIVERSE_DEFAULTS["is_active"]) for s in missing])
+        conn.commit()
+        logger.warning("watchlist synced from universe: added %s", missing)
+    if extra:
+        logger.warning("in watchlist but not in the universe (left alone): %s", extra)
+    total = conn.execute("SELECT COUNT(*) FROM stock_radar_watchlist").fetchone()[0]
+    conn.close()
+    return {"universe": len(universe), "watchlist": total,
+            "added": [] if dry_run else missing, "would_add": missing if dry_run else [],
+            "not_in_universe": extra}
+
+
 def get_watchlist():
     conn = _db()
     rows = conn.execute(

@@ -101,10 +101,19 @@ class RiskEngine:
                 continue
 
             # ── Check 4: Liquidity ───────────────────────
-            avg_value = self._get_avg_daily_value(sym)
-            if avg_value is not None and avg_value < self.MIN_LIQUIDITY_VALUE:
+            liq = self._get_avg_daily_value(sym)
+            avg_value = liq.get("value_kwd")
+            if liq.get("state") == "missing" or avg_value is None:
+                # no dated liquidity figure: say so rather than let the symbol
+                # through as if it had passed a check that never ran
+                logger.warning("liquidity unknown for %s (%s) - not gating on it",
+                               sym, liq.get("reason") or liq.get("source"))
+            elif avg_value < self.MIN_LIQUIDITY_VALUE:
+                _age = ""
+                if liq.get("state") == "stale":
+                    _age = f" (بيانات {liq.get('as_of', '')[:10]})"
                 self._downgrade(opp, "low_liquidity",
-                                f"سيولة ضعيفة — متوسط التداول {avg_value:,.0f} د.ك/يوم")
+                                f"سيولة ضعيفة — متوسط التداول {avg_value:,.0f} د.ك/يوم{_age}")
                 continue
 
             # ✅ Passed all checks — allow ENTER
@@ -123,27 +132,58 @@ class RiskEngine:
         logger.info("Risk gate: %s downgraded to WAIT (%s): %s",
                      opp.get("symbol"), flag, reason_ar)
 
-    def _get_avg_daily_value(self, symbol: str):
+    def _get_avg_daily_value(self, symbol: str) -> dict:
+        """Average daily traded value in KWD, with the age of the answer.
+
+        Two numbers of different vintage meet here. The price can be live -
+        price_source reaches the bridge or Yahoo. The average volume cannot:
+        it is a computed average that only exists in stock_radar_daily, and
+        Yahoo's volume field is one session's turnover, not an average, so
+        substituting it would answer a different question.
+
+        A live price times a four-month-old average volume is a four-month-old
+        answer. combine() enforces that: worst state, oldest as_of. Returning
+        a bare float here is what let a stale figure look fresh.
+
+        Returns {value_kwd, price, avg_volume, as_of, source, state}. value_kwd
+        is None when either input is missing.
         """
-        Get average daily traded value (KWD) for a symbol.
-        Uses avg_volume × price from stock_radar_daily.
-        Returns KWD value or None if unavailable.
-        """
+        from price_source import get_quote, combine
+
+        quote = get_quote(symbol)
+
+        avg_vol, vol_part = None, {"as_of": None, "source": "db", "state": "missing"}
         try:
             with _conn() as c:
                 row = c.execute(
-                    "SELECT price, avg_volume, volume FROM stock_radar_daily WHERE symbol=? ORDER BY rowid DESC LIMIT 1",
+                    "SELECT avg_volume, volume, captured_at, updated_at "
+                    "FROM stock_radar_daily WHERE symbol=? "
+                    "ORDER BY captured_at DESC LIMIT 1",
                     (symbol.upper(),),
                 ).fetchone()
-                if row:
-                    price = float(row["price"] or 0)
-                    avg_vol = float(row["avg_volume"] or row["volume"] or 0)
-                    if price > 0 and avg_vol > 0:
-                        # price is in fils (1 KWD = 1000 fils)
-                        return (price * avg_vol) / 1000.0  # KWD
+            if row:
+                # avg_volume is 0 in all 128 rows - the column was added and never
+                # populated, as were avg_daily_volume and avg_daily_value. The
+                # original code used `or`, which skipped the zero and silently fell
+                # through to `volume`. Keeping that behaviour rather than changing
+                # it mid-conversion, but note what it means: `volume` is one
+                # session's turnover, not an average, so this check has always been
+                # measuring something other than its name. Recorded, not changed here.
+                raw = row["avg_volume"] or row["volume"]
+                stamp = row["captured_at"] or row["updated_at"]
+                if raw is not None and stamp:
+                    avg_vol = float(raw)
+                    vol_part = {"as_of": str(stamp), "source": "db", "state": "stale"}
         except Exception as e:
-            logger.debug("Avg daily value lookup failed for %s: %s", symbol, e)
-        return None
+            logger.warning("avg volume lookup failed for %s: %r", symbol, e)
+
+        price = quote.get("close")
+        out = combine(quote, vol_part, price=price, avg_volume=avg_vol)
+        # price is in fils; 1 KWD = 1000 fils
+        out["value_kwd"] = ((price * avg_vol) / 1000.0
+                            if price and avg_vol and price > 0 and avg_vol > 0
+                            else None)
+        return out
 
 
 def calculate_position_risk(entry_price: float, stop_loss: float, target: float = 0,
