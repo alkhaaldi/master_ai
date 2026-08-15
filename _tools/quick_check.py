@@ -112,6 +112,22 @@ def main():
         check("/dashboard/radar", len(found) == len(fields),
               f"{len(found)}/{len(fields)} radar fields present")
 
+    # -- 5c. Data feed liveness (proof of life, user decision 2026-08-15) --
+    print("")
+    print("[Data]")
+    try:
+        sys.path.insert(0, os.path.join(BASE_DIR, "_tools"))
+        import run_witness
+        n, when = run_witness.sessions_since_last_success("yahoo_close")
+        if n is None:
+            check("daily fill age", False,
+                  "no successful yahoo_close run ever recorded")
+        else:
+            check("daily fill age", n <= 3,
+                  f"last success {when} UTC - {n} session(s) old")
+    except Exception as e:
+        check("daily fill age", False, f"witness unavailable: {e}")
+
     # ── 6. Git status ──
     print("\n[Git]")
     try:

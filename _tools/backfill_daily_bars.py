@@ -133,6 +133,9 @@ def indicators(closes):
 
 
 def main():
+    sys.path.insert(0, BASE + "/_tools")
+    import run_witness
+    _t0 = time.time()
     m = json.load(open(BASE + "/_tools/kse_symbol_map.json"))
     symbols = sorted(r["our_symbol"] for r in m["records"]
                      if r.get("verdict") == "confirmed")
@@ -224,6 +227,29 @@ def main():
         print("ABORTED:", aborted)
         print("not_scanned:", ",".join(not_scanned))
     print("requests:", req)
+
+    # ── proof of life, by user decision 2026-08-15 ──
+    err_txt = "; ".join("%s:%d" % (k, len(v)) for k, v in errors.items()) or None
+    if aborted:
+        status = "failed"
+        err_txt = (err_txt + "; " if err_txt else "") + aborted
+    elif stats["bars_inserted"] == 0:
+        status = "failed"
+    elif errors:
+        status = "partial"
+    else:
+        status = "success"
+    run_witness.log_run("yahoo_close", status, stats["ok"], len(symbols),
+                        time.time() - _t0, err_txt)
+    if stats["bars_inserted"] == 0 or aborted:
+        run_witness.send_telegram(
+            "⚠️ تعبئة الإغلاق فشلت: %d صف، %d/%d رمزاً (%s)"
+            % (stats["bars_inserted"], stats["ok"], len(symbols),
+               err_txt or "بلا تفاصيل"))
+    # cross-watch: on a trading day, the intraday feed must have run too
+    if run_witness.is_trading_day() and run_witness.runs_today("yahoo_intraday") == 0:
+        run_witness.send_telegram(
+            "⚠️ التحديث اللحظي لم يعمل اليوم إطلاقاً — تحقق من cron")
 
 
 if __name__ == "__main__":
