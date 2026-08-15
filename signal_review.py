@@ -475,6 +475,36 @@ def review_liveness() -> dict:
     return {"last_review_date": last, "sessions_since_last_review": sessions}
 
 
+def lifetime_stats() -> dict:
+    """E-6: the loop's whole-of-life record for /dashboard/reviews.
+    Counts come straight from signal_reviews with no bucket filtered out —
+    no_data and ungraded are part of the record, not omissions."""
+    with _conn() as c:
+        results = {r[0]: r[1] for r in c.execute(
+            "SELECT result, COUNT(*) FROM signal_reviews GROUP BY result")}
+        # All four declared modes always present — an empty bucket is a 0
+        # the page must be able to show, not an absent key.
+        modes = {"live": 0, "backfill": 0, "legacy": 0, "ungraded": 0}
+        for r in c.execute(
+                "SELECT graded_mode, COUNT(*) FROM signal_reviews GROUP BY graded_mode"):
+            modes[r[0] if r[0] is not None else "unknown"] = r[1]
+        hits = c.execute(
+            "SELECT COALESCE(SUM(hit_target_1),0), COALESCE(SUM(hit_stop),0), "
+            "MIN(review_date) FROM signal_reviews").fetchone()
+    graded_total = sum(results.values())
+    resolved_total = graded_total - results.get("no_data", 0) - results.get("pending", 0)
+    return {
+        "graded_total": graded_total,
+        "resolved_total": resolved_total,
+        "results": results,
+        "hit_target_1": hits[0],
+        "hit_stop": hits[1],
+        "by_graded_mode": modes,
+        "first_review_date": hits[2],
+        **review_liveness(),
+    }
+
+
 def get_reviews_for_dashboard(date_str: str = None) -> dict:
     """Return reviews formatted for dashboard HTML page."""
     init_review_schema()
@@ -487,7 +517,8 @@ def get_reviews_for_dashboard(date_str: str = None) -> dict:
             date_str = row[0] if row and row[0] else None
 
     if not date_str:
-        return {"reviews": [], "summary": {}, "date": None, **review_liveness()}
+        return {"reviews": [], "summary": {}, "date": None,
+                "lifetime": lifetime_stats(), **review_liveness()}
 
     with _conn() as c:
         rows = c.execute("""
@@ -540,6 +571,7 @@ def get_reviews_for_dashboard(date_str: str = None) -> dict:
         "best": {"symbol": best["symbol"], "pnl": best["pnl_pct"]} if best else None,
         "worst": {"symbol": worst["symbol"], "pnl": worst["pnl_pct"]} if worst else None,
         "reviews": reviews,
+        "lifetime": lifetime_stats(),
         **review_liveness(),
     }
 
