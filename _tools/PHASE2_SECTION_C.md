@@ -353,3 +353,70 @@ those callers wants "how many opened inside the window and are still open" -
 they all want "how many are open now".
 
 Recorded 2026-08-14.
+
+---
+
+## C-23. the trailing stop is locked inside a target-hit branch
+
+`position_engine.py`, in `daily_monitor`, the only call to
+`_update_trailing_stop` sits here:
+
+```python
+if t1 > 0 and not t1_hit and price >= t1:
+    ...
+    _mark_target_hit(trade_id, target=1)
+    trailing = float(trade.get("trailing_stop") or 0)
+    if trailing < entry_price:
+        _update_trailing_stop(trade_id, entry_price)   # breakeven
+```
+
+So a stop can only ever move when target 1 is both set and hit. `t1` comes from
+`target_1` or `take_profit`, and both are null on every trade in the journal, so
+the branch has never opened. The engine runs, finds nothing it is allowed to do,
+and returns quietly.
+
+Whether that is wrong depends on intent. If the only trailing rule is
+"breakeven after target 1", the code matches it. If a stop is meant to trail
+price generally, the rule was never written. Deciding that is a trading
+decision, not a code one.
+
+Recorded 2026-08-14. Do not change before Sunday - it touches what the monitor
+does to live positions.
+
+---
+
+## C-24. nothing stops a trade being opened with no stop loss
+
+Seven of the eight trades ever recorded have `stop_loss = NULL`. The single
+exception is CLEANING on 2026-04-04 with `stop=140.0`. The one currently open
+position, EQUIPMENT (entered 2026-03-26, 507,586 shares), has all six risk
+fields null: `stop_loss`, `trailing_stop`, `original_stop`, `target_1`,
+`target_2`, `take_profit`.
+
+This is why C-23 has never fired, and it makes the risk engine, the stop
+monitor and the trailing logic decorative for the position they are meant to
+protect.
+
+The fix is a policy question before it is a code one: refuse the trade, warn and
+accept, or accept and flag it on the dashboard. `POST /api/trade/open` and the
+Telegram `/trade` path would both need to agree, and there is existing history
+to decide about - closing or annotating trades that predate the rule.
+
+Recorded 2026-08-14.
+
+---
+
+## C-25. PAPER has no symbol on Yahoo
+
+Of the 128 watchlist symbols probed against Yahoo with the `.KW` suffix, 127
+returned Kuwait-exchange equity data in KWF. `PAPER.KW` returned a clean 404 -
+not a rate limit, not a block; thirteen AAPL controls passed through the run and
+none failed.
+
+So if Yahoo is ever used as a price source or a cross-check, PAPER needs either
+a different ticker or an explicit exclusion. It should not silently become a
+symbol that never has a price.
+
+The full map is in `_tools/kse_symbol_map.json`.
+
+Recorded 2026-08-14.
