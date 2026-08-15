@@ -1875,24 +1875,55 @@ def dashboard_swing():
     active_positions = []
     for pos in raw.get("open_positions", []):
         sym = (pos.get("symbol") or "").upper()
-        entry_p = pos.get("entry_price") or pos.get("avg_price") or 0
-        cur_p = pos.get("current_price") or pos.get("price") or 0
-        if entry_p and cur_p:
-            pnl_pct = ((cur_p - entry_p) / entry_p * 100)
-            # Find current signal for EMA data
-            cur_sig = next((s for s in all_sigs if s["symbol"] == sym), None)
-            ema9 = (cur_sig or {}).get("ema9") or ((cur_sig or {}).get("ema") or {}).get("ema9", 0) if cur_sig else 0
-            days_held = pos.get("days_held", 0)
-            active_positions.append({
-                "symbol": sym,
-                "entry_price": entry_p,
-                "current_price": cur_p,
-                "pnl_pct": round(pnl_pct, 2),
-                "days_held": days_held,
-                "stop_loss": pos.get("stop_loss"),
-                "target": pos.get("target_price"),
-                "daily_trend": (cur_sig or {}).get("daily_trend", "UNKNOWN"),
-            })
+        # signal_engine emits "entry" and "current"; this read used to ask for
+        # entry_price/avg_price and current_price/price, got 0 for both, and the
+        # `if entry_p and cur_p` below dropped the row. One open position was
+        # invisible here for 142 days without a single log line. The old names
+        # stay as fallbacks in case another producer ever feeds this.
+        entry_p = pos.get("entry") or pos.get("entry_price") or pos.get("avg_price") or 0
+        cur_p = pos.get("current") or pos.get("current_price") or pos.get("price") or 0
+
+        if not entry_p:
+            logger.warning(
+                "swing: dropping position %s - no entry price in source. keys=%s",
+                sym or "<no symbol>", sorted(pos.keys()),
+            )
+            continue
+
+        # signal_engine sets state="manage" only when the symbol was present in
+        # the bridge response; "entered" means current was filled from entry as a
+        # fallback, so it is not a market price. Reporting a P&L off it would be
+        # the same fault as a Bearish regime computed from a zero sample: an
+        # absence dressed up as a confident number.
+        price_is_live = pos.get("state") == "manage" and cur_p != 0
+        pnl_pct = round((cur_p - entry_p) / entry_p * 100, 2) if price_is_live else None
+
+        days_held = pos.get("days_held")
+        if days_held is None and pos.get("entry_date"):
+            try:
+                days_held = (_dt.now() - _dt.fromisoformat(str(pos["entry_date"])[:10])).days
+            except (ValueError, TypeError) as _de:
+                logger.warning("swing: unparseable entry_date for %s (%r)", sym, _de)
+                days_held = None
+
+        cur_sig = next((s for s in all_sigs if s["symbol"] == sym), None)
+        active_positions.append({
+            "symbol": sym,
+            "entry_price": entry_p,
+            # null, not a stale number, when there is no live price
+            "current_price": cur_p if price_is_live else None,
+            "pnl_pct": pnl_pct,
+            "price_state": "live" if price_is_live else "stale",
+            "last_known_price": cur_p or None,
+            "quantity": pos.get("quantity"),
+            "entry_date": pos.get("entry_date"),
+            "days_held": days_held,
+            # absent in the source: explicitly null rather than 0, which would
+            # read as "stop at zero"
+            "stop_loss": pos.get("stop_loss"),
+            "target": pos.get("target_price"),
+            "daily_trend": (cur_sig or {}).get("daily_trend", "UNKNOWN"),
+        })
 
     # Market trend summary: how many whitelist stocks are UP?
     trend_up = sum(1 for s in all_sigs if s.get("daily_trend") == "UP")
