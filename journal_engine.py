@@ -65,6 +65,16 @@ def init_schema():
             # restated, not exited) must never be learned from as an outcome.
             # Rows are marked, never deleted - deleting hides the correction.
             c.execute("ALTER TABLE trades ADD COLUMN trade_kind TEXT DEFAULT 'real'")
+        if "user_confirmed_at" not in cols:
+            # PHASE2_SECTION_D D-9: when a human reviewed and settled this
+            # row. THIS is what silences a checker - precision says how well
+            # a date is known, and a row can be confirmed AND approx.
+            c.execute("ALTER TABLE trades ADD COLUMN user_confirmed_at TEXT")
+        if "entry_basis" not in cols:
+            # D-9: new | consolidated_restart. A restart row has no
+            # originating signal - scoring it would measure a bookkeeping
+            # date against a price series and call the result evidence.
+            c.execute("ALTER TABLE trades ADD COLUMN entry_basis TEXT DEFAULT 'new'")
         if "entry_date_precision" not in cols:
             # PHASE2_SECTION_D D-3: exact|approx - a backdated manual entry
             # must never carry a confident date it does not have

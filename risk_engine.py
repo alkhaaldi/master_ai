@@ -282,6 +282,9 @@ def _get_risk_config() -> dict:
         "account_capital": 10000, "risk_per_trade_pct": 2.0,
         "max_open_positions": 3, "max_portfolio_heat_pct": 6.0,
         "max_sector_positions": 2,
+        # D-10: a single position above this share of capital is worth
+        # saying out loud - never blocked, the user sizes his own book
+        "max_single_position_pct": 40,
     }
     try:
         c = _conn()
@@ -424,15 +427,43 @@ def get_risk_status() -> dict:
                          # a slot count is not a risk assessment: while any
                          # position lacks a stop, heat is incomplete and
                          # new risk is refused (PHASE2_SECTION_D, D-2)
-                         and heat.get("heat_complete", False)),
+                         and heat.get("heat_complete", False)
+                         # and a heat figure is not a cash balance: with no
+                         # capital left there is nothing to open with (D-10)
+                         and _capital_deployment(positions, cfg)["capital_available_kwd"] > 0),
         "portfolio_heat_pct": heat["heat_pct"],
         "max_heat_pct": heat["max_heat_pct"],
         "heat_complete": heat.get("heat_complete"),
         "positions_without_stop": heat.get("positions_without_stop"),
         "heat_note": heat.get("heat_note"),
         "capital_note": _capital_note(positions, cfg["account_capital"]),
+        **_capital_deployment(positions, cfg),
         "sector_exposure": sectors,
     }
+
+
+def _capital_deployment(positions, cfg):
+    """PHASE2_SECTION_D D-10: heat measures loss-if-stopped; this measures
+    committed capital. Two different questions - both get asked now."""
+    capital = cfg.get("account_capital") or 0
+    vals = [((p.get("entry_price") or 0) * (p.get("quantity") or 0) / 1000.0, p)
+            for p in positions]
+    deployed = sum(v for v, _ in vals)
+    out = {
+        "capital_deployed_kwd": round(deployed, 1),
+        "capital_deployed_pct": round(deployed / capital * 100, 1) if capital else None,
+        "capital_available_kwd": round(capital - deployed, 1),
+        "concentration_note": None,
+    }
+    share_cap = cfg.get("max_single_position_pct") or 40
+    for v, p in vals:
+        if capital and v / capital * 100 > share_cap:
+            out["concentration_note"] = (
+                "%s is %d%% of capital (limit note at %d%%) - not blocked,"
+                " not silent" % (p.get("symbol"), round(v / capital * 100),
+                                 share_cap))
+            break
+    return out
 
 
 def _capital_note(positions, capital):

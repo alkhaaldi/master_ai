@@ -575,6 +575,12 @@ Confluence is computed at the 14:00 run with simple declared weights
 written in backfill_daily_bars.py - deliberately NOT the learned
 weights, same reason.
 
+Prerequisites before any scoring pass (D-3, D-7, D-9): exclude
+`trade_kind = 'void'` AND `entry_basis = 'consolidated_restart'`. A restart
+row has `entry_signal_id = NULL` and no originating signal - scoring it
+measures a bookkeeping date against a price series and calls the result
+evidence: the void-row error arriving by a different door.
+
 The work, in order, when taken up:
 1. re-run outcome evaluation over signal_snapshots with the corrected
    windows and clocks - hit/miss/expired recomputed, not trusted;

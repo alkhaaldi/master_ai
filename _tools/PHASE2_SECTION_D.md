@@ -213,7 +213,8 @@ consumer that finds it.
 python3 _tools/quick_check.py
 python3 _tools/smoke_test.py
 python3 _tools/db_sanity.py
-git add -A && git commit -m "Phase 2 Section D: enforce price contract at endpoint layer"
+git add <explicit paths only — never -A in this repo>
+git commit -m "Phase 2 Section D: enforce price contract at endpoint layer"
 bash _tools/restart_master_ai.sh
 ```
 
@@ -263,3 +264,99 @@ id=10 entry value is 142,705 KWD against `risk-status.capital = 121,000` —
 Either the capital figure is stale or position sizing has no ceiling check.
 **Ask the user which before changing anything.** Then add a `capital_note`
 when a single position exceeds capital, instead of sizing silently past it.
+
+---
+
+## STATUS — independent verification by claude.ai, 2026-08-15 (post `3d5f8b0`)
+
+Probed live against the tunnel, not read from the report.
+
+| item | verdict | evidence on the wire |
+|---|---|---|
+| D-1 | **green** | `/dashboard/portfolio` open[0]: `price_state=live, price_as_of=2026-08-13T10:14:18+00:00, price_source=yahoo, price_age_days=2, pnl_valid=true`; identical in `/dashboard/radar -> journal_open[0]`; `quote_*` aliases still present |
+| D-2 | **green** | `portfolio_heat_pct=5.3` (was 5265.1), `heat_complete=true`, `positions_without_stop=0`, `can_open_new=true`. Units bug resolved; hand-check agrees |
+| D-3 | **partial** | column added and write paths gated, but `entry_date_precision` is **absent from the `/dashboard/portfolio` payload**. DB-only is not enough — C-27 and positions.html read the wire, not the table. Emit it. |
+| D-4 | **green** | `data_age_hours=58.1` (real), `data_state=normal`, `sessions_old=0`, no `999` anywhere in the radar payload |
+| D-5 | **green** | counter live, no deletion |
+| D-6 | **green** | `whitelist=[]`, `whitelist_suspended_reason` present, `flags.whitelist_mode=false` |
+| D-7 | **NOT DONE** | `trade_kind` absent on the wire; id=9 unmarked; `stats_30d` still reports `losses=1, win_rate=0.0, avg_loss_pct=-24.15, total_pnl_fils=-10,650,000` — the phantom trade is still being taught |
+| D-8 | **NOT DONE** | position value 142,705 KWD vs `capital=121,000` — untouched |
+
+D-7 and D-8 were appended to this file at ~19:0x, likely after the executing
+session had already read it. They are not failures of that session. They are
+still open, and **D-7 blocks C-27** for the same reason D-3 did: C-27 reads
+`stats`/closed trades, and one synthetic -24.15% loss is currently in there.
+
+Also confirmed from the executing session's own report: `git add -A` in the
+verification block was wrong for this repo — corrected above.
+
+---
+
+## D-9 — Record the consolidated restart as what it is (user decision, 2026-08-15)
+
+The user confirmed reading **(b)**: `id=10` is a deliberate restart. The older
+EQUIPMENT exposure (first bought ~May 2026 at 294, averaged down) was closed
+on the books, and the position is now tracked from 2026-08-15 at avg 224. The
+-24% is written off by intent, not by error.
+
+So `entry_date = 2026-08-15` is correct **as an accounting fact**. What is
+missing is that nothing on the row says so, and `entry_date_precision=exact`
+is currently carrying that meaning by accident.
+
+**Change:**
+
+1. **Split the two claims that are sharing one field.**
+   - `entry_date_precision` — how well the date is known: `exact | approx`.
+     Nothing else. Never set by a confirmation step.
+   - `user_confirmed_at` (TEXT, nullable) — when a human reviewed and settled
+     this row. This is what silences a checker, not the precision value.
+   - Rework the D-3 and D-7 checkers to key off `user_confirmed_at`. A row
+     may be confirmed AND approx at the same time; today that is unsayable.
+
+2. **Add `entry_basis TEXT DEFAULT 'new'`** — `'new' | 'consolidated_restart'`.
+   Set `id=10` to `'consolidated_restart'`.
+
+3. **C-27 must EXCLUDE `entry_basis='consolidated_restart'` from hit/miss
+   scoring.** This is not a filter of convenience — such a row has
+   `entry_signal_id = NULL` and no originating signal, so scoring it measures
+   a bookkeeping date against a price series and calls the result evidence.
+   Same class of error as the void rows, arriving by a different door.
+
+4. Write the intent into `entry_reason` on id=10, in plain words: restart of a
+   prior position, avg cost 224 after averaging down from 294, first purchase
+   ~May 2026, P&L tracked from 2026-08-15.
+
+5. Link the audit trail: `notes` on id=10 references the void rows it
+   supersedes (id=2, id=9), so the older cost basis stays traceable after it
+   left the P&L.
+
+## D-10 — Concentration is not measured (the real remainder of D-8)
+
+`capital` is now 144,000 KWD and `portfolio_heat_pct = 4.4` with
+`heat_complete = true` — both correct. But id=10 is worth 142,705 KWD, i.e.
+**99% of capital in one position**, and the engine still reports
+`can_open_new = true` because heat (4.4%) sits under the 6% cap.
+
+Heat measures loss-if-stopped. It says nothing about how much capital is
+committed. Two different questions; only one is being asked.
+
+**Change:**
+1. Compute `capital_deployed_pct` = sum(open position value) / capital.
+2. Add `capital_available_kwd` and `concentration_note`.
+3. `can_open_new` must be false when there is no capital left to open with,
+   regardless of heat. A slot count and a heat figure are not a cash balance.
+4. If a single position exceeds a configurable share of capital (suggest 40%),
+   emit `concentration_note` saying so. Do not block — the user sizes his own
+   positions — but do not stay silent either.
+
+**Acceptance:** with id=10 open, `capital_deployed_pct ~= 99`,
+`can_open_new = false`, and `concentration_note` is non-null.
+
+---
+
+## Open items after D-9/D-10 land
+
+- C-27 — clear to start **only once D-9.3 is in place** (restart rows excluded).
+- `positions.html` / `radar.html` — claude.ai, canonical fields are on the wire.
+- ~36 remaining price paths → `get_price`.
+- D-5 counter review (one week from 2026-08-15).
