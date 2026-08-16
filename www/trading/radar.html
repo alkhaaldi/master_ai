@@ -389,6 +389,7 @@ tbody tr:last-child td{border-bottom:none}
 </header>
 
 <!-- REGIME BANNER -->
+<div id="dataStateBanner" style="display:none;padding:.6rem .9rem;font-size:.78rem;border-bottom:1px solid transparent"></div>
 <div id="regimeBanner" style="display:none;text-align:center;padding:.5rem;font-size:.78rem;font-weight:600"></div>
 
 <!-- TICKER STRIP -->
@@ -672,6 +673,52 @@ $('#filter-bar').addEventListener('click',e=>{
 $('#btn-refresh').addEventListener('click',()=>fetchData());
 $('#btn-retry').addEventListener('click',()=>fetchData());
 
+/* ===== حالة البيانات — Phase 2 (Section G) =====
+   الترتيب أدناه لا يُقرأ بمعزل عن عمر البيانات ولا عن حال المصدر.
+   المصدر واحد الآن (Yahoo)، فسقوطه ليس تدهوراً جزئياً بل عمى كامل. */
+function renderDataState(sw, sig){
+  var el = document.getElementById('dataStateBanner');
+  if(!el) return;
+  sw = sw || {}; sig = sig || {};
+  var st  = (sw.data_state || '').toLowerCase();
+  var src = (sw.source_state || '').toLowerCase();
+  var MAP = {
+    live:     ['ok',   'بيانات حيّة',      'الجلسة مفتوحة والأسعار تتحدث'],
+    normal:   ['ok',   'البيانات سليمة',   'آخر جلسة مغلقة مقروءة بالكامل'],
+    degraded: ['warn', 'البيانات متأخرة',  'مضت جلسات دون تحديث — الترتيب أقدم مما يبدو'],
+    broken:   ['bad',  'البيانات مكسورة',  'المصدر يرد بما لا يصلح للقياس'],
+    blind:    ['bad',  'لا توجد بيانات',   'هذا ليس غياب فرص — هذا غياب قياس']
+  };
+  var S = MAP[st] || ['bad','حالة البيانات غير معلنة','الحمولة لا تحمل data_state — لا يُبنى ترتيب على هذا'];
+  /* حال المصدر يعلو على حال البيانات: لو المصدر مقطوع فالأرقام تاريخ لا حاضر */
+  if(src && src !== 'ok'){
+    S = ['bad', 'المصدر غير متاح — ' + src,
+         (sw.source_reason || 'تعذّر السؤال، وهذا ليس "لا توجد بيانات"') + ' — ما يُعرض أدناه محفوظ لا حيّ'];
+  }
+  var tone = S[0];
+  var bg = tone==='ok'?'rgba(76,175,130,.08)':tone==='warn'?'rgba(232,168,56,.10)':'rgba(217,68,82,.12)';
+  var bc = tone==='ok'?'rgba(76,175,130,.35)':tone==='warn'?'rgba(232,168,56,.40)':'rgba(217,68,82,.45)';
+  var c  = tone==='ok'?'#4CAF82':tone==='warn'?'#E8A838':'#D94452';
+  var ic = tone==='ok'?'\u2713':tone==='warn'?'\u25B2':'\u2715';
+  function chip(v){ return '<span style="direction:ltr;display:inline-block;font-family:ui-monospace,monospace;font-size:.62rem;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.12);padding:2px 7px;border-radius:5px;margin-left:5px">'+v+'</span>'; }
+  var chips = '';
+  if(sw.source)            chips += chip(sw.source);
+  if(sw.data_sessions_old!=null) chips += chip(sw.data_sessions_old+' sess');
+  if(sw.as_of)             chips += chip(sw.as_of);
+  else if(sw.scan_time)    chips += chip(sw.scan_time);
+  /* عدد ما قيس فعلاً مقابل ما يُعرض */
+  var note = '';
+  var all = (sig.all_signals||sig.opportunities||[]);
+  if(all && all.length!=null) note = '<div style="opacity:.8;margin-top:3px">'+all.length+' رمزاً في هذا الترتيب</div>';
+  el.style.display='block';
+  el.style.background=bg; el.style.borderBottom='1px solid '+bc; el.style.color=c;
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">'
+    + '<span style="font-size:1rem">'+ic+'</span>'
+    + '<div style="flex:1;min-width:190px"><div style="font-weight:700">'+S[1]+'</div>'
+    + '<div style="opacity:.85;font-weight:400;font-size:.72rem">'+S[2]+'</div>'+note+'</div>'
+    + '<div>'+chips+'</div></div>';
+}
+
 /* ===== Fetch ===== */
 async function fetchData(){
   const btn = $('#btn-refresh');
@@ -684,7 +731,9 @@ async function fetchData(){
     /* Market Regime Banner */
     try{
       var swR=await fetch('/dashboard/swing');
-      if(swR.ok){var swD=await swR.json();var mr=swD.market_regime||{};var rb=document.getElementById('regimeBanner');
+      if(swR.ok){var swD=await swR.json();
+        renderDataState(swD, d);
+        var mr=swD.market_regime||{};var rb=document.getElementById('regimeBanner');
         var regime=mr.regime||'UNKNOWN';
         var regimeAr=regime==='BULLISH'?'\u0635\u0627\u0639\u062F':regime==='BEARISH'?'\u0646\u0627\u0632\u0644':regime==='NEUTRAL'?'\u0645\u062D\u0627\u064A\u062F':'\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641';
         var bg=regime==='BULLISH'?'rgba(76,175,130,.08)':regime==='BEARISH'?'rgba(217,68,82,.08)':'rgba(232,168,56,.08)';

@@ -880,6 +880,46 @@ window.toggleInlineEdit = toggleInlineEdit;
 window.saveInlineEdit = saveInlineEdit;
 
 /* ===== Render ===== */
+/* ===== حالة البيانات (Phase 2) =====
+   الأرقام أدناه لا تُقرأ بمعزل عن عمر السعر الذي بُنيت عليه. */
+const PSTATE = {
+  live:     ['ok',   'بيانات حيّة',      'الجلسة مفتوحة والأسعار تتحدث'],
+  normal:   ['ok',   'البيانات سليمة',   'آخر جلسة مغلقة مقروءة بالكامل'],
+  degraded: ['warn', 'البيانات متأخرة',  'مضت جلسات دون تحديث — الأرقام أقدم مما تبدو'],
+  broken:   ['bad',  'البيانات مكسورة',  'المصدر يرد بما لا يصلح للقياس'],
+  blind:    ['bad',  'لا توجد بيانات',   'هذا ليس غياب مراكز — هذا غياب قياس']
+};
+function _has(v){ return v!==null && v!==undefined && v!==''; }
+function dataStateBanner(op, unvalidated){
+  if(!op.length) return '';
+  const p = op[0];
+  const key = _has(p.price_state) ? String(p.price_state).toLowerCase()
+            : (_has(p.quote_state) ? String(p.quote_state).toLowerCase() : null);
+  const S = PSTATE[key] || ['bad','حالة السعر غير معلنة','الحمولة لا تحمل price_state — لا تُبنَ قرارات على هذا'];
+  const bg = S[0]==='ok' ? 'rgba(47,174,110,.10)' : S[0]==='warn' ? 'rgba(232,163,61,.12)' : 'rgba(224,82,82,.14)';
+  const bc = S[0]==='ok' ? 'rgba(47,174,110,.40)' : S[0]==='warn' ? 'rgba(232,163,61,.45)' : 'rgba(224,82,82,.50)';
+  const ic = S[0]==='ok' ? 'mdi-check-circle-outline' : S[0]==='warn' ? 'mdi-alert-outline' : 'mdi-close-octagon-outline';
+  let chips = '';
+  if(_has(p.price_as_of))  chips += '<span class="ltr" style="font-family:var(--fm);font-size:.62rem;background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.12);padding:3px 8px;border-radius:6px;margin-left:5px">'+p.price_as_of+'</span>';
+  if(_has(p.price_source)) chips += '<span class="ltr" style="font-family:var(--fm);font-size:.62rem;background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.12);padding:3px 8px;border-radius:6px;margin-left:5px">'+p.price_source+'</span>';
+  if(_has(p.price_age_days)) chips += '<span class="ltr" style="font-family:var(--fm);font-size:.62rem;background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.12);padding:3px 8px;border-radius:6px;margin-left:5px">'+p.price_age_days+'d</span>';
+  const warn = unvalidated>0
+    ? '<div style="margin-top:6px;font-size:.72rem;color:var(--red)">'+unvalidated+' مركز بأرباح غير محسوبة — مستبعدة من المجموع أدناه</div>' : '';
+  return '<div style="background:'+bg+';border:1px solid '+bc+';border-radius:10px;padding:.7rem .9rem;margin-bottom:1rem;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap">'
+       + '<span class="mdi '+ic+'" style="font-size:1.2rem"></span>'
+       + '<div style="flex:1;min-width:180px"><div style="font-weight:700;font-size:.85rem">'+S[1]+'</div>'
+       + '<div style="font-size:.72rem;color:var(--text-2)">'+S[2]+'</div>'+warn+'</div>'
+       + '<div>'+chips+'</div></div>';
+}
+/* P&L لا يُعرض إلا إذا أقرّ الخادم بصلاحيته */
+function pnlGuard(p){
+  if(p.pnl_valid === false){
+    const why = _has(p.pnl_invalid_reason) ? p.pnl_invalid_reason : 'الخادم لم يصادق على الحساب';
+    return '<div style="font-size:.72rem;color:var(--amber);border:1px dashed rgba(232,163,61,.5);border-radius:6px;padding:4px 8px;display:inline-block">غير محسوب — '+why+'</div>';
+  }
+  return null;
+}
+
 function render(data){
   _lastData = data;
   const el = document.getElementById('content');
@@ -889,16 +929,18 @@ function render(data){
   const s7 = data.stats_7d || {};
   const svt = data.signal_vs_trade || {};
 
-  /* aggregate stats for pulse bar */
-  let totalNetPnl = 0, totalFees = 0;
+  /* aggregate stats — P&L counted only where the server validated it */
+  let totalNetPnl = 0, totalFees = 0, pnlUnvalidated = 0;
   op.forEach(p=>{
     if(p.pnl){
-      totalNetPnl += Number(p.pnl.net_pnl_kwd)||0;
       totalFees += Number(p.pnl.total_fees_kwd)||0;
+      if(p.pnl_valid === false){ pnlUnvalidated++; }
+      else { totalNetPnl += Number(p.pnl.net_pnl_kwd)||0; }
     }
   });
 
   let html = '';
+  html += dataStateBanner(op, pnlUnvalidated);
 
   /* ===== PULSE BAR ===== */
   html += '<div class="section-title"><span class="mdi mdi-chart-box-outline"></span> نبض المحفظة</div>';
@@ -1207,14 +1249,25 @@ async function loadData(){
       var rr=await fetch('/dashboard/risk-status');
       if(rr.ok){var rd=await rr.json();var rc=document.getElementById('riskStatusContainer');
         var heat=rd.portfolio_heat_pct||0;var hc=heat>5?'var(--red)':heat>3?'var(--amber)':'var(--green)';
+        var dep=(rd.capital_deployed_pct!=null)?Number(rd.capital_deployed_pct):null;
+        var dc=(dep==null)?'var(--text-3)':(dep>90?'var(--red)':dep>60?'var(--amber)':'var(--green)');
+        var hcomp=(rd.heat_complete===false);
+        var gateWhy=(rd.can_open_new_reason!=null&&rd.can_open_new_reason!=='')?rd.can_open_new_reason:null;
+        var gateHtml=(rd.can_open_new===false)
+          ? '<div style="margin-top:.5rem;font-size:.72rem;color:var(--amber);border:1px dashed rgba(232,163,61,.5);border-radius:6px;padding:5px 9px">لا يمكن فتح مركز جديد'
+            + (gateWhy? ' — <span class="ltr" style="font-family:var(--fm);font-size:.66rem">'+gateWhy+'</span>' : ' — السبب غير معلن على السلك')
+            + '</div>' : '';
+        var heatNote=hcomp
+          ? '<div style="margin-top:.5rem;font-size:.72rem;color:var(--red)">الحرارة ناقصة — '+(rd.positions_without_stop||0)+' مركز بلا وقف، فمساهمته غير مقيسة</div>' : '';
         var sectors=rd.sector_exposure||{};
         var secHtml=Object.entries(sectors).map(function(e){var k=e[0],v=e[1];return '<span style="font-size:.65rem;padding:2px 8px;border-radius:4px;background:var(--navy-700);color:'+(v.full?'var(--red)':'var(--text-2)')+'">'+k+': '+v.count+'/'+v.max+'</span>'}).join(' ');
         rc.innerHTML='<div class="pulse-grid">'
           +'<div class="pulse-card"><div class="pulse-icon" style="color:'+hc+'"><span class="mdi mdi-fire"></span></div><div class="pulse-val" style="color:'+hc+'">'+heat.toFixed(1)+'%</div><div class="pulse-lbl">Portfolio Heat (max '+(rd.max_heat_pct||6)+'%)</div><div style="height:4px;background:var(--navy-700);border-radius:2px;margin-top:4px"><div style="height:100%;border-radius:2px;background:'+hc+';width:'+Math.min(heat/(rd.max_heat_pct||6)*100,100)+'%"></div></div></div>'
           +'<div class="pulse-card"><div class="pulse-icon" style="color:var(--gold)"><span class="mdi mdi-account-group"></span></div><div class="pulse-val">'+(rd.open_positions||0)+'/'+(rd.max_positions||3)+'</div><div class="pulse-lbl">&#x0645;&#x0631;&#x0627;&#x0643;&#x0632;</div></div>'
           +'<div class="pulse-card"><div class="pulse-icon" style="color:var(--cyan)"><span class="mdi mdi-cash"></span></div><div class="pulse-val"><span class="ltr">'+(rd.capital||0).toLocaleString()+'</span></div><div class="pulse-lbl">&#x0631;&#x0623;&#x0633; &#x0645;&#x0627;&#x0644; (&#x062F;.&#x0643;)</div></div>'
+          +'<div class="pulse-card"><div class="pulse-icon" style="color:'+dc+'"><span class="mdi mdi-wallet-outline"></span></div><div class="pulse-val" style="color:'+dc+'">'+(dep==null?'\u2014':dep.toFixed(1)+'%')+'</div><div class="pulse-lbl">&#x0631;&#x0623;&#x0633; &#x0645;&#x0627;&#x0644; &#x0645;&#x0644;&#x062A;&#x0632;&#x0645;'+(rd.capital_available_kwd!=null?' &#x2014; &#x0645;&#x062A;&#x0627;&#x062D; <span class="ltr">'+Number(rd.capital_available_kwd).toLocaleString()+'</span>':'')+'</div></div>'
           +'<div class="pulse-card"><div class="pulse-icon" style="color:var(--amber)"><span class="mdi mdi-chart-pie"></span></div><div class="pulse-val" style="font-size:.8rem">'+secHtml+'</div><div class="pulse-lbl">&#x0642;&#x0637;&#x0627;&#x0639;&#x0627;&#x062A;</div></div>'
-          +'</div>';
+          +'</div>'+heatNote+gateHtml;
       }
     }catch(e){console.error('Risk fetch:',e)}
     /* Load Gemini analysis for open positions */
