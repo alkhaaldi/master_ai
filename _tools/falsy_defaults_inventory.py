@@ -16,6 +16,7 @@ import sys
 BASE = "/home/pi/master_ai"
 
 DECISION = {
+    "indicators.py",
     "gemini_scanner.py", "golden_engine.py", "signal_engine.py",
     "risk_engine.py", "trading_brain.py", "trading_decision_engine.py",
     "position_engine.py", "journal_engine.py", "price_source.py",

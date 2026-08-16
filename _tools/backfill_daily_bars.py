@@ -25,6 +25,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import datetime as _dtm
 from datetime import datetime, timezone
 
 sys.path.insert(0, "/home/pi/master_ai")
@@ -279,9 +280,44 @@ def main():
                 "VALUES (?,?,?,?,?,?,?,?,'yahoo',1)",
                 (sym, d, o, h, l, c, v, val))
             ins += 1
+        # G-2: one implementation for every indicator in the system, with
+        # the forming bar dropped and a coverage floor enforced. The local
+        # helpers above stay for the vote-based confluence only.
+        import time as _t
+        from indicators import compute_all as _compute_all
+        _dicts = [{"ts": int(_dtm.datetime.strptime(b[0], "%Y-%m-%d").replace(
+                       hour=6, tzinfo=_dtm.timezone.utc).timestamp()),
+                   "open": b[2], "high": b[3], "low": b[4],
+                   "close": b[5], "volume": b[6]} for b in bars]
+        _ci = _compute_all(_dicts, "1d", int(_t.time()))
         closes = [b[5] for b in bars]
-        ind = indicators(closes)
-        ind.update(full_indicators(bars))
+        ind = {}
+        if _ci["rsi"]["value"] is not None:
+            ind["rsi"] = round(_ci["rsi"]["value"], 2)
+        if _ci["ema_9"]["value"] is not None:
+            ind["ema_fast"] = ind["daily_ema9"] = _ci["ema_9"]["value"]
+        if _ci["ema_21"]["value"] is not None:
+            ind["ema_slow"] = ind["daily_ema21"] = _ci["ema_21"]["value"]
+        if ind.get("ema_fast") is not None and ind.get("ema_slow") is not None:
+            ind["daily_ema_cross"] = ("bullish" if ind["ema_fast"] > ind["ema_slow"]
+                                      else "bearish")
+        _m = _ci["macd"]["value"]
+        if _m:
+            ind.update(macd=_m["macd"], macd_signal=_m["signal"],
+                       macd_histogram=_m["histogram"], macd_cross=_m["cross"],
+                       macd_above_zero=int(bool(_m["above_zero"])))
+        for _k, _dst in (("adx", "adx"), ("atr", "atr"), ("stoch_k", "stoch_k")):
+            if _ci[_k]["value"] is not None:
+                ind[_dst] = _ci[_k]["value"]
+        _sr = _ci["sr"]["value"]
+        if _sr:
+            ind["support"], ind["resistance"] = _sr["support"], _sr["resistance"]
+        # the evidence travels with the values (G-2 + user requirement)
+        ind["indicator_source"] = "local"
+        ind["indicator_params"] = "RSI14 MACD12/26/9 ATR14 ADX14 StochK14 EMA9/21 SR20"
+        ind["bars_used"] = _ci["bars_complete"]
+        ind["coverage_pct"] = _ci["coverage_pct"]
+        ind["bar_complete"] = 1 if _ci["bars_dropped_incomplete"] == 0 else 0
         last = bars[-1]
         chg = (round((closes[-1] / closes[-2] - 1) * 100, 2)
                if len(closes) >= 2 and closes[-2] else None)

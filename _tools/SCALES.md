@@ -84,6 +84,61 @@ Declared, not fixed, per F-3.4.
 
 ---
 
+## Locally computed indicators (G-2, `indicators.py`, from 2026-08-16)
+
+Computed from Yahoo OHLCV. Every one returns
+`{value, bars_used, coverage_pct, params, reason}` - never a bare number,
+never a neutral default when the data is insufficient.
+
+| name | range | endpoints mean | negative? | shape | params |
+|---|---|---|---|---|---|
+| `rsi` | 0-100 | 0 = pure loss run, 100 = pure gain run, **50 is a real reading** | no | continuous | RSI 14, Wilder |
+| `stoch_k` | 0-100 | position of close within the window's high-low range | no | continuous | %K 14 |
+| `adx` | 0-100 | trend STRENGTH only - **carries no direction** | no | continuous | ADX 14, Wilder |
+| `macd` / `signal` / `histogram` | unbounded | **signed**; sign is the direction | **yes, meaningful** | continuous | 12/26/9 |
+| `ema_9`, `ema_21` | price domain | in **fils**, like every price here | no | continuous | EMA 9 / EMA 21 |
+| `atr` | >= 0 | average true range in **fils** | no | continuous | ATR 14, Wilder |
+| `support` / `resistance` | price domain | rolling extremes in **fils**, newest bar excluded | no | continuous | 20-bar rolling |
+
+Two gates every one of them passes through:
+
+- **`bar_complete`** - the forming bar is dropped before anything is
+  computed. Yahoo's newest intraday element is stamped off the interval
+  grid (G-1 measured 09:45Z on a 30m series) and its close and volume
+  still move. An indicator computed on it changes retroactively.
+- **`coverage_pct` >= 80** - a thin name whose 30m grid is 65% non-null
+  (URC, measured) gets `None` and a reason, not a number computed across
+  holes. `bars_used` and `coverage_pct` are stored beside every value so
+  a reader can judge the evidence, not just the answer.
+
+**`indicator_source`** (`bridge` | `local`) marks the 2026-08-16 seam.
+Values either side of it are NOT comparable and must never be averaged
+across - measured deltas below.
+
+### Measured: local vs bridge, same symbol, same date
+
+| symbol | date | RSI | ADX | StochK | ATR |
+|---|---|---|---|---|---|
+| URC | 2026-08-13 | -3.1% | +10.2% | **+44.6%** | +3.3% |
+| RASIYAT | 2026-08-05 | +0.1% | +10.7% | -2.5% | +5.3% |
+| ACICO | 2026-08-05 | +9.3% | -14.9% | **+242%** | -0.3% |
+| URC | 2026-07-08 | -14.0% | -2.2% | **-48.1%** | -0.2% |
+| ALFTAQA | 2026-07-08 | -13.6% | -4.2% | **-90.4%** | -2.5% |
+
+They do NOT match, and the pattern is informative rather than random:
+
+- **ATR agrees within ~5%** and **ADX within ~15%** - long-window Wilder
+  averages are dominated by the same price history whoever computes them.
+- **RSI diverges up to 14%** - seeding and smoothing choices matter.
+- **StochK diverges wildly, up to 242%** - a 14-bar window oscillator is
+  dominated by which bars are in the window, so any difference in the
+  bar set or the as-of instant moves it enormously.
+
+The practical consequence, and the reason `indicator_source` exists: a
+StochK of 26.3 from the bridge and 90.0 computed locally are not two
+measurements of one thing. Any threshold tuned on bridge-era values is
+not transferable, and C-27 must treat the seam as a break in the series.
+
 ## Rules for anything that consumes these
 
 1. **State the scale at the point of use.** A comment naming the range and
