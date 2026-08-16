@@ -238,3 +238,44 @@ Keep the existing day-slice keys unchanged (backward compatible).
 
 **Acceptance:** the numbers match a direct `GROUP BY` on the table, and the
 decisions page renders the record instead of the missing-field notice.
+
+---
+
+## E-7 — Confidence calibration measured over all of signal_reviews  (Claude Code) — feeds C-27 directly
+
+**الحالة:** مُتحقَّق 2026-08-16 — قياس، لا إصلاح.
+
+Measured over the full table (31 rows, every one carrying a confidence):
+
+```
+result    n    avg_conf   min..max
+fail      5    90.1       86..96     <- the HIGHEST-confidence bucket
+ongoing   3    87.6       84..90
+no_data   6    86.4       82..90
+partial   15   86.8       82..95
+success   2    84.4       81..88    <- the LOWEST
+```
+
+Two findings, one worse than the other:
+
+1. **The inversion holds on the whole table.** Failed calls carried on
+   average 5.7 points MORE confidence than successful ones. The sample is
+   small (success n=2, fail n=5) - directional evidence, not proof - but
+   it points the same way the single-day page did.
+
+2. **The scale is saturated, which is the deeper defect.** Every row of 31
+   sits in [81..96]. The bands 0-80 have never been used: a confidence
+   that never says "low" discriminates nothing, so even a perfectly
+   re-derived weight on top of it would be a weight on noise. Success
+   rate of graded rows (success/(success+partial+fail)): 2/22 = 9%.
+
+**What this means for C-27, recorded as a prerequisite finding:** the
+confidence feature does not merely need its weight re-derived - it needs
+its SIGN reviewed (the current direction may be inverted) and its
+GENERATOR reviewed (whatever emits 81-96 for everything is not measuring
+uncertainty). Re-weighting a saturated, possibly sign-flipped input is
+polishing a broken instrument.
+
+Caveat stated plainly: n=31 with 2 successes cannot settle sign by
+itself. C-27's re-scored outcomes over signal_snapshots (41k rows) can -
+this item tells it to look.

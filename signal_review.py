@@ -509,6 +509,18 @@ def lifetime_stats() -> dict:
     }
 
 
+def recent_reviews(limit: int = 30) -> list:
+    """reviews.recent: the last N reviewed decisions across ALL dates -
+    not a one-day slice - with the same columns as reviews[]. No bucket
+    is filtered: no_data and ungraded rows appear as they are, because a
+    record that hides its awkward baskets is not a record."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM signal_reviews "
+            "ORDER BY market_date DESC, id DESC LIMIT ?", (limit,)).fetchall()
+    return [dict(r) for r in rows]
+
+
 def get_reviews_for_dashboard(date_str: str = None) -> dict:
     """Return reviews formatted for dashboard HTML page."""
     init_review_schema()
@@ -522,6 +534,7 @@ def get_reviews_for_dashboard(date_str: str = None) -> dict:
 
     if not date_str:
         return {"reviews": [], "summary": {}, "date": None,
+                "recent": recent_reviews(30),
                 "lifetime": lifetime_stats(), **review_liveness()}
 
     with _conn() as c:
@@ -575,6 +588,7 @@ def get_reviews_for_dashboard(date_str: str = None) -> dict:
         "best": {"symbol": best["symbol"], "pnl": best["pnl_pct"]} if best else None,
         "worst": {"symbol": worst["symbol"], "pnl": worst["pnl_pct"]} if worst else None,
         "reviews": reviews,
+        "recent": recent_reviews(30),
         "lifetime": lifetime_stats(),
         **review_liveness(),
     }
