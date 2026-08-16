@@ -128,24 +128,27 @@ def main():
     except Exception as e:
         check("daily fill age", False, f"witness unavailable: {e}")
 
-    # F-1.5: a stopped backup must announce itself. FAILS until the
-    # first successful NAS backup exists - that is a true alarm state:
-    # everything lives on one SD card until then.
+    # F-1.5 + user order 2026-08-16: EVERY backup path announces its
+    # age - the shell backups failed silently for 4.5 months into a
+    # log nobody read. Red until a path has its first success.
     try:
         import sqlite3 as _sq
         from datetime import datetime as _dt
         _bc = _sq.connect(os.path.join(BASE_DIR, "data", "life.db"))
-        _row = _bc.execute(
-            "SELECT MAX(created_at) FROM data_fetch_runs "
-            "WHERE source='nas_backup' AND status='success'").fetchone()
+        for _src in ("nas_backup", "local_backup", "gdrive_backup"):
+            _row = _bc.execute(
+                "SELECT MAX(created_at) FROM data_fetch_runs "
+                "WHERE source=? AND status='success'", (_src,)).fetchone()
+            if not _row or not _row[0]:
+                check(_src + " age", False, "no successful run ever recorded")
+            else:
+                _h = (_dt.utcnow() - _dt.fromisoformat(_row[0])).total_seconds() / 3600
+                check(_src + " age", _h < 26,
+                      f"last success {_row[0]} UTC - {_h:.1f}h old")
         _bc.close()
-        if not _row or not _row[0]:
-            check("backup age", False, "no successful NAS backup has ever run")
-        else:
-            _h = (_dt.utcnow() - _dt.fromisoformat(_row[0])).total_seconds() / 3600
-            check("backup age", _h < 24, f"last success {_row[0]} UTC - {_h:.1f}h old")
     except Exception as _be:
-        check("backup age", False, f"backup witness unavailable: {_be}")
+        check("backup ages", False, f"witness unavailable: {_be}")
+
 
     # ── 6. Git status ──
     print("\n[Git]")
