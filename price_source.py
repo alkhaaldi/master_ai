@@ -45,7 +45,11 @@ SYMBOL_MAP = BASE / "_tools" / "kse_symbol_map.json"
 
 # Bridge first: when it is running it is a live feed and Yahoo is end-of-day.
 # It is started by hand, so most of the time it fails fast and we fall through.
-SOURCE_ORDER = ("bridge", "yahoo", "db")
+# G-4 (2026-08-16): the bridge is RETIRED, not down. `down` invites a restart;
+# retired means the dependency is gone and Yahoo is the single source.
+# _from_bridge stays in the module, unreachable, so the history of how
+# prices used to arrive is not deleted along with the dependency.
+SOURCE_ORDER = ("yahoo", "db")
 
 QUOTE_TTL = 60          # seconds; this stands in front of ~39 call sites
 BRIDGE_HEALTH_TIMEOUT = 2
@@ -87,7 +91,10 @@ def reset_bridge_circuit() -> None:
 
 
 def bridge_circuit_state() -> dict:
-    return {"open": _bridge_open, "reason": _bridge_reason}
+    """Retired, not down (G-4). The distinction is operational: `down`
+    reads as something to restart, and someone would."""
+    return {"open": False, "state": "retired", "retired_on": "2026-08-16",
+            "reason": "bridge retired 2026-08-16 - Yahoo is the single source"} 
 
 
 # ----------------------------------------------------------------- helpers
@@ -313,6 +320,13 @@ def _from_yahoo(symbol: str) -> dict | None:
 
 
 def _from_bridge(symbol: str) -> dict | None:
+    # RETIRED 2026-08-16 (G-4). Unreachable via get_quote already - the
+    # bridge is out of SOURCE_ORDER - but guarded at the door too, so a
+    # direct caller cannot revive the dependency by accident.
+    return None
+
+
+def _from_bridge_retired(symbol: str) -> dict | None:
     global _bridge_open, _bridge_reason
     if _bridge_open:
         return None

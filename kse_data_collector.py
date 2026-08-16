@@ -127,6 +127,15 @@ def _get_watchlist_symbols() -> list:
 
 
 def _fetch_bridge_bars(symbols: list) -> dict:
+    # RETIRED 2026-08-16 (G-4): the bridge dependency is gone. Returning
+    # the empty shape rather than calling a host that is not there - a
+    # dangling endpoint that times out is a silent failure waiting to be
+    # misread as "no signal". The URL below stays as a deprecated marker.
+    # daily_bars is filled from Yahoo by _tools/backfill_daily_bars.py now.
+    return {}
+
+
+def _fetch_bridge_bars_retired(symbols: list) -> dict:
     """Fetch 1D bars from Bridge API. Returns {symbol: {open,high,low,close,volume}}."""
     import requests as _req
 

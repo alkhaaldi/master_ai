@@ -587,6 +587,19 @@ directly:
   `stock_radar_daily` holds 0/17/33/50/67/83/100 with 3 legacy rows still on
   the pre-2026-08-15 signed scale. Same name, different meaning, not
   interchangeable.
+- **StochK PATTERNS MUST BE RECALIBRATED FROM ZERO, NOT RE-WEIGHTED**
+  (user decision 2026-08-16). Measured on the same symbol on the same day,
+  bridge vs local: ACICO 2026-08-05 read **26.3** from the bridge and
+  **90.0** computed locally. Those are not two estimates of one quantity -
+  they fall on opposite sides of every threshold in the system. The atom
+  `stoch_gt_80` is ABSENT under one and PRESENT under the other for the
+  identical stock and session. So every pattern, atom and threshold
+  involving StochK carries a hidden dependency on which era produced it,
+  and re-deriving a weight for it would fit a coefficient onto a variable
+  whose definition changed underneath. Discard the StochK-derived patterns
+  and rebuild them from local-era data only. See `_tools/SCALES.md` for the
+  full local-vs-bridge delta table (RSI up to 14%, ADX up to 15%, ATR ~5%,
+  StochK up to 242%).
 - **`regime_confidence` is 1-3, not 0-100** (n=40,966). Any formula reading it
   as a percentage is off by roughly 33x.
 - **`decision_audit.confidence` is a post-gate sample** (80.56-96.41, n=34)

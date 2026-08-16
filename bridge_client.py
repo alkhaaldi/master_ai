@@ -12,6 +12,21 @@ import httpx
 
 logger = logging.getLogger("bridge_client")
 
+# ── DEPRECATED 2026-08-16 (PHASE2_SECTION_G, G-4) ─────────────────────────────
+# The TradingView bridge is RETIRED, not down. It required a Windows PC
+# powered on, a live TradingView session and a second machine on the LAN -
+# three ways to fail silently, which is what this whole phase exists to
+# remove. Yahoo (.KW) is the single source; indicators are computed
+# locally by indicators.py.
+#
+# This module is kept, unreachable from live paths, because the historical
+# rows it produced are tagged indicator_source='bridge' and someone
+# reading them needs to see how they were fetched. Do not wire it back in
+# without re-reading _tools/SCALES.md: bridge and local indicator values
+# are NOT comparable (StochK diverged up to 242% on the same symbol and
+# the same day).
+# ──────────────────────────────────────────────────────────────────────
+
 BRIDGE_BASE_URL = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 DEFAULT_EXCHANGE = "KSE"
 

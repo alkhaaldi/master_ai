@@ -747,6 +747,14 @@ def _load_prev_ema():
 
 
 def _fetch_bridge_30m(ticker: str) -> dict:
+    # RETIRED 2026-08-16 (G-4): the bridge dependency is gone. Returning
+    # the empty shape rather than calling a host that is not there - a
+    # dangling endpoint that times out is a silent failure waiting to be
+    # misread as "no signal". The URL below stays as a deprecated marker.
+    return {}
+
+
+def _fetch_bridge_30m_retired(ticker: str) -> dict:
     """Fetch 30m analysis for one symbol from Bridge API (sync)."""
     import requests as _req
     r = _req.get(
@@ -1237,6 +1245,14 @@ def _market_open_safe() -> bool:
 
 
 def _fetch_bridge_daily(symbols: list) -> dict:
+    # RETIRED 2026-08-16 (G-4): the bridge dependency is gone. Returning
+    # the empty shape rather than calling a host that is not there - a
+    # dangling endpoint that times out is a silent failure waiting to be
+    # misread as "no signal". The URL below stays as a deprecated marker.
+    return {}
+
+
+def _fetch_bridge_daily_retired(symbols: list) -> dict:
     """Fetch 1D analysis for all symbols from Bridge API (sync, batched).
     Returns dict: {symbol: normalized_data} or {} on failure.
 

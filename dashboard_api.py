@@ -900,7 +900,11 @@ async def ha_dashboard_portfolio():
                     t["pnl_kwd"] = 0
 
                 # ── S/R from Bridge analysis (if not already set from radar_daily) ──
-                if _cur and not t.get("support"):
+                # G-4: S/R came from the bridge here. Retired - the values
+                # now come from stock_radar_daily, computed by indicators.py
+                # (20-bar rolling, newest bar excluded). Block disabled
+                # rather than deleted so the old shape stays readable.
+                if False and _cur and not t.get("support"):
                     try:
                         import urllib.request as _urlreq, json as _json
                         _aurl = f"{os.getenv('BRIDGE_URL', 'http://192.168.111.214:8059')}/analysis?symbol={sym}&interval=1D"
@@ -2940,14 +2944,10 @@ async def api_data_freshness():
         conn.close()
 
         # Bridge connectivity
+        # G-4 (2026-08-16): the bridge is retired. A dangling endpoint that times
+        # out is a silent failure waiting to be misread as "no signal", so
+        # the probe is gone rather than left to fail quietly every call.
         bridge_online = False
-        try:
-            import urllib.request as _ur
-            with _ur.urlopen(f"{os.getenv('BRIDGE_URL', 'http://192.168.111.214:8059')}/health", timeout=3) as resp:
-                if resp.status == 200:
-                    bridge_online = True
-        except Exception:
-            pass
 
         return {
             "last_radar_update": last_update,

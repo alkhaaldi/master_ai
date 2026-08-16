@@ -8,7 +8,10 @@ _gk = os.path.expanduser("~/.gemini_key")
 if os.path.exists(_gk):
     GEMINI_KEY = open(_gk).read().strip()
 
+# RETIRED 2026-08-16 (G-4). Address kept as a deprecated marker; the
+# guard below stops every call before it leaves the process.
 BRIDGE_BASE = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
+BRIDGE_RETIRED = True
 
 # DISABLED 2026-05-10: cache removed — every call goes to Gemini live.
 # _analysis_cache = {}
@@ -18,6 +21,8 @@ BRIDGE_BASE = os.getenv("BRIDGE_URL", "http://192.168.111.214:8059")
 def _bridge_available():
     """Quick check if Bridge is reachable (2s timeout)."""
     try:
+        if BRIDGE_RETIRED:
+            return False
         req = urllib.request.urlopen(f"{BRIDGE_BASE}/health", timeout=2)
         return req.status == 200
     except Exception:
@@ -259,6 +264,8 @@ async def refresh_all_analyses_parallel(send_update=None, max_concurrent=5):
 
 def _fetch_bridge_bars(symbol, interval, count):
     """Fetch enriched bars from Bridge API."""
+    if BRIDGE_RETIRED:
+        return None
     url = f"{BRIDGE_BASE}/bars?symbol={symbol}&interval={interval}&count={count}"
     req = urllib.request.urlopen(url, timeout=30)
     return json.loads(req.read().decode())

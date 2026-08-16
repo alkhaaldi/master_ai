@@ -1267,6 +1267,16 @@ def _get_open_trades_safe() -> list:
 
 
 def _get_bridge_data_safe() -> dict:
+    """RETIRED 2026-08-16 (G-4). Returns the empty shape without touching the
+    network. Kept as a function because six call sites read its contract;
+    deleting it would be a contract break, and the snapshot universe
+    (C-10 shape) is the real source now.
+    """
+    return {"bridge_online": False, "bridge_status": "retired",
+            "symbols_count": 0, "symbols": {}}
+
+
+def _get_bridge_data_safe_retired_impl() -> dict:
     """Get bridge multi-analysis for candidate symbols (5-min module-level cache).
     Fire-and-forget: triggers background fetch, always returns stale immediately."""
     global _bridge_cache, _bridge_cache_ts
