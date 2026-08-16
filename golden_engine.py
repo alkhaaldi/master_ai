@@ -1028,6 +1028,37 @@ def scan_opportunities(live_data: list) -> dict:
             "chosen": cp.get("stop"),
         }
 
+    # ── F-4: one authoritative TARGET set per record ──────────
+    # E-2 collapsed three stops into chosen_plan.stop and left the targets
+    # behind, so the payload kept shipping two answers for the same symbol
+    # (chosen_plan target2 246.186 vs trade_plan target_2 216.407, R/R 1.90
+    # vs 2.55). The decisions page papered over it with a divergence
+    # warning - a frontend plaster on a payload problem. chosen_plan is
+    # authoritative; everything else is a labelled diagnostic.
+    for opp in all_opportunities:
+        tp = opp.get("trade_plan") or {}
+        sm = opp.get("strategy_match") or {}
+        cp = opp.get("chosen_plan") or {}
+        opp["plan_source"] = cp.get("source")
+        opp["plan_candidates"] = {
+            "golden_trade_plan": {
+                "target_1": tp.pop("target_1", None),
+                "target_2": tp.pop("target_2", None),
+                "rr": tp.pop("risk_reward", None) if "risk_reward" in tp
+                      else tp.pop("rr", None),
+            },
+            "strategy_backtest": {
+                "target_1": sm.get("target_1_pct"),
+                "target_2": sm.get("target_2_pct"),
+                "rr": sm.get("rr"),
+            },
+            "chosen": {
+                "target_1": cp.get("target1"),
+                "target_2": cp.get("target2"),
+                "rr": cp.get("rr"),
+            },
+        }
+
     enter_list = [o for o in all_opportunities if o.get("smart_decision") == "ENTER"]
     wait_list  = [o for o in all_opportunities if o.get("smart_decision") == "WAIT"]
     skip_list  = [o for o in all_opportunities if o.get("smart_decision") == "SKIP"]

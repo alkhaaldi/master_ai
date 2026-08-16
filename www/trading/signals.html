@@ -509,6 +509,7 @@ let allSignals = [];
 let liveSignals = [];
 let dailySignals = [];
 let activeTF = '30m';
+let liveLayerState = null, liveLayerReason = null;
 let refreshTimer = null;
 let sortCol = 'confluence';
 let sortAsc = false;
@@ -670,8 +671,13 @@ async function fetchData(){
     ]);
     const d = r1 || {};
     /* === Store both data sources === */
-    /* 30m: use dedicated 30m endpoint (real 30m data, brain-weighted, all 128 symbols) */
-    liveSignals = (r30m && r30m.signals && r30m.signals.length > 0) ? r30m.signals : (d.all_signals || []);
+    /* 30m tab. The old line fell back to d.all_signals - DAILY data -
+       whenever the 30m endpoint came back empty, and rendered it under
+       a tab labelled 'live 30m'. That is relabelling, not a fallback.
+       The layer now declares itself and the tab shows the reason. */
+    liveSignals = (r30m && r30m.signals) ? r30m.signals : [];
+    liveLayerState  = (r30m && r30m.layer_state) || (r30m ? 'ok' : 'unreachable');
+    liveLayerReason = (r30m && r30m.layer_reason) || null;
     
     /* Build daily signals from radar_daily_context */
     const dailyCtx = r2 && r2.radar_daily_context && r2.radar_daily_context.length > 0 ? r2.radar_daily_context : [];

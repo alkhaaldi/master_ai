@@ -1296,12 +1296,52 @@ def _fetch_bridge_daily_retired(symbols: list) -> dict:
 
 
 def refresh_daily_snapshot(symbols=None, force=False):
-    """Compute daily (1D) analysis for watchlist via Bridge API, store in stock_radar_daily.
+    """Refresh stock_radar_daily. Delegates to the ONE writer (Yahoo).
 
-    Refuses while KSE is open unless force=True: a snapshot taken mid-session
-    stores intraday prices in the columns the daily tab presents as closing
-    values. The manual endpoint passes force for deliberate intraday pulls.
+    Retired as an independent writer 2026-08-16 (OPEN_ITEMS NEXT-4). Two
+    writers shared this table - this one (bridge era) and
+    _tools/backfill_daily_bars.py (Yahoo) - and only the second wrote
+    indicator_source / bars_used / coverage_pct. The damage was worse than
+    a missing tag: the old body used INSERT OR REPLACE naming 37 of the
+    table's 56 columns, so a single successful run would have silently
+    NULLed 19 populated columns - the entire liquidity census (med_vol_20,
+    liq_vol, liq_value_kwd, avg_vol_*, 127-132 rows each) and every piece
+    of G-2 evidence. It has been inert since the bridge was retired, so
+    nothing was lost; the risk was that reviving the bridge would have
+    wiped four days of work on the first run.
+
+    The five callers keep working and keep their contract shape - the
+    scheduler, kse_data_collector, the manual endpoint, verify_sunday and
+    the _tools scripts all still get {ok, errors, msg}.
     """
+    global _daily_refresh_lock
+    market_open = _market_open_safe()
+    if market_open and not force:
+        logger.warning("daily_snapshot: KSE still open - refusing (pass force=True)")
+        return {"ok": 0, "errors": 0, "msg": "market_open", "market_was_open": True}
+    if _daily_refresh_lock:
+        return {"ok": 0, "errors": 0, "msg": "refresh already running"}
+    _daily_refresh_lock = True
+    try:
+        import importlib.util, os as _os
+        _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                           "_tools", "backfill_daily_bars.py")
+        _spec = importlib.util.spec_from_file_location("_bdb", _p)
+        _mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        _mod.main()
+        return {"ok": 1, "errors": 0, "msg": "delegated to backfill_daily_bars (Yahoo)",
+                "writer": "backfill_daily_bars", "market_was_open": market_open}
+    except Exception as e:
+        logger.warning("daily_snapshot delegation failed: %r", e)
+        return {"ok": 0, "errors": 1, "msg": "delegation failed: %r" % e}
+    finally:
+        _daily_refresh_lock = False
+
+
+def _refresh_daily_snapshot_bridge_era(symbols=None, force=False):
+    """The pre-2026-08-16 bridge writer. Unreachable. Kept for the record
+    ONLY - do not call it: its INSERT OR REPLACE would NULL 19 columns."""
     global _daily_refresh_lock
     market_open = _market_open_safe()
     if market_open and not force:

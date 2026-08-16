@@ -1403,7 +1403,39 @@ def _get_bridge_data_30m_safe() -> dict:
 
 
 def build_signals_30m() -> dict:
-    """Build 30m signals from Bridge — uses Brain weights."""
+    """30m signals. The Bridge supplied this layer; it is retired (G-4).
+
+    The layer is NOT dead - G-1 measured Yahoo serving 30m for .KW: 41
+    bars over 5 sessions, tier-1 names 100% populated, thin names 65-93%.
+    So it is rebuildable locally through yahoo_gate + indicators.py, and
+    the coverage floor already knows what to do with the thin ones.
+
+    Until that is built, this returns an EMPTY list with layer_state and
+    layer_reason saying why. The one thing it must never do is let a
+    caller quietly substitute daily data - that relabelling is the exact
+    disease this phase removed everywhere else.
+    """
+    now = datetime.now()
+    result = {
+        "timeframe": "30m",
+        "market_open": _is_market_open_safe(),
+        "bridge_online": False,
+        "layer_state": "offline",
+        "layer_reason": ("the 30m layer was fed by the TradingView bridge, "
+                         "retired 2026-08-16. Yahoo does serve 30m for .KW "
+                         "(G-1), so this is rebuildable locally - it is not "
+                         "dead data, it is unbuilt. Do NOT substitute daily "
+                         "signals here."),
+        "layer_rebuildable": True,
+        "timestamp": now.strftime("%Y-%m-%dT%H:%M:%S"),
+        "signals": [],
+        "thresholds": _get_thresholds(),
+        "flags": get_trading_flags(),
+    }
+    return result
+
+
+def _build_signals_30m_bridge_era() -> dict:
     now = datetime.now()
     result = {
         "timeframe": "30m",
