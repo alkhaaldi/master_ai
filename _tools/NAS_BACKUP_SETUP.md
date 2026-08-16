@@ -144,3 +144,33 @@ one SD card.
 `master_ai/` · `--verify-restore` reports `integrity_check ok` with matching
 row counts · `quick_check` returns 15/15 · and the 03:10 and 03:30 jobs either
 succeed or no longer exist.
+
+---
+
+## OPEN ITEM — rotate the rpi_backup password (deferred by the user, 2026-08-16)
+
+The password currently in `/etc/cifs-credentials-nas` was pasted into a chat
+session twice (once as terminal output, once in a screenshot of the nano
+buffer). Treat it as disclosed.
+
+Blast radius, stated honestly: the account is `users`-group only, R/W on the
+`backups` share alone, denied Quran and every other share, no DSM and no SSH.
+So the exposure is bounded to one folder - but that folder is the off-device
+copy of everything, and whoever holds this credential can read or delete it.
+
+The user chose to finish the setup first and rotate in a later session. That
+is a legitimate call; recording it here so "I'll change it later" does not
+become the silent-failure pattern this whole phase exists to remove.
+
+**To close it:**
+1. DSM: `Control Panel → User → rpi_backup → Edit → Password` - new value,
+   never pasted into a chat or a screenshot.
+2. RPi: `sudo nano /etc/cifs-credentials-nas`, replace the `password=` line,
+   save (`Ctrl+O`, `Enter`, `Ctrl+X`).
+3. `sudo umount /mnt/nas-backups 2>/dev/null; ls /mnt/nas-backups` to force a
+   fresh automount with the new credential.
+4. `venv/bin/python3 _tools/nas_backup.py` - a green run confirms it; a failed
+   one alerts by itself now.
+
+Nothing else in the system holds this password: `mount.cifs` reads the file
+directly and `nas_backup.py` never touches it.
