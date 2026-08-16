@@ -172,6 +172,19 @@ def main():
     except Exception as _fe:
         check("falsy defaults", False, f"inventory unavailable: {_fe}")
 
+    # G-3: a shut price source must be visible here, not discovered later.
+    print("")
+    print("[Price source]")
+    try:
+        sys.path.insert(0, BASE_DIR)
+        from yahoo_gate import circuit_state as _cs
+        _st = _cs()
+        check("yahoo circuit", not _st.get("open"),
+              ("OPEN - " + str(_st.get("reason"))) if _st.get("open")
+              else f"closed, {_st.get('requests', 0)} requests, {_st.get('rate_limited', 0)} rate-limited")
+    except Exception as _se:
+        check("yahoo circuit", False, f"gate unavailable: {_se}")
+
     # ── 6. Git status ──
     print("\n[Git]")
     try:

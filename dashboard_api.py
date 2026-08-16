@@ -776,6 +776,33 @@ def _apply_price_contract(t: dict, fp: dict):
     return cur
 
 
+def _source_state() -> dict:
+    """G-3.4: the price source's own health, separate from data age.
+
+    A shut door and stale data are different failures: data can be old
+    because the market is closed (normal), or because we cannot ask
+    (blind). Collapsing them is what let April prices render as current
+    for four months.
+    """
+    try:
+        from yahoo_gate import circuit_state
+        st = circuit_state()
+    except Exception as e:
+        return {"source_state": "unknown", "source_reason": repr(e)[:120],
+                "source": "yahoo"}
+    if st.get("open"):
+        return {"source_state": "blind",
+                "source_reason": "circuit open: %s (%ss remaining)"
+                                 % (st.get("reason"), st.get("cooldown_remaining_s")),
+                "source": "yahoo"}
+    if st.get("consecutive_failures", 0) >= 2:
+        return {"source_state": "degraded",
+                "source_reason": "%d consecutive failures, last %s"
+                                 % (st["consecutive_failures"], st.get("last_failure")),
+                "source": "yahoo"}
+    return {"source_state": "ok", "source_reason": None, "source": "yahoo"}
+
+
 def _session_freshness(as_of, was_open) -> dict:
     """Session-aged freshness block (PHASE2_SECTION_D, D-4). The 999
     sentinel is dead: an age that cannot be computed is null plus a
@@ -2051,6 +2078,7 @@ def dashboard_swing():
         "scan_time": _dt.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "market_status": "open" if raw.get("market_open") else "closed",
         "bridge_online": bridge_online,
+        **_source_state(),
         "data_state": _page_state.get("data_state"),
         "data_state_ar": _page_state.get("data_state_ar"),
         "data_sessions_old": _page_state.get("sessions_old"),
