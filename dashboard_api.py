@@ -120,19 +120,31 @@ def _build_rooms_summary(states):
 # ═══════════════════════════════════════════════════
 
 def _check_bridge_health():
-    """Check if Bridge is available via service_health."""
+    """The bridge is RETIRED (G-4), so its absence is not degradation.
+
+    This used to report degraded=True / "Bridge offline" / data_source=
+    "cache" forever, which is a dead vocabulary describing a dependency
+    that no longer exists - and /dashboard/radar has 863 consumers in 26
+    hours (the D-5 counter), every one of them being told the system is
+    degraded because a retired component is not running.
+
+    Health now means the health of the source that actually serves data.
+    """
     try:
-        from service_health import get_health_hub
-        hub = get_health_hub()
-        if hub and not hub.is_up("bridge"):
-            svc = hub._services.get("bridge")
+        from yahoo_gate import circuit_state
+        st = circuit_state()
+        if st.get("open"):
             return False, {
                 "degraded": True,
-                "degraded_reason": f"Bridge offline: {svc.reason if svc else 'unknown'}",
-                "data_source": "cache",
+                "degraded_reason": "yahoo circuit open: %s" % st.get("reason"),
+                "data_source": "unavailable",
             }
-    except Exception:
-        pass
+    except Exception as e:
+        return False, {
+            "degraded": True,
+            "degraded_reason": "price source state unknown: %r" % e,
+            "data_source": "unknown",
+        }
     return True, {}
 
 
@@ -378,6 +390,11 @@ async def dashboard_jobs_list():
 async def ha_dashboard_radar():
     """Dedicated radar data for HA radar sensor -- lightweight, read-only from DB."""
     _count_endpoint_hit("/dashboard/radar")
+    # D-5 answered by evidence, not assumption: 863 hits in 26 hours (HA
+    # sensors, 120s interval). It has a heavy consumer, so it joins the
+    # contract rather than being declared dead. A live endpoint answering
+    # in a dead vocabulary is how April's numbers survived four months.
+    _contract = dict(_source_state())
     import sqlite3
     from datetime import date as _d
     data = {}
@@ -726,6 +743,27 @@ async def ha_dashboard_radar():
         logging.getLogger("master_ai").warning("dashboard/radar journal error: %s", _je)
         data["journal_open"] = []
         data["journal_stats"] = {}
+    # The contract, merged last so it cannot be shadowed by an earlier
+    # key: source / source_state / source_reason, and the session-aged
+    # data_state computed from the newest radar row. Same vocabulary as
+    # /dashboard/swing, so one payload cannot say fresh while the other
+    # says blind for the same data (D-4 reconciliation, now for the
+    # endpoint that actually has consumers).
+    try:
+        import sqlite3 as _sq6
+        from price_source import classify_data_state as _cds
+        _c6 = _sq6.connect("data/life.db", timeout=3)
+        _mx6 = _c6.execute("SELECT MAX(captured_at) FROM stock_radar_daily").fetchone()[0]
+        _c6.close()
+        _ds6 = _cds(_mx6)
+        _contract.update(data_state=_ds6["data_state"],
+                         data_state_ar=_ds6["data_state_ar"],
+                         data_sessions_old=_ds6["sessions_old"])
+    except Exception as _e6:
+        _contract.update(data_state="unknown", data_state_ar=None,
+                         data_sessions_old=None,
+                         data_state_reason=repr(_e6)[:120])
+    data.update(_contract)
     return data
 
 

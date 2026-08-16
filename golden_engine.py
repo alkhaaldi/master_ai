@@ -40,7 +40,13 @@ def build_live_atoms(live: dict) -> set:
         _rsi_raw = live.get("rsi")
     rsi = float(_rsi_raw) if _rsi_raw is not None else None
     vol        = float(live.get("vol_ratio") or 0)
-    adx        = float(live.get("adx") or 0)
+    # `or 0` minted the atom adx_lt_20 ("weak trend") out of a MISSING
+    # ADX: 0 is below every threshold, so absence voted for weakness.
+    # Same family as rsi/stoch `or 99`, same fix - absence produces no
+    # atom at all, because an atom set says "not measured" by having
+    # nothing to say (OPEN_ITEMS 3).
+    _adx_raw = live.get("adx")
+    adx = float(_adx_raw) if _adx_raw is not None else None
     _stoch_raw = live.get("stoch_k")
     stoch = float(_stoch_raw) if _stoch_raw is not None else None
     macd_state = str(live.get("macd_state") or live.get("macd_cross") or "").lower()
@@ -65,8 +71,9 @@ def build_live_atoms(live: dict) -> set:
     if "bullish" in ema_state: atoms.add("ema_bullish")
     if "bearish" in ema_state: atoms.add("ema_bearish")
 
-    if adx >= 25: atoms.add("adx_ge_25")
-    if adx < 20:  atoms.add("adx_lt_20")
+    if adx is not None:
+        if adx >= 25: atoms.add("adx_ge_25")
+        if adx < 20:  atoms.add("adx_lt_20")
 
     if vol >= 1.5: atoms.add("vol_ge_1_5")
     if vol >= 2.0: atoms.add("vol_ge_2")
