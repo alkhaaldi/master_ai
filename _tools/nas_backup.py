@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
-"""F-1: back up life.db to the NAS - sqlite3 backup API, never cp.
+"""F-1: back up life.db to the NAS over CIFS - no SSH on the NAS at all.
 
-Copying a live SQLite file mid-write produces a corrupt snapshot that
-restores silently and fails later: this project's disease in backup form.
-The backup API takes a consistent snapshot while the service keeps writing.
+Transport redesigned by user decision 2026-08-16: the NAS stays closed
+(no DSM SSH, no admin credentials on this exposed machine). The RPi
+mounts //192.168.109.45/backups with the dedicated low-privilege user
+rpi_backup (users group, R/W on that share alone), credentials in
+/etc/cifs-credentials-nas mode 600, written by the user himself.
 
-Path: RPi -> ssh nas (svc-claude@HOMECLOUD). Target dir is NAS_BACKUP_DIR
-(env) or the default below - confirmed with the user before first use.
-Keeps the newest 14, gzipped. Every run lands in data_fetch_runs
-(source=nas_backup) through run_witness; failure alerts Telegram.
+The snapshot is taken on the RPi with the sqlite3 backup API - never cp
+on the LIVE db; copying the finished gz onto the mount is fine because
+the gz is already a consistent, closed file. Keeps the newest 14.
+Every run lands in data_fetch_runs (source=nas_backup); failures alert
+Telegram; quick_check turns red past 24h.
 
-  --verify-restore : pull the newest backup, restore to scratch, run
-                     PRAGMA integrity_check and compare row counts with
-                     the live DB. A backup never restored is a hope.
+  --verify-restore : restore the newest backup to scratch, run
+                     PRAGMA integrity_check, compare row counts.
 """
 import gzip
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -27,14 +30,31 @@ sys.path.insert(0, "/home/pi/master_ai/_tools")
 import run_witness
 
 DB = "/home/pi/master_ai/data/life.db"
-NAS_DIR = os.environ.get("NAS_BACKUP_DIR", "/volume1/backups/master_ai")
+NAS_HOST = "192.168.109.45"
+SHARE = "backups"
+CREDS = "/etc/cifs-credentials-nas"
+MOUNT = "/mnt/nas_backups"
+SUBDIR = "master_ai"          # -> /volume1/backups/master_ai on the NAS
 KEEP = 14
 SOURCE = "nas_backup"
 
 
-def _nas(cmd, inp=None, timeout=300):
-    return subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-                           "nas", cmd], input=inp, capture_output=True, timeout=timeout)
+def ensure_mounted():
+    """Mount on demand, idempotent. sudo is passwordless for pi; the
+    credentials file itself is root-owned 600 - the mount helper reads
+    it, this process never sees the password."""
+    if os.path.ismount(MOUNT):
+        return
+    if not os.path.exists(CREDS):
+        raise RuntimeError("credentials file %s does not exist yet" % CREDS)
+    subprocess.run(["sudo", "mkdir", "-p", MOUNT], check=True)
+    r = subprocess.run(
+        ["sudo", "mount", "-t", "cifs", "//%s/%s" % (NAS_HOST, SHARE), MOUNT,
+         "-o", "credentials=%s,uid=pi,gid=pi,vers=3.0,iocharset=utf8" % CREDS],
+        capture_output=True, timeout=30)
+    if r.returncode != 0:
+        raise RuntimeError("cifs mount failed: %s"
+                           % r.stderr.decode(errors="replace").strip()[:250])
 
 
 def make_backup():
@@ -42,9 +62,12 @@ def make_backup():
     stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     tmp_db = "/tmp/life_backup_%s.db" % stamp
     tmp_gz = tmp_db + ".gz"
-    remote = "%s/life_%s.db.gz" % (NAS_DIR, stamp)
     try:
-        # consistent snapshot via the backup API
+        ensure_mounted()
+        dest_dir = os.path.join(MOUNT, SUBDIR)
+        os.makedirs(dest_dir, exist_ok=True)
+
+        # consistent snapshot of the live db via the backup API
         src = sqlite3.connect(DB, timeout=30)
         dst = sqlite3.connect(tmp_db)
         src.backup(dst)
@@ -55,23 +78,28 @@ def make_backup():
                 f_out.write(chunk)
         size = os.path.getsize(tmp_gz)
 
-        r = _nas("mkdir -p %s && cat > %s.part && mv %s.part %s && gzip -t %s && stat -c%%s %s"
-                 % (NAS_DIR, remote, remote, remote, remote, remote),
-                 inp=open(tmp_gz, "rb").read())
-        if r.returncode != 0:
-            raise RuntimeError("nas transfer/verify failed: %s"
-                               % r.stderr.decode(errors="replace").strip()[:300])
-        remote_size = int(r.stdout.decode().strip().splitlines()[-1])
-        if remote_size != size:
-            raise RuntimeError("size mismatch local %d vs nas %d" % (size, remote_size))
+        dest = os.path.join(dest_dir, "life_%s.db.gz" % stamp)
+        shutil.copyfile(tmp_gz, dest + ".part")
+        os.replace(dest + ".part", dest)
+
+        # verify what actually landed on the NAS: size + gzip integrity
+        landed = os.path.getsize(dest)
+        if landed != size:
+            raise RuntimeError("size mismatch local %d vs nas %d" % (size, landed))
+        with gzip.open(dest, "rb") as f:
+            while f.read(1 << 20):
+                pass
 
         # prune to the newest KEEP
-        _nas("cd %s && ls -1t life_*.db.gz 2>/dev/null | tail -n +%d | xargs -r rm --"
-             % (NAS_DIR, KEEP + 1))
+        files = sorted(f for f in os.listdir(dest_dir)
+                       if f.startswith("life_") and f.endswith(".db.gz"))
+        for old in files[:-KEEP]:
+            os.remove(os.path.join(dest_dir, old))
 
         dur = time.time() - t0
         run_witness.log_run(SOURCE, "success", 1, 1, dur, None)
-        print("backup ok: %s (%d bytes, %.1fs)" % (remote, size, dur))
+        print("backup ok: %s (%d bytes, %.1fs, kept %d)"
+              % (dest, size, dur, min(len(files), KEEP)))
         return True
     except Exception as e:
         run_witness.log_run(SOURCE, "failed", 0, 1, time.time() - t0, str(e)[:300])
@@ -85,46 +113,37 @@ def make_backup():
 
 
 def verify_restore():
-    r = _nas("ls -1t %s/life_*.db.gz | head -1" % NAS_DIR)
-    newest = r.stdout.decode().strip()
-    if r.returncode != 0 or not newest:
-        print("verify FAILED: no backup found on nas (%s)"
-              % r.stderr.decode(errors="replace").strip()[:200])
+    ensure_mounted()
+    dest_dir = os.path.join(MOUNT, SUBDIR)
+    files = sorted(f for f in os.listdir(dest_dir)
+                   if f.startswith("life_") and f.endswith(".db.gz"))
+    if not files:
+        print("verify FAILED: no backup on the share")
         return False
+    newest = os.path.join(dest_dir, files[-1])
     print("newest on nas:", newest)
-    r = _nas("cat %s" % newest, timeout=600)
-    if r.returncode != 0:
-        print("verify FAILED: pull failed")
-        return False
-    scratch_gz = "/tmp/restore_check.db.gz"
     scratch_db = "/tmp/restore_check.db"
-    with open(scratch_gz, "wb") as f:
-        f.write(r.stdout)
-    with gzip.open(scratch_gz, "rb") as f_in, open(scratch_db, "wb") as f_out:
-        while chunk := f_in.read(1 << 20):
-            f_out.write(chunk)
     try:
+        with gzip.open(newest, "rb") as f_in, open(scratch_db, "wb") as f_out:
+            while chunk := f_in.read(1 << 20):
+                f_out.write(chunk)
         rc = sqlite3.connect(scratch_db)
         integ = rc.execute("PRAGMA integrity_check").fetchone()[0]
-        live = sqlite3.connect("file:%s?mode=ro" % DB, uri=True)
         print("integrity_check:", integ)
+        live = sqlite3.connect("file:%s?mode=ro" % DB, uri=True)
         for t in ("trades", "signal_snapshots", "stock_radar_daily", "confidence_census"):
             a = rc.execute("SELECT COUNT(*) FROM %s" % t).fetchone()[0]
             b = live.execute("SELECT COUNT(*) FROM %s" % t).fetchone()[0]
             print("  %-20s restored=%-7d live=%-7d %s"
-                  % (t, a, b, "match" if a == b else "differs (live moved on - fine if small)"))
+                  % (t, a, b, "match" if a == b else "differs (live moved on)"))
         rc.close()
         live.close()
         return integ == "ok"
     finally:
-        for p in (scratch_gz, scratch_db):
-            if os.path.exists(p):
-                os.remove(p)
+        if os.path.exists(scratch_db):
+            os.remove(scratch_db)
 
 
 if __name__ == "__main__":
-    if "--verify-restore" in sys.argv:
-        ok = verify_restore()
-    else:
-        ok = make_backup()
+    ok = verify_restore() if "--verify-restore" in sys.argv else make_backup()
     sys.exit(0 if ok else 1)
