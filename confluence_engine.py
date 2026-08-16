@@ -198,9 +198,15 @@ def _discovery_checks(row):
     macd_above = row.get("macd_above_zero", False)
     checks["macd_turn"] = histogram > 0 or (histogram > -0.5 and not macd_above)
 
-    # Check 3: RSI recovery — wider range than confirmation (35-75)
-    rsi = float(row.get("rsi") or 50)
-    checks["rsi_recovery"] = 35 < rsi < 75
+    # Check 3: RSI recovery — wider range than confirmation (35-75).
+    # `or 50` put an unmeasured stock at the exact centre of the passing
+    # band, so a missing RSI PASSED this check. None now propagates and the
+    # check is False with the reason recorded separately: not measured is
+    # not the same as measured-and-failed, and the count must not reward it.
+    _rsi_raw = row.get("rsi")
+    rsi = float(_rsi_raw) if _rsi_raw is not None else None
+    checks["rsi_measured"] = rsi is not None
+    checks["rsi_recovery"] = (35 < rsi < 75) if rsi is not None else False
 
     # Check 4: Near support — price within 5% above support
     price = float(row.get("price") or 0)

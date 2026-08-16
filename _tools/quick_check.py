@@ -150,6 +150,28 @@ def main():
         check("backup ages", False, f"witness unavailable: {_be}")
 
 
+    # Numeric falsy-default ratchet. A new `or 50` or `if x else 40` in a
+    # decision path is a new way for an absent reading to become a
+    # confident one - the family behind confluence 0, updated_at "",
+    # avg_volume 0 and rsi 50. Rising is a FAIL; falling is progress and
+    # should be committed with a lowered baseline.
+    print("")
+    print("[Falsy defaults]")
+    try:
+        import json as _json, importlib.util as _ilu
+        _bl = _json.load(open(os.path.join(BASE_DIR, "_tools", "falsy_baseline.json")))
+        _spec = _ilu.spec_from_file_location(
+            "fdi", os.path.join(BASE_DIR, "_tools", "falsy_defaults_inventory.py"))
+        _m = _ilu.module_from_spec(_spec); _spec.loader.exec_module(_m)
+        _d, _o = _m.counts()
+        _bd, _bo = _bl["decision_path"], _bl["other"]
+        check("decision-path falsy defaults", _d <= _bd,
+              f"{_d} vs baseline {_bd}" + (" - NEW ONES ADDED" if _d > _bd
+              else " - lowered, update the baseline" if _d < _bd else ""))
+        check("other falsy defaults", _o <= _bo, f"{_o} vs baseline {_bo}")
+    except Exception as _fe:
+        check("falsy defaults", False, f"inventory unavailable: {_fe}")
+
     # ── 6. Git status ──
     print("\n[Git]")
     try:

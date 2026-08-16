@@ -30,10 +30,19 @@ def _conn():
 def build_live_atoms(live: dict) -> set:
     """Convert live indicator data into atom set."""
     atoms = set()
-    rsi        = float(live.get("rsi_14") or live.get("rsi") or 99)
+    # `or 99` was the worst default in the inventory: 99 is not a neutral
+    # placeholder, it is MAXIMUM OVERBOUGHT, so a stock with no RSI was
+    # scored as if it were at the top of its range - an absent measurement
+    # voting against the stock. The `or` between the two key names stays:
+    # that is an alias chain choosing which field carries the number.
+    _rsi_raw = live.get("rsi_14")
+    if _rsi_raw is None:
+        _rsi_raw = live.get("rsi")
+    rsi = float(_rsi_raw) if _rsi_raw is not None else None
     vol        = float(live.get("vol_ratio") or 0)
     adx        = float(live.get("adx") or 0)
-    stoch      = float(live.get("stoch_k") or 99)
+    _stoch_raw = live.get("stoch_k")
+    stoch = float(_stoch_raw) if _stoch_raw is not None else None
     macd_state = str(live.get("macd_state") or live.get("macd_cross") or "").lower()
     ema_state  = str(live.get("ema_state") or live.get("daily_ema_cross") or "").lower()
     bb_squeeze = live.get("bb_squeeze")
@@ -43,9 +52,12 @@ def build_live_atoms(live: dict) -> set:
     resistance = float(live.get("resistance") or 0)
     atr        = float(live.get("atr_14") or live.get("atr") or 0)
 
-    if rsi < 30:           atoms.add("rsi_lt_30")
-    if 30 <= rsi < 45:     atoms.add("rsi_30_45")
-    if rsi > 70:           atoms.add("rsi_gt_70")
+    # No RSI -> no RSI atom. An atom set says "not measured" natively by
+    # having nothing to say, which is why this needs no placeholder at all.
+    if rsi is not None:
+        if rsi < 30:       atoms.add("rsi_lt_30")
+        if 30 <= rsi < 45: atoms.add("rsi_30_45")
+        if rsi > 70:       atoms.add("rsi_gt_70")
 
     if "bullish" in macd_state: atoms.add("macd_bullish")
     if "bearish" in macd_state: atoms.add("macd_bearish")
@@ -59,8 +71,9 @@ def build_live_atoms(live: dict) -> set:
     if vol >= 1.5: atoms.add("vol_ge_1_5")
     if vol >= 2.0: atoms.add("vol_ge_2")
 
-    if stoch < 20: atoms.add("stoch_lt_20")
-    if stoch > 80: atoms.add("stoch_gt_80")
+    if stoch is not None:
+        if stoch < 20: atoms.add("stoch_lt_20")
+        if stoch > 80: atoms.add("stoch_gt_80")
 
     if bb_squeeze: atoms.add("bb_squeeze")
 

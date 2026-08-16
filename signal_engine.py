@@ -962,9 +962,15 @@ def swing_confluence(symbol: str, sig: dict, daily_trend: dict) -> dict:
     else:
         blockers.append(f"ADX:{adx:.0f}(<25)")
 
-    # 4. RSI < 50 filter (not as a signal — just avoid overbought)
-    rsi = sig.get("rsi_14") or 50
-    if rsi < 30:
+    # 4. RSI < 50 filter (not as a signal — just avoid overbought).
+    # `or 50` sent an unmeasured stock down the else-branch and posted a
+    # fabricated "RSI:50(>50)" blocker against it. None propagates now:
+    # no score either way, and the gap is stated as itself.
+    rsi = sig.get("rsi_14")
+    rsi_measured = rsi is not None
+    if not rsi_measured:
+        blockers.append("RSI:unmeasured")
+    elif rsi < 30:
         score += 15
         factors.append(f"RSI:{rsi:.0f}(oversold)")
     elif rsi < 50:

@@ -100,8 +100,24 @@ def compute_entry_status(opp: dict, profile: dict) -> dict:
     reasons    = []
     in_zone    = entry_low <= price <= entry_high
     vol_ok     = float(opp.get("current_vol") or opp.get("vol_ratio") or 0) >= 1.2
-    stoch      = float(opp.get("current_stoch") or opp.get("stoch_k") or 50)
-    rsi        = float(opp.get("current_rsi")   or opp.get("rsi_14") or opp.get("rsi") or 50)
+    # `or 50` on both: an unmeasured stock was handed the neutral midpoint,
+    # which is a legitimate reading on this scale, so nothing downstream
+    # could tell the two apart. None propagates; the *_measured flags travel
+    # with the values for any caller that needs to know why a rule was
+    # skipped. The remaining `or` chains are key ALIASES, not value
+    # defaults - they pick which field carries the number, and the first
+    # non-None wins.
+    def _first(*keys):
+        for k in keys:
+            v = opp.get(k)
+            if v is not None:
+                return float(v)
+        return None
+
+    stoch = _first("current_stoch", "stoch_k")
+    rsi = _first("current_rsi", "rsi_14", "rsi")
+    stoch_measured = stoch is not None
+    rsi_measured = rsi is not None
     confidence = float(opp.get("confidence") or 0)
 
     # ─── Decision logic ────────────────────────────────────────
@@ -120,9 +136,9 @@ def compute_entry_status(opp: dict, profile: dict) -> dict:
     if in_zone and vol_ok and rr >= 1.8 and confidence >= 75:
         reasons.append("السعر داخل منطقة الدخول")
         reasons.append("الحجم يؤكد")
-        if stoch < 30:
+        if stoch_measured and stoch < 30:
             reasons.append("Stoch متشبع بيعياً — ارتداد متوقع")
-        if rsi < 35:
+        if rsi_measured and rsi < 35:
             reasons.append("RSI متشبع بيعياً")
         reasons.append("R/R {:.1f}x ممتاز".format(rr))
         return _status("enter_now", 90, reasons, trade_plan)

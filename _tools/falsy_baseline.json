@@ -1,0 +1,18 @@
+{
+ "decision_path": 211,
+ "other": 228,
+ "measured_at": "2026-08-16",
+ "note": "Ratchet, not a target. quick_check FAILS when either number rises: a new numeric falsy-default in a decision path is a new way for an absent reading to become a confident one. Lower it deliberately, never raise it silently.",
+ "history": [
+  {
+   "date": "2026-08-16",
+   "decision_path": 218,
+   "note": "first inventory"
+  },
+  {
+   "date": "2026-08-16",
+   "decision_path": 211,
+   "note": "rsi/stoch family: None propagates + measured flags"
+  }
+ ]
+}

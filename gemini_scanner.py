@@ -322,7 +322,9 @@ class GeminiScanner:
 
         for stock in active_stocks:
             sym = stock["symbol"]
-            rsi = stock.get("rsi", 50) or 50
+            # None propagates; the momentum block below tests the flag.
+            rsi = stock.get("rsi")
+            rsi_measured = rsi is not None
             adx = stock.get("adx", 0) or 0
             vol_ratio = stock.get("vol_ratio", 1.0) or 1.0
             stoch = stock.get("stoch_k", 50) or 50
@@ -375,9 +377,16 @@ class GeminiScanner:
             # Volume score
             vol_score = min(vol_ratio * 30, 100) if vol_ratio else 30
 
-            # RSI momentum (30-70 is neutral, <30 oversold bounce, >70 overbought risk)
+            # RSI momentum (30-70 is neutral, <30 oversold bounce, >70
+            # overbought risk). An unmeasured RSI keeps the structural
+            # midpoint of 50 for the weighted sum - the sum needs a number -
+            # but it is now reached ONLY through the explicit unmeasured
+            # branch, so it is a declared placeholder rather than a reading
+            # that arrived by accident.
             momentum_score = 50
-            if 30 <= rsi <= 50:
+            if not rsi_measured:
+                pass          # 50 stands for "no momentum evidence"
+            elif 30 <= rsi <= 50:
                 momentum_score = 60 + (50 - rsi)  # oversold recovery zone
             elif 50 < rsi <= 70:
                 momentum_score = 55 + (rsi - 50) * 0.5  # strength zone
