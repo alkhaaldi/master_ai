@@ -111,6 +111,7 @@ tr:last-child td{border-bottom:0}
   <div class="head">
     <h1>قرارات الدخول</h1>
     <span class="sub" id="scanSub">جارٍ التحميل…</span>
+    <span class="sub" id="sessNote"></span>
     <span class="grow"></span>
     <button class="btn" id="rf" onclick="load()">تحديث</button>
   </div>
@@ -132,6 +133,12 @@ tr:last-child td{border-bottom:0}
   <div class="pulse" id="pulse">
     <div><div class="lbl">أعلى الفرص المرصودة</div>
       <div class="none">جارٍ التحميل…</div></div>
+  </div>
+
+  <!-- 3.5 هل كانت صحيحة؟ الثقة وقتها مقابل ما حدث فعلاً -->
+  <div class="sec">
+    <h2>هل كانت صحيحة؟ <span class="hint" id="verdictHint"></span></h2>
+    <div class="bd" id="verdictWrap"><div class="empty">جارٍ القراءة…</div></div>
   </div>
 
   <!-- 4. البطاقات -->
@@ -268,12 +275,122 @@ function stopCell(o){
          (src ? '<br><span class="tag">' + esc(src) + '</span>' : '');
 }
 
-/* ---- الشروط المتحققة: وقائع، لا أوزان ---- */
-function atomsCell(o){
-  const a = Array.isArray(o.live_atoms) ? o.live_atoms.slice(0, 5) : [];
-  if (!a.length) return '<span class="muted">—</span>';
-  const more = (o.live_atoms.length > 5) ? '<span class="tag">+' + (o.live_atoms.length - 5) + '</span>' : '';
-  return a.map(x => '<span class="tag">' + esc(x) + '</span>').join('') + more;
+/* ---- النمط: عربي أولاً، والذرات الخام تفصيل ثانوي ---- */
+function patternCell(o){
+  const out = [];
+  if (has(o.pattern_ar))
+    out.push('<div style="color:var(--txt);font-size:13px;line-height:1.5">' + esc(o.pattern_ar) + '</div>');
+  const a = Array.isArray(o.live_atoms) ? o.live_atoms : [];
+  if (a.length){
+    const show = a.slice(0, 4).map(x => '<span class="tag">' + esc(x) + '</span>').join('');
+    const more = a.length > 4 ? '<span class="tag">+' + (a.length - 4) + '</span>' : '';
+    out.push('<div style="margin-top:3px;opacity:.72">' + show + more + '</div>');
+  }
+  return out.length ? out.join('') : '<span class="muted">—</span>';
+}
+
+/* ---- خطة الصفقة: من chosen_plan وحده، كما فعلنا بالوقف ---- */
+function planCell(o){
+  const cp = o.chosen_plan || {};
+  if (!has(cp.entry) && !has(cp.target1)) return '<span class="muted">—</span>';
+  const bits = [];
+  if (has(cp.entry))   bits.push('دخول <span class="m">' + num(cp.entry, 1) + '</span>');
+  if (has(cp.target1)) bits.push('هدف١ <span class="m up">' + num(cp.target1, 1) + '</span>');
+  if (has(cp.target2)) bits.push('هدف٢ <span class="m up">' + num(cp.target2, 1) + '</span>');
+  if (has(cp.rr))      bits.push('R/R <span class="m">' + num(cp.rr, 2) + '</span>');
+  return bits.join('<br>');
+}
+
+/* ---- هل كانت صحيحة؟ ----
+   الاختبار الوحيد الصادق: الثقة المعلنة وقت القرار مقابل ما حدث بعده.
+   إن لم تفرّق الثقة بين الناجح والفاشل، فهي رقم لا يحمل معلومة. ---- */
+const RESULT_AR = {
+  success:  ['نجح',        'up'],
+  fail:     ['فشل',        'down'],
+  partial:  ['جزئي',       'warn'],
+  ongoing:  ['قائم',       'muted'],
+  no_data:  ['بلا بيانات', 'muted'],
+  ungraded: ['بلا قياس',   'muted']
+};
+
+function renderPastCalls(rv){
+  const w = $('verdictWrap');
+  const rows = (rv && Array.isArray(rv.reviews)) ? rv.reviews : [];
+  const lt = rv && rv.lifetime ? rv.lifetime : null;
+
+  if (!rows.length){
+    w.innerHTML = '<div class="empty">لا قرارات مقيَّمة معروضة.<br>' +
+      'الخادم يرجّع شريحة يوم واحد فقط — ينقص الحقل ' +
+      '<span class="chip">reviews.recent</span> ليُعرض آخر ما قِيس عبر التواريخ.</div>';
+    $('verdictHint').textContent = '';
+    return;
+  }
+
+  /* معايرة: هل الثقة تفصل الناجح عن الفاشل؟ */
+  const wins = rows.filter(r => r.result === 'success' && has(r.confidence));
+  const loss = rows.filter(r => r.result === 'fail'    && has(r.confidence));
+  const avg  = a => a.length ? a.reduce((s, r) => s + Number(r.confidence), 0) / a.length : null;
+  const cw = avg(wins), cl = avg(loss);
+
+  let calib = '';
+  if (cw !== null && cl !== null){
+    const gap = cw - cl;
+    calib = 'متوسط الثقة عند النجاح <span class="m up">' + num(cw, 1) + '</span> ' +
+            'مقابل <span class="m down">' + num(cl, 1) + '</span> عند الفشل — ' +
+            (Math.abs(gap) < 3
+              ? '<span class="warn">الفرق ضئيل: الثقة لا تكاد تميّز الناجح من الفاشل.</span>'
+              : (gap > 0 ? 'الثقة تميل في الاتجاه الصحيح، والعيّنة صغيرة.'
+                         : '<span class="down">الثقة أعلى في الصفقات الفاشلة — إشارة معكوسة.</span>'));
+  } else {
+    calib = 'لا تكفي النتائج المحسومة لقياس معايرة الثقة بعد.';
+  }
+
+  $('verdictHint').textContent = 'المصدر: signal_reviews' +
+    (has(rv.date) ? ' — ' + rv.date : '');
+
+  let h = '<div style="font-size:12.5px;color:var(--txt-2);margin:2px 0 12px;line-height:1.7">' +
+          calib + '</div>' +
+          '<table><thead><tr><th>الرمز</th><th>الثقة وقتها</th><th>دخول / وقف / هدف</th>' +
+          '<th>ما حدث فعلاً</th><th>النتيجة</th><th>الأقصى ربحاً / خسارة</th>' +
+          '<th>الدرس</th></tr></thead><tbody>';
+
+  rows.forEach(r => {
+    const res = RESULT_AR[r.result] || [esc(r.result || '—'), 'muted'];
+    const pnl = has(r.pnl_pct) ? Number(r.pnl_pct) : null;
+    h += '<tr>' +
+      '<td><span class="sym">' + esc(r.symbol) + '</span>' +
+        (has(r.market_date) ? '<br><span class="tag">' + esc(r.market_date) + '</span>' : '') +
+        (r.graded_mode && r.graded_mode !== 'live'
+          ? '<span class="tag">' + esc(r.graded_mode) + '</span>' : '') + '</td>' +
+      '<td><span class="m">' + num(r.confidence, 1) + '</span></td>' +
+      '<td style="font-size:12px"><span class="m">' + num(r.entry_price, 1) + '</span> / ' +
+        '<span class="m down">' + num(r.stop_price, 1) + '</span> / ' +
+        '<span class="m up">' + num(r.target_1, 1) + '</span></td>' +
+      '<td style="font-size:12px">أعلى <span class="m">' + num(r.next_day_high, 1) + '</span>' +
+        '<br>أدنى <span class="m">' + num(r.next_day_low, 1) + '</span>' +
+        '<br>إغلاق <span class="m">' + num(r.next_day_close, 1) + '</span></td>' +
+      '<td><span class="' + res[1] + '" style="font-weight:700">' + res[0] + '</span>' +
+        (pnl === null ? '' : '<br><span class="m ' + (pnl >= 0 ? 'up' : 'down') + '">' +
+          num(pnl, 2) + '%</span>') +
+        (r.hit_target_1 ? '<br><span class="tag">بلغ الهدف</span>' : '') +
+        (r.hit_stop ? '<br><span class="tag">ضرب الوقف</span>' : '') + '</td>' +
+      '<td style="font-size:12px"><span class="m up">' + num(r.max_favorable, 1) + '%</span>' +
+        '<br><span class="m down">' + num(r.max_adverse, 1) + '%</span></td>' +
+      '<td style="font-size:12px;color:var(--txt-2)">' +
+        (has(r.lesson_ar) ? esc(r.lesson_ar) : '<span class="muted">—</span>') +
+        (has(r.error_type) && r.error_type !== 'none'
+          ? '<br><span class="tag">' + esc(r.error_type) + '</span>' : '') + '</td>' +
+    '</tr>';
+  });
+  h += '</tbody></table>';
+
+  if (lt && has(lt.graded_total) && rows.length < lt.graded_total){
+    h += '<div class="note" style="color:var(--txt-3);font-size:11.5px;margin-top:9px">' +
+         'معروض ' + rows.length + ' من ' + lt.graded_total + ' قراراً مقيَّماً — ' +
+         'الخادم يرجّع شريحة يوم واحد. الحقل <span class="m">reviews.recent</span> ' +
+         'يعرض الباقي عبر التواريخ.</div>';
+  }
+  w.innerHTML = h;
 }
 
 /* ---- الرسم الرئيسي ---- */
@@ -297,6 +414,7 @@ function render(d, rv){
   $('scanSub').textContent = 'مسح ' + (has(d.total_scanned) ? d.total_scanned : '—') + ' سهماً';
 
   renderRecord(rv);
+  renderPastCalls(rv);
 
   /* أعلى فرصة — وقائع فقط، بلا ثقة ولا حكم */
   const p = $('pulse');
@@ -310,15 +428,15 @@ function render(d, rv){
     p.innerHTML =
       '<div><div class="lbl">أعلى الفرص المرصودة</div>' +
         '<div class="sym">' + esc(o.symbol) + '</div>' +
-        '<div class="co">' + esc(o.sector || '') + '</div></div>' +
+        '<div class="co">' + esc(o.name_ar || o.sector || '') + '</div></div>' +
       '<div><div class="lbl">السعر</div><div class="sym">' + num(o.price, 1) + '</div>' +
         (ch === null ? '' : '<div class="co ' + (ch >= 0 ? 'up' : 'down') + '">' +
           '<span class="m">' + num(ch, 2) + '%</span> آخر إغلاق</div>') + '</div>' +
       '<div><div class="lbl">الوقف المعتمد</div><div class="co" style="font-size:15px">' +
         stopCell(o) + '</div></div>' +
       '<div class="grow"></div>' +
-      '<div style="max-width:290px"><div class="lbl">الشروط المتحققة</div>' +
-        '<div>' + atomsCell(o) + '</div></div>';
+      '<div style="max-width:300px"><div class="lbl">النمط</div>' +
+        '<div>' + patternCell(o) + '</div></div>';
   }
 
   /* البطاقات */
@@ -340,34 +458,43 @@ function render(d, rv){
       'هذا غياب فرص، لا غياب بيانات — الحالة أعلاه سليمة.</div>';
   } else {
     let h = '<table><thead><tr><th>الرمز</th><th>السعر</th><th>التغير</th>' +
-            '<th>الوقف المعتمد</th><th>دعم / مقاومة</th><th>السيولة</th>' +
-            '<th>الشروط المتحققة</th></tr></thead><tbody>';
+            '<th>الوقف المعتمد</th><th>خطة الصفقة</th><th>دعم / مقاومة</th><th>السيولة</th>' +
+            '<th>النمط والشروط</th></tr></thead><tbody>';
     opps.forEach(o => {
       const ch = has(o.change_pct) ? Number(o.change_pct) : null;
       h += '<tr>' +
         '<td><span class="sym">' + esc(o.symbol) + '</span>' +
+          (has(o.name_ar) ? '<br><span style="font-size:12px;color:var(--txt-2)">' + esc(o.name_ar) + '</span>' : '') +
           (has(o.sector) ? '<br><span class="tag">' + esc(o.sector) + '</span>' : '') + '</td>' +
         '<td><span class="m">' + num(o.price, 1) + '</span></td>' +
         '<td>' + (ch === null ? '<span class="muted">—</span>' :
           '<span class="m ' + (ch >= 0 ? 'up' : 'down') + '">' + num(ch, 2) + '%</span>') + '</td>' +
         '<td>' + stopCell(o) + '</td>' +
+        '<td style="font-size:12.5px;line-height:1.7">' + planCell(o) + '</td>' +
         '<td><span class="m">' + num(o.key_support, 1) + '</span> / ' +
             '<span class="m">' + num(o.key_resistance, 1) + '</span></td>' +
         '<td>' + (has(o.max_position_kwd)
             ? '<span class="m">' + o.max_position_kwd + '</span>' : '<span class="muted">—</span>') + '</td>' +
-        '<td>' + atomsCell(o) + '</td>' +
+        '<td>' + patternCell(o) + '</td>' +
       '</tr>';
     });
     w.innerHTML = h + '</tbody></table>';
   }
 
   renderSuspended(opps);
+  const tpWarn = opps.some(o => o.trade_plan && o.chosen_plan &&
+                            has(o.trade_plan.target_1) && has(o.chosen_plan.target1) &&
+                            Math.abs(o.trade_plan.target_1 - o.chosen_plan.target1) > 0.01);
   $('foot').innerHTML =
-    'المصدر: <span class="m">' + API + '</span> — تحديث يدوي فقط.<br>' +
+    'المصدر: <span class="m">' + API + '</span><br>' +
+    'آخر جلب: <span class="m">' + lastFetch + '</span> · ' +
     'وقت التوليد: <span class="m">' + esc(d.generated_at || '—') + '</span> ' +
     '<span class="muted">(بلا منطقة زمنية معلنة — بند E-4)</span><br>' +
-    'الوقف المعروض هو <span class="m">chosen_plan.stop</span> وحده؛ ' +
-    'المرشحات الأخرى تشخيصية في <span class="m">stop_candidates</span>.';
+    'الوقف وخطة الصفقة كلاهما من <span class="m">chosen_plan</span> وحده؛ ' +
+    'مرشحات الوقف الأخرى تشخيصية في <span class="m">stop_candidates</span>.' +
+    (tpWarn ? '<br><span class="warn">تنبيه: <span class="m">trade_plan</span> يحمل أهدافاً مختلفة ' +
+              'عن <span class="m">chosen_plan</span> في الحمولة نفسها — تكرار لم يُوحَّد بعد ' +
+              '(نفس علة الوقوف الثلاثة قبل E-2). المعروض هنا هو chosen_plan.</span>' : '');
 }
 
 function card(lbl, val, note, txt){
@@ -379,13 +506,14 @@ function card(lbl, val, note, txt){
 
 /* ---- المقاييس المعلّقة: كل رقم مشتق من hit/miss خلف باب واحد ---- */
 const SUSPENDED_FIELDS = [
-  ['confidence',      'الثقة'],
-  ['win_rate',        'نسبة النجاح'],
-  ['pattern_score',   'درجة النمط'],
-  ['baseline_wr',     'خط الأساس'],
-  ['entry_score',     'درجة الدخول'],
-  ['smart_decision',  'القرار الذكي'],
-  ['entry_status',    'حالة الدخول']
+  ['confidence',       'الثقة'],
+  ['win_rate',         'نسبة النجاح'],
+  ['pattern_score',    'درجة النمط'],
+  ['baseline_wr',      'خط الأساس'],
+  ['entry_score',      'درجة الدخول'],
+  ['smart_decision_ar','القرار الذكي'],
+  ['entry_status_ar',  'حالة الدخول'],
+  ['personality_ar',   'شخصية السهم']
 ];
 
 function renderSuspended(opps){
@@ -419,7 +547,34 @@ function renderSuspended(opps){
   $('suspBody').innerHTML = h;
 }
 
-/* ---- التحميل: يدوي فقط. الحركة التلقائية توهم بالطزاجة. ---- */
+/* ---- التحميل ----
+   تلقائي أثناء الجلسة فقط (أحد-خميس 09:00-13:00 بتوقيت الكويت).
+   خارجها يدوي: الحركة المستمرة على بيانات ساكنة توهم بالطزاجة.
+   وفي الحالتين يُعرض ختم "آخر جلب" حتى لا يُخمَّن عمر ما تراه. ---- */
+let lastFetch = '—';
+let timer = null;
+
+function kuwaitNow(){
+  /* الكويت UTC+3 بلا توقيت صيفي */
+  return new Date(Date.now() + (3 * 60 + new Date().getTimezoneOffset()) * 60000);
+}
+function inSession(){
+  const t = kuwaitNow(), d = t.getDay(), h = t.getHours();
+  return (d >= 0 && d <= 4) && h >= 9 && h < 13;   /* الأحد=0 .. الخميس=4 */
+}
+function stamp(){
+  const t = kuwaitNow();
+  const p = n => String(n).padStart(2, '0');
+  return p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
+}
+function reschedule(){
+  if (timer) { clearInterval(timer); timer = null; }
+  if (inSession()) timer = setInterval(load, 120000);
+  const s = $('sessNote');
+  if (s) s.textContent = inSession() ? 'الجلسة مفتوحة — تحديث تلقائي كل دقيقتين'
+                                     : 'خارج الجلسة — تحديث يدوي';
+}
+
 async function load(){
   const btn = $('rf'); btn.disabled = true; btn.textContent = 'جارٍ…';
   let d = null, rv = null;
@@ -427,6 +582,7 @@ async function load(){
     const r = await fetch(API + '?t=' + Date.now(), {cache:'no-store'});
     if (!r.ok) throw new Error('HTTP ' + r.status);
     d = await r.json();
+    lastFetch = stamp();
   } catch (e) {
     $('banner').className = 'banner b-bad';
     $('banner').innerHTML = '<div class="ic">✕</div><div class="main">' +
@@ -442,6 +598,7 @@ async function load(){
   } catch (e) { rv = null; }
 
   render(d, rv);
+  reschedule();
   btn.disabled = false; btn.textContent = 'تحديث';
 }
 
