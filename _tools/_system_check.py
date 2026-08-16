@@ -42,13 +42,29 @@ for name, url in checks.items():
                 top = sorted(w.items(), key=lambda x: x[1], reverse=True)[:3]
                 print(f"    Top weights: {', '.join(f'{k}={v:.2f}' for k,v in top)}")
         elif name == "Portfolio":
-            pos = data.get("positions", data.get("open_positions", []))
+            # Same shape: "positions" has never been emitted; the real
+            # key is open_positions (PHASE2_SECTION_D, D-1).
+            pos = data.get("open_positions")
+            if pos is None:
+                print(f"\n  {name}: FAIL — contract: expected key "
+                      f"'open_positions', got {sorted(data)[:8]}")
+                continue
             if isinstance(pos, list):
                 print(f"\n  {name}: OK — {len(pos)} open positions")
             else:
                 print(f"\n  {name}: OK")
         elif name == "Decisions":
-            ops = data.get("opportunities", data.get("decisions", []))
+            # One correct key. The old chain
+            # .get("opportunities", .get("decisions", [])) tried two names
+            # the producer has never emitted and then defaulted to [], so
+            # this check reported "0 opportunities" as a healthy result
+            # while /api/decisions-now was returning 25. A fallback chain
+            # is a guess wearing the costume of a contract.
+            ops = data.get("all_opportunities")
+            if ops is None:
+                print(f"\n  {name}: FAIL — contract: expected key "
+                      f"'all_opportunities', got {sorted(data)[:8]}")
+                continue
             if isinstance(ops, list):
                 print(f"\n  {name}: OK — {len(ops)} opportunities")
             else:

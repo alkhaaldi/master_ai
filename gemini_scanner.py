@@ -286,15 +286,24 @@ class GeminiScanner:
         except Exception:
             pass
 
-        # Get golden opportunities
+        # Get golden opportunities.
+        # The key was "opportunities" from 2026-04-07 to 2026-08-16; the
+        # producer has emitted "all_opportunities" since 2026-03-28. The
+        # reader was born wrong, and `.get(..., [])` plus a debug-level
+        # except kept it invisible for 4.5 months while 0.20 of the weight
+        # below sat at a constant zero. Read through the contract guard so
+        # the next rename cannot repeat it silently.
         golden_opps = {}
         try:
             from golden_engine import scan_opportunities
+            from contract import expect
             result = scan_opportunities(active_stocks)
-            for opp in result.get("opportunities", []):
+            for opp in expect(result, "all_opportunities",
+                              "golden_engine.scan_opportunities -> gemini prefilter",
+                              []):
                 golden_opps[opp["symbol"]] = opp.get("confidence", 50)
         except Exception as e:
-            logger.debug("Golden engine unavailable: %s", e)
+            logger.warning("Golden engine unavailable: %r", e)
 
         for stock in active_stocks:
             sym = stock["symbol"]
@@ -306,15 +315,19 @@ class GeminiScanner:
             macd_state = stock.get("macd_state", "")
             confluence = stock.get("confluence", 0) or 0
 
-            # SCALES.md: `confluence` here is the radar column, which was
-            # SIGNED +/-100 before 2026-08-15 and is an unsigned 7-level
-            # ordinal after it. brain_score is capped ABOVE at 100 and not
-            # below - measured -62.4..66.0 over 305 rows - and that asymmetry
-            # is the direct cause of final_confidence = -9.73. Left uncapped
-            # deliberately (F-3.4): clamping here would hide the 41 rows that
-            # exposed it. Note the key read is `confluence`, not
-            # `confluence_score`.
-            brain_score = min(confluence * 1.2, 100) if confluence else 40
+            # SCALES.md: this formula's consumer (the weighted prefilter
+            # below) is a 0-100 blend, so brain_score is clamped to 0-100 at
+            # BOTH ends now. It was capped above only - measured -62.4..66.0
+            # over 305 rows - and that asymmetry produced every negative
+            # final_confidence. The clamp is allowed here because SCALES.md
+            # rule 4 is satisfied: the cause is written down, so this hides
+            # nothing. The 41 historical rows stay in the DB as evidence.
+            brain_score = max(0.0, min(confluence * 1.2, 100.0)) if confluence else 40
+            # Two scale hazards this line still carries, declared not fixed:
+            #  - the key read is `confluence`; the daily-snapshot path builds
+            #    `confluence_score`, so on that path this is always 0
+            #  - confluence 0 is now the MOST bearish ordinal level, but it is
+            #    falsy, so it takes the `else 40` branch and reads neutral
             # SCALES.md: golden_score is DECLARED 0-100 and MEASURED constant
             # 0.0 across all 305 stored rows - this lookup has never once
             # resolved, so a fifth of the weighted sum below is a dead zero
@@ -456,6 +469,40 @@ class GeminiScanner:
 
     # ─── Fusion ───
 
+    @staticmethod
+    def _shadow_buy_now(symbol, branch, score, gemini_conf, brain_score):
+        """Record a BUY_NOW that WOULD have fired, without firing it.
+
+        Opened by user decision 2026-08-16 for a two-week observation
+        window after golden_score stopped being a constant zero. The row
+        is the evidence for that decision; nothing reads it to trade.
+        """
+        import sqlite3
+        from datetime import datetime as _dt
+        try:
+            conn = sqlite3.connect(DB_PATH, timeout=10)
+            conn.execute("""CREATE TABLE IF NOT EXISTS buy_now_shadow (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                logged_at TEXT NOT NULL,
+                symbol TEXT,
+                branch TEXT NOT NULL,
+                score REAL,
+                gemini_confidence REAL,
+                brain_score REAL,
+                acted BOOLEAN NOT NULL DEFAULT 0)""")
+            conn.execute(
+                "INSERT INTO buy_now_shadow (logged_at, symbol, branch, score,"
+                " gemini_confidence, brain_score, acted) VALUES (?,?,?,?,?,?,0)",
+                (_dt.utcnow().strftime("%Y-%m-%d %H:%M:%S"), symbol, branch,
+                 score, gemini_conf, brain_score))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.warning("shadow BUY_NOW not recorded for %s: %r", symbol, e)
+        logger.warning("SHADOW BUY_NOW (not acted): %s branch=%s score=%.1f "
+                       "gemini_conf=%s brain=%.1f", symbol, branch, score or 0,
+                       gemini_conf, brain_score or 0)
+
     def _fuse_scores(self, prefilter_data, gemini_result):
         """Combine local prefilter with Gemini confirmation."""
         base_score = prefilter_data.get("prefilter_score", 50)
@@ -464,7 +511,11 @@ class GeminiScanner:
             # Gemini unavailable — use local only
             decision = "WAIT"
             if base_score >= 70:
-                decision = "BUY_NOW"
+                # SHADOW ONLY (user decision 2026-08-16): golden_score was a
+                # constant 0 until today, so this branch has never once been
+                # reachable. Two weeks of observation before it may act.
+                self._shadow_buy_now(prefilter_data.get("symbol"), "no_gemini",
+                                base_score, None, base_score)
             elif base_score <= 30:
                 decision = "SELL"
             return {
@@ -511,7 +562,15 @@ class GeminiScanner:
         # Final decision
         brain_score = prefilter_data.get("brain_score", 50)
         if fused_score >= 75 and gemini_is_buy and brain_score >= 55:
-            final_decision = "BUY_NOW"
+            # SHADOW ONLY (user decision 2026-08-16) - see _shadow_buy_now.
+            # This gate has never fired: prefilter measured -13.9..46.8 while
+            # a constant-zero golden_score held a fifth of its weight. Now
+            # that the input is real the scores will move, and moving them
+            # and acting on them in the same change would leave nothing to
+            # compare against. Observe two weeks, then decide.
+            self._shadow_buy_now(prefilter_data.get("symbol"), "fused",
+                            fused_score, gemini_conf, brain_score)
+            final_decision = "WAIT"
         elif fused_score <= 30 or (gemini_is_sell and brain_score < 40):
             final_decision = "SELL"
         else:
