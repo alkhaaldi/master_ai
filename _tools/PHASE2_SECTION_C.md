@@ -575,6 +575,24 @@ Confluence is computed at the 14:00 run with simple declared weights
 written in backfill_daily_bars.py - deliberately NOT the learned
 weights, same reason.
 
+Measured constraints on the inputs (2026-08-16, read-only diagnosis):
+
+- `confluence_score` is ORDINAL, five levels, not continuous: 67,185 rows
+  hold exactly 50/67/83/100 plus two stray rows (75, 80). The floor of 50
+  is a STORAGE filter (snapshot_signals skips score < 50), not a computed
+  minimum. Any re-derivation must treat it as a 5-level ordinal - means,
+  z-scores and linear weights over it are category errors.
+- `brain_score` is SIGNED (bearish negative, observed to -62.4) while at
+  least one consumer (gemini prefilter) weights it as if 0-100 - the 41
+  negative final_confidence rows trace to exactly this, via the unclamped
+  no-Gemini branch (prefilter x 0.7). Two scales share one variable name;
+  C-27 must declare which scale the re-derived weights live on.
+- the decision-layer confidence (80.6-96.4, stdev 3.6, never below 80 in
+  its life) is a POST-GATE sample - truncated by construction. The
+  confidence_census table (golden_engine, 2026-08-16) now records every
+  examined candidate; weight re-derivation over confidence waits until
+  that census has a few weeks of rows.
+
 Prerequisites before any scoring pass (D-3, D-7, D-9): exclude
 `trade_kind = 'void'` AND `entry_basis = 'consolidated_restart'`. A restart
 row has `entry_signal_id = NULL` and no originating signal - scoring it

@@ -943,6 +943,18 @@ def scan_opportunities(live_data: list) -> dict:
                     alerts_sent += 1
     alert_conn.close()
 
+    # ── Confidence census (user decision 2026-08-16) ──────────
+    # Store confidence for EVERY examined candidate, not only emitted
+    # decisions: the 34 audited rows were truncated by construction
+    # (post-gate), so the generator distribution was unobservable and the
+    # 80.6-96.4 saturation question could not be answered. One light row
+    # per symbol per session; a few weeks of this yields the real
+    # distribution C-27 is blocked on.
+    try:
+        _log_confidence_census(all_opportunities)
+    except Exception as e:
+        logger.warning("confidence census failed: %r", e)
+
     # ── Phase 4 V10: Decision Audit — log ENTER decisions ─────
     try:
         from kse_data_collector import log_decision
@@ -999,3 +1011,33 @@ def scan_opportunities(live_data: list) -> dict:
         "top_10":              all_opportunities[:10],
         "all_opportunities":   all_opportunities,
     }
+
+
+def _log_confidence_census(opps):
+    """One row per examined candidate per session: symbol, date,
+    confidence, and whether the gate emitted it. Kept deliberately thin -
+    this is a measurement instrument, not another decision store."""
+    from datetime import datetime as _dtu, date as _dte
+    conn = _conn()
+    conn.execute("""CREATE TABLE IF NOT EXISTS confidence_census (
+        market_date TEXT NOT NULL,
+        symbol TEXT NOT NULL,
+        confidence REAL,
+        smart_decision TEXT,
+        emitted BOOLEAN NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        UNIQUE(market_date, symbol))""")
+    now = _dtu.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    today = _dte.today().isoformat()
+    for o in opps:
+        if not o.get("symbol"):
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO confidence_census "
+            "(market_date, symbol, confidence, smart_decision, emitted, created_at) "
+            "VALUES (?,?,?,?,?,?)",
+            (today, o.get("symbol"), o.get("confidence"),
+             o.get("smart_decision"),
+             1 if o.get("smart_decision") == "ENTER" else 0, now))
+    conn.commit()
+    conn.close()
