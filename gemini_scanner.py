@@ -196,6 +196,7 @@ class GeminiScanner:
             logger.error("Import error in prefilter: %s", e)
             return []
 
+        from contract import expect
         symbols = get_scanner_universe()  # 92 active stocks
         if not symbols:
             logger.warning("Empty universe")
@@ -238,7 +239,13 @@ class GeminiScanner:
                         "volume": s.get("volume", 0),
                         "vol_ratio": s.get("vol_ratio", 1.0),
                         "stoch_k": s.get("stoch_k", 50),
-                        "confluence_score": s.get("confluence_score", s.get("score", 0)),
+                        # absence -> None, never 0: since 2026-08-15 a
+                        # confluence_score of 0 is the MOST BEARISH ordinal
+                        # level (SCALES.md), so defaulting a missing value
+                        # to 0 would mint a maximally bearish reading out of
+                        # nothing. `score` is a different scale and is no
+                        # longer silently substituted.
+                        "confluence_score": s.get("confluence_score"),
                     }
             except Exception as e:
                 logger.error("Daily snapshot fallback failed: %s", e)
@@ -268,7 +275,15 @@ class GeminiScanner:
                 "volume": data.get("volume", 0) or 0,
                 "vol_ratio": data.get("vol_ratio", 1.0),
                 "stoch_k": data.get("stoch_k", 50),
-                "confluence": data.get("confluence_score", 0),
+                # One name end to end (was renamed to `confluence` here,
+                # which is how the bridge path lost it: bridge payloads carry
+                # signals.confluence, not confluence_score, so this read
+                # returned the 0 default and every bridge-sourced stock
+                # scored as maximally bearish. expect() puts that on the
+                # record instead of defaulting in silence.
+                "confluence_score": expect(
+                    data, "confluence_score",
+                    "prefilter symbol data -> scoring loop", None),
             })
         logger.info("Prefilter: %d/%d have valid data (session=%s)", len(active), len(symbols), session)
         return active
@@ -313,7 +328,10 @@ class GeminiScanner:
             stoch = stock.get("stoch_k", 50) or 50
             ema_state = stock.get("ema_state", "")
             macd_state = stock.get("macd_state", "")
-            confluence = stock.get("confluence", 0) or 0
+            # `or 0` removed: it collapsed a legitimate 0 (most bearish)
+            # and a missing value into the same number. None now means
+            # "not measured" and is handled explicitly at every use below.
+            confluence = stock.get("confluence_score")
 
             # SCALES.md: this formula's consumer (the weighted prefilter
             # below) is a 0-100 blend, so brain_score is clamped to 0-100 at
@@ -322,12 +340,12 @@ class GeminiScanner:
             # final_confidence. The clamp is allowed here because SCALES.md
             # rule 4 is satisfied: the cause is written down, so this hides
             # nothing. The 41 historical rows stay in the DB as evidence.
-            brain_score = max(0.0, min(confluence * 1.2, 100.0)) if confluence else 40
-            # Two scale hazards this line still carries, declared not fixed:
-            #  - the key read is `confluence`; the daily-snapshot path builds
-            #    `confluence_score`, so on that path this is always 0
-            #  - confluence 0 is now the MOST bearish ordinal level, but it is
-            #    falsy, so it takes the `else 40` branch and reads neutral
+            # `if confluence else 40` tested truthiness, so a real 0 - the
+            # most bearish level there is - took the absent-value branch and
+            # came out as a neutral 40. The test is on None now: 0 scores as
+            # 0, and only a genuinely missing measurement falls back.
+            brain_score = (max(0.0, min(confluence * 1.2, 100.0))
+                           if confluence is not None else 40)
             # SCALES.md: golden_score is DECLARED 0-100 and MEASURED constant
             # 0.0 across all 305 stored rows - this lookup has never once
             # resolved, so a fifth of the weighted sum below is a dead zero
@@ -370,9 +388,9 @@ class GeminiScanner:
 
             # Radar signal
             radar_signal = "neutral"
-            if confluence and confluence >= 65:
+            if confluence is not None and confluence >= 65:
                 radar_signal = "bullish"
-            elif confluence and confluence <= 35:
+            elif confluence is not None and confluence <= 35:
                 radar_signal = "bearish"
 
             # Weighted prefilter score. SCALES.md: this assumes every input
@@ -383,7 +401,7 @@ class GeminiScanner:
             prefilter_score = (
                 0.30 * brain_score +
                 0.20 * golden_score +
-                0.15 * (confluence or 40) +
+                0.15 * (confluence if confluence is not None else 40) +
                 0.15 * vol_score +
                 0.10 * ema_score +
                 0.10 * momentum_score
@@ -470,7 +488,8 @@ class GeminiScanner:
     # ─── Fusion ───
 
     @staticmethod
-    def _shadow_buy_now(symbol, branch, score, gemini_conf, brain_score):
+    def _shadow_buy_now(symbol, branch, score, gemini_conf, brain_score,
+                        threshold=None):
         """Record a BUY_NOW that WOULD have fired, without firing it.
 
         Opened by user decision 2026-08-16 for a two-week observation
@@ -489,19 +508,27 @@ class GeminiScanner:
                 score REAL,
                 gemini_confidence REAL,
                 brain_score REAL,
+                threshold REAL,
                 acted BOOLEAN NOT NULL DEFAULT 0)""")
+            cols = [r[1] for r in conn.execute(
+                "PRAGMA table_info(buy_now_shadow)")]
+            if "threshold" not in cols:
+                conn.execute("ALTER TABLE buy_now_shadow ADD COLUMN threshold REAL")
             conn.execute(
                 "INSERT INTO buy_now_shadow (logged_at, symbol, branch, score,"
-                " gemini_confidence, brain_score, acted) VALUES (?,?,?,?,?,?,0)",
+                " gemini_confidence, brain_score, threshold, acted)"
+                " VALUES (?,?,?,?,?,?,?,0)",
                 (_dt.utcnow().strftime("%Y-%m-%d %H:%M:%S"), symbol, branch,
-                 score, gemini_conf, brain_score))
+                 score, gemini_conf, brain_score, threshold))
             conn.commit()
             conn.close()
         except Exception as e:
             logger.warning("shadow BUY_NOW not recorded for %s: %r", symbol, e)
         logger.warning("SHADOW BUY_NOW (not acted): %s branch=%s score=%.1f "
-                       "gemini_conf=%s brain=%.1f", symbol, branch, score or 0,
-                       gemini_conf, brain_score or 0)
+                       "threshold=%s gemini_conf=%s brain=%.1f",
+                       symbol, branch, score if score is not None else -1,
+                       threshold, gemini_conf,
+                       brain_score if brain_score is not None else -1)
 
     def _fuse_scores(self, prefilter_data, gemini_result):
         """Combine local prefilter with Gemini confirmation."""
@@ -515,7 +542,8 @@ class GeminiScanner:
                 # constant 0 until today, so this branch has never once been
                 # reachable. Two weeks of observation before it may act.
                 self._shadow_buy_now(prefilter_data.get("symbol"), "no_gemini",
-                                base_score, None, base_score)
+                                     base_score, None, base_score,
+                                     threshold=70)
             elif base_score <= 30:
                 decision = "SELL"
             return {
@@ -569,7 +597,8 @@ class GeminiScanner:
             # and acting on them in the same change would leave nothing to
             # compare against. Observe two weeks, then decide.
             self._shadow_buy_now(prefilter_data.get("symbol"), "fused",
-                            fused_score, gemini_conf, brain_score)
+                                 fused_score, gemini_conf, brain_score,
+                                 threshold=75)
             final_decision = "WAIT"
         elif fused_score <= 30 or (gemini_is_sell and brain_score < 40):
             final_decision = "SELL"
