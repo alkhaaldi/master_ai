@@ -328,6 +328,27 @@ def _compile_aliases(knowledge):
 
 
 
+def _ensure_memory_table():
+    """Schema guard for the memory table in audit.db. Restored 2026-08-16
+    (F-2): reload() had called a name that only survived in
+    _deprecated/brain_backup.py, so every boot logged a NameError - 38
+    times in one server.log - and the except swallowed it (C-19)."""
+    try:
+        conn = sqlite3.connect(str(AUDIT_DB), timeout=5)
+        conn.execute("""CREATE TABLE IF NOT EXISTS memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL,
+            content TEXT NOT NULL, context TEXT DEFAULT '{}',
+            source TEXT DEFAULT 'unknown', confidence REAL DEFAULT 1.0,
+            hit_count INTEGER DEFAULT 0, last_used TEXT,
+            active INTEGER DEFAULT 1, created_at TEXT NOT NULL,
+            UNIQUE(category, content))""")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_mem_cat ON memory(category, active)")
+        conn.commit()
+        conn.close()
+    except sqlite3.Error as e:
+        logger.warning("memory table guard failed: %r", e)
+
+
 def reload():
     """Reload all data files. Called at import and can be called on demand."""
     global _knowledge, _entity_map, _entity_index, _alias_cache
@@ -338,11 +359,12 @@ def reload():
     _load_system_knowledge()
     _load_expert_knowledge()
     total_entities = sum(len(v) for v in _entity_index.values())
-    try:
-        _ensure_memory_table()
-        _apply_confidence_decay()
-    except Exception as e:
-        logger.error(f"Brain reload failed: {e}")
+    _ensure_memory_table()
+    # Confidence decay stays OFF, deliberately (C-19): restoring it would
+    # rewrite stored confidences across memory/memory_archive - a data
+    # decision, not a code one. Until the user makes it, the honest state
+    # is "no decay", stated here instead of raised as a NameError and
+    # swallowed on every boot since the function was archived.
     logger.info(
         f"Brain loaded: {len(_entity_map)} rooms, "
         f"{total_entities} entities, {len(_alias_cache)} alias groups"

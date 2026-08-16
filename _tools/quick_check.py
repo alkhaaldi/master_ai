@@ -128,6 +128,25 @@ def main():
     except Exception as e:
         check("daily fill age", False, f"witness unavailable: {e}")
 
+    # F-1.5: a stopped backup must announce itself. FAILS until the
+    # first successful NAS backup exists - that is a true alarm state:
+    # everything lives on one SD card until then.
+    try:
+        import sqlite3 as _sq
+        from datetime import datetime as _dt
+        _bc = _sq.connect(os.path.join(BASE_DIR, "data", "life.db"))
+        _row = _bc.execute(
+            "SELECT MAX(created_at) FROM data_fetch_runs "
+            "WHERE source='nas_backup' AND status='success'").fetchone()
+        _bc.close()
+        if not _row or not _row[0]:
+            check("backup age", False, "no successful NAS backup has ever run")
+        else:
+            _h = (_dt.utcnow() - _dt.fromisoformat(_row[0])).total_seconds() / 3600
+            check("backup age", _h < 24, f"last success {_row[0]} UTC - {_h:.1f}h old")
+    except Exception as _be:
+        check("backup age", False, f"backup witness unavailable: {_be}")
+
     # ── 6. Git status ──
     print("\n[Git]")
     try:
