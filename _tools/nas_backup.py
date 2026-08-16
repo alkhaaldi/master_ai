@@ -33,28 +33,36 @@ DB = "/home/pi/master_ai/data/life.db"
 NAS_HOST = "192.168.109.45"
 SHARE = "backups"
 CREDS = "/etc/cifs-credentials-nas"
-MOUNT = "/mnt/nas_backups"
+# B4: the fstab entry owns the mount now (x-systemd.automount, nofail,
+# _netdev). This script no longer runs `sudo mount` itself - touching the
+# path is what triggers it, and a NAS outage degrades to a failed backup
+# with an alert instead of a boot that hangs.
+MOUNT = "/mnt/nas-backups"
 SUBDIR = "master_ai"          # -> /volume1/backups/master_ai on the NAS
 KEEP = 14
 SOURCE = "nas_backup"
 
 
 def ensure_mounted():
-    """Mount on demand, idempotent. sudo is passwordless for pi; the
-    credentials file itself is root-owned 600 - the mount helper reads
-    it, this process never sees the password."""
-    if os.path.ismount(MOUNT):
-        return
-    if not os.path.exists(CREDS):
-        raise RuntimeError("credentials file %s does not exist yet" % CREDS)
-    subprocess.run(["sudo", "mkdir", "-p", MOUNT], check=True)
-    r = subprocess.run(
-        ["sudo", "mount", "-t", "cifs", "//%s/%s" % (NAS_HOST, SHARE), MOUNT,
-         "-o", "credentials=%s,uid=pi,gid=pi,vers=3.0,iocharset=utf8" % CREDS],
-        capture_output=True, timeout=30)
-    if r.returncode != 0:
-        raise RuntimeError("cifs mount failed: %s"
-                           % r.stderr.decode(errors="replace").strip()[:250])
+    """Trigger the systemd automount and confirm it took.
+
+    The credentials never pass through this process: mount.cifs reads the
+    root-owned 600 file itself. A blank or wrong credential shows up here
+    as a mount that did not happen, which is exactly what should be
+    reported rather than worked around.
+    """
+    try:
+        os.listdir(MOUNT)          # the access that fires the automount
+    except OSError as e:
+        raise RuntimeError("cannot reach %s: %s" % (MOUNT, e))
+    if not os.path.ismount(MOUNT):
+        hint = ""
+        try:
+            if os.path.getsize(CREDS) == 0:
+                hint = " - %s is empty (password not set yet)" % CREDS
+        except OSError:
+            hint = " - %s is unreadable from here (expected: root 600)" % CREDS
+        raise RuntimeError("%s is not mounted%s" % (MOUNT, hint))
 
 
 def make_backup():
