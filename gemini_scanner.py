@@ -306,10 +306,24 @@ class GeminiScanner:
             macd_state = stock.get("macd_state", "")
             confluence = stock.get("confluence", 0) or 0
 
-            # Brain score (from confluence adjusted by learned weights)
+            # SCALES.md: `confluence` here is the radar column, which was
+            # SIGNED +/-100 before 2026-08-15 and is an unsigned 7-level
+            # ordinal after it. brain_score is capped ABOVE at 100 and not
+            # below - measured -62.4..66.0 over 305 rows - and that asymmetry
+            # is the direct cause of final_confidence = -9.73. Left uncapped
+            # deliberately (F-3.4): clamping here would hide the 41 rows that
+            # exposed it. Note the key read is `confluence`, not
+            # `confluence_score`.
             brain_score = min(confluence * 1.2, 100) if confluence else 40
-            # Golden score
+            # SCALES.md: golden_score is DECLARED 0-100 and MEASURED constant
+            # 0.0 across all 305 stored rows - this lookup has never once
+            # resolved, so a fifth of the weighted sum below is a dead zero
+            # dragging every score down. Recorded, not fixed: the cause (why
+            # golden_opps never contains these symbols) is not yet known.
             golden_score = golden_opps.get(sym, 0)
+            if golden_score == 0:
+                logger.warning("prefilter: golden_score 0 for %s - 0.20 of the "
+                               "weight is contributing nothing (SCALES.md)", sym)
 
             # EMA alignment score
             ema_score = 0
@@ -348,7 +362,11 @@ class GeminiScanner:
             elif confluence and confluence <= 35:
                 radar_signal = "bearish"
 
-            # Weighted prefilter score
+            # Weighted prefilter score. SCALES.md: this assumes every input
+            # is 0-100. Two of them break that today - brain_score can be
+            # negative, golden_score is always 0 - so the sum is MEASURED
+            # -13.9..46.8 and has never reached the 70/75 thresholds tested
+            # against it further down.
             prefilter_score = (
                 0.30 * brain_score +
                 0.20 * golden_score +
@@ -452,12 +470,21 @@ class GeminiScanner:
             return {
                 "fused_score": base_score,
                 "final_decision": decision,
-                "final_confidence": base_score * 0.7,  # lower confidence without Gemini
+                # SCALES.md: UNCLAMPED, unlike the Gemini branch below. Every
+                # one of the 41 negative final_confidence rows in the DB came
+                # through here, carrying a negative brain_score up from the
+                # prefilter. Left as-is by F-3.4 - it is the only thing making
+                # the upstream scale mismatch visible.
+                "final_confidence": base_score * 0.7,
                 "gemini_available": False,
             }
 
         structured = gemini_result.get("structured", {})
         gemini_signal = (structured.get("signal") or "").strip()
+        # SCALES.md: 0-100, measured 25.0..85.0 over 173 non-null rows.
+        # The default turns an ABSENT or malformed model confidence into a
+        # confident midpoint - absence becoming a value, the disease this
+        # phase is named for. Declared here; changing it changes decisions.
         gemini_conf = structured.get("confidence", 50)
         if not isinstance(gemini_conf, (int, float)):
             gemini_conf = 50

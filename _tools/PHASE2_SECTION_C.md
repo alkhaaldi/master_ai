@@ -575,6 +575,24 @@ Confluence is computed at the 14:00 run with simple declared weights
 written in backfill_daily_bars.py - deliberately NOT the learned
 weights, same reason.
 
+**Precondition (F-3): read `_tools/SCALES.md` first.** It declares every
+value that feeds a score - measured range, what the endpoints mean, whether
+negative is meaningful, continuous or ordinal. No weight may be derived from
+a value whose scale is not listed there. Three of its findings bind C-27
+directly:
+
+- **Never take a mean, a z-score or a linear weight on `confluence_score`.**
+  It is ordinal in both tables that carry the name, and they are TWO DIFFERENT
+  SCALES: `signal_snapshots` holds 50/67/83/100 (floor 50 is a storage filter),
+  `stock_radar_daily` holds 0/17/33/50/67/83/100 with 3 legacy rows still on
+  the pre-2026-08-15 signed scale. Same name, different meaning, not
+  interchangeable.
+- **`regime_confidence` is 1-3, not 0-100** (n=40,966). Any formula reading it
+  as a percentage is off by roughly 33x.
+- **`decision_audit.confidence` is a post-gate sample** (80.56-96.41, n=34)
+  while the generator reaches 60.0 (`confidence_census`, all examined
+  candidates). Fit on the census, never on the audit.
+
 Measured constraints on the inputs (2026-08-16, read-only diagnosis):
 
 - `confluence_score` is ORDINAL, five levels, not continuous: 67,185 rows

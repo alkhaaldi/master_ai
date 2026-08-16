@@ -195,6 +195,9 @@ def declared_confluence(ind, vol_ratio):
         votes.append(1 if vol_ratio > 1 else 0)
     if not votes:
         return {}
+    # SCALES.md: ORDINAL. With 6 possible votes the only reachable values
+    # are 0/17/33/50/67/83/100 - seven levels, not a continuum. Never take a
+    # mean or fit a linear weight on this column.
     score = round(100 * sum(votes) / len(votes))
     direction = "bullish" if score >= 60 else ("bearish" if score <= 40 else "neutral")
     return {"confluence_score": score, "confluence_direction": direction}

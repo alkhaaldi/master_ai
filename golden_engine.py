@@ -100,7 +100,23 @@ def match_pattern(live_atoms: set, pattern_atoms_str: str) -> tuple:
 
 
 def calc_confidence(pattern: dict, profile: dict, match_ratio: float) -> float:
-    """Calculate confidence score 0-100."""
+    """Confidence 0-100, clamped. Input scales (see _tools/SCALES.md):
+
+      match_ratio  0-1 fraction        -> x100
+      win_rate     0-1 FRACTION        -> (wr - baseline + 0.10)/0.30 x100
+      baseline     0-1 fraction, dflt 0.3
+      occurrences  count               -> log1p saturating at 50
+      pattern_score assumed <= 100     -> min() only, no lower guard
+      avg_gain_pct percent             -> /12 x100, saturates at +12%
+      align        ordinal {50,75,80,85,90}
+
+    win_rate is a FRACTION here and a PERCENT at line ~639, where it is
+    formatted {:.0f}% and prints 0.6 as "0%". Declared, not fixed (F-3.4).
+
+    Output measured: decision_audit 80.56..96.41 (n=34, post-gate sample)
+    but confidence_census 60.0..93.97 (n=27, every examined candidate) -
+    the generator does reach 60. C-27 must use the census, not the audit.
+    """
     wr        = float(pattern.get("win_rate") or 0)
     occ       = int(pattern.get("occurrences") or 0)
     avg_gain  = float(pattern.get("avg_gain_pct") or 0)
