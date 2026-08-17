@@ -798,12 +798,24 @@ function showError(){
 function processData(d){
   // Status chips
   const mo = d.market_open;
-  const bo = d.bridge_online;
   $('#dot-market').className = 'status-dot '+(mo?'on':'off');
   $('#lbl-market').textContent = mo?'السوق مفتوح':'السوق مغلق';
-  $('#dot-bridge').className = 'status-dot '+(bo?'on':'off');
-  const bc = d.bridge_cached_count!=null ? ` (${d.bridge_cached_count})` : '';
-  $('#lbl-bridge').textContent = (bo?'الربط متصل':'الربط غير متصل') + bc;
+
+  /* كانت النقطة تقرأ d.bridge_online من حمولة swing. الجسر متقاعد منذ
+     16 أغسطس، فالنقطة كانت ستحمرّ إلى الأبد وتدعو لإصلاح مضيف غير موجود.
+     تعرض الآن المصدر الفعلي وحاله وعمر البيانات. */
+  const src = d.source, ss = d.source_state, age = d.as_of_age_minutes;
+  if(src){
+    const ok = ss === 'ok';
+    $('#dot-bridge').className = 'status-dot '+(ok?'on':'off');
+    let t = src + (ok ? '' : ' — ' + ss);
+    if(d.source_delay_minutes != null) t += ` · تأخير ${d.source_delay_minutes}د`;
+    if(age != null) t += ` · العمر ${Math.round(age)}د`;
+    $('#lbl-bridge').textContent = t;
+  } else {
+    $('#dot-bridge').className = 'status-dot off';
+    $('#lbl-bridge').textContent = 'الحمولة لا تعلن مصدرها';
+  }
 
   // Signal counts
   const sc = d.signal_counts || {};

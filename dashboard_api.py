@@ -2235,7 +2235,12 @@ def dashboard_swing():
         "flags": get_trading_flags(),
         "scan_time": _dt.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "market_status": "open" if raw.get("market_open") else "closed",
-        "bridge_online": bridge_online,
+        # `bridge_online` removed here too, 2026-08-17. It came off
+        # /dashboard/signals and /dashboard/signals-daily first and was left
+        # on its own neighbour, which is the same inconsistency the contract
+        # work existed to remove - three siblings, and only two of them
+        # corrected. `bridge` below says retired; source/source_state say
+        # what is actually feeding the numbers.
         **_source_state(),
         "data_state": _page_state.get("data_state"),
         "data_state_ar": _page_state.get("data_state_ar"),
@@ -2433,7 +2438,8 @@ def dashboard_scalper():
         "scalper_active": SCALPING_MODE,
         "scan_time": _dt.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "market_status": "open" if raw.get("market_open") else "closed",
-        "bridge_online": bridge_online,
+        # See the note in /dashboard/swing. scalper.html never read this key,
+        # so nothing on the page changes.
         "hot_stocks": hot,
         "active_scalps": active_scalps,
         "stats": {
