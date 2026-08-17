@@ -449,6 +449,67 @@ name will appear the moment the payload carries one. Until then the fallback
 resolves to an empty string and the card shows no name, exactly as before.
 The page is ready; the payload is not.
 
+**4k. THE THIRD CLASS — correct numbers that arrive and are never read**
+
+After *invented numbers* (4g and the whole falsy family) and *numbers with no
+context* (4i), this is the third and quietest. The value is right, it is
+dated, it reaches the page — and the page asks for it under a name nobody
+ships, so it renders `—` and nothing anywhere is wrong. A payload check
+passes: the payload is correct. A page check passes: the page does not crash.
+
+Found by accident on 2026-08-17 while fixing one empty field. The hero card
+on swing.html read `ts.score ?? ts.confluence_score` while the payload shipped
+`confluence_pct` — the strongest signal displayed "الدرجة —" while carrying
+90. Same shape for `o.rsi` vs `rsi_14`, `o.name` vs `name_ar`, `p.entry` vs
+`entry_price`.
+
+**The method:** compare the field names each page READS against the field
+names its endpoints SHIP. `_tools/inventory_field_names.py`, read-only.
+
+First measurement, 16 pages with endpoints:
+
+```
+READ NOT SHIPPED, uncovered  89    <- renders empty, silently
+    shipped by another endpoint  25    the page fetches the wrong URL
+    shipped by no endpoint       64    wrong name, or never built
+read not shipped, covered   120    a shipped name sits beside it in a fallback
+SHIPPED NOT READ           1257
+```
+
+**The 25 are the sharpest finding, and they are not naming errors at all.**
+`assistant.html` and `home.html` fetch `/dashboard/extended` and read
+`api_online`, `priority_engine`, `assistant_surface`, `version` — every one of
+which is built and shipped, on `/dashboard`. The Priority Engine and
+Assistant Surface Layer described in CLAUDE.md are running; two pages are
+pointed at the wrong URL to see them. Others read `swing_rr` and `ema_state`
+from pages fetching endpoints that do not carry them while siblings do.
+
+Worst pages by uncovered reads: personality 23, radar 13, positions 12,
+home 11, assistant 10, signals 8, swing 6, system 4.
+
+**Triage order, because these repairs are different:**
+1. the 25 wrong-endpoint reads — likely the cheapest and the highest value,
+   since the data already exists and a whole feature may be dark
+2. the 64 nowhere-shipped — each needs a decision: rename the read, ship the
+   field, or delete the read. A read of something never built is a promise
+   the page is making on the system's behalf.
+3. the 120 covered — lowest priority, but a fallback chain whose FIRST name
+   is unshipped is a fossil worth removing
+4. the 1257 shipped-not-read — mostly harmless payload weight, but worth
+   scanning once for a feature that was built and never wired
+
+**Limits, stated:** the reader is regex over `x.field` and over-reports —
+locals and DOM properties are filtered by a stopword list and a leading-
+underscore rule, not by parsing JS. `/api/analyze` is excluded (a Gemini call
+per request) and parameterised routes are not called. A field read only
+through bracket notation or a computed key is invisible to it. So treat
+READ NOT SHIPPED as a candidate list, not a verdict — every one of the four
+examples above was confirmed by hand against the live payload before being
+believed.
+
+**Not a ratchet.** Same reasoning as 4i: 89 is too varied to hold at zero, and
+a sweep that over-reports must not become a gate. Triage first.
+
 **5. The 30m layer**
 `/dashboard/signals-30m` returns nothing. G-1 proved Yahoo **does** serve 30m
 for `.KW` (41 bars, tier-1 names 100% populated). So the layer is rebuildable
