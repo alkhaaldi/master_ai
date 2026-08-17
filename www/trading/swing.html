@@ -215,7 +215,10 @@ const UI = {
   blind:    {c:'b-bad',  ic:'✕', t:'لا بيانات — الصفحة لا تعكس السوق'}
 };
 function resolveState(d){
-  if(d.data_state) return {st:d.data_state, ar:d.data_state_ar, sess:d.data_sessions_old, as_of:d.data_as_of};
+  /* as_of, لا data_as_of — الحمولة لم تشحن هذا الاسم يوماً، فكان الحقل
+     undefined دائماً والصفحة عمياء عن ختمها الزمني. */
+  if(d.data_state) return {st:d.data_state, ar:d.data_state_ar, sess:d.data_sessions_old,
+                           as_of:d.as_of, delay:d.source_delay_minutes, age:d.as_of_age_minutes};
   const scanned = d.stats?.total_scanned ?? d.stats?.scanned ?? 0;
   if(d.bridge_online === false && scanned === 0) return {st:'blind', ar:'لا مصدر أسعار'};
   if(d.bridge_online === false) return {st:'broken', ar:'الأسعار من التخزين'};
@@ -228,8 +231,14 @@ function render(d){
 
   $('banner').className = 'banner ' + u.c;
   $('b-ic').textContent = u.ic;
-  $('b-t').textContent  = u.t;
-  $('b-s').textContent  = S.ar || '';
+  /* «حيّ» وحدها تدّعي ما لا تسنده التغذية. القياس على السلك (17 أغسطس،
+     18 عيّنة) أعطى أرضية 15.1 دقيقة لم تُخترق مرة. فالوسم يحمل الأرضية،
+     والسطر تحته يحمل العمر الفعلي — وهما رقمان مختلفان: الأرضية ما لا
+     يستطيع المصدر تجاوزه، والعمر ما نملكه نحن الآن. الوسم على «حيّ» وحدها:
+     بعد الإغلاق الرقم نهائي ولا يدّعي حضوراً، فالتأخير هناك ضجيج. */
+  $('b-t').textContent  = u.t + (S.st === 'live' && has(S.delay) ? ` (تغذية متأخرة ${S.delay} دقيقة)` : '');
+  const ageTxt = has(S.age) ? `آخر تداول عند المصدر قبل ${Math.round(S.age)} دقيقة` : '';
+  $('b-s').textContent  = [S.ar || '', ageTxt].filter(Boolean).join(' · ');
   const chip = $('b-chip');
   if(has(S.sess)){ chip.hidden=false;
     chip.textContent = Number(S.sess)===0 ? 'آخر جلسة' : `${S.sess} جلسة`; }
