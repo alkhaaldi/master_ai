@@ -1,4 +1,10 @@
-"""Stock Deep Analysis — Bridge bars + Gemini 2.5 Pro analysis."""
+"""Stock Deep Analysis — local bars and local indicators, read by Gemini 2.5 Pro.
+
+Bars: `daily_bars` for the daily series, yahoo_gate for 30m. Indicators:
+indicators.py, under its coverage floor. Price: price_source, the one door
+that stamps its answer. The bridge is retired (G-4, 2026-08-16) and nothing
+here reaches for it.
+"""
 import os, json, time, re, logging, sqlite3, csv, asyncio, urllib.request, urllib.error
 
 logger = logging.getLogger("stock_analyzer")
@@ -603,6 +609,63 @@ ANALYSIS_PROMPT = """أنت محلل فني محترف لبورصة الكويت
 ابدأ التحليل الآن."""
 
 
+def _price_now(symbol):
+    """What the symbol is worth, through the one door that stamps its answer.
+
+    The page used to read the close off the newest 30m bar, and when that bar
+    was empty it fell through to /dashboard/signals-daily - a second door. So
+    on 2026-08-17 a thin name showed no price at all while price_source held
+    one (KHOT, 185.0), and URC showed 270.0 where every other page showed
+    271.0. Two doors a fils apart, and neither number carried the time it was
+    measured. price_source exists precisely because a bare number once rode a
+    134-day-old price into a published P&L.
+    """
+    try:
+        import price_source
+        p = price_source.get_price(symbol)
+        age = price_source.as_of_age_minutes(p.get("as_of"))
+        floor = price_source.SOURCE_DELAY_MINUTES
+    except Exception as e:
+        return {"value": None, "as_of": None, "source": None, "state": "missing",
+                "reason": "price_source failed: %s" % repr(e)[:120]}
+    return {
+        "value": p.get("price"),
+        "as_of": p.get("as_of"),
+        "source": p.get("source"),
+        "state": p.get("state"),
+        "data_state": p.get("data_state"),
+        "data_state_ar": p.get("data_state_ar"),
+        "sessions_old": p.get("sessions_old"),
+        "market_open": p.get("market_open"),
+        "age_minutes": age,
+        # What the feed cannot beat, next to what we actually hold. They are
+        # different questions and only both together mean "fresh".
+        "source_delay_floor_min": floor,
+        "reason": p.get("reason"),
+    }
+
+
+def _price_line(p):
+    """The price as Gemini must read it - never a bare number."""
+    if p.get("value") is None:
+        return ("لا سعر متاح — %s. لا تفترض سعراً ولا تبنِ خطة دخول عليه."
+                % (p.get("reason") or "مصدر السعر لم يعطِ قيمة مؤرخة"))
+    bits = ["السعر %s فلس" % p["value"]]
+    if p.get("data_state_ar"):
+        bits.append(p["data_state_ar"])
+    if p.get("source"):
+        bits.append("المصدر %s" % p["source"])
+    if p.get("age_minutes") is not None:
+        bits.append("عمر القراءة %s دقيقة" % p["age_minutes"])
+    # The feed floor is only a live-session question. Said while the market is
+    # closed it would read as doubt about a settled close, which is the one
+    # number here that is not in doubt.
+    if p.get("market_open") and p.get("source_delay_floor_min"):
+        bits.append("والمصدر نفسه متأخر %s دقيقة على الأقل، فلا تعامله كسعر لحظي"
+                    % p["source_delay_floor_min"])
+    return " · ".join(bits)
+
+
 def _contract(summary):
     """What the page needs to judge a number by: where it came from, how many
     bars answered, how much of the grid was there, and whether the newest bar
@@ -633,7 +696,9 @@ def analyze_stock(symbol):
     Bars now come from the same places as everything else: daily from the
     local `daily_bars` store, 30m live through yahoo_gate. Indicators are
     computed by indicators.py under its coverage floor, so absence produces
-    a reason instead of a number.
+    a reason instead of a number. The price comes from price_source rather
+    than off the newest bar, so it is the same number the other pages show
+    and it carries the time it was measured.
     """
     b30, src30, err30 = _bars_for(symbol, "30m")
     bday, srcday, errday = _bars_for(symbol, "daily")
@@ -650,16 +715,19 @@ def analyze_stock(symbol):
                 "symbol": symbol, "source_30m": src30, "source_daily": srcday}
 
     # 5. Build prompt
+    price = _price_now(symbol)
     provenance = (
         "المؤشرات محسوبة محلياً بـ indicators.py (%s)، لا من الجسر.\n"
         "الجسر تقاعد في 2026-08-16، وأرقامه لم تكن بنفس المعايير: StochK "
         "اختلف حتى 242%% على نفس السهم والجلسة. فلا تقارن هذا التحليل "
         "بتحليل سابق من عهد الجسر — المحرّك مختلف.\n"
         "مصدر 30 دقيقة: %s · مصدر اليومي: %s\n"
+        "%s\n"
         "كل مؤشر يحمل bars_used و coverage_pct و bar_complete. أي قيمة "
         "None معناها «تعذّر القياس» ومعها سبب — وليست صفراً ولا حياداً. "
         "لا تبنِ استنتاجاً على قيمة غائبة."
-        % (LOCAL_PARAMS, summary_30m.get("source"), summary_daily.get("source"))
+        % (LOCAL_PARAMS, summary_30m.get("source"), summary_daily.get("source"),
+           _price_line(price))
     )
     prompt = ANALYSIS_PROMPT.format(
         symbol=symbol,
@@ -808,7 +876,11 @@ def analyze_stock(symbol):
         "data": {
             "bars_30m": summary_30m.get("total_bars"),
             "bars_daily": summary_daily.get("total_bars"),
-            "price": (summary_30m.get("latest") or {}).get("close"),
+            # The bare number stays for anything still reading `price`, but it
+            # is now the same number every other page shows, and `price_meta`
+            # carries the stamp that makes it judgeable.
+            "price": price["value"],
+            "price_meta": price,
             "indicator_source": "local (indicators.py)",
             "indicator_params": LOCAL_PARAMS,
             "timeframes": {

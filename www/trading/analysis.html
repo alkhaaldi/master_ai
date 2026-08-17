@@ -101,6 +101,9 @@ body{background:var(--navy-900);color:var(--text);font-family:var(--fd);min-heig
 .sh-signal.wait{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-br)}
 .sh-signal.watch{color:var(--cyan);background:var(--cyan-bg);border:1px solid var(--cyan-br)}
 .sh-conf{margin-right:auto;font-family:var(--fm);font-size:.8rem;color:var(--text-3)}
+/* The price never appears alone: this carries when it was measured and how
+   it was judged, straight from price_source. */
+.sh-stamp{font-size:.6rem;color:var(--text-3);align-self:center}
 /* Quick stats */
 .quick-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
 .qs-card{background:var(--navy-800);border:1px solid var(--card-border);border-radius:10px;padding:10px;text-align:center}
@@ -157,7 +160,7 @@ body{background:var(--navy-900);color:var(--text);font-family:var(--fd);min-heig
     <div class="empty-state">
       <div class="empty-icon">&#x1F50D;</div>
       <div class="empty-title">&#x0627;&#x062E;&#x062A;&#x0631; &#x0633;&#x0647;&#x0645; &#x0644;&#x0644;&#x062A;&#x062D;&#x0644;&#x064A;&#x0644;</div>
-      <div class="empty-sub">&#x0627;&#x0636;&#x063A;&#x0637; &#x0639;&#x0644;&#x0649; &#x0623;&#x064A; &#x0633;&#x0647;&#x0645; &#x0645;&#x0646; &#x0627;&#x0644;&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0644;&#x0644;&#x062D;&#x0635;&#x0648;&#x0644; &#x0639;&#x0644;&#x0649; &#x062A;&#x062D;&#x0644;&#x064A;&#x0644; &#x0641;&#x0646;&#x064A; &#x0645;&#x0641;&#x0635;&#x0644; &#x0628;&#x0627;&#x0644;&#x0639;&#x0631;&#x0628;&#x064A;<br>Gemini 2.5 Pro + TradingView Bridge + Google Search</div>
+      <div class="empty-sub">&#x0627;&#x0636;&#x063A;&#x0637; &#x0639;&#x0644;&#x0649; &#x0623;&#x064A; &#x0633;&#x0647;&#x0645; &#x0645;&#x0646; &#x0627;&#x0644;&#x0642;&#x0627;&#x0626;&#x0645;&#x0629; &#x0644;&#x0644;&#x062D;&#x0635;&#x0648;&#x0644; &#x0639;&#x0644;&#x0649; &#x062A;&#x062D;&#x0644;&#x064A;&#x0644; &#x0641;&#x0646;&#x064A; &#x0645;&#x0641;&#x0635;&#x0644; &#x0628;&#x0627;&#x0644;&#x0639;&#x0631;&#x0628;&#x064A;<br>Gemini 2.5 Pro + &#x0645;&#x0624;&#x0634;&#x0631;&#x0627;&#x062A; &#x0645;&#x062D;&#x0644;&#x064A;&#x0629; (indicators.py) + Google Search</div>
     </div>
   </div>
 </div>
@@ -231,27 +234,23 @@ window.selectStock = async function(symbol, forceRefresh){
   
   const panel = $('analysis-panel');
 
-  if(!forceRefresh){
-    // Try cache first
-    panel.innerHTML = '<div class="loading-state"><div class="ld-spinner"></div><div class="ld-text">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u062A\u062D\u0644\u064A\u0644 '+esc(symbol)+'...</div></div>';
-    try{
-      const resp = await fetch('/api/analyze?symbol='+encodeURIComponent(symbol));
-      const data = await resp.json();
-      if(!data.error && data.cached){
-        await renderAnalysis(data, symbol);
-        return;
-      }
-    }catch(e){}
-  }
+  /* ONE call per click. This used to fire three full Gemini 2.5 Pro
+     analyses: a GET, then a POST because `data.cached` is never set - there
+     is no cache, and /api/analyze/refresh is the same endpoint - then a
+     third GET to "read the cached result". Measured 2026-08-17: 86s and 30s
+     for a single call, so one click cost a minute and a half to three
+     minutes and three times the tokens, and what you were finally shown was
+     the third answer, not the one you had waited for. forceRefresh is kept
+     in the signature because the refresh button passes it; with no cache in
+     front of it, every call is already live. */
 
-  // Live refresh — call Gemini directly
   panel.innerHTML = '<div class="loading-state"><div class="ld-spinner"></div>'
     +'<div class="ld-text">\u062C\u0627\u0631\u064A \u062A\u062D\u0644\u064A\u0644 '+esc(symbol)+' \u0645\u0628\u0627\u0634\u0631\u0629...</div>'
-    +'<div class="ld-sub">Bridge + Gemini \u2022 \u0642\u062F \u064A\u0633\u062A\u063A\u0631\u0642 30-60 \u062B\u0627\u0646\u064A\u0629</div>'
+    +'<div class="ld-sub">\u0645\u0624\u0634\u0631\u0627\u062A \u0645\u062D\u0644\u064A\u0629 + Gemini \u2022 \u0642\u062F \u064A\u0633\u062A\u063A\u0631\u0642 30-60 \u062B\u0627\u0646\u064A\u0629</div>'
     +'<div class="ld-progress"><div class="ld-progress-bar"></div></div></div>';
 
   try{
-    const resp = await fetch('/api/analyze/refresh?symbol='+encodeURIComponent(symbol), {method:'POST'});
+    const resp = await fetch('/api/analyze?symbol='+encodeURIComponent(symbol));
     const data = await resp.json();
     if(data.error){
       panel.innerHTML='<div class="error-state" style="padding:2rem;text-align:center">'
@@ -262,45 +261,39 @@ window.selectStock = async function(symbol, forceRefresh){
         +'</div>';
       return;
     }
-    // Re-fetch from cache to get structured data
-    try{
-      const cr = await fetch('/api/analyze?symbol='+encodeURIComponent(symbol));
-      const cd = await cr.json();
-      if(!cd.error) { await renderAnalysis(cd, symbol); return; }
-    }catch(e2){}
-    // Fallback: render raw result
-    await renderAnalysis(data, symbol);
+    renderAnalysis(data, symbol);
   }catch(e){
     panel.innerHTML='<div class="error-state">\u274C \u062E\u0637\u0623: '+esc(e.message)+'</div>';
   }
 };
 
-async function renderAnalysis(data, symbol){
+function renderAnalysis(data, symbol){
   const s = data.structured || {};
   const sigMap = {'\u0634\u0631\u0627\u0621':'buy','\u0628\u064A\u0639':'sell','\u0627\u0646\u062A\u0638\u0627\u0631':'wait','\u0645\u0631\u0627\u0642\u0628\u0629':'watch'};
   const sigCls = sigMap[s.signal] || 'watch';
-  const price = (data.data||{}).price || s.entry || '';
-
-  // Fetch live price from signals-daily if no price from analysis cache
-  let livePrice = null;
-  if(!price || typeof price !== 'number'){
-    try{
-      const sr = await fetch('/dashboard/signals-daily');
-      if(sr.ok){
-        const sd = await sr.json();
-        const sig = (sd.all_signals||[]).find(function(x){return x.symbol===symbol});
-        if(sig && sig.price) livePrice = sig.price;
-      }
-    }catch(e){}
-  }
-  const displayPrice = livePrice || (typeof price==='number' ? price : null);
+  /* One door for the price: price_source, through the analysis. It used to be
+     the close of the newest 30m bar, and when that bar was empty this fell
+     through to /dashboard/signals-daily - so on 2026-08-17 KHOT showed nothing
+     while price_source held 185.0, and URC showed 270.0 where every other page
+     showed 271.0. `s.entry` was in that chain too, which put the entry price
+     Gemini PROPOSED where the current price belongs. */
+  const meta = (data.data||{}).price_meta || {};
+  const displayPrice = (typeof (data.data||{}).price === 'number')
+                     ? (data.data||{}).price : null;
+  const stamp = [meta.data_state_ar, meta.source].filter(Boolean).join(' \u00B7 ');
 
   let html = '';
   // Signal Hero
   html += '<div class="signal-hero">';
   html += '<span class="sh-symbol">'+esc(symbol)+'</span>';
-  if(displayPrice) html += '<span class="sh-price" style="direction:ltr;unicode-bidi:isolate">'+Number(displayPrice).toFixed(3)+'</span>';
-  else if(price) html += '<span class="sh-price">'+esc(String(price))+'</span>';
+  if(displayPrice !== null){
+    html += '<span class="sh-price" style="direction:ltr;unicode-bidi:isolate">'+Number(displayPrice).toFixed(3)+'</span>';
+    if(stamp) html += '<span class="sh-stamp">'+esc(stamp)+'</span>';
+  }else{
+    // No price is an answer, and it says why. Never a blank the reader fills in.
+    html += '<span class="sh-price" style="color:var(--amber)">لا سعر</span>';
+    html += '<span class="sh-stamp">'+esc(meta.reason||'مصدر السعر لم يعطِ قيمة مؤرخة')+'</span>';
+  }
   html += '<span class="sh-signal '+sigCls+'">'+(s.signal||'\u2014')+'</span>';
   html += '<span class="sh-conf">\u062B\u0642\u0629: '+(s.confidence||data.confidence||'\u2014')+'%</span>';
   html += '<button onclick="selectStock(\''+symbol+'\',true)" style="margin-right:auto;padding:4px 12px;border-radius:6px;border:1px solid var(--gold-br);background:var(--gold-bg);color:var(--gold);cursor:pointer;font-family:var(--fd);font-size:.6rem">\u{1F504} \u062A\u062D\u062F\u064A\u062B</button>';
