@@ -695,8 +695,15 @@ than slower honest labelling.
 
 ---
 
-> **Status note appended 2026-08-18 by the local Claude Code session, on
-> committing this file. The text below is claude.ai's and is left as written.**
+## HANDOFF #2 — 2026-08-17 evening, for the next Claude Code session
+
+> **STATUS NOTE — appended 2026-08-18 by the local Claude Code session on
+> committing this file. Everything below it is claude.ai's, left as written.**
+>
+> Placed here, immediately under the heading, on the second try. The first
+> version sat ABOVE the heading, where it read in the right order and was
+> invisible to anyone who searched *inside* the section for it — which is
+> where a note about a section is looked for.
 >
 > - **"Next, in order" items 1 and 2 are DONE** (commit `063a840`). Item 1's
 >   five fields turned out to be three: `s.support`, `s.resistance` and
@@ -705,13 +712,12 @@ than slower honest labelling.
 >   four real gaps went through `signal_health`, not the position row.
 >   Item 2's two: `autonomy_level` now on `/dashboard`; `brain_weighted` was
 >   absent BY DESIGN and is now an explicit `false` carrying its reason.
-> - **`HEAD c1559f9` is stale** — HEAD is `063a840` at the time of this note.
+> - **`HEAD c1559f9` is stale** — HEAD was `063a840` when this note was
+>   written.
 > - Item 3, DELETE the 6, is **not** done, and the count has moved: the sweep
 >   had five defects, every one of them inflating it. Uncovered reads went
 >   104 → 89 → 69 → 28 → 20. See OPEN_ITEMS 4k for the corrected numbers and
 >   the correction history, which is the more useful half.
-
-## HANDOFF #2 — 2026-08-17 evening, for the next Claude Code session
 
 Previous session is near its context limit. Verified on the wire by claude.ai,
 not copied from a report.
