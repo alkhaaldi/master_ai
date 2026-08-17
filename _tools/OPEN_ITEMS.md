@@ -198,6 +198,42 @@ none of which belongs riding on another change.
 Until then the code refuses what the schema permits, which holds — but it
 holds by three modules agreeing, not by construction.
 
+**4g. Audit every trajectory built for a model or a report — the `rsi_traj` shape**
+Fixed in `stock_analyzer` on 2026-08-17, not looked for anywhere else:
+
+```python
+rsi_traj = [round(b.get("rsi_14", 0), 1) for b in bars[-20:]]
+```
+
+Twenty points went to Gemini, and any bar the bridge had not enriched
+contributed **0** — a reading that says "maximum oversold" and means "not
+measured". A single number carrying an invented value is bad; a *trajectory*
+is worse, because the consumer reads a SHAPE out of it. Two unenriched bars
+in the middle of a rising RSI look like a crash and a recovery that never
+happened, and no scalar check would catch it: every individual value is in
+range.
+
+Why it is its own item: the falsy sentinel does not see this. `b.get("rsi_14",
+0)` is `dict.get` with a default, not `or 0`, and the widened string family
+does not cover it either. So this class is currently unmeasured — we do not
+know how many exist.
+
+To audit, in this order:
+1. every list comprehension over bars feeding an LLM prompt or a report
+2. `.get(key, 0)` and `.get(key, 0.0)` inside any list/series construction
+3. anything that then computes a slope, a trend or a "direction" from such a
+   series — that is where an invented point becomes an invented conclusion
+
+Known consumers worth checking first: `trading_brain` (report text),
+`gemini_scanner`, `brain_analytics`, `confluence_engine`, and any dashboard
+card drawing a sparkline. The fix pattern is settled: compute per window and
+let a window that cannot answer contribute `None`, as
+`stock_analyzer._trail` now does.
+
+Consider extending `falsy_defaults_inventory` with a fourth family —
+`.get(k, <number>)` inside a comprehension — once the manual sweep says how
+big the problem is.
+
 **5. The 30m layer**
 `/dashboard/signals-30m` returns nothing. G-1 proved Yahoo **does** serve 30m
 for `.KW` (41 bars, tier-1 names 100% populated). So the layer is rebuildable

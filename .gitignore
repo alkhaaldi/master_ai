@@ -91,3 +91,10 @@ tmp/
 data/yahoo_gate.db*
 _tools/_falsy_probe_artificial.py
 .probe_work/
+
+# Migration TOOLS in _tools/ are tracked (2026-08-17). The blanket
+# migrate_*.py rule above was written for one-off scratch scripts, but it also
+# hid _tools/migrate_direction_check.py - which rewrote the trades table. A
+# script that touches the money records and escapes review is the exact
+# pattern this repo spent a day closing.
+!_tools/migrate_*.py

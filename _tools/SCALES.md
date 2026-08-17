@@ -139,6 +139,61 @@ StochK of 26.3 from the bridge and 90.0 computed locally are not two
 measurements of one thing. Any threshold tuned on bridge-era values is
 not transferable, and C-27 must treat the seam as a break in the series.
 
+## `/api/analyze` — the evidence contract, by exact key path
+
+Added 2026-08-17 when the page was rebuilt off the retired bridge. Written
+here because the contract was described in prose first and probed with the
+flat names that prose implied — `coverage_30m`, `dropped_incomplete`,
+`source_daily` — every one of which returns `None`. **The fields are nested.**
+A contract nobody can name is a contract nobody can check.
+
+Top level:
+
+| key path | type | meaning |
+|---|---|---|
+| `.symbol` | str | as requested, upper-cased |
+| `.analyzed_at` | str | `%Y-%m-%dT%H:%M:%SZ`, when the report was assembled — **not** a bar time |
+| `.gemini_model` | str | which model answered; `"unknown"` if the fallback chain lost track |
+| `.report` | str | the Arabic analysis text |
+| `.structured` | dict | signal / confidence / entry / stop_loss / targets / support / resistance |
+| `.error` | str | present **instead of** the above; carries the per-timeframe reasons |
+
+`.data` — the numbers and where they came from:
+
+| key path | type | meaning |
+|---|---|---|
+| `.data.price` | float \| null | last close of the newest **30m** bar. `null` when 30m is unavailable — never 0 |
+| `.data.bars_30m` | int \| null | count only, kept for the existing page |
+| `.data.bars_daily` | int \| null | count only |
+| `.data.indicator_source` | str | `"local (indicators.py)"` — the seam marker |
+| `.data.indicator_params` | str | `"RSI14 MACD12/26/9 ATR14 ADX14 StochK14 EMA9/21 SR20"` |
+
+`.data.timeframes.<tf>` where `<tf>` is exactly **`"30m"`** or **`"daily"`** —
+these are the strings the probes were missing:
+
+| key path | type | meaning |
+|---|---|---|
+| `.data.timeframes.30m.state` | `"ok"` \| `"unavailable"` | anything other than `ok` means the numbers below are absent, not zero |
+| `.data.timeframes.30m.reason` | str | present only when `state != "ok"` |
+| `.data.timeframes.30m.source` | str | `"yahoo 30m (yahoo)"` or `"yahoo 30m (cache)"` — the parenthesis says whether it was fetched or served from the ten-minute cache |
+| `.data.timeframes.30m.bars_used` | int | bars that survived the completeness drop |
+| `.data.timeframes.30m.bars_dropped_incomplete` | int | bars removed because the period had not closed |
+| `.data.timeframes.30m.coverage_pct` | float | share of non-null closes in the window, 0–100 |
+| `.data.timeframes.30m.coverage_floor_pct` | float | `80.0` — below this an indicator is refused, not approximated |
+| `.data.timeframes.30m.bar_complete` | bool | whether the newest bar had closed |
+| `.data.timeframes.daily.*` | — | identical shape; `source` is `"daily_bars (local store)"` |
+
+Measured on NBK, 2026-08-17: 30m `bars_used` 176, `bars_dropped_incomplete`
+1, `coverage_pct` 100.0; daily 98 / 0 / 100.0.
+
+**The seam this exists to mark:** indicators here are computed by
+`indicators.py`, not supplied by the bridge. They are not the same numbers by
+another road — StochK differed by up to 242% on the same symbol and session
+(see *Measured: local vs bridge* above). `indicator_source` is what tells a
+reader which side of 2026-08-16 a stored analysis belongs to.
+
+---
+
 ## Rules for anything that consumes these
 
 1. **State the scale at the point of use.** A comment naming the range and

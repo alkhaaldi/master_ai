@@ -27,8 +27,11 @@ restored.
                                             reason and the service uptime
   telegram         refuse a send with an -> the refusal must be recorded.
                    invalid token            Nothing is delivered here.
-  direction        an empty direction,   -> no P&L at all, and above all
-                   and a typo, on a copy    not the long or short reading
+  direction        schema layer: '' and   -> the database must refuse them
+                   a typo, on a copy
+                   code layer: the same  -> still refused, proved against a
+                   values on a legacy       copy of the pre-migration
+                   snapshot                 snapshot
 
 Restoration runs from a finally block, so an interrupted run does not leave
 the door shut or a fake row behind.
@@ -379,13 +382,18 @@ def prove_db_sanity():
          "UPDATE stock_radar_daily SET captured_at=NULL"),
         ("stock_radar_daily.rsi_divergence nulls",
          "UPDATE stock_radar_daily SET rsi_divergence=NULL"),
+        # `direction` is stated explicitly. These fixtures used to omit it and
+        # lean on the schema's DEFAULT 'long' - the very default the
+        # 2026-08-17 migration dropped. The new constraint caught its own
+        # author's test data first, which is a good sign about the constraint
+        # and a fair comment on the test data.
         ("open trades entry_date vs created_at",
-         "INSERT INTO trades (symbol, status, entry_date, created_at, entry_price,"
-         " quantity) VALUES ('PROVE', 'open', DATE(datetime('now','+3 hours')),"
-         " datetime('now'), 1, 1)"),
+         "INSERT INTO trades (symbol, status, direction, entry_date, created_at,"
+         " entry_price, quantity) VALUES ('PROVE', 'open', 'long',"
+         " DATE(datetime('now','+3 hours')), datetime('now'), 1, 1)"),
         ("closed trades bookkeeping candidates",
-         "INSERT INTO trades (symbol, status, entry_date, exit_date, created_at,"
-         " entry_price, quantity) VALUES ('PROVE', 'closed',"
+         "INSERT INTO trades (symbol, status, direction, entry_date, exit_date,"
+         " created_at, entry_price, quantity) VALUES ('PROVE', 'closed', 'long',"
          " DATE(datetime('now','+3 hours')), DATE(datetime('now','+3 hours')),"
          " datetime('now'), 1, 1)"),
     ]
@@ -413,132 +421,121 @@ def prove_db_sanity():
 
 # ──────────────────── guard 7: a missing direction is not a BUY ─────────
 def prove_direction():
-    """A trade with no direction must be refused, not read as long.
+    """Two layers, because the 2026-08-17 migration added one.
 
-    Driven on a COPY. The trades table holds the user's real money records;
-    inserting a phantom open position into it, even for two seconds, would
-    also drop that symbol into the live positions cycle. So this points
-    position_engine at a VACUUM INTO copy and works there.
+    SCHEMA: the database itself refuses '' and typos and an omitted column.
+    That is the layer that does not depend on anyone remembering.
+
+    CODE: position_engine and journal_engine still refuse the same values.
+    Proved against a copy of the PRE-migration snapshot, because the live
+    schema now makes the bad row unconstructible - which is the whole point
+    of having done the migration, and also why the code layer would silently
+    rot untested if this only tested the live shape.
     """
     print("\n[guard] direction: absence is not a BUY")
+
+    # ── layer 1: the schema ──
     probe = _probe_db()
     try:
-        import position_engine as pe
-        real_path = pe.DB_PATH
-        pe.DB_PATH = probe
-        try:
-            c = sqlite3.connect(probe, timeout=15)
-            # entry 100, price 90: a LONG reads -10%, a SHORT reads +10%.
-            # If anything gets written at all, the sign says which default
-            # was silently applied.
-            # An EMPTY STRING, not NULL: the column is `TEXT NOT NULL
-            # DEFAULT 'long'`, so NULL cannot be stored - but '' can, and ''
-            # is falsy, which is exactly what the old `or "long"` fired on.
-            # The schema's own DEFAULT 'long' is the same defect one layer
-            # down, and is recorded in OPEN_ITEMS rather than fixed here.
-            c.execute(
-                "INSERT INTO trades (symbol, status, direction, entry_price,"
-                " quantity, entry_date, created_at) VALUES"
-                " ('NODIR', 'open', '', 100, 10, date('now'), datetime('now'))")
-            tid = c.execute("SELECT id FROM trades WHERE symbol='NODIR'").fetchone()[0]
-            c.commit()
-            c.close()
-
-            pe._update_position_pnl(tid, 90.0)
-
-            c = sqlite3.connect(probe, timeout=15)
-            row = c.execute("SELECT pnl_pct, pnl_fils FROM trades WHERE id=?",
-                            (tid,)).fetchone()
-            c.close()
-            step("empty direction -> no P&L written at all", row, (None, None))
-            print(f"       stored pnl_pct={row[0]!r} pnl_fils={row[1]!r}")
-            step("...and specifically NOT the long reading (-10%)",
-                 row[0] == -10.0, False)
-
-            # and the same row, given a direction, is computed normally -
-            # the guard refuses the unknown, it does not break the known.
-            c = sqlite3.connect(probe, timeout=15)
-            c.execute("UPDATE trades SET direction='long' WHERE id=?", (tid,))
-            c.commit()
-            c.close()
-            pe._update_position_pnl(tid, 90.0)
-            c = sqlite3.connect(probe, timeout=15)
-            row2 = c.execute("SELECT pnl_pct FROM trades WHERE id=?",
-                             (tid,)).fetchone()
-            c.close()
-            step("a stated 'long' still computes", row2[0], -10.0)
-
-            # a stated short is the opposite sign - which is what the old
-            # default was quietly choosing between
-            c = sqlite3.connect(probe, timeout=15)
-            c.execute("UPDATE trades SET direction='short', pnl_pct=NULL WHERE id=?",
-                      (tid,))
-            c.commit()
-            c.close()
-            pe._update_position_pnl(tid, 90.0)
-            c = sqlite3.connect(probe, timeout=15)
-            row3 = c.execute("SELECT pnl_pct FROM trades WHERE id=?",
-                             (tid,)).fetchone()
-            c.close()
-            step("a stated 'short' computes the opposite sign", row3[0], 10.0)
-            print(f"       long {row2[0]}%  vs  short {row3[0]}%  - the "
-                  f"default used to pick one of these for you")
-
-            # A typo is the nastiest case and the schema accepts it: 'lomg'
-            # is TRUTHY, so the old code sailed past `or "long"` and landed in
-            # the else branch - computing a SHORT. One mistyped letter
-            # inverted the sign of the money.
-            c = sqlite3.connect(probe, timeout=15)
-            c.execute("UPDATE trades SET direction='lomg', pnl_pct=NULL WHERE id=?",
-                      (tid,))
-            c.commit()
-            c.close()
-            pe._update_position_pnl(tid, 90.0)
-            c = sqlite3.connect(probe, timeout=15)
-            row4 = c.execute("SELECT pnl_pct FROM trades WHERE id=?",
-                             (tid,)).fetchone()
-            c.close()
-            step("a typo ('lomg') is refused, not read as a SHORT", row4[0], None)
-        finally:
-            pe.DB_PATH = real_path
+        c = sqlite3.connect(probe, timeout=15)
+        for label, direction, want in (("omitted column", None, "refused"),
+                                       ("empty string", "", "refused"),
+                                       ("typo 'lomg'", "lomg", "refused"),
+                                       ("a stated 'short'", "short", "accepted")):
+            if direction is None:
+                sql = ("INSERT INTO trades (symbol,status,entry_price,entry_date,"
+                       "created_at) VALUES ('X','open',1,date('now'),datetime('now'))")
+                args = ()
+            else:
+                sql = ("INSERT INTO trades (symbol,status,direction,entry_price,"
+                       "entry_date,created_at) VALUES "
+                       "('X','open',?,1,date('now'),datetime('now'))")
+                args = (direction,)
+            try:
+                c.execute("BEGIN")
+                c.execute(sql, args)
+                c.execute("ROLLBACK")
+                got = "accepted"
+            except sqlite3.IntegrityError:
+                c.execute("ROLLBACK")
+                got = "refused"
+            step(f"schema: {label}", got, want)
+        c.close()
     finally:
         _drop_probe(probe)
 
-    # And the OTHER two readers must agree. Before 2026-08-17 they did not:
-    # position_engine read an unrecognised direction as LONG, journal_engine
-    # fell through to SHORT in two places, so the same row produced +10% and
-    # -10% depending on which module you asked.
-    probe2 = _probe_db()
+    # ── layer 2: the code, on a database that still permits the bad row ──
+    import glob
+    snaps = sorted(glob.glob(BASE + "/backups/life_pre_direction_check_*.db"))
+    if not snaps:
+        print("     SKIPPED code layer: no pre-migration snapshot left "
+              "(retention). The schema layer above still holds.")
+        return
+    legacy = os.path.join(tempfile.mkdtemp(prefix="prove_guards_", dir=WORKDIR),
+                          "legacy.db")
+    _probe_dirs.append(os.path.dirname(legacy))
+    shutil.copy(snaps[-1], legacy)
     try:
+        import position_engine as pe
         import journal_engine as je
-        real_je = je.DB_PATH if hasattr(je, "DB_PATH") else None
-        c = sqlite3.connect(probe2, timeout=15)
-        c.execute(
-            "INSERT INTO trades (symbol, status, direction, entry_price,"
-            " quantity, entry_date, created_at) VALUES"
-            " ('NODIR2', 'open', 'lomg', 100, 10, date('now'), datetime('now'))")
-        tid2 = c.execute("SELECT id FROM trades WHERE symbol='NODIR2'").fetchone()[0]
-        c.commit()
-        c.close()
-        for attr in ("DB_PATH", "LIFE_DB", "DB"):
-            if hasattr(je, attr):
-                setattr(je, attr, probe2)
+        real_pe, real_je = pe.DB_PATH, je.DB_PATH
+        pe.DB_PATH = je.DB_PATH = legacy
         try:
-            closed = je.close_trade(tid2, 90.0) if hasattr(je, "close_trade") else None
-            step("journal_engine refuses to CLOSE an unrecognised direction",
-                 closed, None)
-        except Exception as e:
-            print(f"       close_trade raised instead of returning None: {e!r}")
-            failures.append("journal close: raised instead of refusing")
-        if real_je is not None:
-            je.DB_PATH = real_je
-    finally:
-        _drop_probe(probe2)
+            c = sqlite3.connect(legacy, timeout=15)
+            # entry 100, price 90: long reads -10%, short reads +10%. If
+            # anything is written, the sign says which default was applied.
+            c.execute("INSERT INTO trades (symbol,status,direction,entry_price,"
+                      "quantity,entry_date,created_at) VALUES "
+                      "('NODIR','open','',100,10,date('now'),datetime('now'))")
+            tid = c.execute("SELECT id FROM trades WHERE symbol='NODIR'").fetchone()[0]
+            c.commit()
+            c.close()
+            step("legacy schema really does accept the bad row", True, True)
 
-    # nothing may have touched the real table
+            pe._update_position_pnl(tid, 90.0)
+            c = sqlite3.connect(legacy, timeout=15)
+            row = c.execute("SELECT pnl_pct, pnl_fils FROM trades WHERE id=?",
+                            (tid,)).fetchone()
+            c.close()
+            step("code: empty direction -> no P&L written", row, (None, None))
+            step("code: ...and specifically NOT the long reading (-10%)",
+                 row[0] == -10.0, False)
+
+            for d, want in (("long", -10.0), ("short", 10.0)):
+                c = sqlite3.connect(legacy, timeout=15)
+                c.execute("UPDATE trades SET direction=?, pnl_pct=NULL WHERE id=?",
+                          (d, tid))
+                c.commit()
+                c.close()
+                pe._update_position_pnl(tid, 90.0)
+                c = sqlite3.connect(legacy, timeout=15)
+                got = c.execute("SELECT pnl_pct FROM trades WHERE id=?",
+                                (tid,)).fetchone()[0]
+                c.close()
+                step(f"code: a stated '{d}' computes", got, want)
+
+            c = sqlite3.connect(legacy, timeout=15)
+            c.execute("UPDATE trades SET direction='lomg', status='open',"
+                      " pnl_pct=NULL WHERE id=?", (tid,))
+            c.commit()
+            c.close()
+            pe._update_position_pnl(tid, 90.0)
+            c = sqlite3.connect(legacy, timeout=15)
+            got = c.execute("SELECT pnl_pct FROM trades WHERE id=?",
+                            (tid,)).fetchone()[0]
+            c.close()
+            step("code: a typo is refused, not read as a SHORT", got, None)
+
+            closed = je.close_trade(tid, 90.0)
+            step("code: journal_engine refuses to CLOSE it either", closed, None)
+        finally:
+            pe.DB_PATH, je.DB_PATH = real_pe, real_je
+    finally:
+        _drop_probe(legacy)
+
     c = sqlite3.connect(DB, timeout=15)
     left = c.execute("SELECT COUNT(*) FROM trades WHERE symbol IN "
-                     "('NODIR','NODIR2')").fetchone()[0]
+                     "('NODIR','NODIR2','X','PROVE')").fetchone()[0]
     c.close()
     step("the real trades table was never written to", left, 0)
 
