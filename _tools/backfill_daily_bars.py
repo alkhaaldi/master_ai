@@ -312,9 +312,17 @@ def main():
         _sr = _ci["sr"]["value"]
         if _sr:
             ind["support"], ind["resistance"] = _sr["support"], _sr["resistance"]
+        # Written UNCONDITIONALLY, unlike the indicators above. Those may skip
+        # a field and leave the stored value alone; this column must not work
+        # that way, because the values already in the table came from the
+        # bridge and have been frozen since it was retired on 2026-08-16. A
+        # conditional write would preserve them for ever. None here means
+        # "asked, unanswerable" and lands as NULL on purpose.
+        ind["rsi_divergence"] = _ci["rsi_divergence"]["value"]
         # the evidence travels with the values (G-2 + user requirement)
         ind["indicator_source"] = "local"
-        ind["indicator_params"] = "RSI14 MACD12/26/9 ATR14 ADX14 StochK14 EMA9/21 SR20"
+        ind["indicator_params"] = ("RSI14 MACD12/26/9 ATR14 ADX14 StochK14 "
+                                   "EMA9/21 SR20 RSIdiv14/30/2")
         ind["bars_used"] = _ci["bars_complete"]
         ind["coverage_pct"] = _ci["coverage_pct"]
         ind["bar_complete"] = 1 if _ci["bars_dropped_incomplete"] == 0 else 0

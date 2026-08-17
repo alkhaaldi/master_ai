@@ -38,6 +38,12 @@ ATR_PERIOD = 14
 ADX_PERIOD = 14
 STOCH_PERIOD = 14
 SR_LOOKBACK = 20
+# RSI divergence: how far back to look for the two pivots, and how many bars
+# must sit either side of a turn before it counts as one. Two bars is the
+# smallest window that rejects single-bar noise without smoothing away a
+# real two-day turn on a market this thin.
+RSI_DIV_LOOKBACK = 30
+RSI_DIV_PIVOT = 2
 
 INTERVAL_SECONDS = {"30m": 1800, "60m": 3600, "1h": 3600, "1d": 86400}
 
@@ -155,6 +161,107 @@ def rsi(bars, period=RSI_PERIOD, min_coverage=MIN_COVERAGE_PCT):
     if al == 0:
         return _result(100.0 if ag > 0 else 50.0, len(series), pct, params)
     return _result(round(100 - 100 / (1 + ag / al), 4), len(series), pct, params)
+
+
+def _rsi_series(series, period):
+    """Wilder RSI at every index from `period` on. Same recursion as rsi(),
+    exposed as a series because divergence is a question about the past:
+    the last value alone cannot say whether momentum is falling while price
+    rises. Returns a list aligned to `series`, with None before warm-up."""
+    out = [None] * len(series)
+    if len(series) < period + 1:
+        return out
+    gains = losses = 0.0
+    for i in range(1, period + 1):
+        d = series[i] - series[i - 1]
+        gains += max(d, 0.0)
+        losses += max(-d, 0.0)
+    ag, al = gains / period, losses / period
+    out[period] = 100.0 if al == 0 and ag > 0 else (
+        50.0 if al == 0 else round(100 - 100 / (1 + ag / al), 4))
+    for i in range(period + 1, len(series)):
+        d = series[i] - series[i - 1]
+        ag = (ag * (period - 1) + max(d, 0.0)) / period
+        al = (al * (period - 1) + max(-d, 0.0)) / period
+        out[i] = 100.0 if al == 0 and ag > 0 else (
+            50.0 if al == 0 else round(100 - 100 / (1 + ag / al), 4))
+    return out
+
+
+def _pivots(values, width, kind):
+    """Indices of local extremes with `width` bars either side.
+
+    kind='low' finds troughs, 'high' finds peaks. Strict on one side and
+    non-strict on the other so a flat shoulder does not erase a real turn -
+    common on a thin market where a price sits unchanged for a session.
+    """
+    out = []
+    for i in range(width, len(values) - width):
+        v = values[i]
+        if v is None:
+            continue
+        window = values[i - width:i + width + 1]
+        if any(w is None for w in window):
+            continue
+        if kind == "low" and v <= min(window) and v < max(window):
+            out.append(i)
+        elif kind == "high" and v >= max(window) and v > min(window):
+            out.append(i)
+    return out
+
+
+def rsi_divergence(bars, period=RSI_PERIOD, lookback=RSI_DIV_LOOKBACK,
+                   pivot=RSI_DIV_PIVOT, min_coverage=MIN_COVERAGE_PCT):
+    """'bullish' | 'bearish' | 'none' - or None with a reason.
+
+    Bullish: price makes a LOWER low while RSI makes a HIGHER low - selling
+    continues but with less force behind it. Bearish is the mirror: a higher
+    high in price on a lower high in RSI.
+
+    'none' and None are different answers and must stay different. 'none'
+    means two pivots were found and compared and they did not diverge - a
+    measurement. None means the question could not be asked: too few bars,
+    too many holes, or no second pivot inside the window. The writer this
+    replaced collapsed the two, storing NULL for both, so a checked symbol
+    and an unexaminable one were indistinguishable in the table.
+
+    Moved here 2026-08-17. The previous source was the trading bridge, which
+    was retired on 2026-08-16 (G-4) - after which nothing wrote this column
+    at all, while dashboard_api kept raising a "bearish divergence" review
+    alert on open positions from whatever value happened to be frozen in the
+    row.
+    """
+    params = "RSIdiv %d/%d/%d" % (period, lookback, pivot)
+    need = period + pivot * 2 + 2
+    series, bad = _prepare(bars, need, params, min_coverage)
+    if bad:
+        return bad
+    rs = _rsi_series(series, period)
+    _, _, pct = coverage(bars)
+    window = min(lookback, len(series) - period)
+    px, rv = series[-window:], rs[-window:]
+
+    for kind, verdict, price_cmp, rsi_cmp in (
+            ("low", "bullish", lambda a, b: a < b, lambda a, b: a > b),
+            ("high", "bearish", lambda a, b: a > b, lambda a, b: a < b)):
+        idx = _pivots(px, pivot, kind)
+        if len(idx) < 2:
+            continue
+        prev, last = idx[-2], idx[-1]
+        if rv[prev] is None or rv[last] is None:
+            continue
+        if price_cmp(px[last], px[prev]) and rsi_cmp(rv[last], rv[prev]):
+            return _result(verdict, len(series), pct, params)
+
+    # Say WHY there is no verdict: "no pivot pair" is not the same as
+    # "compared and flat", and only the second is a reading.
+    if (len(_pivots(px, pivot, "low")) < 2
+            and len(_pivots(px, pivot, "high")) < 2):
+        return _result(None, len(series), pct, params,
+                       "no pivot pair inside the last %d bars - nothing to "
+                       "compare, which is not the same as no divergence"
+                       % window)
+    return _result("none", len(series), pct, params)
 
 
 def ema_series(values, period):
@@ -342,4 +449,5 @@ def compute_all(bars, interval, now_utc_ts, min_coverage=MIN_COVERAGE_PCT):
     out["adx"] = adx(complete, min_coverage=min_coverage)
     out["stoch_k"] = stoch_k(complete, min_coverage=min_coverage)
     out["sr"] = support_resistance(complete, min_coverage=min_coverage)
+    out["rsi_divergence"] = rsi_divergence(complete, min_coverage=min_coverage)
     return out

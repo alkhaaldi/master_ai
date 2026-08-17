@@ -15,6 +15,8 @@ restored.
   yahoo circuit    open the circuit      -> the check must FAIL
   positions cycle  halt today's cycle    -> the check must FAIL
                    age out the cycle     -> the check must FAIL
+  db_sanity        break each check in   -> every one must FAIL
+                   turn, on a COPY
 
 Restoration runs from a finally block, so an interrupted run does not leave
 the door shut or a fake row behind. It does blind the price source for a few
@@ -22,10 +24,12 @@ seconds, so do not run it mid-scan.
 
     python3 _tools/prove_guards.py
 """
+import os
 import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 
 
@@ -196,9 +200,83 @@ def prove_positions_cycle():
     step("restored -> passes again", verdict("positions cycle"), "PASS")
 
 
+# ─────────────────────────── guard 3: db_sanity ─────────────────────────
+# Driven on a COPY. VACUUM INTO rather than a file copy, because life.db is
+# in WAL mode and a plain copy would miss whatever is still in the log.
+def _probe_db():
+    path = os.path.join(tempfile.mkdtemp(), "probe.db")
+    conn = sqlite3.connect(DB, timeout=30)
+    conn.execute("VACUUM INTO ?", (path,))
+    conn.close()
+    return path
+
+
+def _db_sanity_lines(db_path):
+    env = dict(os.environ, DB_SANITY_DB=db_path)
+    r = subprocess.run([BASE + "/venv/bin/python3", BASE + "/_tools/db_sanity.py"],
+                       capture_output=True, text=True, cwd=BASE, timeout=300, env=env)
+    return r.stdout + r.stderr
+
+
+def _db_verdict(out, marker):
+    for line in out.splitlines():
+        if marker in line:
+            m = re.search(r"\[(PASS|FAIL)\]", line)
+            if m:
+                return m.group(1), line.strip()
+    return None, None
+
+
+def prove_db_sanity():
+    print("\n[guard] db_sanity — every check, driven red on a copy")
+    base_db = _probe_db()
+    out = _db_sanity_lines(base_db)
+
+    # Each entry: the check's marker, and the SQL that should turn it red.
+    cases = [
+        ("stock_radar_events exists", "DELETE FROM stock_radar_events"),
+        ("stock_radar_daily exists", "DELETE FROM stock_radar_daily"),
+        ("stock_radar_watchlist exists", "DELETE FROM stock_radar_watchlist"),
+        ("stock_radar_state exists", "DELETE FROM stock_radar_state"),
+        ("stock_radar_daily.price nulls",
+         "UPDATE stock_radar_daily SET price=NULL"),
+        ("stock_radar_daily.captured_at nulls",
+         "UPDATE stock_radar_daily SET captured_at=NULL"),
+        ("stock_radar_daily.rsi_divergence nulls",
+         "UPDATE stock_radar_daily SET rsi_divergence=NULL"),
+        ("open trades entry_date vs created_at",
+         "INSERT INTO trades (symbol, status, entry_date, created_at, entry_price,"
+         " quantity) VALUES ('PROVE', 'open', DATE(datetime('now','+3 hours')),"
+         " datetime('now'), 1, 1)"),
+        ("closed trades bookkeeping candidates",
+         "INSERT INTO trades (symbol, status, entry_date, exit_date, created_at,"
+         " entry_price, quantity) VALUES ('PROVE', 'closed',"
+         " DATE(datetime('now','+3 hours')), DATE(datetime('now','+3 hours')),"
+         " datetime('now'), 1, 1)"),
+    ]
+
+    for marker, sql in cases:
+        v, line = _db_verdict(out, marker)
+        if v != "PASS":
+            print(f"     want=PASS  got={v!s:<5} *** MISMATCH ***  "
+                  f"{marker} (baseline)")
+            failures.append(f"db_sanity: {marker} not green at baseline")
+            continue
+        broken = _probe_db()
+        c = sqlite3.connect(broken, timeout=30)
+        c.execute(sql)
+        c.commit()
+        c.close()
+        v2, line2 = _db_verdict(_db_sanity_lines(broken), marker)
+        step(f"{marker}", v2, "FAIL")
+        if v2 != "FAIL":
+            print(f"       line was: {line2}")
+
+
 print(__doc__.split("\n\n")[0])
 prove_circuit()
 prove_positions_cycle()
+prove_db_sanity()
 
 print()
 if failures:
