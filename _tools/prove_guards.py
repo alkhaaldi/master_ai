@@ -20,8 +20,9 @@ restored.
                    detached share           one df alone cannot see
   db_sanity        break each check in   -> every one must FAIL
                    turn, on a COPY
-  falsy sentinel   plant a known `or 0` -> the count must rise and the
-                                            check must FAIL
+  falsy sentinel   plant a known `or 0`,  -> each count must rise, the
+                   then a known `or "id"`    check must FAIL, and the two
+                                            families must not bleed
   witness          drive one check red   -> the row must say so, with its
                                             reason and the service uptime
   telegram         refuse a send with an -> the refusal must be recorded.
@@ -547,6 +548,13 @@ def prove_witness():
 # it and required the number to move. The tool that guards the other tools
 # was the last one taking its own word for it.
 FALSY_PROBE = BASE + "/_tools/_falsy_probe_artificial.py"
+FALSY_PROBE_STR_SRC = '''"""ARTIFICIAL - written by prove_guards.py, deleted seconds later."""
+
+
+def _probe_str(d):
+    # The string violation: an absent config becoming a specific destination.
+    return d.get("nobody_set_this") or "669769765"
+'''
 FALSY_PROBE_SRC = '''"""ARTIFICIAL - written by prove_guards.py, deleted seconds later.
 
 If you are reading this file in a checkout, a proof run was interrupted:
@@ -572,6 +580,21 @@ def _falsy_counts():
     parts = r.stdout.split()
     if len(parts) != 2:
         raise RuntimeError("inventory did not report counts: %r"
+                           % (r.stdout + r.stderr)[:200])
+    return int(parts[0]), int(parts[1])
+
+
+def _falsy_counts_str():
+    """(decision_path, other) for the string family, from a fresh process."""
+    code = ("import importlib.util as u;"
+            "s=u.spec_from_file_location('f','%s/_tools/falsy_defaults_inventory.py');"
+            "m=u.module_from_spec(s);s.loader.exec_module(m);print(*m.counts_str())"
+            % BASE)
+    r = subprocess.run([BASE + "/venv/bin/python3", "-c", code],
+                       capture_output=True, text=True, cwd=BASE, timeout=300)
+    parts = r.stdout.split()
+    if len(parts) != 2:
+        raise RuntimeError("inventory did not report string counts: %r"
                            % (r.stdout + r.stderr)[:200])
     return int(parts[0]), int(parts[1])
 
@@ -612,6 +635,31 @@ def prove_falsy_sentinel():
     step(f"count returns to baseline ({o3})", (d3, o3), (base_d, base_o))
     quick_check_lines()
     step("back at baseline -> passes again", verdict(marker), "PASS")
+
+    # The string family, added 2026-08-17. It exists because the numeric
+    # sentinel walked past a hardcoded telegram id in 28 places, so it had
+    # better be shown to catch the thing it was widened for.
+    smarker = "other string defaults"
+    base_ds, base_os = _falsy_counts_str()
+    print(f"       string baseline: decision={base_ds} other={base_os}")
+    step("string baseline -> passes", verdict(smarker), "PASS")
+    try:
+        with open(FALSY_PROBE, "w", encoding="utf-8") as fh:
+            fh.write(FALSY_PROBE_STR_SRC)
+        ds2, os2 = _falsy_counts_str()
+        step(f'one planted `or "669769765"` raises the string count '
+             f"({base_os} -> {os2})", os2 - base_os, 1)
+        step("the NUMERIC counts stay put - the families do not bleed",
+             _falsy_counts(), (base_d, base_o))
+        quick_check_lines()
+        show(smarker)
+        step("string count above baseline -> check FAILS", verdict(smarker), "FAIL")
+    finally:
+        if os.path.exists(FALSY_PROBE):
+            os.remove(FALSY_PROBE)
+    quick_check_lines()
+    step("string count back at baseline -> passes again",
+         verdict(smarker), "PASS")
 
 
 def _refuse_during_session():

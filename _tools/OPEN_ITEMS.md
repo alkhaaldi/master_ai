@@ -97,6 +97,35 @@ Fix: move the throttle's `_last_request` and the circuit state into
 `life.db` (or a lock file) so every caller shares one door, and make
 `quick_check` read that shared state instead of its own.
 
+**4d. One telegram destination, not 28 — found 2026-08-17 proving the channel**
+`ADMIN_TELEGRAM_ID or "669769765"` appears in **28 places, 18 of them in
+`server.py`**. The literal matches the configured id today, so it is redundant
+rather than wrong — and that is exactly why it is dangerous. Change the id in
+`.env` tomorrow and eighteen call sites keep sending to the old chat, in
+silence, with every one of them reporting success.
+
+It survived for months because the falsy-defaults sentinel only looked at
+numbers. Widened on 2026-08-17 to count `or "<literal>"`; the first
+measurement is 9 in decision paths and 81 elsewhere, 42 of the 81 in
+`server.py`. Baselines declared in `falsy_baseline.json`, ratcheted in
+`quick_check`, and the widened sentinel is itself proved in `prove_guards.py`.
+
+Fix: one resolver, as `run_witness.telegram_credentials()` already is for the
+credentials, and the 28 sites call it. Scope is wide — 18 edits in server.py
+alone — so it is a batch of its own, not a rider on someone else's.
+
+Related, and the one that actually invents a decision rather than a
+destination:
+
+```
+position_engine.py:176   direction = row["direction"] or "long"
+```
+
+A missing trade direction becomes a BUY. Same family as `rsi or 50`: absence
+producing a confident reading. Five of the other eight string defaults in
+decision paths are display placeholders (`'—'`, `'?'`) that render absence AS
+absence, which is correct and should stay.
+
 **5. The 30m layer**
 `/dashboard/signals-30m` returns nothing. G-1 proved Yahoo **does** serve 30m
 for `.KW` (41 bars, tier-1 names 100% populated). So the layer is rebuildable

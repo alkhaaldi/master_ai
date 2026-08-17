@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
-"""Inventory only: numeric falsy-defaults in decision paths. No edits.
+"""Inventory only: falsy-defaults in decision paths. No edits.
 
-Two shapes, both of which turn a legitimate 0 into a different number:
+Numeric shapes, each turning a legitimate 0 into a different number:
     x = something or <number>
     x = <number> if cond else <number>      (cond being a bare truthiness)
     d.get(key, <number>) or <number>
+
+STRING shapes, added 2026-08-17 and counted separately:
+    x = something or "<literal>"
+
+Widened after `ADMIN_TELEGRAM_ID or "669769765"` was found in 28 places, 18
+of them in server.py. The numeric sentinel walked straight past it, because
+it only ever looked at numbers - and a hardcoded destination is the same
+defect wearing a different type. An absent config does not become an unknown
+recipient; it becomes a specific one, confidently, and the message goes
+somewhere nobody chose today. Empty strings are not counted: `or ""` defaults
+to nothing, which invents nothing.
 
 Scope: modules that feed a trade/risk/score decision. Display-only and
 tooling modules are counted separately so the urgent set stays readable.
@@ -31,6 +42,7 @@ class Finder(ast.NodeVisitor):
         self.path = path
         self.lines = src.splitlines()
         self.hits = []
+        self.str_hits = []       # counted apart: a new family, not a regression
 
     def _num(self, node):
         """The numeric constant a fallback yields, or None."""
@@ -42,12 +54,26 @@ class Finder(ast.NodeVisitor):
             return -inner if inner is not None else None
         return None
 
+    def _str(self, node):
+        """The non-empty string constant a fallback yields, or None.
+
+        Empty is excluded on purpose: `or ""` supplies nothing and claims
+        nothing. `or "669769765"` supplies a destination nobody chose today.
+        """
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if node.value:
+                return node.value
+        return None
+
     def visit_BoolOp(self, node):
         # `a or 5`  ->  the last value is a bare number
         if isinstance(node.op, ast.Or):
             n = self._num(node.values[-1])
             if n is not None and len(node.values) >= 2:
                 self.hits.append((node.lineno, "or", n))
+            s = self._str(node.values[-1])
+            if s is not None and len(node.values) >= 2:
+                self.str_hits.append((node.lineno, "or-str", s))
         self.generic_visit(node)
 
     def visit_IfExp(self, node):
@@ -70,6 +96,41 @@ def scan(path):
     f = Finder(path, src)
     f.visit(tree)
     return [(ln, kind, val, f.lines[ln - 1].strip()[:88]) for ln, kind, val in f.hits]
+
+
+def scan_str(path):
+    """String fallbacks. Separate function, separate count: folding these
+    into the numeric totals would move two baselines that have meant the same
+    thing since 2026-08-16, and a discovery must not look like a regression."""
+    src = open(path, encoding="utf-8", errors="replace").read()
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return []
+    f = Finder(path, src)
+    f.visit(tree)
+    return [(ln, kind, val, f.lines[ln - 1].strip()[:88]) for ln, kind, val in f.str_hits]
+
+
+def counts_str():
+    """(decision_path, other) for STRING fallbacks."""
+    d = o = 0
+    for root, dirs, files in os.walk(BASE):
+        dirs[:] = [x for x in dirs if x not in
+                   {"venv", "_archive", "_deprecated", "examples", ".git",
+                    "backups", "node_modules", "__pycache__"}]
+        for fn in files:
+            if not fn.endswith(".py"):
+                continue
+            hits = scan_str(os.path.join(root, fn))
+            if not hits:
+                continue
+            rel = os.path.relpath(os.path.join(root, fn), BASE)
+            if fn in DECISION and not os.path.dirname(rel):
+                d += len(hits)
+            else:
+                o += len(hits)
+    return d, o
 
 
 def main():

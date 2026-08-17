@@ -2,7 +2,7 @@
  "decision_path": 210,
  "other": 228,
  "measured_at": "2026-08-16",
- "note": "Ratchet, not a target. quick_check FAILS when either number rises: a new numeric falsy-default in a decision path is a new way for an absent reading to become a confident one. Lower it deliberately, never raise it silently.",
+ "note": "Ratchet, not a target. quick_check FAILS when any of these rise: a new falsy-default in a decision path is a new way for an absent reading to become a confident one. Lower them deliberately, never raise them silently. The _str pair counts `x = something or \"<literal>\"`, added 2026-08-17 after a hardcoded telegram id in 28 places went unseen by a sentinel that only looked at numbers.",
  "history": [
   {
    "date": "2026-08-16",
@@ -18,6 +18,14 @@
    "date": "2026-08-16",
    "decision_path": 210,
    "note": "golden_engine adx or 0 - absence no longer mints adx_lt_20"
+  },
+  {
+   "date": "2026-08-17",
+   "decision_path_str": 9,
+   "other_str": 81,
+   "note": "first measurement of the string family - a discovery, not a regression: the numeric baselines did not move. Of the 9 in decision paths, 5 are display placeholders ('-', '?') that render absence AS absence and 2 are honest labels; the one that matters is position_engine.py:176, `direction = row[\"direction\"] or \"long\"`, where a missing trade direction becomes a BUY. server.py carries 42 of the 81, including the 18 hardcoded telegram destinations."
   }
- ]
+ ],
+ "decision_path_str": 9,
+ "other_str": 81
 }

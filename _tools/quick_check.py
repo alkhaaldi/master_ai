@@ -372,6 +372,20 @@ def main():
               f"{_d} vs baseline {_bd}" + (" - NEW ONES ADDED" if _d > _bd
               else " - lowered, update the baseline" if _d < _bd else ""))
         check("other falsy defaults", _o <= _bo, f"{_o} vs baseline {_bo}")
+        # Third family, measured 2026-08-17: `x = something or "<literal>"`.
+        # The numeric sentinel walked past `ADMIN_TELEGRAM_ID or "669769765"`
+        # in 28 places for months because it only ever looked at numbers. A
+        # hardcoded string fallback is the same defect in a different type -
+        # an absent config becomes a specific destination rather than an
+        # unknown one. Counted apart so the two numeric baselines keep
+        # meaning what they have meant since 2026-08-16.
+        _ds, _os_ = _m.counts_str()
+        _bds, _bos = _bl["decision_path_str"], _bl["other_str"]
+        check("decision-path string defaults", _ds <= _bds,
+              f"{_ds} vs baseline {_bds}" + (" - NEW ONES ADDED" if _ds > _bds
+              else " - lowered, update the baseline" if _ds < _bds else ""))
+        check("other string defaults", _os_ <= _bos,
+              f"{_os_} vs baseline {_bos}")
     except Exception as _fe:
         check("falsy defaults", False, f"inventory unavailable: {_fe}")
 
