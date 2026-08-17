@@ -692,3 +692,96 @@ than slower honest labelling.
 
 - Rotate the `rpi_backup` password (`_tools/NAS_BACKUP_SETUP.md`)
 - Tunnel exposure — parked by his decision, not forgotten
+
+---
+
+> **Status note appended 2026-08-18 by the local Claude Code session, on
+> committing this file. The text below is claude.ai's and is left as written.**
+>
+> - **"Next, in order" items 1 and 2 are DONE** (commit `063a840`). Item 1's
+>   five fields turned out to be three: `s.support`, `s.resistance` and
+>   `s.signal` read `/api/analyze`, which ships all three — the sweep excluded
+>   that endpoint from its shipped-set while still counting reads on it. The
+>   four real gaps went through `signal_health`, not the position row.
+>   Item 2's two: `autonomy_level` now on `/dashboard`; `brain_weighted` was
+>   absent BY DESIGN and is now an explicit `false` carrying its reason.
+> - **`HEAD c1559f9` is stale** — HEAD is `063a840` at the time of this note.
+> - Item 3, DELETE the 6, is **not** done, and the count has moved: the sweep
+>   had five defects, every one of them inflating it. Uncovered reads went
+>   104 → 89 → 69 → 28 → 20. See OPEN_ITEMS 4k for the corrected numbers and
+>   the correction history, which is the more useful half.
+
+## HANDOFF #2 — 2026-08-17 evening, for the next Claude Code session
+
+Previous session is near its context limit. Verified on the wire by claude.ai,
+not copied from a report.
+
+### State
+
+```
+quick_check 26/26 · db_sanity 9/9 · smoke 4/4 · prove_guards all green
+falsy baselines: decision 210 · other 228 (numeric), string family separate
+HEAD c1559f9 · working tree clean except _tools/avg_volume_fill.json
+source=yahoo · source_state=ok · source_delay_minutes=15
+as_of_kind=source_market_time · as_of_age_minutes per payload
+buy_now_shadow 5 rows, acted=0 — day 2 of 14
+```
+
+### Done today (short list)
+
+Bridge retired and indicators computed locally · analysis.html rebuilt on
+Yahoo · `check_symbol` no longer returns fabricated zeros · `direction` is now
+a CHECK constraint, not an agreement between modules · Telegram channel proven
+end-to-end (one delivered message, confirmed by the user) · `telegram_sends`
+table records every attempt · shared Yahoo gate across processes · every guard
+proven able to fail (`_tools/prove_guards.py`) · swing.html opportunities
+rendered as cards, names and scores now resolve.
+
+### Next, in order
+
+**1. positions.html — 7 fields read from the wrong endpoint**
+`support · resistance · atr · trend · signal` are read by positions.html,
+which fetches `portfolio` and `risk-status`. Those fields live on `radar` and
+`signals`. One decision: page fetches the extra endpoint, or the fields get
+shipped in `portfolio`. Measure before and after.
+
+**2. SHIP the 15** — start with `autonomy_level` (in `server.py`) and
+`brain_weighted` (in `trading_brain`); each is read by two pages. Evidence for
+generic names (`msg`, `text`, `level`, `structured`) is weak by design —
+verify each by hand before shipping.
+
+**3. DELETE the 6** — reads with no source anywhere.
+
+### Still open, lower priority
+
+- 15 non-zero falsy defaults (`p_value or 1`, `target_1_pct or 3`,
+  `baseline_win_rate or 0.3`, `base_weight or 1.0`, `max_single_position_pct or 40`,
+  `vol_score or 30`)
+- 30m layer: `layer_state: offline`, `layer_rebuildable: true`. Yahoo serves
+  30m for `.KW` (proven in G-1) — it is unbuilt, not dead
+- `captured_at` written by two paths with two meanings (OPEN_ITEMS 4b)
+- The gate is shared but each cron run is a new process (4c)
+- `avg_volume_fill.json` untracked — decide keep or ignore
+
+### Scheduled
+
+```
+2026-08-18 14:20  first real Telegram alert from cron (signal_review).
+                  Today's test was sent from an interactive shell; cron was
+                  the path that was broken. It records itself in telegram_sends.
+2026-08-22        D-5 counter review (already answered by evidence: 863 calls
+                  in 26h from HA sensors — /dashboard/radar has heavy consumers)
+2026-08-30        buy_now_shadow review
+```
+
+### C-27 preconditions (unchanged)
+
+census maturity (~4 weeks) · scales declared · exclusions honoured
+(`trade_kind=void`, `entry_basis=consolidated_restart`, `graded_mode` buckets)
+· StochK patterns recalibrated from zero, not reweighted · a run manifest that
+reproduces on unchanged inputs.
+
+### For the user, not for Claude Code
+
+Rotate the `rpi_backup` password (`_tools/NAS_BACKUP_SETUP.md`) · tunnel
+exposure, parked by his decision.
