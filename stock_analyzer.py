@@ -356,6 +356,37 @@ def _trail(bars, pick, n=20):
     return out
 
 
+def _nonnull(bars, key):
+    """The readings of one OHLCV field that are actually there.
+
+    An absent field is a window the market did not trade in, not a zero, and
+    the two must not meet the same arithmetic. `b.get("volume", 0)` returns
+    None the moment the key exists holding None, and `max()` over a list with
+    a None in it raises outright - which is how a single empty 30m bar turned
+    into a 500 for the whole symbol (EQUIPMENT, 2026-08-17). The indicators
+    had already refused those bars correctly; the raw summary below them was
+    what fell over, so the coverage floor never got to answer.
+    """
+    return [b[key] for b in bars if b.get(key) is not None]
+
+
+def _extreme_bar(bars, key, fn):
+    """The bar carrying the highest high / lowest low, skipping bars that
+    carry no such reading. None when not one of them does."""
+    usable = [b for b in bars if b.get(key) is not None]
+    if not usable:
+        return None
+    return fn(usable, key=lambda b: b[key])
+
+
+def _stat(values, fn, why):
+    """{value, reason} - the same shape indicators.py returns, so a hole
+    reads identically wherever the reader meets it."""
+    if not values:
+        return {"value": None, "reason": why}
+    return {"value": fn(values), "reason": None}
+
+
 def _summarize_bars(bars_data, label, interval="1d", source=None):
     """Summary for Gemini, computed HERE rather than read off enriched bars.
 
@@ -397,15 +428,52 @@ def _summarize_bars(bars_data, label, interval="1d", source=None):
     rsi_traj = _trail(bars, _pick_rsi)
     macd_traj = _trail(bars, _pick_macd)
 
-    vols = [b.get("volume", 0) for b in bars]
-    vol_20 = sum(vols[-20:]) / max(len(vols[-20:]), 1)
-    vol_5 = sum(vols[-5:]) / max(len(vols[-5:]), 1)
+    # Windows stay fixed in time and the nulls drop out of both the sum and
+    # the count. Averaging "the last 20 readings" instead would quietly walk
+    # the window backwards on exactly the thin names where it matters, and
+    # report a 20-bar average measured over five weeks.
+    def _vol_avg(n):
+        w = _nonnull(bars[-n:], "volume")
+        if not w:
+            return {"value": None, "bars_counted": 0,
+                    "reason": "no traded volume in the last %d bars" % n}
+        return {"value": round(sum(w) / len(w)), "bars_counted": len(w),
+                "reason": None}
 
-    highs = [b["high"] for b in bars]
-    lows = [b["low"] for b in bars]
+    vol_20, vol_5 = _vol_avg(20), _vol_avg(5)
 
-    peak_bar = max(bars, key=lambda b: b["high"])
-    trough_bar = min(bars, key=lambda b: b["low"])
+    highs = _nonnull(bars, "high")
+    lows = _nonnull(bars, "low")
+
+    peak_bar = _extreme_bar(bars, "high", max)
+    trough_bar = _extreme_bar(bars, "low", min)
+
+    # The window's own ends, each found rather than assumed: on a thin name
+    # the first or last bar is often empty, and a change measured between two
+    # different bars than the reader pictures is a wrong number wearing a
+    # right one's name. So both ends travel with the time they were taken.
+    first_open_bar = next((b for b in bars if b.get("open") is not None), None)
+    last_close_bar = next((b for b in reversed(bars)
+                           if b.get("close") is not None), None)
+
+    def _end(bar, key, why):
+        if not bar:
+            return {"value": None, "at": None, "reason": why}
+        return {"value": bar[key], "at": _bar_time(bar), "reason": None}
+
+    def _change_pct():
+        if not first_open_bar or not last_close_bar or not first_open_bar["open"]:
+            return {"value": None,
+                    "reason": "needs a first open and a last close, both "
+                              "present and the open non-zero"}
+        return {"value": round((last_close_bar["close"] - first_open_bar["open"])
+                               / first_open_bar["open"] * 100, 2), "reason": None}
+
+    def _vol_ratio():
+        if vol_5["value"] is None or not vol_20["value"]:
+            return {"value": None,
+                    "reason": "needs both averages, with a non-zero 20-bar one"}
+        return {"value": round(vol_5["value"] / vol_20["value"], 2), "reason": None}
 
     def _val(key):
         """{value, reason} - the reason survives when the value cannot."""
@@ -437,24 +505,38 @@ def _summarize_bars(bars_data, label, interval="1d", source=None):
         "latest": bars[-1],
         "latest_5_bars": latest_5,
         "price_range": {
-            "period_high": max(highs),
-            "period_low": min(lows),
-            "first_open": bars[0]["open"],
-            "last_close": bars[-1]["close"],
-            "change_pct": round((bars[-1]["close"] - bars[0]["open"]) / bars[0]["open"] * 100, 2),
+            "period_high": _stat(highs, max,
+                                 "no bar in the window carries a high"),
+            "period_low": _stat(lows, min,
+                                "no bar in the window carries a low"),
+            "first_open": _end(first_open_bar, "open",
+                               "no bar in the window carries an open"),
+            "last_close": _end(last_close_bar, "close",
+                               "no bar in the window carries a close"),
+            "change_pct": _change_pct(),
         },
         # `ts`, not `time`: bridge bars carried a preformatted time string,
         # ours carry an epoch. Rendered here so Gemini reads a date rather
         # than a number it would have to guess the unit of.
-        "peak": {"time": _bar_time(peak_bar), "high": peak_bar["high"]},
-        "trough": {"time": _bar_time(trough_bar), "low": trough_bar["low"]},
+        "peak": ({"time": _bar_time(peak_bar), "high": peak_bar["high"]}
+                 if peak_bar else
+                 {"time": None, "high": None,
+                  "reason": "no bar in the window carries a high"}),
+        "trough": ({"time": _bar_time(trough_bar), "low": trough_bar["low"]}
+                   if trough_bar else
+                   {"time": None, "low": None,
+                    "reason": "no bar in the window carries a low"}),
         "rsi_last_20": rsi_traj,
         "macd_last_20": macd_traj,
         "volume": {
-            "avg_20": round(vol_20),
-            "avg_5": round(vol_5),
-            "latest": bars[-1].get("volume", 0),
-            "ratio_5_to_20": round(vol_5 / max(vol_20, 1), 2),
+            "avg_20": vol_20,
+            "avg_5": vol_5,
+            # `.get("volume", 0)` read the default only when the key was
+            # missing; a key present holding None sailed straight through as
+            # a volume of zero, which on this market reads as "nobody traded"
+            # rather than "we were not told".
+            "latest": bars[-1].get("volume"),
+            "ratio_5_to_20": _vol_ratio(),
         },
         # ema_50 / ema_200 are absent on purpose: indicators.py does not
         # compute them, and carrying the keys with None would read as "we
