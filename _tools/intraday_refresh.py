@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Intraday price refresh - every 15 minutes during the KSE session (cron).
+"""Intraday price refresh - two cadences during the KSE session (cron).
+
+  full       */15  every symbol clearing the liquidity floor (117 today)
+  positions  */2   open positions only, via --positions-only
+
+The split exists because the two answer different questions: the universe
+feeds the ranking, the positions feed live P&L. Measured 2026-08-17: Yahoo's
+own delay is a 15-minute FLOOR (18 samples, never once below 15.10). So the
+2-minute cycle cuts OUR staleness, never the source's - worst case moves from
+~30 minutes to ~17, and no faster. See price_source.SOURCE_DELAY_MINUTES.
 
 Scope, updated by user decision 2026-08-15 (whitelist suspended, C-27):
 open positions + every symbol clearing the liquidity floor.
@@ -30,20 +39,35 @@ sys.path.insert(0, "/home/pi/master_ai")
 sys.path.insert(0, "/home/pi/master_ai/_tools")
 
 import run_witness
-from price_source import (_yahoo_opener, _UA, YAHOO_TIMEOUT, _kse_local,
+import yahoo_gate
+from price_source import (YAHOO_TIMEOUT, _kse_local,
                           _SESSION_OPEN_H, _SESSION_CLOSE_H)
 
 DB = "/home/pi/master_ai/data/life.db"
 SOURCE = "yahoo_intraday"
+SOURCE_POSITIONS = "yahoo_positions"
+
+# Two consecutive failed cycles stop the day (user condition 2026-08-17).
+# A 2-minute job that keeps failing is 120 identical errors per session and
+# one alert nobody reads twice; halting says it once and stays quiet. Scoped
+# to today's run_date, so tomorrow starts clean without anyone resetting it.
+HALT_AFTER_CONSECUTIVE_FAILURES = 2
 
 
-def scope_symbols():
+def scope_symbols(positions_only=False):
     syms = set()
     try:
         from journal_engine import get_open_trades
         syms |= {t["symbol"].upper() for t in get_open_trades() if t.get("symbol")}
     except Exception as e:
         print("scope: open trades unavailable: %r" % e)
+        if positions_only:
+            # An empty positions cycle and an unreadable journal are different
+            # states. Returning [] here would log a clean zero-symbol run and
+            # look like "no positions" forever.
+            raise
+    if positions_only:
+        return sorted(syms)
     # whitelist suspended 2026-08-15 (C-27): scope is now every symbol
     # that clears the liquidity floor, straight from the store
     try:
@@ -65,9 +89,11 @@ def fetch_quote(symbol):
     url = ("https://query2.finance.yahoo.com/v8/finance/chart/"
            + urllib.parse.quote(symbol + ".KW") + "?range=5d&interval=1d")
     try:
-        with _yahoo_opener().open(urllib.request.Request(url, headers=_UA),
-                                  timeout=YAHOO_TIMEOUT) as f:
-            res = json.loads(f.read().decode())["chart"]["result"][0]
+        res = yahoo_gate.get(url, timeout=YAHOO_TIMEOUT)["chart"]["result"][0]
+    except yahoo_gate.YahooBlocked:
+        # Kept distinct on purpose: the door was shut, so we never asked.
+        # That is not "this symbol has no data".
+        return None, "blocked"
     except urllib.error.HTTPError as e:
         return None, ("not_found" if e.code == 404 else
                       "rate_limited" if e.code == 429 else "http_%d" % e.code)
@@ -96,13 +122,48 @@ def fetch_quote(symbol):
 
 def main():
     t0 = time.time()
+    positions_only = "--positions-only" in sys.argv
+    source = SOURCE_POSITIONS if positions_only else SOURCE
+
     if not run_witness.is_trading_day():
-        run_witness.log_run(SOURCE, "skipped", 0, 0, time.time() - t0,
+        run_witness.log_run(source, "skipped", 0, 0, time.time() - t0,
                             "not a trading day")
         print("not a trading day - skipped")
         return
 
-    syms = scope_symbols()
+    # Kill switch, before anything is fetched.
+    recent = run_witness.recent_statuses(source, 2, today_only=True)
+    if recent and recent[0] == "halted":
+        print("halted earlier today - staying down until tomorrow")
+        return
+    if (len(recent) >= HALT_AFTER_CONSECUTIVE_FAILURES
+            and all(s == "failed" for s in recent[:HALT_AFTER_CONSECUTIVE_FAILURES])):
+        run_witness.log_run(source, "halted", 0, 0, time.time() - t0,
+                            "%d consecutive failed cycles"
+                            % HALT_AFTER_CONSECUTIVE_FAILURES)
+        run_witness.send_telegram(
+            "⚠️ دورة %s فشلت %d مرات متتالية — أُوقفت لبقية اليوم. "
+            "الأسعار لن تتحدّث حتى تُعالَج."
+            % (source, HALT_AFTER_CONSECUTIVE_FAILURES))
+        print("halting: %d consecutive failures" % HALT_AFTER_CONSECUTIVE_FAILURES)
+        return
+
+    try:
+        syms = scope_symbols(positions_only=positions_only)
+    except Exception as e:
+        run_witness.log_run(source, "failed", 0, 0, time.time() - t0,
+                            "scope unavailable: %r" % e)
+        print("scope unavailable: %r" % e)
+        return
+
+    if positions_only and not syms:
+        # No open positions is a real, healthy answer - but it is not a
+        # successful fetch, and it must not age the freshness check.
+        run_witness.log_run(source, "idle", 0, 0, time.time() - t0,
+                            "no open positions")
+        print("no open positions - nothing to poll")
+        return
+
     conn = sqlite3.connect(DB, timeout=15)
     fetched, errors = 0, {}
     for sym in syms:
@@ -121,18 +182,29 @@ def main():
 
     err_txt = "; ".join("%s:%s" % (k, ",".join(v)) for k, v in errors.items()) or None
     status = "success" if fetched > 0 else "failed"
-    run_witness.log_run(SOURCE, status, fetched, len(syms),
+    # The witness records the failures too, not only the wins (user condition
+    # 2026-08-17): err_txt rides along on a partial success as well, so a
+    # cycle that fetched 4 of 5 does not read as clean.
+    run_witness.log_run(source, status, fetched, len(syms),
                         time.time() - t0, err_txt)
-    print("%s: %d/%d fetched, errors=%s" % (SOURCE, fetched, len(syms), err_txt))
+    if status == "failed":
+        print("cycle FAILED: 0 of %d fetched - %s" % (len(syms), err_txt))
+    print("%s: %d/%d fetched, errors=%s" % (source, fetched, len(syms), err_txt))
 
-    if fetched == 0:
+    # The per-cycle alert belongs to the 15-minute run only. Firing it from a
+    # 2-minute job would send an alert every 2 minutes for the whole session -
+    # the halt above is the positions cycle's voice, and it speaks once.
+    if fetched == 0 and not positions_only:
         run_witness.send_telegram(
             "⚠️ التحديث اللحظي: صفر أسعار من %d رمزاً (%s) — المصدر لا يجيب"
             % (len(syms), err_txt or "بلا تفاصيل"))
 
     # First run of the day: did yesterday's post-close fill happen?
+    # Once a day means the 15-minute run: the 2-minute job passes through this
+    # window seven times, and this check would alert on every one of them.
     now_loc = _kse_local(datetime.utcnow())
-    if now_loc.hour == _SESSION_OPEN_H and now_loc.minute < 15:
+    if (not positions_only
+            and now_loc.hour == _SESSION_OPEN_H and now_loc.minute < 15):
         n, when = run_witness.sessions_since_last_success("yahoo_close")
         if n is None or n > 1:
             run_witness.send_telegram(

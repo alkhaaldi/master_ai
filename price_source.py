@@ -311,12 +311,19 @@ def _from_yahoo(symbol: str) -> dict | None:
         return None
     url = ("https://query2.finance.yahoo.com/v8/finance/chart/"
            + urllib.parse.quote(symbol + ".KW") + "?range=5d&interval=1d")
+    # Through the gate, not around it (user decision 2026-08-17). The gate
+    # owns the 2s spacing, the 429 backoff and the circuit; going around it
+    # meant circuit_state() reported "0 requests" while this path was making
+    # all of them, so /dashboard's source_state was answering about a door
+    # nobody used.
     try:
-        with _yahoo_opener().open(urllib.request.Request(url, headers=_UA),
-                                  timeout=YAHOO_TIMEOUT) as f:
-            res = json.loads(f.read().decode())["chart"]["result"][0]
-    except (urllib.error.HTTPError, urllib.error.URLError, OSError,
-            json.JSONDecodeError, KeyError, IndexError, TypeError):
+        import yahoo_gate
+        res = yahoo_gate.get(url, timeout=YAHOO_TIMEOUT)["chart"]["result"][0]
+    except Exception:
+        # Includes YahooBlocked. get_quote's own fallback chain then returns
+        # the db row marked `stale`, and _source_state() reports the open
+        # circuit separately - so "could not ask" still reaches the reader as
+        # a source failure, not as a fresh-looking price.
         return None
     meta = res.get("meta") or {}
     ts = meta.get("regularMarketTime")

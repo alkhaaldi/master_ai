@@ -77,6 +77,28 @@ def last_success(source: str):
     return row
 
 
+def recent_statuses(source: str, n: int = 2, today_only: bool = False):
+    """Newest-first statuses for a source. Feeds the kill switch: a job that
+    fires every 2 minutes must be able to see its own recent history, since
+    each cron run is a fresh process with no memory of the last one.
+
+    today_only scopes to this run_date so a halt lasts the session, not
+    forever - tomorrow starts clean with nobody having to reset anything.
+    """
+    conn = sqlite3.connect(DB, timeout=15)
+    if today_only:
+        rows = conn.execute(
+            "SELECT status FROM data_fetch_runs WHERE source=? AND run_date=?"
+            " ORDER BY id DESC LIMIT ?",
+            (source, datetime.utcnow().strftime("%Y-%m-%d"), n)).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT status FROM data_fetch_runs WHERE source=?"
+            " ORDER BY id DESC LIMIT ?", (source, n)).fetchall()
+    conn.close()
+    return [r[0] for r in rows]
+
+
 def runs_today(source: str, status: str = "success") -> int:
     conn = sqlite3.connect(DB, timeout=15)
     n = conn.execute(

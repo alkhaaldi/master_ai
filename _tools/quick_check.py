@@ -128,6 +128,42 @@ def main():
     except Exception as e:
         check("daily fill age", False, f"witness unavailable: {e}")
 
+    # The 2-minute positions cycle announces its age the same way the
+    # backups do (user condition 2026-08-17). A cadence nobody checks is a
+    # cadence that stops without telling anyone - during an open session the
+    # tolerance is 10 minutes (5 missed cycles), outside it the last session's
+    # final cycle is the freshest truth that can exist.
+    try:
+        import sqlite3 as _sq2
+        from datetime import datetime as _dt2
+        from price_source import (_kse_local, _SESSION_OPEN_H,
+                                  _SESSION_CLOSE_H, _KSE_TRADING_WEEKDAYS)
+        _pc = _sq2.connect(os.path.join(BASE_DIR, "data", "life.db"))
+        _prow = _pc.execute(
+            "SELECT MAX(created_at) FROM data_fetch_runs "
+            "WHERE source='yahoo_positions' AND status='success'").fetchone()
+        _phalt = _pc.execute(
+            "SELECT status FROM data_fetch_runs WHERE source='yahoo_positions'"
+            " AND run_date=? ORDER BY id DESC LIMIT 1",
+            (_dt2.utcnow().strftime("%Y-%m-%d"),)).fetchone()
+        _pc.close()
+        _loc = _kse_local(_dt2.utcnow())
+        _open = (_loc.weekday() in _KSE_TRADING_WEEKDAYS
+                 and _SESSION_OPEN_H <= _loc.hour < _SESSION_CLOSE_H)
+        if _phalt and _phalt[0] == "halted":
+            check("positions cycle", False,
+                  "HALTED today after consecutive failures - prices are not moving")
+        elif not _prow or not _prow[0]:
+            check("positions cycle", False, "no successful cycle ever recorded")
+        else:
+            _pm = (_dt2.utcnow() - _dt2.fromisoformat(_prow[0])).total_seconds() / 60
+            _lim = 10 if _open else 26 * 60
+            check("positions cycle", _pm < _lim,
+                  f"last success {_prow[0]} UTC - {_pm:.0f}m old "
+                  f"({'session open' if _open else 'session closed'}, limit {_lim:.0f}m)")
+    except Exception as _pe:
+        check("positions cycle", False, f"witness unavailable: {_pe}")
+
     # F-1.5 + user order 2026-08-16: EVERY backup path announces its
     # age - the shell backups failed silently for 4.5 months into a
     # log nobody read. Red until a path has its first success.
