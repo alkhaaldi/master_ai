@@ -22,10 +22,14 @@ description: Rules for editing Python in the Master AI FastAPI service on the Ra
     python3 _tools/quick_check.py
     python3 _tools/smoke_test.py
     python3 _tools/db_sanity.py      # only if the DB was touched
-    git status --short               # read this before staging
+    git status --short          # look BEFORE you stage
     git add <only the paths you changed>
     git commit -m "<what changed>"
     bash _tools/restart_master_ai.sh
+
+`git status --short` is not optional. The tree regularly
+carries unrelated in-flight work. Staging blind is how that
+work ends up in someone else's commit.
 
 Commit BEFORE restart, never after. If quick_check or smoke_test
 fails, fix it before committing - do not commit a red state.

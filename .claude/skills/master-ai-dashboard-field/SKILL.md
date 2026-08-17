@@ -7,8 +7,9 @@ description: The full chain for adding or changing a field shown on a Master AI 
 
 1. Endpoint change (Python, this agent).
 2. Test the raw JSON before touching anything downstream.
-3. Update `configuration.yaml` if `json_attributes` needs the new
-   key. Restart HA if the sensor definition changed.
+3. If `json_attributes` needs the new key: report the exact
+   edit needed in `configuration.yaml` and hand it to
+   claude.ai. Do NOT edit HA YAML and do NOT restart HA.
 4. Confirm the `sensor` state in HA actually carries the value.
    Never assume an entity_id - verify it.
 5. HTML page change - NOT this agent. claude.ai owns HTML/CSS/JS.
