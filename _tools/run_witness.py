@@ -77,6 +77,43 @@ def last_success(source: str):
     return row
 
 
+def last_ok(source: str, statuses=("success", "idle")):
+    """(created_at_utc, run_date) of the newest run that went RIGHT.
+
+    Wider than last_success on purpose. A positions cycle with no open
+    positions logs 'idle': it fetched nothing because there was nothing to
+    fetch, which is a correct outcome, not a failure. Judging freshness on
+    'success' alone means the guard turns red 26 hours after the user closes
+    their last position and stays red - blaming the cycle for the portfolio
+    being empty.
+    """
+    conn = sqlite3.connect(DB, timeout=15)
+    marks = ",".join("?" * len(statuses))
+    row = conn.execute(
+        "SELECT created_at, run_date FROM data_fetch_runs"
+        " WHERE source=? AND status IN (%s)"
+        " ORDER BY id DESC LIMIT 1" % marks, (source, *statuses)).fetchone()
+    conn.close()
+    return row
+
+
+def sessions_since_last_ok(source: str, statuses=("success", "idle")):
+    """(sessions_old, created_at) for the newest run that went right.
+
+    Sessions, not hours, by the 2026-08-15 rule: a last reading taken while
+    the market was open is the freshest that CAN exist once it closes, and
+    counting wall-clock hours through a weekend turns that into a fault.
+    """
+    row = last_ok(source, statuses)
+    if not row:
+        return None, None
+    from price_source import _sessions_since, _parse_as_of
+    dt = _parse_as_of(row[0])
+    if dt is None:
+        return None, row[0]
+    return _sessions_since(dt, datetime.utcnow()), row[0]
+
+
 def recent_statuses(source: str, n: int = 2, today_only: bool = False):
     """Newest-first statuses for a source. Feeds the kill switch: a job that
     fires every 2 minutes must be able to see its own recent history, since

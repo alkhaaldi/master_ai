@@ -15,14 +15,20 @@ restored.
   yahoo circuit    open the circuit      -> the check must FAIL
   positions cycle  halt today's cycle    -> the check must FAIL
                    age out the cycle     -> the check must FAIL
+  space            inject a full disk,   -> each must FAIL, and the
+                   a full tmpfs, a          detached-share case is the
+                   detached share           one df alone cannot see
   db_sanity        break each check in   -> every one must FAIL
                    turn, on a COPY
   falsy sentinel   plant a known `or 0` -> the count must rise and the
                                             check must FAIL
 
 Restoration runs from a finally block, so an interrupted run does not leave
-the door shut or a fake row behind. It does blind the price source for a few
-seconds, so do not run it mid-scan.
+the door shut or a fake row behind.
+
+It REFUSES to run during a KSE session. The circuit it opens is the real one
+and the cycle it halts is the real one, so a run at 10am costs live fetches
+on a market the user trades. Pass --force to override, deliberately.
 
     python3 _tools/prove_guards.py
 """
@@ -143,64 +149,151 @@ def _delete(ids):
     conn.close()
 
 
+def _park(on):
+    """Hide or restore the real yahoo_positions rows, so a synthetic history
+    can be laid over them and taken away again without deleting anything."""
+    conn = sqlite3.connect(DB, timeout=15)
+    if on:
+        conn.execute("UPDATE data_fetch_runs SET source='yahoo_positions__parked'"
+                     " WHERE source='yahoo_positions'")
+    else:
+        conn.execute("UPDATE data_fetch_runs SET source='yahoo_positions'"
+                     " WHERE source='yahoo_positions__parked'")
+    conn.commit()
+    conn.close()
+
+
 def prove_positions_cycle():
+    """Four cases, chosen because the FIRST version of this guard failed all
+    of the first three: it aged the cycle in wall-clock hours, so it was red
+    for ~41 hours every weekend, red at 09:00 every Sunday, and red for ever
+    once the user closed their last position. Green in a normal state is not
+    the property under test - staying green through normal states is."""
     print("\n[guard] positions cycle")
     show("positions cycle")
-    base = verdict("positions cycle")
-    if base != "PASS":
+    if verdict("positions cycle") != "PASS":
         print("  ABORT: the check is not green to begin with - fix that first.")
         failures.append("positions cycle: not green at baseline")
         return
 
     ids = []
     try:
-        # (a) a halted day must be loud
+        _park(True)
+
+        # 1. HOURS vs SESSIONS, the weekend defect in its smallest form.
+        #    27 hours old is past the old 26-hour limit, so the first version
+        #    of this guard would have called it broken - but only ONE trading
+        #    session has passed, so nothing was missed. This single case is
+        #    the whole weekend bug: every Friday afternoon crossed 26 hours
+        #    with no session missed at all.
+        #    27h is deliberate: it always lands on the previous calendar day,
+        #    so at most one session can fall between it and now, whatever
+        #    weekday this runs on.
+        h27 = _utcnow() - timedelta(hours=27)
+        ids.append(_insert("success", h27.isoformat(sep=" ", timespec="seconds"),
+                           h27.strftime("%Y-%m-%d")))
+        quick_check_lines()
+        show("positions cycle")
+        step("27h old but 1 session old -> PASSES (old rule said FAIL)",
+             verdict("positions cycle"), "PASS")
+        _delete([ids.pop()])
+
+        # 2. NO OPEN POSITIONS. The cycle logs 'idle' - it fetched nothing
+        #    because there was nothing to fetch. That is a correct outcome.
+        idle = _utcnow() - timedelta(minutes=3)
+        ids.append(_insert("idle", idle.isoformat(sep=" ", timespec="seconds"),
+                           idle.strftime("%Y-%m-%d")))
+        quick_check_lines()
+        show("positions cycle")
+        step("only 'idle' runs, no fetches at all -> PASSES",
+             verdict("positions cycle"), "PASS")
+        _delete([ids.pop()])
+
+        # 3. THE OPENING MINUTES. Yesterday's cycle, nothing yet today. Inside
+        #    the grace window that is the schedule, not a fault.
+        y = _utcnow() - timedelta(days=1)
+        ids.append(_insert("success", y.isoformat(sep=" ", timespec="seconds"),
+                           y.strftime("%Y-%m-%d")))
+        quick_check_lines()
+        show("positions cycle")
+        step("yesterday's cycle, one session old -> PASSES",
+             verdict("positions cycle"), "PASS")
+        _delete([ids.pop()])
+
+        # 4. AND IT MUST STILL BREAK. Three sessions with no cycle at all is
+        #    a real stoppage, weekend arithmetic or not.
+        old = _utcnow() - timedelta(days=9)
+        ids.append(_insert("success", old.isoformat(sep=" ", timespec="seconds"),
+                           old.strftime("%Y-%m-%d")))
+        quick_check_lines()
+        show("positions cycle")
+        step("several sessions with no cycle -> FAILS", verdict("positions cycle"),
+             "FAIL")
+        _delete([ids.pop()])
+
+        # 5. A halted day is still loud.
         ids.append(_insert("halted", _utcnow().isoformat(sep=" ", timespec="seconds"),
                            _utcnow().strftime("%Y-%m-%d")))
         quick_check_lines()
         show("positions cycle")
         step("halted today -> FAILS", verdict("positions cycle"), "FAIL")
-        _delete([ids.pop()])
-
-        # (b) an aged-out cycle must be loud too. The limit is 10 minutes
-        # while the session is open and 26 hours once it has closed, so age
-        # the newest success past whichever applies right now.
-        from price_source import (_kse_local, _SESSION_OPEN_H,
-                                  _SESSION_CLOSE_H, _KSE_TRADING_WEEKDAYS)
-        loc = _kse_local(_utcnow())
-        session_open = (loc.weekday() in _KSE_TRADING_WEEKDAYS
-                        and _SESSION_OPEN_H <= loc.hour < _SESSION_CLOSE_H)
-        old = _utcnow() - timedelta(minutes=30 if session_open else 60 * 30)
-        # the check reads MAX(created_at) of successes, so the real rows must
-        # be hidden for this one - park them, then put them straight back
-        conn = sqlite3.connect(DB, timeout=15)
-        conn.execute("UPDATE data_fetch_runs SET source='yahoo_positions__parked'"
-                     " WHERE source='yahoo_positions'")
-        conn.commit()
-        conn.close()
-        ids.append(_insert("success", old.isoformat(sep=" ", timespec="seconds"),
-                           old.strftime("%Y-%m-%d")))
-        quick_check_lines()
-        show("positions cycle")
-        step("stale cycle -> FAILS (%s)" % ("session open, >10m"
-                                            if session_open else "closed, >26h"),
-             verdict("positions cycle"), "FAIL")
     finally:
         _delete(ids)
+        _park(False)
         conn = sqlite3.connect(DB, timeout=15)
-        conn.execute("UPDATE data_fetch_runs SET source='yahoo_positions'"
-                     " WHERE source='yahoo_positions__parked'")
-        conn.commit()
         left = conn.execute(
             "SELECT COUNT(*) FROM data_fetch_runs WHERE error_msg=?",
             (ARTIFICIAL,)).fetchone()[0]
+        parked = conn.execute(
+            "SELECT COUNT(*) FROM data_fetch_runs "
+            "WHERE source='yahoo_positions__parked'").fetchone()[0]
         conn.close()
-        print(f"     restored: {left} artificial row(s) left behind"
-              f"{' *** CLEAN UP ***' if left else ''}")
-        if left:
-            failures.append("positions cycle: artificial rows left behind")
+        print(f"     restored: {left} artificial row(s), {parked} still parked")
+        if left or parked:
+            failures.append("positions cycle: state left behind")
     quick_check_lines()
     step("restored -> passes again", verdict("positions cycle"), "PASS")
+
+
+# ────────────────────────────── guard 3: space ──────────────────────────
+def prove_space():
+    """Three resources, three physics, three separate lines.
+
+    Driven with QUICK_CHECK_FAKE_SPACE rather than by actually filling a
+    117GB card or a 4GB tmpfs - the seam names itself in the output, so an
+    injected reading can never be read as a real one.
+    """
+    print("\n[guard] space — disk, memory and network kept apart")
+    for path, kind, inject, want, why in (
+            ("/", "disk", "99", "FAIL", "card nearly full"),
+            ("/tmp", "memory", "88", "FAIL", "tmpfs eating RAM"),
+            ("/mnt/nas-backups", "network", "95", "FAIL", "share nearly full"),
+            ("/mnt/nas-backups", "network", "unmounted", "FAIL",
+             "share detached - the case df alone cannot see"),
+    ):
+        marker = f"space {path} ({kind})"
+        env_val = f"{path}={inject}"
+        r = subprocess.run(
+            [BASE + "/venv/bin/python3", BASE + "/_tools/quick_check.py"],
+            capture_output=True, text=True, cwd=BASE, timeout=300,
+            env=dict(os.environ, QUICK_CHECK_FAKE_SPACE=env_val))
+        got, line = None, None
+        for ln in (r.stdout + r.stderr).splitlines():
+            if marker in ln:
+                m = re.search(r"\[(PASS|FAIL)\]", ln)
+                if m:
+                    got, line = m.group(1), ln.strip()
+        step(f"{marker}: {why}", got, want)
+        if got != want:
+            print(f"       line was: {line}")
+    quick_check_lines()
+    for path, kind, _, _ in SPACE_KINDS:
+        step(f"space {path} ({kind}) green again with no injection",
+             verdict(f"space {path} ({kind})"), "PASS")
+
+
+SPACE_KINDS = [("/", "disk", None, None), ("/tmp", "memory", None, None),
+               ("/mnt/nas-backups", "network", None, None)]
 
 
 # ─────────────────────────── guard 3: db_sanity ─────────────────────────
@@ -379,10 +472,37 @@ def prove_falsy_sentinel():
     step("back at baseline -> passes again", verdict(marker), "PASS")
 
 
+def _refuse_during_session():
+    """Not during a live session, unless someone says so out loud.
+
+    This tool is not a simulation. It opens the real circuit, so every fetch
+    in that window raises YahooBlocked; it writes a real 'halted' row, so a
+    positions cycle firing at that moment stands down. Two seconds of open
+    circuit at 10am is a scan that never happened, on a market the user
+    trades. Outside session hours it costs nothing.
+    """
+    if "--force" in sys.argv:
+        print("  running inside the session by --force, as instructed")
+        return
+    from price_source import (_kse_local, _SESSION_OPEN_H, _SESSION_CLOSE_H,
+                              _KSE_TRADING_WEEKDAYS)
+    loc = _kse_local(_utcnow())
+    if (loc.weekday() in _KSE_TRADING_WEEKDAYS
+            and _SESSION_OPEN_H <= loc.hour < _SESSION_CLOSE_H):
+        print(f"\nREFUSING: the KSE session is open ({loc:%H:%M} Kuwait, "
+              f"{_SESSION_OPEN_H:02d}:00-{_SESSION_CLOSE_H:02d}:00).")
+        print("This tool opens the real circuit and halts the real positions "
+              "cycle for a few seconds.\nRun it after the close, or pass "
+              "--force if you accept the lost fetches.")
+        sys.exit(2)
+
+
 print(__doc__.split("\n\n")[0])
+_refuse_during_session()
 try:
     prove_circuit()
     prove_positions_cycle()
+    prove_space()
     prove_db_sanity()
     prove_falsy_sentinel()
 finally:

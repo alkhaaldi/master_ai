@@ -16,6 +16,67 @@ CORE_FILES = [
 PASS = 0
 FAIL = 0
 
+SPACE_TARGETS = [
+    ("/", "disk", 85.0,
+     "the SD card carries the databases, the logs and the git tree, and "
+     "SQLite corrupts on a full volume rather than failing cleanly"),
+    ("/tmp", "memory", 50.0,
+     "tmpfs lives in RAM, not on the card: filling it is memory pressure, "
+     "and the OOM killer picks a victim that need not be whatever "
+     "overflowed it. prove_guards put 4GB here on 2026-08-17 and the "
+     "service survived on luck"),
+    ("/mnt/nas-backups", "network", 90.0,
+     "an 11TB share does not fill, it VANISHES - and when the CIFS mount "
+     "drops, this path stays a plain directory on the SD card while df "
+     "reports the root filesystem's free space, so backups keep "
+     "'succeeding' onto the card. Mounted-ness is the reading that matters"),
+]
+
+
+def _space_reading(path):
+    """(pct_used, state, note). state is 'ok', or why no number is trusted.
+
+    df runs under a timeout because a dropped CIFS mount does not error, it
+    HANGS - and a health check that hangs is worse than one that fails.
+
+    QUICK_CHECK_FAKE_SPACE is a test seam, and it announces itself in the
+    note so an injected reading can never be mistaken for a real one. Format:
+    "/=99,/tmp=88,/mnt/nas-backups=unmounted".
+    """
+    import subprocess as _sp
+    fake = os.environ.get("QUICK_CHECK_FAKE_SPACE")
+    if fake:
+        for part in fake.split(","):
+            if "=" not in part:
+                continue
+            p, v = part.split("=", 1)
+            if p != path:
+                continue
+            if v == "unmounted":
+                return None, "NOT A MOUNT POINT", "INJECTED READING"
+            if v == "unreachable":
+                return None, "unreadable", "INJECTED READING"
+            return float(v), "ok", "INJECTED READING"
+
+    # For the network share, mounted-ness comes first: a plain directory
+    # where a mount should be reports the root filesystem and looks healthy.
+    if path.startswith("/mnt/") and not os.path.ismount(path):
+        return None, "NOT A MOUNT POINT", ("the share is detached; anything "
+                                           "written here lands on the SD card")
+    try:
+        r = _sp.run(["df", "-P", path], capture_output=True, text=True, timeout=8)
+    except _sp.TimeoutExpired:
+        return None, "unresponsive", "df did not return in 8s - a hung mount"
+    lines = r.stdout.strip().splitlines()
+    if len(lines) < 2:
+        return None, "unreadable", (r.stderr or "df gave no rows").strip()[:80]
+    cols = lines[1].split()
+    for c in cols:
+        if c.endswith("%"):
+            return float(c[:-1]), "ok", ""
+    return None, "unreadable", "df row carried no percentage"
+
+
 def check(name, ok, detail=""):
     global PASS, FAIL
     status = "PASS" if ok else "FAIL"
@@ -128,41 +189,70 @@ def main():
     except Exception as e:
         check("daily fill age", False, f"witness unavailable: {e}")
 
-    # The 2-minute positions cycle announces its age the same way the
-    # backups do (user condition 2026-08-17). A cadence nobody checks is a
-    # cadence that stops without telling anyone - during an open session the
-    # tolerance is 10 minutes (5 missed cycles), outside it the last session's
-    # final cycle is the freshest truth that can exist.
+    # The 2-minute positions cycle announces its age (user condition
+    # 2026-08-17). Rewritten the same day, before it ever misled anyone: the
+    # first version aged it in wall-clock hours, 10 minutes during a session
+    # and 26 outside one. That is red for ~41 hours EVERY WEEKEND - Thursday's
+    # last cycle passes 26h on Friday afternoon - and red again at 09:00 sharp
+    # each Sunday, when the limit drops to 10 minutes while the newest cycle
+    # is still 68 hours old. A guard that goes red every week for a normal
+    # reason becomes "the known red", which is the exact failure this whole
+    # session was spent removing.
+    #
+    # So: sessions, not hours, by the 2026-08-15 rule - and 'idle' counts,
+    # because a cycle with no open positions did its job.
     try:
         import sqlite3 as _sq2
         from datetime import datetime as _dt2
         from price_source import (_kse_local, _SESSION_OPEN_H,
                                   _SESSION_CLOSE_H, _KSE_TRADING_WEEKDAYS)
         _pc = _sq2.connect(os.path.join(BASE_DIR, "data", "life.db"))
-        _prow = _pc.execute(
-            "SELECT MAX(created_at) FROM data_fetch_runs "
-            "WHERE source='yahoo_positions' AND status='success'").fetchone()
         _phalt = _pc.execute(
             "SELECT status FROM data_fetch_runs WHERE source='yahoo_positions'"
             " AND run_date=? ORDER BY id DESC LIMIT 1",
             (_dt2.utcnow().strftime("%Y-%m-%d"),)).fetchone()
         _pc.close()
+        _sess, _pwhen = run_witness.sessions_since_last_ok("yahoo_positions")
         _loc = _kse_local(_dt2.utcnow())
-        _open = (_loc.weekday() in _KSE_TRADING_WEEKDAYS
-                 and _SESSION_OPEN_H <= _loc.hour < _SESSION_CLOSE_H)
+        _in_hours = (_loc.weekday() in _KSE_TRADING_WEEKDAYS
+                     and _SESSION_OPEN_H <= _loc.hour < _SESSION_CLOSE_H)
+        # Six minutes of grace after the bell: the cycle fires every two, so
+        # before then "nothing yet today" is the schedule, not a fault.
+        _mins_in = (_loc.hour - _SESSION_OPEN_H) * 60 + _loc.minute
+        _live = _in_hours and _mins_in >= 6
         if _phalt and _phalt[0] == "halted":
             check("positions cycle", False,
                   "HALTED today after consecutive failures - prices are not moving")
-        elif not _prow or not _prow[0]:
-            check("positions cycle", False, "no successful cycle ever recorded")
+        elif _sess is None:
+            check("positions cycle", False,
+                  "no completed cycle ever recorded (neither a fetch nor an "
+                  "idle run with no positions)")
+        elif _live:
+            _pm = (_dt2.utcnow() - _dt2.fromisoformat(_pwhen)).total_seconds() / 60
+            check("positions cycle", _pm <= 10,
+                  f"last cycle {_pwhen} UTC - {_pm:.0f}m old "
+                  f"(session open {_mins_in}m, limit 10m)")
         else:
-            _pm = (_dt2.utcnow() - _dt2.fromisoformat(_prow[0])).total_seconds() / 60
-            _lim = 10 if _open else 26 * 60
-            check("positions cycle", _pm < _lim,
-                  f"last success {_prow[0]} UTC - {_pm:.0f}m old "
-                  f"({'session open' if _open else 'session closed'}, limit {_lim:.0f}m)")
+            check("positions cycle", _sess <= 1,
+                  f"last cycle {_pwhen} UTC - {_sess} session(s) old, limit 1 "
+                  f"({'in the opening minutes' if _in_hours else 'market closed'})")
     except Exception as _pe:
         check("positions cycle", False, f"witness unavailable: {_pe}")
+
+    # ── Space: three resources that share one word and nothing else ──
+    # Kept apart deliberately. Rolling them into one "disk" check would put a
+    # RAM-pressure problem, an SD-card problem and a network problem behind a
+    # single number, which is the shape of defect this project keeps finding.
+    for _path, _kind, _max_pct, _why in SPACE_TARGETS:
+        _pct, _state, _note = _space_reading(_path)
+        _name = f"space {_path} ({_kind})"
+        if _state != "ok":
+            check(_name, False, f"{_state} - {_note}. {_why}")
+        else:
+            check(_name, _pct <= _max_pct,
+                  f"{_pct:.0f}% used, limit {_max_pct:.0f}%"
+                  + (f" - {_why}" if _pct > _max_pct else "")
+                  + (f" [{_note}]" if _note else ""))
 
     # F-1.5 + user order 2026-08-16: EVERY backup path announces its
     # age - the shell backups failed silently for 4.5 months into a
