@@ -822,23 +822,32 @@ def _source_state() -> dict:
     (blind). Collapsing them is what let April prices render as current
     for four months.
     """
+    # The feed's delay is a property of the source, so it travels with the
+    # source on every path - including the blind ones, where knowing the feed
+    # is 15 minutes behind is exactly what stops a reader treating the last
+    # stored number as current.
+    try:
+        from price_source import SOURCE_DELAY_MINUTES as _sdm
+    except Exception:
+        _sdm = None                  # unknown delay, not zero delay
+    _src = {"source": "yahoo", "source_delay_minutes": _sdm}
     try:
         from yahoo_gate import circuit_state
         st = circuit_state()
     except Exception as e:
         return {"source_state": "unknown", "source_reason": repr(e)[:120],
-                "source": "yahoo"}
+                **_src}
     if st.get("open"):
         return {"source_state": "blind",
                 "source_reason": "circuit open: %s (%ss remaining)"
                                  % (st.get("reason"), st.get("cooldown_remaining_s")),
-                "source": "yahoo"}
+                **_src}
     if st.get("consecutive_failures", 0) >= 2:
         return {"source_state": "degraded",
                 "source_reason": "%d consecutive failures, last %s"
                                  % (st["consecutive_failures"], st.get("last_failure")),
-                "source": "yahoo"}
-    return {"source_state": "ok", "source_reason": None, "source": "yahoo"}
+                **_src}
+    return {"source_state": "ok", "source_reason": None, **_src}
 
 
 def _session_freshness(as_of, was_open) -> dict:
@@ -2122,6 +2131,19 @@ def dashboard_swing():
         # from an hour-old one, which is the only question that matters
         # while the market moves.
         _page_state["as_of"] = _mx
+        # ...and a time nobody can name is barely better. Measured on the wire
+        # 2026-08-17: this stamp is neither our fetch time (that is scan_time)
+        # nor the bar's time (that is bar_start, pinned at 06:00Z all session).
+        # It is the SOURCE's own last-trade time - Yahoo's regularMarketTime,
+        # carried into captured_at by _tools/intraday_refresh.py. Naming it
+        # costs one field and settles a question a reader cannot answer from
+        # the payload today.
+        # CAVEAT, tracked in _tools/OPEN_ITEMS.md: stock_radar.py stamps the
+        # same column from utcnow(). 131 of 132 rows are source-clock, so this
+        # label holds today by weight of rows, not by construction.
+        from price_source import as_of_age_minutes as _aom
+        _page_state["as_of_kind"] = "source_market_time" if _mx else None
+        _page_state["as_of_age_minutes"] = _aom(_mx)
     except Exception as _dse:
         logging.getLogger("master_ai").warning("swing data_state error: %r", _dse)
 
@@ -2135,6 +2157,8 @@ def dashboard_swing():
         "data_state_ar": _page_state.get("data_state_ar"),
         "data_sessions_old": _page_state.get("sessions_old"),
         "as_of": _page_state.get("as_of"),
+        "as_of_kind": _page_state.get("as_of_kind"),
+        "as_of_age_minutes": _page_state.get("as_of_age_minutes"),
         "market_regime": regime,
         "market_trend": {
             "up": trend_up,

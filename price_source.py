@@ -56,6 +56,19 @@ BRIDGE_HEALTH_TIMEOUT = 2
 BRIDGE_TIMEOUT = 3
 YAHOO_TIMEOUT = 12
 
+# Yahoo publishes KSE quotes on a delay. MEASURED 2026-08-17 during an open
+# session, not assumed: 18 samples over 7 symbols across a 27-minute span,
+# fetched with use_cache=False so every stamp came off the wire. Run floors
+# 15.93 / 15.14 / 15.10 minutes; no sample in 18 ever fell below 15.10, and
+# the 0.10 is our own fetch latency.
+#
+# This is a FLOOR, not an age. Readings above it are trade sparsity, not feed
+# lag: HUMANSOFT read 26.0 minutes because its last trade was 26 minutes old
+# while the feed was as current as everyone else's. Polling faster cannot go
+# under this number - it lowers our staleness, never the source's. So anything
+# claiming freshness must pair this with the per-response as_of age below.
+SOURCE_DELAY_MINUTES = 15
+
 STATE_RANK = {"live": 0, "stale": 1, "missing": 2}
 
 logger = logging.getLogger("price_source")
@@ -126,6 +139,25 @@ def _parse_as_of(value) -> datetime | None:
     except (ValueError, TypeError):
         return None
     return dt.replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def as_of_age_minutes(as_of, now_utc=None) -> float | None:
+    """How old the stamp is, in minutes, at the moment of asking.
+
+    The companion to SOURCE_DELAY_MINUTES: that one says what the source
+    cannot beat, this one says what we actually hold. They differ whenever a
+    symbol has not traded recently, which is most of them most of the time.
+
+    None when there is no stamp or it will not parse. A number here is a
+    measurement; absence of one is not zero.
+    """
+    dt = _parse_as_of(as_of)          # tz-naive UTC, or None
+    if dt is None:
+        return None
+    now = now_utc or datetime.now(timezone.utc)
+    if now.tzinfo:
+        now = now.astimezone(timezone.utc).replace(tzinfo=None)
+    return round((now - dt).total_seconds() / 60.0, 1)
 
 
 # ---------------------------------------------------------------- sessions
