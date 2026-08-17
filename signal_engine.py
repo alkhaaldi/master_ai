@@ -1254,7 +1254,20 @@ def _extract_confluence(bridge: dict) -> dict:
     if bridge.get("source") == "radar_daily":
         conf = (bridge.get("signals") or {}).get("confluence")
         if isinstance(conf, dict) and conf.get("score") is not None:
-            return conf
+            # brain_weighted stated, not omitted (2026-08-17). radar.html and
+            # signals.html both read `cd.brain_weighted` to decide whether to
+            # show the Brain badge, and it was never in the payload - so the
+            # badge was hidden by ABSENCE rather than by this decision. Those
+            # look identical to the page and mean opposite things: one is "the
+            # brain deliberately does not touch these rows", the other is "we
+            # do not know". Same shape as pnl_valid.
+            out = dict(conf)
+            out["brain_weighted"] = False
+            out["brain_weighted_reason"] = (
+                "snapshot rows carry the declared-weight score from the 14:00 "
+                "run; the brain's learned weights never touch them, because "
+                "their training basis is the suspect hit/miss sample (C-27)")
+            return out
     try:
         from trading_brain import get_adjusted_confluence
         adjusted = get_adjusted_confluence(bridge)

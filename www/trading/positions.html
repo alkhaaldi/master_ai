@@ -1013,8 +1013,12 @@ function render(data){
       html += metric('الكمية','<span class="ltr">'+n(p.quantity)+'</span>');
       html += metric('أيام الاحتفاظ','<span class="ltr">'+daysHeld(p.entry_date)+'</span>');
       html += metric('الاستراتيجية', esc(p.entry_reason||p.strategy||'\u2014'));
-      html += metric('الدعم','<span class="ltr">'+n3(p.support)+'</span>');
-      html += metric('المقاومة','<span class="ltr">'+n3(p.resistance)+'</span>');
+      /* من signal_health لا من المركز: هذه قراءات سوق لكل رمز، لا حقائق
+         صفقة، والكتلة موجودة أصلاً لهذا. كانتا تُقرآن من المركز فتعرضان
+         «—» دائماً — والبيانات كانت تصل، على بُعد مفتاح واحد. */
+      var _sh = p.signal_health || {};
+      html += metric('الدعم','<span class="ltr">'+n3(_sh.support ?? p.support)+'</span>');
+      html += metric('المقاومة','<span class="ltr">'+n3(_sh.resistance ?? p.resistance)+'</span>');
       html += metric('تاريخ الدخول','<span class="ltr">'+(p.entry_date||'\u2014')+'</span>');
       html += '</div>';
 
@@ -1060,7 +1064,9 @@ function render(data){
         html += '<span style="color:var(--cyan)">Trailing Stop (ATR\u00D72): </span>';
         html += '<span class="ltr" style="font-family:var(--fm);font-weight:600;color:'+trColor+'">'+n3(p.trailing_stop)+'</span>';
         html += '<span class="ltr" style="font-family:var(--fm);font-size:.75rem;color:var(--text-3)">(-'+trDist+'%)</span>';
-        if(p.atr) html += '<span class="ltr" style="font-family:var(--fm);font-size:.72rem;color:var(--text-4);margin-right:auto">ATR: '+n3(p.atr)+'</span>';
+        /* نفس السبب: ATR قراءة سوق، مكانها signal_health. */
+        var _atr = (p.signal_health||{}).atr ?? p.atr;
+        if(_atr) html += '<span class="ltr" style="font-family:var(--fm);font-size:.72rem;color:var(--text-4);margin-right:auto">ATR: '+n3(_atr)+'</span>';
         html += '</div>';
       }
 

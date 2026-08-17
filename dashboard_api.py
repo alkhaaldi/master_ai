@@ -158,6 +158,31 @@ async def ha_dashboard():
     data["version"] = _ctx["version"]
     data["uptime"] = round(time.time() - _ctx["start_time"])
     data["api_online"] = True
+    # assistant.html and home.html both read dash.autonomy_level and both
+    # rendered the 'standard' fallback, because /dashboard never carried it -
+    # while /health has been reporting autonomy.level all along. One source,
+    # surfaced where the pages already look.
+    # Straight from system_settings, the same row event_engine reads in
+    # server.py. Not an import of server (that would be circular) and not a
+    # second copy of the default - if the row is missing, the level is
+    # unknown, and unknown is what gets reported.
+    try:
+        import sqlite3 as _sqa
+        import json as _jsa
+        _ac = _sqa.connect(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                        "data", "audit.db"), timeout=3)
+        _arow = _ac.execute("SELECT value FROM system_settings"
+                            " WHERE key='autonomy_config'").fetchone()
+        _ac.close()
+        data["autonomy_level"] = _jsa.loads(_arow[0]).get("level") if _arow else None
+        if not _arow:
+            data["autonomy_level_reason"] = "no autonomy_config row in system_settings"
+    except Exception as _ae:
+        # None, not a guessed level: an unknown autonomy setting is not
+        # "standard", and a page saying standard when nobody knows is the
+        # defect this whole phase removed.
+        data["autonomy_level"] = None
+        data["autonomy_level_reason"] = repr(_ae)[:120]
     try:
         data["cpu"] = psutil.cpu_percent(interval=0.5)
         data["memory"] = psutil.virtual_memory().percent
@@ -1048,6 +1073,28 @@ async def ha_dashboard_portfolio():
                             "macd_momentum": sig.get("macd_momentum", ""),
                             "rsi_divergence": sig.get("rsi_divergence"),
                             "adx": sig.get("adx"),
+                            # Added 2026-08-17. positions.html has been
+                            # rendering "الدعم —" and "المقاومة —" and hiding
+                            # its ATR and TREND chips because these four never
+                            # reached the page - not because they were
+                            # missing. The signal row carries all of them, two
+                            # of them under different names, and THIS is the
+                            # right place for that translation: signal_health
+                            # is already the block that carries per-symbol
+                            # technicals onto a position, so widening the
+                            # position row instead would have put market
+                            # readings among trade facts.
+                            "support": sig.get("support"),
+                            "resistance": sig.get("resistance"),
+                            "atr": sig.get("atr_14"),
+                            "trend": sig.get("daily_trend"),
+                            # volume_signal is NOT here on purpose. The page
+                            # reads it as a text label; the signal row carries
+                            # vol_ratio, a number. tv_analysis has a
+                            # detect_volume_signal that produces the label,
+                            # but wiring it is a decision about which module
+                            # owns volume classification, not a rename.
+                            # Tracked in OPEN_ITEMS.
                         }
                         alerts = []
                         cs = sig.get("confluence_score", 100)
