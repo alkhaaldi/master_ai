@@ -17,6 +17,8 @@ restored.
                    age out the cycle     -> the check must FAIL
   db_sanity        break each check in   -> every one must FAIL
                    turn, on a COPY
+  falsy sentinel   plant a known `or 0` -> the count must rise and the
+                                            check must FAIL
 
 Restoration runs from a finally block, so an interrupted run does not leave
 the door shut or a fake row behind. It does blind the price source for a few
@@ -273,10 +275,85 @@ def prove_db_sanity():
             print(f"       line was: {line2}")
 
 
+# ──────────────────────── guard 4: the falsy sentinel ───────────────────
+# The ratchet caught three of my own additions during the 2026-08-17 session
+# and each was rewritten rather than waived. But being caught three times is
+# an anecdote, not a test: nobody had ever put a known violation in front of
+# it and required the number to move. The tool that guards the other tools
+# was the last one taking its own word for it.
+FALSY_PROBE = BASE + "/_tools/_falsy_probe_artificial.py"
+FALSY_PROBE_SRC = '''"""ARTIFICIAL - written by prove_guards.py, deleted seconds later.
+
+If you are reading this file in a checkout, a proof run was interrupted:
+delete it. While it exists, quick_check's falsy-defaults line is red on
+purpose and the count is one above the committed baseline.
+"""
+
+
+def _probe(d):
+    # The violation being proved: an absent reading becoming a confident 0.
+    return float(d.get("nothing_is_here") or 0)
+'''
+
+
+def _falsy_counts():
+    """(decision_path, other) from a SEPARATE process, so the scan is fresh."""
+    code = ("import importlib.util as u;"
+            "s=u.spec_from_file_location('f','%s/_tools/falsy_defaults_inventory.py');"
+            "m=u.module_from_spec(s);s.loader.exec_module(m);print(*m.counts())"
+            % BASE)
+    r = subprocess.run([BASE + "/venv/bin/python3", "-c", code],
+                       capture_output=True, text=True, cwd=BASE, timeout=300)
+    parts = r.stdout.split()
+    if len(parts) != 2:
+        raise RuntimeError("inventory did not report counts: %r"
+                           % (r.stdout + r.stderr)[:200])
+    return int(parts[0]), int(parts[1])
+
+
+def prove_falsy_sentinel():
+    print("\n[guard] falsy-defaults sentinel")
+    if os.path.exists(FALSY_PROBE):
+        print("  ABORT: %s already exists - an earlier run was interrupted. "
+              "Delete it, then re-run." % FALSY_PROBE)
+        failures.append("falsy sentinel: stale probe file present")
+        return
+
+    marker = "other falsy defaults"
+    base_d, base_o = _falsy_counts()
+    print(f"       baseline: decision={base_d} other={base_o}")
+    show(marker)
+    step("baseline -> passes", verdict(marker), "PASS")
+
+    try:
+        with open(FALSY_PROBE, "w", encoding="utf-8") as fh:
+            fh.write(FALSY_PROBE_SRC)
+        d2, o2 = _falsy_counts()
+        step(f"one planted `or 0` raises the count ({base_o} -> {o2})",
+             o2 - base_o, 1)
+        step("decision-path count is untouched", d2 - base_d, 0)
+        quick_check_lines()
+        show(marker)
+        step("count above baseline -> check FAILS", verdict(marker), "FAIL")
+    finally:
+        if os.path.exists(FALSY_PROBE):
+            os.remove(FALSY_PROBE)
+        gone = not os.path.exists(FALSY_PROBE)
+        print(f"     removed: probe gone={gone}")
+        if not gone:
+            failures.append("falsy sentinel: probe file left behind")
+
+    d3, o3 = _falsy_counts()
+    step(f"count returns to baseline ({o3})", (d3, o3), (base_d, base_o))
+    quick_check_lines()
+    step("back at baseline -> passes again", verdict(marker), "PASS")
+
+
 print(__doc__.split("\n\n")[0])
 prove_circuit()
 prove_positions_cycle()
 prove_db_sanity()
+prove_falsy_sentinel()
 
 print()
 if failures:

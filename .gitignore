@@ -86,3 +86,4 @@ _inbox/
 tmp/
 *.mp3
 data/yahoo_gate.db*
+_tools/_falsy_probe_artificial.py
