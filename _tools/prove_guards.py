@@ -28,6 +28,7 @@ seconds, so do not run it mid-scan.
 """
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -205,12 +206,37 @@ def prove_positions_cycle():
 # ─────────────────────────── guard 3: db_sanity ─────────────────────────
 # Driven on a COPY. VACUUM INTO rather than a file copy, because life.db is
 # in WAL mode and a plain copy would miss whatever is still in the log.
+_probe_dirs = []
+
+
 def _probe_db():
-    path = os.path.join(tempfile.mkdtemp(), "probe.db")
+    """A throwaway copy of life.db. Every caller must hand it to _drop_probe.
+
+    life.db is ~87MB and this function is called once per case, so leaking
+    them fills a 4GB tmpfs in five runs - which it did on 2026-08-17 before
+    the cleanup below existed. A proof tool that degrades the machine it
+    runs on is not a proof tool.
+    """
+    d = tempfile.mkdtemp(prefix="prove_guards_")
+    _probe_dirs.append(d)
+    path = os.path.join(d, "probe.db")
     conn = sqlite3.connect(DB, timeout=30)
     conn.execute("VACUUM INTO ?", (path,))
     conn.close()
     return path
+
+
+def _drop_probe(path):
+    d = os.path.dirname(path)
+    shutil.rmtree(d, ignore_errors=True)
+    if d in _probe_dirs:
+        _probe_dirs.remove(d)
+
+
+def _drop_all_probes():
+    for d in list(_probe_dirs):
+        shutil.rmtree(d, ignore_errors=True)
+        _probe_dirs.remove(d)
 
 
 def _db_sanity_lines(db_path):
@@ -233,6 +259,7 @@ def prove_db_sanity():
     print("\n[guard] db_sanity — every check, driven red on a copy")
     base_db = _probe_db()
     out = _db_sanity_lines(base_db)
+    _drop_probe(base_db)
 
     # Each entry: the check's marker, and the SQL that should turn it red.
     cases = [
@@ -265,14 +292,17 @@ def prove_db_sanity():
             failures.append(f"db_sanity: {marker} not green at baseline")
             continue
         broken = _probe_db()
-        c = sqlite3.connect(broken, timeout=30)
-        c.execute(sql)
-        c.commit()
-        c.close()
-        v2, line2 = _db_verdict(_db_sanity_lines(broken), marker)
-        step(f"{marker}", v2, "FAIL")
-        if v2 != "FAIL":
-            print(f"       line was: {line2}")
+        try:
+            c = sqlite3.connect(broken, timeout=30)
+            c.execute(sql)
+            c.commit()
+            c.close()
+            v2, line2 = _db_verdict(_db_sanity_lines(broken), marker)
+            step(f"{marker}", v2, "FAIL")
+            if v2 != "FAIL":
+                print(f"       line was: {line2}")
+        finally:
+            _drop_probe(broken)
 
 
 # ──────────────────────── guard 4: the falsy sentinel ───────────────────
@@ -350,10 +380,15 @@ def prove_falsy_sentinel():
 
 
 print(__doc__.split("\n\n")[0])
-prove_circuit()
-prove_positions_cycle()
-prove_db_sanity()
-prove_falsy_sentinel()
+try:
+    prove_circuit()
+    prove_positions_cycle()
+    prove_db_sanity()
+    prove_falsy_sentinel()
+finally:
+    # Belt and braces: each case drops its own copy, this catches an
+    # interrupted run. 87MB a piece on a 4GB tmpfs is not survivable.
+    _drop_all_probes()
 
 print()
 if failures:
