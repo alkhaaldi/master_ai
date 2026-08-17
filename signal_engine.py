@@ -329,6 +329,32 @@ def _save_regime_snapshot(regime_data: dict):
         pass
 
 
+def _name_ar(symbol, trade=None) -> str:
+    """The Arabic company name for a symbol.
+
+    Both call sites used to ask the TRADE record for it. That works for an
+    open position and cannot work for an opportunity, which has no trade -
+    `(trade or {}).get("name_ar", "")` returned "" for all 18 of them, every
+    time, by construction rather than by accident. Meanwhile tv_data.KSE_STOCKS
+    has mapped all 132 symbols to their Arabic names the whole time, and
+    dashboard_api has been using it two files away.
+
+    Order: the trade's own name first, because a position may carry a name
+    the map does not; the map second. Empty last, and empty on purpose - the
+    card shows the symbol already, so repeating it as the company name would
+    be noise dressed as data.
+    """
+    if trade:
+        own = (trade.get("name_ar") or "").strip()
+        if own:
+            return own
+    try:
+        from tv_data import KSE_STOCKS
+    except Exception:
+        return ""
+    return (KSE_STOCKS.get(str(symbol).upper()) or "").strip()
+
+
 def build_signals() -> dict:
     """Main entry: build composite signals from radar + bridge + journal."""
     now = datetime.now()
@@ -406,7 +432,7 @@ def build_signals() -> dict:
 
         sig = {
             "symbol": sym_upper,
-            "name_ar": (trade or {}).get("name_ar", ""),
+            "name_ar": _name_ar(sym_upper, trade),
             "price": bd.get("price", 0),
             "change_pct": round(bd.get("change_pct", 0) or 0, 2),
             "verdict": verdict,
@@ -527,7 +553,7 @@ def build_signals() -> dict:
 
         result["open_positions"].append({
             "symbol": sym,
-            "name_ar": trade.get("name_ar", ""),
+            "name_ar": _name_ar(sym, trade),
             "entry": entry_price,
             "current": current_price,
             "pnl_pct": round(pnl_pct, 2),

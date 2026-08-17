@@ -2115,8 +2115,13 @@ def dashboard_swing():
     for s in all_sigs:
         action = s.get("swing_action", "")
         if action == "WATCH":
+            from signal_engine import _name_ar as _nm_w
             watchlist.append({
                 "symbol": s["symbol"],
+                # Same resolver again. The watchlist sat beside a positions
+                # list and an opportunities list on one page, and was the
+                # only one of the three with no name.
+                "name_ar": _nm_w(s["symbol"]),
                 "price": s.get("price", 0),
                 "daily_trend": s.get("daily_trend", "UNKNOWN"),
                 "confluence_pct": s.get("swing_confluence_pct", 0),
@@ -2161,8 +2166,14 @@ def dashboard_swing():
                 days_held = None
 
         cur_sig = next((s for s in all_sigs if s["symbol"] == sym), None)
+        # The name was absent from this list entirely - signal_engine's fix
+        # could not reach it, because swing builds its positions here rather
+        # than from build_signals. Same resolver, so the two lists on this
+        # page cannot drift apart again.
+        from signal_engine import _name_ar as _nm
         active_positions.append({
             "symbol": sym,
+            "name_ar": _nm(sym, pos),
             "entry_price": entry_p,
             # null, not a stale number, when there is no live price
             "current_price": cur_p if price_is_live else None,

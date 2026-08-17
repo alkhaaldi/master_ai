@@ -279,16 +279,21 @@ function render(d){
   /* ── Pulse: أهم إشارة ── */
   const ts = d.top_signal;
   if(ok && ts){
-    const sc = Number(ts.score ?? ts.confluence_score ?? 0);
+    /* نفس سلسلة الأسماء المستعملة في البطاقات والمراقبة. وكان `?? 0` هنا
+       يحوّل الدرجة الغائبة إلى صفر، فتُلوَّن البطاقة muted وتُقرأ «درجة صفر»
+       بدل «لم تصل». الغياب null، ويُقال. */
+    const scRawT = ts.confluence_pct ?? ts.score ?? ts.confluence_score;
+    const sc = has(scRawT) ? Number(scRawT) : null;
+    const tone = s => s === null ? 'muted' : (s>=70?'up':s>=50?'warn':'muted');
     $('pulse').innerHTML = `<div class="pulse">
       <div><div class="lbl">أقوى إشارة</div>
         <div class="sym">${ts.symbol||'—'}</div>
-        ${ts.name?`<div class="co">${ts.name}</div>`:''}</div>
+        ${(ts.name||ts.name_ar)?`<div class="co">${ts.name||ts.name_ar}</div>`:''}</div>
       <div class="grow"></div>
       <div style="text-align:center"><div class="lbl">القرار</div>
-        <div class="act ${sc>=70?'up':sc>=50?'warn':'muted'}">${ts.action||ts.direction||'—'}</div></div>
+        <div class="act ${tone(sc)}">${ts.action||ts.direction||'—'}</div></div>
       <div style="text-align:center"><div class="lbl">الدرجة</div>
-        <div class="score ${sc>=70?'up':sc>=50?'warn':'muted'}">${sc||'—'}</div></div>
+        <div class="score ${tone(sc)}">${sc === null ? 'غير محسوبة' : sc}</div></div>
       ${has(ts.price)?`<div style="text-align:center"><div class="lbl">السعر <span class="m">فلس</span></div>
         <div class="score" style="font-size:24px">${fils(ts.price)}</div></div>`:''}
     </div>`;
@@ -404,7 +409,7 @@ function posTable(rows){
       : `<td class="n hs muted">—</td>`;
 
     return `<tr>
-      <td><span class="sym">${sym}</span>${p.name?`<div class="co">${p.name}</div>`:''}
+      <td><span class="sym">${sym}</span>${(p.name||p.name_ar)?`<div class="co">${p.name||p.name_ar}</div>`:''}
         ${p.daily_trend?`<div class="co" style="font-size:11.5px">اتجاه يومي: ${p.daily_trend}</div>`:''}</td>
       <td class="n">${fils(entry)}</td>
       <td class="n">${valid?fils(cur):'<span class="muted">—</span>'}</td>
@@ -508,10 +513,15 @@ function oppsBlock(S, opps){
 
 function watchTable(rows){
   const body = rows.map(w=>{
-    const sc = Number(w.confluence_score ?? w.score ?? 0);
+    /* نفس سلسلة الأسماء المستعملة في بطاقات الفرص — الحمولة تشحن
+       confluence_pct و name_ar، لا confluence_score و name. */
+    const scRawW = w.confluence_pct ?? w.confluence_score ?? w.score;
+    const sc = has(scRawW) ? Number(scRawW) : null;
     return `<tr>
-      <td><span class="sym">${w.symbol||'—'}</span>${w.name?`<div class="co">${w.name}</div>`:''}</td>
-      <td class="n"><span class="score-pill ${scoreCls(sc)}">${sc||'—'}</span></td>
+      <td><span class="sym">${w.symbol||'—'}</span>${(w.name||w.name_ar)?`<div class="co">${w.name||w.name_ar}</div>`:''}</td>
+      <td class="n">${sc === null
+        ? `<span class="miss" title="لم تصل مع الحمولة">غير محسوبة</span>`
+        : `<span class="score-pill ${scoreCls(sc)}">${sc}</span>`}</td>
       <td class="n">${fils(w.price)}</td>
       <td>${tags(w.factors||w.reasons,'f')}</td>
       <td>${tags(w.blockers,'b') || '<span class="muted" style="font-size:12px">—</span>'}</td>
