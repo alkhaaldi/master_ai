@@ -152,6 +152,15 @@ def _evaluate_outcome(bars, idx, snapshot):
     if len(future) < EVAL_DAYS:
         return None  # not enough future bars
 
+    # These defaults are SENTINELS, not readings, and are chosen so they can
+    # never win their own comparison: 0 cannot be the maximum high, 999999
+    # cannot be the minimum low. A bar missing the field drops out of the
+    # answer instead of skewing it.
+    #
+    # Left as-is deliberately on 2026-08-17, during the 4g sweep that removed
+    # this shape elsewhere. The note is here so the next reader does not
+    # "fix" it into a None-propagating version and change the result: the
+    # number is doing a job, and it is not the job `rsi_traj`'s 0 was doing.
     max_high  = max(b.get("high", 0) for b in future)
     min_low   = min(b.get("low", 999999) for b in future)
     price_7d  = future[-1].get("close", price_at)
@@ -358,6 +367,9 @@ def backfill_symbol_30m(symbol, bars=None):
         if not price_at or price_at <= 0:
             continue
 
+        # Sentinels, not defaults - see the fuller note in _evaluate_outcome.
+        # 0 cannot be a maximum and 999999 cannot be a minimum, so a bar
+        # missing the field leaves the comparison rather than distorting it.
         max_high = max(b.get("high", 0) for b in future)
         min_low = min(b.get("low", 999999) for b in future)
         price_end = future[-1].get("close", price_at)

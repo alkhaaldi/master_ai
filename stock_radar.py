@@ -768,7 +768,46 @@ def _fetch_bridge_30m_retired(ticker: str) -> dict:
 
 
 def check_symbol(symbol, fast=9, slow=21):
-    """Check one symbol for EMA cross via Bridge API (30m). No tvDatafeed dependency."""
+    """OFFLINE since the bridge was retired. Returns the reason, not zeros.
+
+    Measured 2026-08-17, and this is why it is gated rather than repaired:
+    `_fetch_bridge_30m` has returned `{}` since G-4, and every field below it
+    collapses through a chain of `or 0`. The function was answering, for
+    every symbol, with
+
+        price 0.0 · rsi 0.0 · vwap 0.0 · vol_ratio 0.0 · ema 0.0/0.0
+
+    An RSI of 0 is not "no reading", it is the extreme end of the scale -
+    maximum oversold. And `tg_radar_check` is wired to a live Telegram
+    command (server.py:6513), so a fabricated all-zero snapshot was one
+    message away at any time. A dead path that still answers the phone is
+    worse than one that does not.
+
+    This is the 30m layer, so it gets the 30m layer's answer: offline,
+    rebuildable, and NOT substituted with daily data. See build_signals_30m
+    in signal_engine.py and OPEN_ITEMS item 5. Every caller already checks
+    `error`, so nothing downstream changes shape.
+
+    The bridge-era body is preserved below as _check_symbol_bridge_era for
+    the record; do not call it - it computes from an empty dict.
+    """
+    from tv_data import resolve_symbol
+    ticker = resolve_symbol(symbol)
+    return {
+        "ticker": ticker,
+        "error": ("طبقة 30m متوقفة منذ تقاعد الجسر (2026-08-16). "
+                  "قابلة لإعادة البناء محلياً — وليست بيانات ميتة."),
+        "layer_state": "offline",
+        "layer_reason": ("_fetch_bridge_30m returns {} since G-4; every "
+                         "indicator here would collapse to 0 through `or 0`, "
+                         "and 0 is a real RSI reading, not an absent one"),
+        "layer_rebuildable": True,
+    }
+
+
+def _check_symbol_bridge_era(symbol, fast=9, slow=21):
+    """The pre-2026-08-17 body. Unreachable. Kept for the record ONLY - it
+    reads an empty dict and reports zeros as measurements."""
     from tv_data import resolve_symbol, KSE_STOCKS
     ticker = resolve_symbol(symbol)
     try:

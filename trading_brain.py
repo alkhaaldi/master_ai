@@ -592,8 +592,20 @@ def get_adjusted_confluence(signal_data: dict) -> dict:
         "stoch": 1 if (signal_data.get("stoch_k") or 0) > 50 else 0,
     }
 
-    weighted_bullish = sum(votes[ind] * weights.get(ind, 1.0) for ind in INDICATORS)
-    weighted_total = sum(weights.get(ind, 1.0) for ind in INDICATORS)
+    # `weights.get(ind, 1.0)` until 2026-08-17: an indicator the brain had
+    # never learned a weight for was given FULL weight - the loudest vote in
+    # the room going to the one thing with no evidence behind it. And the
+    # score came back stamped brain_weighted=True either way, so a blend of
+    # learned and invented weights was indistinguishable from a fully learned
+    # one. That matters directly for C-27, whose whole question is what the
+    # weights were fitted on.
+    #
+    # Absence now EXCLUDES: an indicator with no learned weight leaves both
+    # sides of the ratio. All six carry weights today, so this changes no
+    # number now - it changes what happens the first time one does not.
+    present = [ind for ind in INDICATORS if weights.get(ind) is not None]
+    weighted_bullish = sum(votes[ind] * weights[ind] for ind in present)
+    weighted_total = sum(weights[ind] for ind in present)
 
     if weighted_total <= 0:
         return _fallback_confluence(signal_data)
@@ -622,6 +634,10 @@ def get_adjusted_confluence(signal_data: dict) -> dict:
         "bearish":      bearish,
         "total":        len(votes),
         "brain_weighted": True,
+        # The basis travels with the score (C-27): which indicators actually
+        # carried a learned weight, and which were left out for lacking one.
+        "weights_used": present,
+        "weights_missing": [i for i in INDICATORS if i not in present],
         "regime":       regime,
         "raw_score":    raw_score,
         "brain_delta":  score - raw_score,
