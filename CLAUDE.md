@@ -74,7 +74,21 @@ bash _tools/restart_master_ai.sh       # only if restart needed
 ```
 
 ### Rule 3: Git Before Restart
-**Always** `git add -A && git commit -m "description"` before any restart or service kill.
+**Always** commit before any restart or service kill - never after.
+
+```bash
+git status --short                    # read this BEFORE staging
+git add <only the paths you changed>
+git commit -m "description"
+```
+
+**NEVER** `git add -A` in this repo. The working tree normally carries
+several modified-but-uncommitted files belonging to someone else's
+unfinished work. `git add -A` sweeps them into your commit and the commit
+message then lies about what changed - that is commit `651b154`, whose
+message claimed "archive 58 scripts" while it actually deleted two live
+modules. If unexplained modified files are present, say so instead of
+committing them.
 
 ### Rule 4: Minimal & Backward-Compatible
 - Changes must be **minimal** — no rewrites unless explicitly asked
