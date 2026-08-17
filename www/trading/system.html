@@ -171,10 +171,10 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
   <div class="section-hdr">&#x1F916; KAIROS <span class="kairos-badge stopped" id="kairos-badge">&#x0645;&#x062A;&#x0648;&#x0642;&#x0641;</span></div>
   <div class="card">
     <div class="kairos-stat"><span class="ks-label">&#x0622;&#x062E;&#x0631; &#x0641;&#x062D;&#x0635;</span><span class="ks-val" id="k-last">--</span></div>
-    <div class="kairos-stat"><span class="ks-label">&#x0641;&#x062D;&#x0648;&#x0635;&#x0627;&#x062A; &#x0627;&#x0644;&#x064A;&#x0648;&#x0645;</span><span class="ks-val" id="k-checks">0</span></div>
-    <div class="kairos-stat"><span class="ks-label">&#x0645;&#x0634;&#x0627;&#x0643;&#x0644;</span><span class="ks-val" id="k-issues">0</span></div>
-    <div class="kairos-stat"><span class="ks-label">&#x062A;&#x0645; &#x062D;&#x0644;&#x0647;&#x0627;</span><span class="ks-val" id="k-resolved">0</span></div>
-    <div class="kairos-stat"><span class="ks-label">&#x062A;&#x0646;&#x0628;&#x064A;&#x0647;&#x0627;&#x062A;</span><span class="ks-val" id="k-alerts">0</span></div>
+    <div class="kairos-stat"><span class="ks-label">&#x0641;&#x062D;&#x0648;&#x0635;&#x0627;&#x062A; &#x0645;&#x0646;&#x0630; &#x0627;&#x0644;&#x062A;&#x0634;&#x063A;&#x064A;&#x0644;</span><span class="ks-val" id="k-checks">--</span></div>
+    <div class="kairos-stat"><span class="ks-label">&#x0645;&#x0634;&#x0627;&#x0643;&#x0644;</span><span class="ks-val" id="k-issues">--</span></div>
+    <div class="kairos-stat"><span class="ks-label">&#x062A;&#x0645; &#x062D;&#x0644;&#x0647;&#x0627;</span><span class="ks-val" id="k-resolved">--</span></div>
+    <div class="kairos-stat"><span class="ks-label">&#x062A;&#x0646;&#x0628;&#x064A;&#x0647;&#x0627;&#x062A;</span><span class="ks-val" id="k-alerts">--</span></div>
   </div>
 </div>
 
@@ -401,10 +401,15 @@ async function loadKairos(){
     $('kairos-badge').className='kairos-badge '+(d.running?'running':'stopped');
     $('kairos-badge').textContent=d.running?'\u0634\u063A\u0627\u0644':'\u0645\u062A\u0648\u0642\u0641';
     $('k-last').textContent=fmtAge(d.last_check)||'--';
-    $('k-checks').textContent=d.checks_today||0;
-    $('k-issues').textContent=d.issues_detected||0;
-    $('k-resolved').textContent=d.issues_resolved||0;
-    $('k-alerts').textContent=d.alerts_sent||0;
+    /* الأسماء الثلاثة السابقة — checks_today و issues_detected و
+       issues_resolved — لا توجد في أي حمولة ولا في أي ملف بايثون، و«||0»
+       كان يحوّل غيابها إلى صفر. فكانت البطاقة تقول «٠ مشاكل» بينما
+       current_down تحمل ثلاث خدمات معطّلة. الآن كل خانة تقرأ ما يشحنه
+       kairos فعلاً، والغياب يُقرأ غياباً لا صفراً. */
+    $('k-checks').textContent   = d.total_checks ?? '--';
+    $('k-issues').textContent   = Array.isArray(d.current_down) ? d.current_down.length : '--';
+    $('k-resolved').textContent = d.auto_fixes ?? '--';
+    $('k-alerts').textContent   = d.alerts_sent ?? '--';
   }catch(e){console.error('kairos',e)}
 }
 
