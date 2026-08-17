@@ -29,8 +29,13 @@
    "date": "2026-08-17",
    "decision_path_str": 8,
    "note": "position_engine.py:176 - `direction = row[\"direction\"] or \"long\"` removed. An unrecognised direction now refuses to compute P&L and logs why. The schema permits  (falsy, which fired the default) and lomg (truthy, which sailed past it into the SHORT branch); both are refused now. The remaining 8 are 5 display placeholders and 3 honest labels."
+  },
+  {
+   "date": "2026-08-17",
+   "other_str": 82,
+   "note": "RAISED, deliberately - the first raise of this phase, and it is not a waiver. stock_analyzer.py:652 (commit 1fbd0d1, parallel session) reads `p.get(\"reason\") or \"...\"` inside _price_line, in the branch that already REFUSES to give Gemini a price. The fallback supplies readable prose where a reason string was missing; it invents no measurement. That is the opposite of the family this ratchet counts, and the counter cannot tell prose from data - which is a known limit of a syntactic sentinel, noted here rather than papered over."
   }
  ],
  "decision_path_str": 8,
- "other_str": 81
+ "other_str": 82
 }

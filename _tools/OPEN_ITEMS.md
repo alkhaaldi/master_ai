@@ -301,6 +301,73 @@ Consider extending `falsy_defaults_inventory` with a fourth family —
 `.get(k, <number>)` inside a comprehension — once the manual sweep says how
 big the problem is.
 
+**4h. Human-entry sweep — 2026-08-17. Everything a person can start.**
+
+Opened because two of these were missed by reading rather than calling:
+`analysis.html` answered "Bridge offline" for every symbol with the bridge
+already unreachable in code, and `check_symbol` returned
+`price 0 · rsi 0 · vwap 0` down a live Telegram command. Both looked fine on
+the page and in the source.
+
+Tools, both read-only and re-runnable:
+`_tools/inventory_human_paths.py` (static: entry points, and a name-based call
+graph to the retired stubs) and `_tools/call_human_paths.py` (calls every
+page-reachable GET and asks whether it fails loudly or with zeros).
+
+```
+221 routes defined · 44 called from a page · 24 telegram handlers
+static graph: 7 entries reach a retired stub, all via one chain
+              build_signals -> _get_bridge_data_safe, which returns
+              {"bridge_online": false, "bridge_status": "retired"} - loud
+called:       loud 5 · ok 18 · suspect 3 · expensive-skipped 1
+telegram:     5 read-only radar commands called, all honest
+```
+
+**Nothing else fabricates a full zero snapshot.** The two known cases are
+fixed. But the sweep found something else.
+
+*The real finding — two endpoints outside the data contract.* Three sibling
+endpoints, three different vocabularies for the same fact:
+
+```
+/dashboard/signals        131 signals · bridge_online:false · NO data_state,
+                          NO source_state, NO as_of
+/dashboard/signals-daily  131 signals · identical, same gap
+/dashboard/signals-30m      0 signals · layer_state, layer_reason,
+                          layer_rebuildable - the full vocabulary
+```
+
+The first two serve real data from the local store, so they are not
+fabricating. But a reader cannot tell how old it is, where it came from, or
+whether the source was reachable — and their only state marker names a
+*retired* dependency as though it might return. This is the same gap
+`/dashboard/radar` had (item 2), closed there and on `swing`, never closed
+here. Fix: give them `source`/`source_state`/`source_delay_minutes`/`as_of`/
+`as_of_kind` like `/dashboard/swing`, and drop `bridge_online` or rename it
+to say retired.
+
+*Minor, diagnostics only.* Two endpoints invent an average of nothing:
+`/api/latency-stats` returns `avg_total_ms: 0` alongside `samples: 0`, and
+`/api/intent-analytics` returns `avg_duration_ms: 0` alongside
+`today_total: 0`. The count beside it makes the zero readable, so this is
+noted rather than urgent — but a mean over no samples is `None`.
+`/api/tasks` is clean: its zeros are counts of events that did not happen.
+
+*Also minor.* `tg_radar_last` answers "آخر إشارات الرادار" with signals from
+**2026-03-25**. The dates are printed, so it is not hiding anything, but
+nothing marks them as five months old.
+
+**Limits of this sweep, stated so the next one knows what was not covered:**
+- only routes whose URL appears in `www/**` were called. 177 of 221 routes
+  are not page-reachable and were not exercised; some are reachable by a
+  human typing a URL, by HA sensors, or by the bot.
+- the call graph matches by NAME and caps at depth 8, so it over-reports and
+  can still miss a path that goes through a dynamic dispatch.
+- `/api/analyze` was skipped deliberately: each call burns a Gemini 2.5 Pro
+  request. It was verified by hand earlier the same day.
+- the three `tg_radar_*` commands that mutate state (add/remove/toggle) were
+  not called.
+
 **5. The 30m layer**
 `/dashboard/signals-30m` returns nothing. G-1 proved Yahoo **does** serve 30m
 for `.KW` (41 bars, tier-1 names 100% populated). So the layer is rebuildable
