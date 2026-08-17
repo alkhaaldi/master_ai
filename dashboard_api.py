@@ -795,7 +795,7 @@ def _apply_price_contract(t: dict, fp: dict):
     t["price_source"] = fp.get("source")
     t["price_age_days"] = age
     t["price_captured_mid_session"] = mid
-    if cur and fp.get("state") == "live" and not mid:
+    if cur and fp.get("state") == "live" and not mid and as_of:
         t["price_state"], t["pnl_valid"], t["pnl_invalid_reason"] = "live", True, None
     elif cur and fp.get("state") == "live":
         t["price_state"], t["pnl_valid"] = "intraday", False
@@ -2080,6 +2080,10 @@ def dashboard_swing():
             "current_price": cur_p if price_is_live else None,
             "pnl_pct": pnl_pct,
             "price_state": "live" if price_is_live else "stale",
+            # the position's own stamp, straight from the price source -
+            # it was computed upstream and then dropped here, so the row
+            # said "live" and could not say when
+            "price_as_of": pos.get("price_as_of"),
             "last_known_price": cur_p or None,
             "quantity": pos.get("quantity"),
             "entry_date": pos.get("entry_date"),
@@ -2112,6 +2116,12 @@ def dashboard_swing():
             "SELECT MAX(captured_at) FROM stock_radar_daily").fetchone()[0]
         _c5.close()
         _page_state = classify_data_state(_mx)
+        # as_of is the stamp of the newest real fetch, not the time this
+        # response was assembled. During an open session "live" without a
+        # time says nothing: it cannot distinguish a two-minute-old price
+        # from an hour-old one, which is the only question that matters
+        # while the market moves.
+        _page_state["as_of"] = _mx
     except Exception as _dse:
         logging.getLogger("master_ai").warning("swing data_state error: %r", _dse)
 
@@ -2124,6 +2134,7 @@ def dashboard_swing():
         "data_state": _page_state.get("data_state"),
         "data_state_ar": _page_state.get("data_state_ar"),
         "data_sessions_old": _page_state.get("sessions_old"),
+        "as_of": _page_state.get("as_of"),
         "market_regime": regime,
         "market_trend": {
             "up": trend_up,

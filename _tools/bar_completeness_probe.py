@@ -27,7 +27,7 @@ from price_source import _yahoo_opener, _UA, YAHOO_TIMEOUT
 from indicators import is_bar_complete, KSE_OPEN_UTC_H, KSE_CLOSE_UTC_H, \
     KSE_TRADING_WEEKDAYS
 
-SYMBOLS = ["KFH", "NBK", "ZAIN"]
+SYMBOLS = ["KFH", "NBK", "ZAIN", "AGLTY", "NIND"]
 
 
 def market_open(now=None):
@@ -97,32 +97,59 @@ def main():
             print("%-8s ERROR %s / %s" % (s, err1, err2))
             continue
         b1, b2 = bars1[-1], bars2[-1]
+        stamp_moved = b1["ts"] != b2["ts"]
         now_ts = int(time.time())
         rule_ok, rule_why = is_bar_complete(b1["ts"], a.interval, now_ts)
         moved = (b1["close"] != b2["close"]) or (b1["volume"] != b2["volume"])
         stamp = datetime.fromtimestamp(b1["ts"], tz=timezone.utc).strftime("%H:%M") + "Z"
-        print("%-8s last bar %s | close %s -> %s | vol %s -> %s | MOVED=%s"
-              % (s, stamp, b1["close"], b2["close"], b1["volume"], b2["volume"], moved))
+        s2 = datetime.fromtimestamp(b2["ts"], tz=timezone.utc).strftime("%H:%M") + "Z"
+        print("%-8s stamp %s -> %s %s | close %s -> %s | vol %s -> %s"
+              % (s, stamp, s2, "ADVANCED" if stamp_moved else "same",
+                 b1["close"], b2["close"], b1["volume"], b2["volume"]))
         print("         rule says complete=%s (%s)" % (rule_ok, rule_why or "on grid, elapsed"))
-        verdicts.append((s, moved, rule_ok))
+        verdicts.append((s, moved or stamp_moved, rule_ok, b1["volume"], stamp_moved))
 
     print()
     if not verdicts:
         print("no comparable samples")
         return 1
-    agree = all((moved != ok) for _s, moved, ok in verdicts)
+    # A bar can be incomplete AND still: no trades means nothing to move.
+    # So stillness is only evidence when the bar HAD volume. Anything that
+    # changed - price, volume or stamp - proves the element is forming.
+    changed = [v for v in verdicts if v[1]]
+    # volume None (never measured) and volume 0 (measured, no trades) are
+    # different facts, and this tool exists to tell them apart - collapsing
+    # them with `or 0` was the very mistake it hunts. Caught by the ratchet.
+    silent_with_volume = [v for v in verdicts
+                          if not v[1] and v[3] is not None and v[3] > 0]
+    inconclusive = [v for v in verdicts
+                    if not v[1] and (v[3] is None or v[3] == 0)]
+    unmeasured_vol = [v for v in verdicts if v[3] is None]
     if is_open:
-        moved_any = any(m for _s, m, _o in verdicts)
-        print("PROOF: last bar moved between fetches on %d/%d symbols"
-              % (sum(1 for _s, m, _o in verdicts if m), len(verdicts)))
-        print("       rule agreed with observation on all symbols: %s" % agree)
-        if moved_any and agree:
-            print("       => the deterministic rule matches reality. Dropping the")
-            print("          last bar is correct and now demonstrated, not assumed.")
+        print("changed (price, volume or stamp) : %d/%d  -> forming, PROVEN"
+              % (len(changed), len(verdicts)))
+        print("still WITH volume                : %d      -> would contradict the rule"
+              % len(silent_with_volume))
+        print("still, nothing traded to move    : %d      -> inconclusive"
+              % len(inconclusive))
+        if unmeasured_vol:
+            print("volume NOT MEASURED at all       : %d      -> distinct from zero"
+                  % len(unmeasured_vol))
+        rule_says_forming = [v for v in verdicts if not v[2]]
+        print("rule called the newest bar forming on %d/%d"
+              % (len(rule_says_forming), len(verdicts)))
+        if changed and not silent_with_volume:
+            print("=> PROVEN: the newest element is a moving target, and the")
+            print("   deterministic rule flagged it without seeing it move.")
+        elif silent_with_volume:
+            print("=> CONTRADICTION: a bar with volume did not move. Investigate")
+            print("   before trusting the drop rule.")
+        else:
+            print("=> INCONCLUSIVE: nothing traded in the window. Not a failure of")
+            print("   the rule - a failure to observe. Re-run with a longer gap or")
+            print("   on a busier symbol.")
     else:
         print("CONTROL ONLY (market closed): nothing moved, as expected.")
-        print("       rule currently says complete=%s for the newest bar."
-              % [ok for _s, _m, ok in verdicts])
         print("       Re-run during 06:00-10:00 UTC (09:00-13:00 Kuwait) for the proof.")
     return 0
 
