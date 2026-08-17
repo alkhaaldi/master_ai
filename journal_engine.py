@@ -209,6 +209,19 @@ def close_trade(trade_id, exit_price, exit_reason="manual"):
         qty = trade["quantity"] or 0
         direction = trade["direction"]
 
+        # Until 2026-08-17 anything unrecognised fell through to the else
+        # branch and was closed as a SHORT - so a row position_engine now
+        # refuses was booked here with the sign inverted. `''` passes the
+        # NOT NULL constraint and a typo like 'lomg' is truthy, so both
+        # reached this line and neither was a short.
+        from position_engine import VALID_DIRECTIONS
+        if direction not in VALID_DIRECTIONS:
+            logger.warning(
+                "trade %s: direction is %r, not one of %s - refusing to close. "
+                "An unknown direction is not a short position.",
+                trade.get("id"), direction, VALID_DIRECTIONS)
+            return None
+
         if direction == "long":
             pnl_fils = (exit_price - entry) * qty if qty else (exit_price - entry)
             pnl_pct = ((exit_price - entry) / entry * 100) if entry else 0
@@ -407,7 +420,18 @@ def partial_sell_trade(trade_id, sell_qty, sell_price, notes=""):
             return {"error": f"Invalid sell_qty={sell_qty}, current={old_qty}"}
 
         entry = float(trade["entry_price"])
-        direction = trade.get("direction", "long")
+        # `.get("direction", "long")` looked like a default and was not one:
+        # the key EXISTS on every row (NOT NULL), so the fallback could never
+        # fire, and an empty or mistyped value went straight to the short
+        # branch below. Refused now, like the other two sites.
+        from position_engine import VALID_DIRECTIONS
+        direction = trade["direction"]
+        if direction not in VALID_DIRECTIONS:
+            logger.warning(
+                "trade %s: direction is %r, not one of %s - refusing the "
+                "partial sell rather than booking it with a guessed sign.",
+                trade.get("id"), direction, VALID_DIRECTIONS)
+            return None
 
         # P&L for sold portion
         if direction == "long":

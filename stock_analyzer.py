@@ -263,24 +263,139 @@ async def refresh_all_analyses_parallel(send_update=None, max_concurrent=5):
 # ═══════════════════════════════════
 
 def _fetch_bridge_bars(symbol, interval, count):
-    """Fetch enriched bars from Bridge API."""
-    if BRIDGE_RETIRED:
+    """RETIRED 2026-08-16 (G-4). Unreachable, kept so the history of how bars
+    used to arrive is not deleted along with the dependency. See _bars_for."""
+    return None
+
+
+LOCAL_PARAMS = "RSI14 MACD12/26/9 ATR14 ADX14 StochK14 EMA9/21 SR20"
+
+
+def _daily_bars_local(symbol, count):
+    """Daily bars from `daily_bars` - the same series backfill_daily_bars
+    maintains and every other module reads.
+
+    Deliberately NOT a fresh Yahoo pull: a second daily series would be a
+    second clock, and this project has spent long enough removing those.
+    """
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT trading_date, open, high, low, close, volume FROM daily_bars"
+            " WHERE symbol=? ORDER BY trading_date DESC LIMIT ?",
+            (symbol.upper(), count)).fetchall()
+    finally:
+        conn.close()
+    import datetime as _dt
+    bars = []
+    for r in reversed(rows):
+        try:
+            ts = int(_dt.datetime.strptime(r["trading_date"], "%Y-%m-%d")
+                     .replace(hour=6, tzinfo=_dt.timezone.utc).timestamp())
+        except (ValueError, TypeError):
+            continue
+        bars.append({"ts": ts, "open": r["open"], "high": r["high"],
+                     "low": r["low"], "close": r["close"], "volume": r["volume"]})
+    return bars, "daily_bars (local store)"
+
+
+def _intraday_bars(symbol, interval, rng):
+    """30m has no local store - that layer is offline (OPEN_ITEMS 5) - so it
+    comes live through the one Yahoo door, cached ten minutes so a user
+    clicking refresh twice does not spend two requests."""
+    import yahoo_gate
+    bars, src = yahoo_gate.chart(symbol.upper(), interval=interval, rng=rng,
+                                 max_age_s=600)
+    return bars, "yahoo %s (%s)" % (interval, src)
+
+
+def _bars_for(symbol, kind):
+    """(bars, source, error). Absence carries a reason, never an empty list
+    pretending to be a flat market."""
+    try:
+        if kind == "30m":
+            bars, src = _intraday_bars(symbol, "30m", "1mo")
+        else:
+            bars, src = _daily_bars_local(symbol, 120)
+    except Exception as e:
+        return [], None, "%s: %s" % (kind, repr(e)[:120])
+    if not bars:
+        return [], src, ("%s: no bars available for %s" % (kind, symbol))
+    return bars, src, None
+
+
+def _bar_time(bar):
+    """UTC timestamp of a bar as a readable string, or None if it has no
+    stamp - an undated bar is not given a made-up date."""
+    import datetime as _dt
+    ts = bar.get("ts")
+    if ts is None:
         return None
-    url = f"{BRIDGE_BASE}/bars?symbol={symbol}&interval={interval}&count={count}"
-    req = urllib.request.urlopen(url, timeout=30)
-    return json.loads(req.read().decode())
+    try:
+        return _dt.datetime.fromtimestamp(int(ts), _dt.timezone.utc).strftime(
+            "%Y-%m-%d %H:%M UTC")
+    except (ValueError, OSError, TypeError):
+        return None
 
 
-def _summarize_bars(bars_data, label):
-    """Create smart summary of bars for Gemini — saves tokens but keeps key info."""
+def _trail(bars, pick, n=20):
+    """The last n readings of an indicator, each computed from the bars up to
+    that point.
+
+    None where the window could not answer - a hole in a trajectory is a
+    hole, and Gemini reading a 0 there would see a collapse that never
+    happened. That is precisely the reading the bridge era used to invent.
+    """
+    import indicators as _I
+    out = []
+    start = len(bars) - n
+    if start < 0:
+        start = 0
+    for i in range(start, len(bars)):
+        out.append(pick(_I, bars[:i + 1]))
+    return out
+
+
+def _summarize_bars(bars_data, label, interval="1d", source=None):
+    """Summary for Gemini, computed HERE rather than read off enriched bars.
+
+    Every indicator now travels with its evidence - bars_used, coverage_pct,
+    bar_complete - and an absent value is None WITH a reason, never a zero.
+    The bridge used to send these pre-computed, on its own parameters and its
+    own bar hygiene; StochK differed by up to 242% on the same symbol and
+    session (ACICO 2026-08-05: 26.3 vs 90.0). So this is not the same number
+    arriving by another road, and the summary says so out loud.
+    """
+    import time as _t
+    import indicators as _I
     bars = bars_data.get("bars", [])
     if not bars:
-        return {"error": "no data"}
+        return {"error": "no data", "timeframe": label,
+                "source": source, "reason": bars_data.get("reason")}
+    ci = _I.compute_all(bars, interval, int(_t.time()))
+    complete, _dropped, _why = _I.drop_incomplete(bars, interval, int(_t.time()))
+    if complete:
+        bars = complete
 
     latest_5 = bars[-5:]
 
-    rsi_traj = [round(b.get("rsi_14", 0), 1) for b in bars[-20:]]
-    macd_traj = [round(b.get("macd", 0), 3) for b in bars[-20:]]
+    # Computed here, one window per point. `round(b.get("rsi_14", 0), 1)`
+    # turned a bar the bridge had not enriched into an RSI of 0 - a reading
+    # that says "maximum oversold" when it means "not measured".
+    def _pick_rsi(_I, sub):
+        v = _I.rsi(sub)["value"]
+        if v is None:
+            return None
+        return round(v, 1)
+
+    def _pick_macd(_I, sub):
+        v = _I.macd(sub)["value"]
+        if v is None:
+            return None
+        return round(v["macd"], 3)
+
+    rsi_traj = _trail(bars, _pick_rsi)
+    macd_traj = _trail(bars, _pick_macd)
 
     vols = [b.get("volume", 0) for b in bars]
     vol_20 = sum(vols[-20:]) / max(len(vols[-20:]), 1)
@@ -292,8 +407,32 @@ def _summarize_bars(bars_data, label):
     peak_bar = max(bars, key=lambda b: b["high"])
     trough_bar = min(bars, key=lambda b: b["low"])
 
+    def _val(key):
+        """{value, reason} - the reason survives when the value cannot."""
+        r = ci.get(key, {})
+        return {"value": r.get("value"), "reason": r.get("reason")}
+
     return {
         "timeframe": label,
+        "source": source,
+        # Stated so an analysis from today is never silently compared with one
+        # from the bridge era. Different engine, different parameters.
+        "indicator_source": "local (indicators.py)",
+        "indicator_params": LOCAL_PARAMS,
+        "bars_used": ci["bars_complete"],
+        "bars_dropped_incomplete": ci["bars_dropped_incomplete"],
+        "drop_reason": ci["drop_reason"],
+        "coverage_pct": ci["coverage_pct"],
+        "coverage_floor_pct": ci["coverage_floor_pct"],
+        "bar_complete": ci["bar_complete"],
+        "rsi": _val("rsi"),
+        "macd": _val("macd"),
+        "adx_now": _val("adx"),
+        "atr_now": _val("atr"),
+        "stoch_k_now": _val("stoch_k"),
+        "support_resistance": _val("sr"),
+        "ema_9_now": _val("ema_9"),
+        "ema_21_now": _val("ema_21"),
         "total_bars": len(bars),
         "latest": bars[-1],
         "latest_5_bars": latest_5,
@@ -304,8 +443,11 @@ def _summarize_bars(bars_data, label):
             "last_close": bars[-1]["close"],
             "change_pct": round((bars[-1]["close"] - bars[0]["open"]) / bars[0]["open"] * 100, 2),
         },
-        "peak": {"time": peak_bar["time"], "high": peak_bar["high"]},
-        "trough": {"time": trough_bar["time"], "low": trough_bar["low"]},
+        # `ts`, not `time`: bridge bars carried a preformatted time string,
+        # ours carry an epoch. Rendered here so Gemini reads a date rather
+        # than a number it would have to guess the unit of.
+        "peak": {"time": _bar_time(peak_bar), "high": peak_bar["high"]},
+        "trough": {"time": _bar_time(trough_bar), "low": trough_bar["low"]},
         "rsi_last_20": rsi_traj,
         "macd_last_20": macd_traj,
         "volume": {
@@ -314,15 +456,16 @@ def _summarize_bars(bars_data, label):
             "latest": bars[-1].get("volume", 0),
             "ratio_5_to_20": round(vol_5 / max(vol_20, 1), 2),
         },
+        # ema_50 / ema_200 are absent on purpose: indicators.py does not
+        # compute them, and carrying the keys with None would read as "we
+        # looked and found nothing" rather than "we do not compute this".
         "ema_current": {
-            "ema_9": bars[-1].get("ema_9"),
-            "ema_21": bars[-1].get("ema_21"),
-            "ema_50": bars[-1].get("ema_50"),
-            "ema_200": bars[-1].get("ema_200"),
+            "ema_9": ci["ema_9"]["value"],
+            "ema_21": ci["ema_21"]["value"],
         },
-        "adx": bars[-1].get("adx"),
-        "stoch_k": bars[-1].get("stoch_k"),
-        "atr": bars[-1].get("atr_14"),
+        "adx": ci["adx"]["value"],
+        "stoch_k": ci["stoch_k"]["value"],
+        "atr": ci["atr"]["value"],
     }
 
 
@@ -331,6 +474,9 @@ def _summarize_bars(bars_data, label):
 # ═══════════════════════════════════
 
 ANALYSIS_PROMPT = """أنت محلل فني محترف لبورصة الكويت. حلّل سهم {symbol} بالتفصيل.
+
+**مصدر الأرقام — اقرأ هذا أولاً:**
+{provenance}
 
 **بيانات 30 دقيقة ({count_30m} شمعة):**
 ```json
@@ -375,29 +521,67 @@ ANALYSIS_PROMPT = """أنت محلل فني محترف لبورصة الكويت
 ابدأ التحليل الآن."""
 
 
+def _contract(summary):
+    """What the page needs to judge a number by: where it came from, how many
+    bars answered, how much of the grid was there, and whether the newest bar
+    had closed. An error carries its reason instead."""
+    if summary.get("error"):
+        return {"state": "unavailable", "reason": summary.get("reason"),
+                "source": summary.get("source")}
+    return {
+        "state": "ok",
+        "source": summary.get("source"),
+        "bars_used": summary.get("bars_used"),
+        "bars_dropped_incomplete": summary.get("bars_dropped_incomplete"),
+        "coverage_pct": summary.get("coverage_pct"),
+        "coverage_floor_pct": summary.get("coverage_floor_pct"),
+        "bar_complete": summary.get("bar_complete"),
+    }
+
+
 def analyze_stock(symbol):
-    """Full stock analysis with Gemini 2.5 Pro."""
-    # 1. Quick Bridge health check (2s) before heavy calls
-    if not _bridge_available():
-        return {"error": "Bridge offline — التحليل يحتاج Bridge شغّال"}
+    """Full stock analysis with Gemini 2.5 Pro.
 
-    # 3. Fetch bars from Bridge
-    try:
-        bars_30m = _fetch_bridge_bars(symbol, "30", 100)
-        bars_daily = _fetch_bridge_bars(symbol, "D", 60)
-    except Exception as e:
-        return {"error": f"Bridge error: {e}"}
+    Rebuilt 2026-08-17. The bridge was retired on 2026-08-16 and this path
+    was gated shut behind BRIDGE_RETIRED in three places, so analysis.html -
+    a page the user opens by hand - answered "Bridge offline" for every
+    symbol, and starting the bridge would not have helped: the code returned
+    None before making a call.
 
-    # 4. Summarize
-    summary_30m = _summarize_bars(bars_30m, "30m")
-    summary_daily = _summarize_bars(bars_daily, "daily")
+    Bars now come from the same places as everything else: daily from the
+    local `daily_bars` store, 30m live through yahoo_gate. Indicators are
+    computed by indicators.py under its coverage floor, so absence produces
+    a reason instead of a number.
+    """
+    b30, src30, err30 = _bars_for(symbol, "30m")
+    bday, srcday, errday = _bars_for(symbol, "daily")
+
+    summary_30m = _summarize_bars({"bars": b30, "reason": err30}, "30m",
+                                  interval="30m", source=src30)
+    summary_daily = _summarize_bars({"bars": bday, "reason": errday}, "daily",
+                                    interval="1d", source=srcday)
 
     if summary_30m.get("error") and summary_daily.get("error"):
-        return {"error": "No bar data from Bridge for " + symbol}
+        # Both empty is "we could not ask", not "the market is flat".
+        return {"error": "No bars for %s — 30m: %s | daily: %s"
+                         % (symbol, err30, errday),
+                "symbol": symbol, "source_30m": src30, "source_daily": srcday}
 
     # 5. Build prompt
+    provenance = (
+        "المؤشرات محسوبة محلياً بـ indicators.py (%s)، لا من الجسر.\n"
+        "الجسر تقاعد في 2026-08-16، وأرقامه لم تكن بنفس المعايير: StochK "
+        "اختلف حتى 242%% على نفس السهم والجلسة. فلا تقارن هذا التحليل "
+        "بتحليل سابق من عهد الجسر — المحرّك مختلف.\n"
+        "مصدر 30 دقيقة: %s · مصدر اليومي: %s\n"
+        "كل مؤشر يحمل bars_used و coverage_pct و bar_complete. أي قيمة "
+        "None معناها «تعذّر القياس» ومعها سبب — وليست صفراً ولا حياداً. "
+        "لا تبنِ استنتاجاً على قيمة غائبة."
+        % (LOCAL_PARAMS, summary_30m.get("source"), summary_daily.get("source"))
+    )
     prompt = ANALYSIS_PROMPT.format(
         symbol=symbol,
+        provenance=provenance,
         count_30m=summary_30m.get("total_bars", 0),
         count_daily=summary_daily.get("total_bars", 0),
         summary_30m=json.dumps(summary_30m, indent=2, ensure_ascii=False),
@@ -535,10 +719,20 @@ def analyze_stock(symbol):
         "structured": analysis_json,
         "analyzed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "gemini_model": _used_model or "unknown",
+        # The counts stay for the existing page, but a count on its own is
+        # the shape this project keeps removing: 176 bars says nothing about
+        # whether they were complete or whether the grid had holes. The
+        # evidence travels with them now, per timeframe.
         "data": {
-            "bars_30m": summary_30m.get("total_bars", 0),
-            "bars_daily": summary_daily.get("total_bars", 0),
-            "price": summary_30m.get("latest", {}).get("close"),
+            "bars_30m": summary_30m.get("total_bars"),
+            "bars_daily": summary_daily.get("total_bars"),
+            "price": (summary_30m.get("latest") or {}).get("close"),
+            "indicator_source": "local (indicators.py)",
+            "indicator_params": LOCAL_PARAMS,
+            "timeframes": {
+                "30m": _contract(summary_30m),
+                "daily": _contract(summary_daily),
+            },
         },
     }
 

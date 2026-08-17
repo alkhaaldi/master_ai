@@ -166,6 +166,38 @@ Fix: `VALID_DIRECTIONS` already exists in `position_engine`. The two
 long reads −10% and a stated short +10% — the two answers the default used to
 choose between without telling anyone.
 
+**4f. `trades.direction` — the default lives in the SCHEMA, before any code runs**
+All three code readers were unified on `VALID_DIRECTIONS` on 2026-08-17
+(`position_engine.py:176`, `journal_engine.py:211` and `:410`). The remaining
+default is one layer below them:
+
+```sql
+direction TEXT NOT NULL DEFAULT 'long'
+```
+
+An INSERT that omits the column gets a BUY — silently, correctly, before a
+single line of Python is involved. And `NOT NULL` is weaker than it looks:
+measured on a copy, `''` is accepted (falsy — what `or "long"` used to fire
+on) and `'lomg'` is accepted (truthy — it sailed past the default straight
+into the short branch, so one mistyped letter inverted the P&L sign).
+
+Fix, as a migration of its own on the trades table:
+
+```sql
+CHECK (direction IN ('long','short'))   -- '' and typos rejected at the door
+-- and DROP the DEFAULT: an omitted direction should fail the insert, not
+-- become a position nobody chose
+```
+
+Why it is its own batch: SQLite cannot add a CHECK constraint in place. It
+needs the create-new-table / copy / drop / rename dance on `trades` — the
+user's money records, 10 rows today but the table every engine writes to.
+That wants a backup, a verified row count either side, and a rollback path,
+none of which belongs riding on another change.
+
+Until then the code refuses what the schema permits, which holds — but it
+holds by three modules agreeing, not by construction.
+
 **5. The 30m layer**
 `/dashboard/signals-30m` returns nothing. G-1 proved Yahoo **does** serve 30m
 for `.KW` (41 bars, tier-1 names 100% populated). So the layer is rebuildable

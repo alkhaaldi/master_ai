@@ -504,9 +504,41 @@ def prove_direction():
     finally:
         _drop_probe(probe)
 
+    # And the OTHER two readers must agree. Before 2026-08-17 they did not:
+    # position_engine read an unrecognised direction as LONG, journal_engine
+    # fell through to SHORT in two places, so the same row produced +10% and
+    # -10% depending on which module you asked.
+    probe2 = _probe_db()
+    try:
+        import journal_engine as je
+        real_je = je.DB_PATH if hasattr(je, "DB_PATH") else None
+        c = sqlite3.connect(probe2, timeout=15)
+        c.execute(
+            "INSERT INTO trades (symbol, status, direction, entry_price,"
+            " quantity, entry_date, created_at) VALUES"
+            " ('NODIR2', 'open', 'lomg', 100, 10, date('now'), datetime('now'))")
+        tid2 = c.execute("SELECT id FROM trades WHERE symbol='NODIR2'").fetchone()[0]
+        c.commit()
+        c.close()
+        for attr in ("DB_PATH", "LIFE_DB", "DB"):
+            if hasattr(je, attr):
+                setattr(je, attr, probe2)
+        try:
+            closed = je.close_trade(tid2, 90.0) if hasattr(je, "close_trade") else None
+            step("journal_engine refuses to CLOSE an unrecognised direction",
+                 closed, None)
+        except Exception as e:
+            print(f"       close_trade raised instead of returning None: {e!r}")
+            failures.append("journal close: raised instead of refusing")
+        if real_je is not None:
+            je.DB_PATH = real_je
+    finally:
+        _drop_probe(probe2)
+
     # nothing may have touched the real table
     c = sqlite3.connect(DB, timeout=15)
-    left = c.execute("SELECT COUNT(*) FROM trades WHERE symbol='NODIR'").fetchone()[0]
+    left = c.execute("SELECT COUNT(*) FROM trades WHERE symbol IN "
+                     "('NODIR','NODIR2')").fetchone()[0]
     c.close()
     step("the real trades table was never written to", left, 0)
 
