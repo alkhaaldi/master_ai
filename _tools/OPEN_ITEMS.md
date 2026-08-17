@@ -198,7 +198,74 @@ none of which belongs riding on another change.
 Until then the code refuses what the schema permits, which holds — but it
 holds by three modules agreeing, not by construction.
 
-**4g. Audit every trajectory built for a model or a report — the `rsi_traj` shape**
+**4g — MEASURED 2026-08-17. Inventory below; nothing fixed yet.**
+
+AST inventory of `.get(key, <number>)`, classified by what the value becomes.
+The first pass counted 699 and the second 180, both of them wrong in the same
+direction: they counted the pattern rather than its consequence. A `.get(k,0)`
+filling a field of a record that gets appended is one wrong number. A
+`.get(k,0)` that becomes an ELEMENT of a scalar sequence is a point on a
+curve, and the consumer reads a shape from it.
+
+```
+TOTAL 699
+  trajectory (this item)  22    decision 12 · elsewhere 10
+  row field in a loop     37    decision 22 · elsewhere 15
+  plain scalar           640    decision 240 · elsewhere 400
+```
+
+**Size verdict: a session, not a section** — for the 22. The 640 plain
+scalars are a separate and much larger problem that should not be smuggled in
+under this heading.
+
+The 22 are not one family. Reading them:
+
+*Worth acting on (~14).* The richest is VWAP, and it is a decision path with
+**three stacked defaults**, the last of which hides the first two:
+
+```
+signal_engine.py:1213-16  [b.get("high", b.get("h", 0)) for b in bars]  (+low, close, volume)
+signal_engine.py:1539     sig["vwap"] = vwap_data.get("vwap", 0)
+signal_engine.py:1542     sig["scalping_vwap_ok"] = ... == "above"   → unknown becomes False
+stock_radar.py:785        vwap = ind.get("vwap") or price            → the 0 is RESCUED into the price
+```
+
+A missing bar field becomes a price of zero, which drags the VWAP down;
+an unavailable VWAP becomes 0; and then `or price` replaces that 0 with
+something plausible, so nothing downstream can tell the difference. Note
+`_get_vwap_for_symbol` still takes `bridge_data` — the bridge is retired, so
+check whether this path computes anything at all before repairing it.
+
+Others in the same tier:
+```
+trading_brain.py:595-596   weights.get(ind, 1.0)   a missing LEARNED weight becomes FULL weight
+confidence_engine.py:72    s.get("score", 0.5)     absence becomes the midpoint of the scale
+sr_engine.py:85            x.get("volume", 0)      drags a cluster's average volume down
+stock_analyzer.py:400      b.get("volume", 0)      survived my own 2026-08-17 rewrite
+journal_engine.py:357      t.get("pnl_fils", 0)    sums P&L; an unrecorded trade counts as break-even
+paper_trading.py:156,157,159   the same shape over slippage and commission
+equity_tracker.py:120      s.get("drawdown_pct", 0)
+```
+
+*Deliberate sentinels, harmless (4).* `brain_backfill.py:155-156, 361-362`
+use `max(b.get("high", 0))` and `min(b.get("low", 999999))`. The sentinel is
+chosen so it cannot win the comparison. Correct as written, though it depends
+on the reader knowing why 999999 is there — worth a comment, not a change.
+
+*Diagnostics, not decisions (4).* `_tools/verify_sunday.py:185-186` and
+`health_watchdog.py:147-148`, summing circuit counters.
+
+**On a fourth sentinel family: not yet.** The count that matters is 22, and a
+ratchet over all 699 would be a number nobody could act on. A narrow family
+over the trajectory shape is defensible — but this classifier needed two
+corrections to stop lying, and a sentinel that misclassifies is worse than no
+sentinel, which is the lesson of this whole phase. Triage the 22 first, then
+add the family with the classifier validated against them as known cases, and
+prove it in `prove_guards.py` like the other three.
+
+The original finding, kept for the record:
+
+**The `rsi_traj` shape — fixed in `stock_analyzer` 2026-08-17**
 Fixed in `stock_analyzer` on 2026-08-17, not looked for anywhere else:
 
 ```python
