@@ -27,7 +27,38 @@ from price_source import _yahoo_opener, _UA, YAHOO_TIMEOUT
 from indicators import is_bar_complete, KSE_OPEN_UTC_H, KSE_CLOSE_UTC_H, \
     KSE_TRADING_WEEKDAYS
 
-SYMBOLS = ["KFH", "NBK", "ZAIN", "AGLTY", "NIND"]
+def _symbols(n=5):
+    """Sample from the verified map, most liquid first.
+
+    The hand-written list contained AGLTY, which stopped existing when the
+    company renamed to MKHZN - it returned 404 on every run. The map knew;
+    this file did not. A probe carrying its own copy of the universe will
+    always drift from the universe.
+    """
+    import json as _j, sqlite3 as _s, os as _o
+    base = _o.path.dirname(_o.path.dirname(_o.path.abspath(__file__)))
+    try:
+        m = _j.load(open(_o.path.join(base, "_tools", "kse_symbol_map.json"),
+                         encoding="utf-8"))
+        ok = {r["our_symbol"] for r in m["records"] if r.get("verdict") == "confirmed"}
+    except (OSError, ValueError, KeyError):
+        return []
+    try:                      # liquid names trade often, so they move often
+        c = _s.connect("file:%s?mode=ro" % _o.path.join(base, "data", "life.db"),
+                       uri=True, timeout=5)
+        rows = c.execute("SELECT symbol FROM stock_radar_daily "
+                         "WHERE liq_value_kwd IS NOT NULL "
+                         "ORDER BY liq_value_kwd DESC").fetchall()
+        c.close()
+        ranked = [r[0] for r in rows if r[0] in ok]
+        if ranked:
+            return ranked[:n]
+    except Exception:
+        pass
+    return sorted(ok)[:n]
+
+
+SYMBOLS = _symbols()
 
 
 def market_open(now=None):

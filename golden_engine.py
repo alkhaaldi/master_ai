@@ -1044,8 +1044,10 @@ def scan_opportunities(live_data: list) -> dict:
             "golden_trade_plan": {
                 "target_1": tp.pop("target_1", None),
                 "target_2": tp.pop("target_2", None),
-                "rr": tp.pop("risk_reward", None) if "risk_reward" in tp
-                      else tp.pop("rr", None),
+                # the key is rr_ratio - F-4 popped "risk_reward"/"rr", which
+                # never existed, so trade_plan kept shipping a second R/R
+                # (1.93 in chosen_plan vs its own) after targets were unified
+                "rr": tp.pop("rr_ratio", None),
             },
             "strategy_backtest": {
                 "target_1": sm.get("target_1_pct"),
