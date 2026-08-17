@@ -2167,6 +2167,22 @@ def dashboard_swing():
             # null, not a stale number, when there is no live price
             "current_price": cur_p if price_is_live else None,
             "pnl_pct": pnl_pct,
+            # pnl_valid was ABSENT here, while the other position builder
+            # (_position_price_block) has always set it. swing.html reads
+            # `p.pnl_valid !== false`, so a missing flag passed as VALID -
+            # the page showed -1.79% as a trusted number with nothing
+            # asserting it was trustworthy. Two builders for one row, and
+            # only one carrying the verdict.
+            #
+            # Explicit true/false now, never absent, and a reason when false:
+            # the reader should not have to infer validity from the presence
+            # of a key.
+            "pnl_valid": bool(price_is_live and pnl_pct is not None),
+            "pnl_invalid_reason": (
+                None if (price_is_live and pnl_pct is not None)
+                else ("no live price for this position — current was filled "
+                      "from entry, so a P&L off it would be an absence "
+                      "dressed as a number")),
             "price_state": "live" if price_is_live else "stale",
             # the position's own stamp, straight from the price source -
             # it was computed upstream and then dropped here, so the row

@@ -420,6 +420,35 @@ serve numbers a human acts on. Those get the contract; the rest get a written
 reason for not having it. Then, and only then, a ratchet at whatever the
 number is.
 
+**4j. `name_ar` is asked of a trade record that an opportunity does not have**
+Found 2026-08-17 while fixing the swing page's field names. Empty in 18 of 18
+opportunities, on every endpoint built by `build_signals`.
+
+```
+signal_engine.py:409   "name_ar": (trade or {}).get("name_ar", "")
+signal_engine.py:530   "name_ar": trade.get("name_ar", "")
+```
+
+An opportunity is not a trade, so `trade` is None and the default wins —
+every time, by construction, not by accident. Meanwhile the same repository
+already has a working symbol→Arabic-name map, used two files away:
+
+```
+dashboard_api.py:451   "name_ar": KSE_STOCKS.get(_sym, str(_sym))
+```
+
+Fix: `signal_engine` uses `KSE_STOCKS` for the non-trade case, keeping the
+trade's own name when there is one. It is a small change with a wide reach —
+`/dashboard/signals`, `/dashboard/signals-daily`, `/dashboard/swing` and
+`/api/decisions-now` all read from `build_signals` — so it is recorded rather
+than ridden in on a page fix.
+
+**Note this makes an existing fix inert.** swing.html now reads
+`o.name || o.name_ar` where it used to read only `o.name`, so the company
+name will appear the moment the payload carries one. Until then the fallback
+resolves to an empty string and the card shows no name, exactly as before.
+The page is ready; the payload is not.
+
 **5. The 30m layer**
 `/dashboard/signals-30m` returns nothing. G-1 proved Yahoo **does** serve 30m
 for `.KW` (41 bars, tier-1 names 100% populated). So the layer is rebuildable

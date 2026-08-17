@@ -94,6 +94,32 @@ td{padding:10px;border-bottom:1px solid rgba(24,47,77,.55);vertical-align:top}
 tr:last-child td{border-bottom:0}
 td.n{font-family:'IBM Plex Mono',monospace;direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
 .sym{font-weight:700;color:var(--gold-bright);font-family:'IBM Plex Mono',monospace;direction:ltr}
+
+/* ===== بطاقات الفرص — بديل جدول العشرة أعمدة ===== */
+.opps{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px}
+.opp{background:linear-gradient(160deg,rgba(15,42,79,.55),rgba(11,30,58,.55));
+     border:1px solid var(--line-soft);border-radius:12px;padding:12px 13px}
+.opp-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+       padding-bottom:9px;border-bottom:1px solid rgba(24,47,77,.6);margin-bottom:9px}
+.opp-h .sym{font-size:16px}
+.opp-h .co{font-size:11.5px;color:var(--txt-3);margin-top:2px;line-height:1.35}
+.opp-a{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.opp-a .act{font-size:10.5px;font-family:'IBM Plex Mono',monospace;direction:ltr;
+            color:var(--txt-2);background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.10);
+            padding:2px 7px;border-radius:5px;white-space:nowrap}
+.opp-g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px}
+.opp-g>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.opp-g span{font-size:10.5px;color:var(--txt-3);white-space:nowrap}
+.opp-g b{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.opp-t{margin-top:9px;padding-top:8px;border-top:1px solid rgba(24,47,77,.6)}
+.miss{font-size:10.5px;color:var(--warn,#E8A33D);font-weight:600;white-space:nowrap}
+.warnbar{background:rgba(232,163,61,.09);border:1px solid rgba(232,163,61,.34);
+         border-radius:10px;padding:9px 12px;margin-bottom:11px;font-size:12.5px;
+         color:var(--warn,#E8A33D);line-height:1.65}
+@media(max-width:430px){
+  .opps{grid-template-columns:1fr}
+  .opp-g{grid-template-columns:repeat(2,1fr)}
+}
 .co{color:var(--txt-2);font-size:12.5px}
 
 .score-pill{font-family:'IBM Plex Mono',monospace;direction:ltr;font-size:13px;font-weight:600;
@@ -355,7 +381,10 @@ function posTable(rows){
   const body = rows.map(p=>{
     const sym=p.symbol||p.sym||'—', entry=p.entry??p.entry_price??p.avg_price;
     const cur=p.current_price??p.current, pstate=p.price_state||(has(cur)?'live':'missing');
-    const valid = p.pnl_valid !== false && has(cur) && pstate==='live';
+    /* كان `p.pnl_valid !== false` — أي أن غياب الراية يمر كصحيح. والحمولة
+       لم تكن تشحنها أصلاً من هذا الباني، فكل مركز كان يُعرض «صالحاً» بلا
+       شيء يؤكد ذلك. الغياب الآن يُقرأ باطلاً: من يعرض ربحاً عليه أن يقوله. */
+    const valid = p.pnl_valid === true && has(cur) && pstate==='live';
     const qty=p.quantity??p.qty;
 
     let pnl;
@@ -410,27 +439,71 @@ function oppsBlock(S, opps){
     return `<div class="empty"><div class="big">لا فرص مطابقة للشروط اليوم</div>
       <div class="why">البيانات سليمة والمسح تمّ — ولم يجتز أي سهم الشروط.</div></div>`;
   }
-  const rows = opps.map(o=>{
-    const sc = Number(o.confluence_score ?? o.score ?? 0);
-    return `<tr>
-      <td><span class="sym">${o.symbol||'—'}</span>${o.name?`<div class="co">${o.name}</div>`:''}
-        <div>${tags(o.factors||o.reasons,'f')}${tags(o.blockers,'b')}</div></td>
-      <td class="n"><span class="score-pill ${scoreCls(sc)}">${sc||'—'}</span></td>
-      <td class="n">${o.action||o.direction||'—'}</td>
-      <td class="n">${fils(o.price)}</td>
-      <td class="n hs">${has(o.rsi)?Number(o.rsi).toFixed(0):'—'}</td>
-      <td class="n hs">${has(o.adx)?Number(o.adx).toFixed(0):'—'}</td>
-      <td class="n hs">${has(o.vol_ratio)?Number(o.vol_ratio).toFixed(1)+'×':'—'}</td>
-      <td class="n">${fils(o.stop??o.stop_loss)}</td>
-      <td class="n">${fils(o.target??o.target_1)}</td>
-      <td class="n hs">${kwdRaw(o.max_position_kwd)}</td>
-    </tr>`;
+  /* بطاقة لكل فرصة بدل جدول بعشرة أعمدة — الجدول كان يزدحم داخل
+     إطار HA فيلتصق رأسه بأول صف. والبطاقة تُظهر الحقل الغائب غياباً
+     بدل أن تتركه شرطة في خانة ضيقة. */
+  const cards = opps.map(o=>{
+    /* الحمولة تشحن confluence_pct — لا confluence_score ولا score. فالخانة
+       كانت شرطة في 18 فرصة من 18، وعدّاد missScore أدناه يقولها منذ fd6ef7e
+       ولم يقرأه أحد. الاسم المشحون أولاً، والقديمان احتياطاً لحمولة مخزَّنة.
+       (وconfluence_score في القاعدة مقياسان بنفس الاسم — راجع SCALES.md —
+        وهذا سبب إضافي لعدم طلبه بالاسم من هنا.) */
+    const scRaw = o.confluence_pct ?? o.confluence_score ?? o.score;
+    const sc    = has(scRaw) ? Number(scRaw) : null;
+    const stop  = o.stop ?? o.stop_loss;
+    const tgt   = o.target ?? o.target_1;
+    const price = o.price;
+
+    const scoreHtml = sc === null
+      ? `<span class="miss" title="لم يصل مع الحمولة">الدرجة غير محسوبة</span>`
+      : `<span class="score-pill ${scoreCls(sc)}">${sc}</span>`;
+
+    const stopHtml = has(stop)
+      ? `<b class="n">${fils(stop)}</b>`
+      : `<b class="miss">لم يُحدَّد</b>`;
+
+    const rr = (has(stop) && has(tgt) && has(price) && Number(price) > Number(stop))
+      ? (Math.abs(Number(tgt)-Number(price)) / Math.abs(Number(price)-Number(stop))).toFixed(2)
+      : null;
+
+    return `<div class="opp">
+      <div class="opp-h">
+        <div>
+          <span class="sym">${o.symbol||'—'}</span>
+          ${(o.name||o.name_ar)?`<div class="co">${o.name||o.name_ar}</div>`:''}
+        </div>
+        <div class="opp-a">
+          ${scoreHtml}
+          <span class="act">${o.action||o.direction||'—'}</span>
+        </div>
+      </div>
+      <div class="opp-g">
+        <div><span>السعر</span><b class="n">${fils(price)}</b></div>
+        <div><span>الوقف</span>${stopHtml}</div>
+        <div><span>الهدف</span><b class="n">${fils(tgt)}</b></div>
+        <div><span>R/R</span><b class="n">${rr ?? '—'}</b></div>
+        <div><span>RSI</span><b class="n">${(()=>{const r=o.rsi_14??o.rsi;return has(r)?Number(r).toFixed(0):'—';})()}</b></div>
+        <div><span>ADX</span><b class="n">${has(o.adx)?Number(o.adx).toFixed(0):'—'}</b></div>
+        <div><span>الحجم</span><b class="n">${has(o.vol_ratio)?Number(o.vol_ratio).toFixed(1)+'×':'—'}</b></div>
+        <div><span>أقصى مركز</span><b class="n">${kwdRaw(o.max_position_kwd)}</b></div>
+      </div>
+      ${(o.factors||o.reasons||o.blockers)?`<div class="opp-t">${tags(o.factors||o.reasons,'f')}${tags(o.blockers,'b')}</div>`:''}
+    </div>`;
   }).join('');
-  return `<table><thead><tr>
-    <th>السهم · العوامل</th><th>الدرجة</th><th>القرار</th><th>السعر <u>فلس</u></th>
-    <th class="hs">RSI</th><th class="hs">ADX</th><th class="hs">الحجم</th>
-    <th>الوقف <u>فلس</u></th><th>الهدف <u>فلس</u></th><th class="hs">أقصى مركز <u>د.ك</u></th>
-  </tr></thead><tbody>${rows}</tbody></table>`;
+
+  /* نفس سلسلة الأسماء المستعملة في البطاقة أعلاه. عدّاد يبحث عن اسم لا
+     تشحنه الحمولة يقول «18 من 18 ناقصة» إلى الأبد — أحمر عالق، وهو ما كان. */
+  const missScore = opps.filter(o=>!has(o.confluence_pct ?? o.confluence_score ?? o.score)).length;
+  const missStop  = opps.filter(o=>!has(o.stop ?? o.stop_loss)).length;
+  let note = '';
+  if(missScore || missStop){
+    const bits = [];
+    if(missScore) bits.push(`${missScore} بلا درجة`);
+    if(missStop)  bits.push(`${missStop} بلا وقف`);
+    note = `<div class="warnbar">الحمولة ناقصة: ${bits.join(' · ')} من ${opps.length}.
+      الترتيب أدناه لا يستند إلى درجة، والوقف غير المحدَّد يعني أنه يُحسب عندك لا عندنا.</div>`;
+  }
+  return note + `<div class="opps">${cards}</div>`;
 }
 
 function watchTable(rows){
