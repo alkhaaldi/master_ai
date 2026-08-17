@@ -85,3 +85,4 @@ server.log*
 _inbox/
 tmp/
 *.mp3
+data/yahoo_gate.db*

@@ -209,15 +209,38 @@ def main():
         check("falsy defaults", False, f"inventory unavailable: {_fe}")
 
     # G-3: a shut price source must be visible here, not discovered later.
+    # Until 2026-08-17 this could not happen: the gate kept its state in
+    # module globals, so importing it here created a brand-new door in
+    # quick_check's own process. It reported "closed, 0 requests" whatever
+    # the server or cron was doing - green, and structurally unable to go
+    # red. Now it reads the shared store, and _tools/prove_guards.py
+    # opens the circuit on purpose to show that this line does turn red.
     print("")
     print("[Price source]")
     try:
         sys.path.insert(0, BASE_DIR)
         from yahoo_gate import circuit_state as _cs
         _st = _cs()
-        check("yahoo circuit", not _st.get("open"),
-              ("OPEN - " + str(_st.get("reason"))) if _st.get("open")
-              else f"closed, {_st.get('requests', 0)} requests, {_st.get('rate_limited', 0)} rate-limited")
+        if not _st.get("shared", False):
+            # Losing sight of the shared door is its own failure. Reporting
+            # this process's private counters as if they were the system's is
+            # exactly the defect being removed.
+            check("yahoo circuit", False,
+                  "shared state unreadable (%s) - this reading is process-local"
+                  % _st.get("shared_reason"))
+        elif _st.get("open"):
+            check("yahoo circuit", False,
+                  "OPEN - %s (%ss cooldown remaining)"
+                  % (_st.get("reason"), _st.get("cooldown_remaining_s")))
+        else:
+            # Indexed, not .get(...,0): reaching here means shared state
+            # was read, so these keys exist. A default would print a
+            # confident 0 for a key that had gone missing.
+            check("yahoo circuit", True,
+                  "closed, %s requests, %s rate-limited, %s consecutive failures"
+                  " (shared, since %s)"
+                  % (_st["requests"], _st["rate_limited"],
+                     _st["consecutive_failures"], _st["counters_since"]))
     except Exception as _se:
         check("yahoo circuit", False, f"gate unavailable: {_se}")
 
