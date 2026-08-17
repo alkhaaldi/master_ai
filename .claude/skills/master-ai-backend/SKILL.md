@@ -27,10 +27,6 @@ description: Rules for editing Python in the Master AI FastAPI service on the Ra
     git commit -m "<what changed>"
     bash _tools/restart_master_ai.sh
 
-`git status --short` is not optional. The tree regularly
-carries unrelated in-flight work. Staging blind is how that
-work ends up in someone else's commit.
-
 Commit BEFORE restart, never after. If quick_check or smoke_test
 fails, fix it before committing - do not commit a red state.
 
@@ -43,7 +39,6 @@ what changed - that is what happened in commit `651b154`, whose
 message claimed "archive 58 scripts" while it actually deleted two
 live modules.
 
-Run `git status --short` first and stage only the paths you touched.
 If unexplained modified files are present, say so instead of
 committing them.
 
