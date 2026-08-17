@@ -22,6 +22,8 @@ restored.
                    turn, on a COPY
   falsy sentinel   plant a known `or 0` -> the count must rise and the
                                             check must FAIL
+  witness          drive one check red   -> the row must say so, with its
+                                            reason and the service uptime
 
 Restoration runs from a finally block, so an interrupted run does not leave
 the door shut or a fake row behind.
@@ -48,6 +50,7 @@ def _utcnow():
 
 BASE = "/home/pi/master_ai"
 DB = BASE + "/data/life.db"
+WORKDIR = BASE + "/.probe_work"      # on /, never tmpfs - see _probe_db
 sys.path.insert(0, BASE)
 
 import yahoo_gate  # noqa: E402
@@ -310,7 +313,12 @@ def _probe_db():
     the cleanup below existed. A proof tool that degrades the machine it
     runs on is not a proof tool.
     """
-    d = tempfile.mkdtemp(prefix="prove_guards_")
+    # On /, not tmpfs (STORAGE_POLICY Rule 3, open item 2). tempfile puts
+    # these in /tmp by default, which is 4GB of the Pi's RAM - so the copies
+    # this tool makes were competing with the service for memory. / has 92GB
+    # free and is the right kind of space for a working file.
+    os.makedirs(WORKDIR, exist_ok=True)
+    d = tempfile.mkdtemp(prefix="probe_", dir=WORKDIR)
     _probe_dirs.append(d)
     path = os.path.join(d, "probe.db")
     conn = sqlite3.connect(DB, timeout=30)
@@ -396,6 +404,66 @@ def prove_db_sanity():
                 print(f"       line was: {line2}")
         finally:
             _drop_probe(broken)
+
+
+# ─────────────────────── guard 5: quick_check's witness ─────────────────
+def prove_witness():
+    """Does the witness actually record the red?
+
+    Everything else here proves a guard CAN go red. This proves the red
+    survives being seen - the half that was missing when today's 20/21 and
+    22/24 both had to be reproduced to be diagnosed, and the second one
+    never was.
+    """
+    print("\n[guard] quick_check witness")
+    marker = "space /tmp (memory)"
+
+    def newest(name):
+        conn = sqlite3.connect(DB, timeout=15)
+        try:
+            return conn.execute(
+                "SELECT ran_at, passed, detail, service_uptime_s"
+                " FROM quick_check_runs WHERE check_name=?"
+                " ORDER BY id DESC LIMIT 1", (name,)).fetchone()
+        finally:
+            conn.close()
+
+    conn = sqlite3.connect(DB, timeout=15)
+    try:
+        have = conn.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+            " AND name='quick_check_runs'").fetchone()[0]
+    finally:
+        conn.close()
+    step("the witness table exists", have, 1)
+    if not have:
+        return
+
+    # A green run is recorded as green...
+    quick_check_lines()
+    before = newest(marker)
+    step(f"a passing '{marker}' is recorded", before[1], 1)
+    print(f"       {before[0]}  passed={before[1]}  uptime={before[3]}s")
+
+    # ...and a red one as red, carrying its reason, not just a lower total.
+    subprocess.run([BASE + "/venv/bin/python3", BASE + "/_tools/quick_check.py"],
+                   capture_output=True, text=True, cwd=BASE, timeout=300,
+                   env=dict(os.environ, QUICK_CHECK_FAKE_SPACE="/tmp=91"))
+    after = newest(marker)
+    step(f"a failing '{marker}' is recorded as failed", after[1], 0)
+    step("and the reason is kept, not only the verdict",
+         "91% used" in (after[2] or ""), True)
+    print(f"       {after[0]}  passed={after[1]}  detail={(after[2] or '')[:54]}")
+
+    # The uptime is the discriminator this table exists for: without it, a
+    # restart artefact and a real fault are the same row.
+    step("the service uptime rides along, so a restart artefact is separable",
+         isinstance(after[3], float), True)
+    print(f"       uptime beside the red: {after[3]}s")
+
+    # And it comes back green, so the table is a log and not a latch.
+    quick_check_lines()
+    step("green again on the next run", newest(marker)[1], 1)
 
 
 # ──────────────────────── guard 4: the falsy sentinel ───────────────────
@@ -505,6 +573,7 @@ try:
     prove_space()
     prove_db_sanity()
     prove_falsy_sentinel()
+    prove_witness()
 finally:
     # Belt and braces: each case drops its own copy, this catches an
     # interrupted run. 87MB a piece on a 4GB tmpfs is not survivable.

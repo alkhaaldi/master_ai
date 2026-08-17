@@ -77,6 +77,78 @@ def _space_reading(path):
     return None, "unreadable", "df row carried no percentage"
 
 
+# ── quick_check's own witness ─────────────────────────────────────────
+# Added 2026-08-17, after a transient red cost the diagnosis twice in one
+# day: a 20/21 while prove_guards was running, and a 22/24 while a parallel
+# session restarted the service. Both times the evidence was gone before
+# anyone looked and the checks had to be re-run to guess what had failed.
+# A guard that can go red but leaves no trace of having done so is half a
+# guard.
+#
+# Retention declared up front, STORAGE_POLICY Rule 4:
+#   what         one row per check per run, ~24 rows a run
+#   why it grows every invocation, including the ones prove_guards makes
+#   kept         90 days
+#   deleted by   quick_check itself, at the end of every run
+#
+# It lives in life.db on the SD card, never on the CIFS mount (Rule 1).
+WITNESS_KEEP_DAYS = 90
+_RESULTS = []
+_SERVICE_UPTIME = None
+
+
+def _write_witness():
+    """One row per check, with the service's uptime beside it.
+
+    The uptime is the whole point. A red four seconds after a restart and a
+    red on a service that has been up for hours are different events that
+    look identical in a summary line - and that is exactly what made both of
+    today's transient reds undiagnosable after the fact. None means /health
+    did not answer, which is itself the loudest reading available.
+
+    Failures to write are printed, never swallowed: a witness that stops
+    witnessing in silence is the failure this table exists to catch.
+    """
+    import sqlite3 as _wsq
+    from datetime import datetime as _wdt, timedelta as _wtd
+    run_at = _wdt.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        conn = _wsq.connect(os.path.join(BASE_DIR, "data", "life.db"), timeout=15)
+        conn.execute("""CREATE TABLE IF NOT EXISTS quick_check_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ran_at TEXT NOT NULL,
+            check_name TEXT NOT NULL,
+            passed INTEGER NOT NULL,
+            detail TEXT,
+            service_uptime_s REAL,
+            git_head TEXT)""")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_qcr_ran_at"
+                     " ON quick_check_runs(ran_at)")
+        head = None
+        try:
+            head = subprocess.check_output(
+                ["git", "-C", BASE_DIR, "rev-parse", "--short", "HEAD"],
+                timeout=5, stderr=subprocess.DEVNULL).decode().strip()
+        except Exception:
+            pass                      # a missing SHA is not worth failing over
+        conn.executemany(
+            "INSERT INTO quick_check_runs (ran_at, check_name, passed, detail,"
+            " service_uptime_s, git_head) VALUES (?,?,?,?,?,?)",
+            # int(p), not a ternary: the `else 0` form is what the sentinel
+            # counts, and it caught this one too - the fourth of mine today,
+            # planted inside the very witness built to stop things going
+            # unrecorded. The ratchet holds at 228.
+            [(run_at, n, int(p), d, _SERVICE_UPTIME, head)
+             for n, p, d in _RESULTS])
+        cutoff = (_wdt.utcnow() - _wtd(days=WITNESS_KEEP_DAYS)).strftime(
+            "%Y-%m-%d %H:%M:%S")
+        conn.execute("DELETE FROM quick_check_runs WHERE ran_at < ?", (cutoff,))
+        conn.commit()
+        conn.close()
+    except Exception as _we:
+        print(f"  [WARN] witness not written: {_we!r} - this run left no trace")
+
+
 def check(name, ok, detail=""):
     global PASS, FAIL
     status = "PASS" if ok else "FAIL"
@@ -84,6 +156,7 @@ def check(name, ok, detail=""):
         PASS += 1
     else:
         FAIL += 1
+    _RESULTS.append((name, bool(ok), detail))
     suffix = f" — {detail}" if detail else ""
     print(f"  [{status}] {name}{suffix}")
     return ok
@@ -144,6 +217,10 @@ def main():
     if "_error" in h:
         check("/health", False, h["_error"])
     else:
+        # Kept for the witness: this number is what separates "the service
+        # was restarting" from "something is actually broken".
+        global _SERVICE_UPTIME
+        _SERVICE_UPTIME = h.get("uptime_seconds")
         check("/health", h.get("status") == "ok",
               f"v{h.get('version','?')} schema={h.get('schema_version','?')} up={h.get('uptime_seconds',0):.0f}s")
 
@@ -346,7 +423,14 @@ def main():
             timeout=5, stderr=subprocess.DEVNULL
         ).decode().strip()
         dirty = len(status.split("\n")) if status else 0
-        check("git", True, f"branch={branch} dirty={dirty} files")
+        # Was check("git", True, ...) - a literal, so it could only ever be
+        # green, same family as the seven found in db_sanity. Now it asserts
+        # something: a detached HEAD means the next restart deploys a commit
+        # nobody is tracking.
+        check("git", branch != "HEAD",
+              f"branch={branch} dirty={dirty} files"
+              + (" - DETACHED HEAD, the next restart deploys an untracked commit"
+                 if branch == "HEAD" else ""))
     except Exception as e:
         check("git", False, str(e))
 
@@ -355,6 +439,7 @@ def main():
     total = PASS + FAIL
     print(f"Results: {PASS}/{total} passed, {FAIL} failed")
     print("=" * 60)
+    _write_witness()
     return FAIL == 0
 
 
