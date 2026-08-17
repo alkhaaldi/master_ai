@@ -439,8 +439,14 @@ def _send_collection_alert(result: dict) -> bool:
     """Send Telegram alert with collection results."""
     import requests as _req
 
-    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN") or _read_file("~/.telegram_bot_token")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID") or _read_file("~/.telegram_chat_id")
+    # One resolver (2026-08-17). This looked for TELEGRAM_CHAT_ID, a name
+    # .env has never carried - it declares ADMIN_TELEGRAM_ID - and then for
+    # ~/.telegram_chat_id, which does not exist. It could not have sent.
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     "_tools"))
+    from run_witness import telegram_credentials as _tc
+    bot_token, chat_id, _why = _tc()
     if not bot_token or not chat_id:
         return False
 

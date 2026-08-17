@@ -11,8 +11,9 @@ import json
 import os
 import sqlite3
 import sys
+import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
@@ -34,12 +35,119 @@ def _env():
     return out
 
 
-def send_telegram(text: str) -> bool:
-    """Direct Bot API send (stdlib only). Returns delivery truthfully."""
+# Retention for telegram_sends, declared before the first row
+# (STORAGE_POLICY Rule 4):
+#   what          one row per send attempt, delivered or not
+#   why it grows  alerts: halted cycles, open circuits, zero-fetch runs
+#   kept          90 days
+#   deleted by    send_telegram itself, on every write
+TELEGRAM_KEEP_DAYS = 90
+
+
+def telegram_credentials():
+    """(token, chat_id, where_from) or (None, None, why not).
+
+    THE one resolver, added 2026-08-17. There were four, and they disagreed:
+
+      run_witness        parsed .env directly           -> worked from cron
+      server.py          os.getenv, systemd loads .env  -> worked in service
+      signal_review      os.environ then ~/.telegram_*  -> the files do not
+                                                          exist, and cron
+                                                          gives it no env, so
+                                                          it logged
+                                                          "credentials not
+                                                          found" and returned
+                                                          False for ever
+      kse_data_collector same, but reading TELEGRAM_CHAT_ID, a name .env has
+                         never contained - it declares ADMIN_TELEGRAM_ID
+
+    .env first because cron does not load it for us; the environment second
+    because systemd does. Both chat-id spellings are accepted, since two
+    modules were written against a name the config does not use.
+    """
     env = _env()
-    token, chat = env.get("TELEGRAM_BOT_TOKEN"), env.get("ADMIN_TELEGRAM_ID")
-    if not token or not chat:
-        print("witness: telegram not configured - alert NOT sent:", text)
+    token = (env.get("TELEGRAM_BOT_TOKEN")
+             or os.environ.get("TELEGRAM_BOT_TOKEN"))
+    chat = (env.get("ADMIN_TELEGRAM_ID") or env.get("TELEGRAM_CHAT_ID")
+            or os.environ.get("ADMIN_TELEGRAM_ID")
+            or os.environ.get("TELEGRAM_CHAT_ID"))
+    if not token:
+        return None, None, "no TELEGRAM_BOT_TOKEN in .env or the environment"
+    if not chat:
+        return None, None, ("no ADMIN_TELEGRAM_ID / TELEGRAM_CHAT_ID in .env "
+                            "or the environment")
+    where = "from .env" if _env().get("TELEGRAM_BOT_TOKEN") else "from the environment"
+    return token.strip(), str(chat).strip(), where
+
+
+def _mask(chat):
+    """Last four digits only. The destination matters for diagnosis; the
+    whole id does not need to sit in a table."""
+    s = str(chat)
+    if len(s) <= 4:
+        return "***"
+    return "***" + s[-4:]
+
+
+def _log_send(delivered, reason, http_status, chat, caller, text):
+    """Every attempt lands here, delivered or not.
+
+    send_telegram already returned the truth; the problem was that the truth
+    went to stdout, and stdout from a cron job goes into a log nobody reads.
+    An alert that did not arrive, unrecorded, is indistinguishable from an
+    alert that was never needed.
+    """
+    try:
+        conn = sqlite3.connect(DB, timeout=15)
+        conn.execute("""CREATE TABLE IF NOT EXISTS telegram_sends (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sent_at TEXT NOT NULL,
+            delivered INTEGER NOT NULL,
+            reason TEXT,
+            http_status INTEGER,
+            chat_masked TEXT,
+            caller TEXT,
+            text_preview TEXT)""")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_tgs_sent_at"
+                     " ON telegram_sends(sent_at)")
+        conn.execute(
+            "INSERT INTO telegram_sends (sent_at, delivered, reason,"
+            " http_status, chat_masked, caller, text_preview)"
+            " VALUES (?,?,?,?,?,?,?)",
+            (datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"), int(delivered),
+             reason, http_status, _mask(chat) if chat else None, caller,
+             str(text)[:120]))
+        cutoff = (datetime.utcnow()
+                  - timedelta(days=TELEGRAM_KEEP_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
+        conn.execute("DELETE FROM telegram_sends WHERE sent_at < ?", (cutoff,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print("witness: telegram send NOT recorded: %r" % e)
+
+
+def _caller():
+    try:
+        import inspect
+        for fr in inspect.stack()[1:]:
+            mod = os.path.basename(fr.filename)
+            if mod != "run_witness.py":
+                return "%s:%s" % (mod, fr.lineno)
+    except Exception:
+        pass
+    return "unknown"
+
+
+def send_telegram(text: str) -> bool:
+    """Direct Bot API send (stdlib only). Returns delivery truthfully, and
+    now records the attempt so the truth outlives the stdout it was printed
+    to."""
+    who = _caller()
+    token, chat, where = telegram_credentials()
+    if not token:
+        print("witness: telegram not configured (%s) - alert NOT sent: %s"
+              % (where, text))
+        _log_send(False, where, None, None, who, text)
         return False
     try:
         req = urllib.request.Request(
@@ -47,9 +155,31 @@ def send_telegram(text: str) -> bool:
             data=json.dumps({"chat_id": chat, "text": text}).encode(),
             headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=10) as r:
-            return r.status == 200
+            status = r.status
+            body = json.loads(r.read().decode())
+        # 200 is not delivery. Telegram answers 200 with {"ok": false} for a
+        # wrong chat id among others, so the body is the reading, not the code.
+        if body.get("ok") is True:
+            _log_send(True, None, status, chat, who, text)
+            return True
+        reason = str(body.get("description"))[:160]
+        print("witness: telegram refused: %s - alert text was: %s" % (reason, text))
+        _log_send(False, reason, status, chat, who, text)
+        return False
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = json.loads(e.read().decode()).get("description", "")
+        except Exception:
+            pass
+        reason = "HTTP %s %s" % (e.code, str(detail)[:120])
+        print("witness: telegram send failed: %s - alert text was: %s" % (reason, text))
+        _log_send(False, reason, e.code, chat, who, text)
+        return False
     except Exception as e:
-        print("witness: telegram send failed: %r - alert text was: %s" % (e, text))
+        reason = repr(e)[:160]
+        print("witness: telegram send failed: %s - alert text was: %s" % (reason, text))
+        _log_send(False, reason, None, chat, who, text)
         return False
 
 

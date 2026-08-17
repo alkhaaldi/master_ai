@@ -634,10 +634,17 @@ def _send_review_telegram(summary: dict) -> bool:
     """Send daily review summary via Telegram."""
     import requests as _req
 
-    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN") or _read_file("~/.telegram_bot_token")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID") or os.environ.get("ADMIN_TELEGRAM_ID") or _read_file("~/.telegram_chat_id")
+    # One resolver (2026-08-17). This block used to read os.environ - empty
+    # under cron - then fall back to ~/.telegram_bot_token, a file that has
+    # never existed on this machine. So it logged "credentials not found" and
+    # returned False every single run, and nothing downstream noticed.
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     "_tools"))
+    from run_witness import telegram_credentials as _tc
+    bot_token, chat_id, _why = _tc()
     if not bot_token or not chat_id:
-        logger.warning("Telegram credentials not found")
+        logger.warning("Telegram credentials unavailable: %s", _why)
         return False
 
     res = summary.get("results", {})

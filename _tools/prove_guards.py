@@ -24,6 +24,8 @@ restored.
                                             check must FAIL
   witness          drive one check red   -> the row must say so, with its
                                             reason and the service uptime
+  telegram         refuse a send with an -> the refusal must be recorded.
+                   invalid token            Nothing is delivered here.
 
 Restoration runs from a finally block, so an interrupted run does not leave
 the door shut or a fake row behind.
@@ -406,6 +408,78 @@ def prove_db_sanity():
             _drop_probe(broken)
 
 
+# ──────────────────────── guard 6: the telegram channel ─────────────────
+def prove_telegram():
+    """An alert that does not arrive is not an alert.
+
+    send_telegram already returned the truth; the truth went to stdout, and
+    stdout from a cron job goes to a file nobody reads. So a refused alert
+    and an alert never needed looked the same from the outside. This proves
+    the refusal is now WRITTEN DOWN.
+
+    Nothing is delivered here. The failing case uses a deliberately invalid
+    token, which Telegram rejects at the door, so no message reaches any
+    chat. Proving successful delivery needs a real send and the user's
+    explicit say-so - it is not something a tool should decide to do.
+    """
+    print("\n[guard] telegram channel")
+    sys.path.insert(0, BASE + "/_tools")
+    import run_witness as w
+
+    def table_exists():
+        c3 = sqlite3.connect(DB, timeout=15)
+        try:
+            return c3.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+                " AND name='telegram_sends'").fetchone()[0]
+        finally:
+            c3.close()
+
+    # 1. the credentials resolve at all - and from .env, so cron can send
+    tok, chat, where = w.telegram_credentials()
+    step("credentials resolve", bool(tok) and bool(chat), True)
+    print(f"       {where}, chat {w._mask(chat) if chat else None}")
+
+    # 2. and they resolve with NO environment, which is how cron runs
+    r = subprocess.run(
+        ["/usr/bin/env", "-i", BASE + "/venv/bin/python3", "-c",
+         "import sys;sys.path.insert(0,'" + BASE + "/_tools');"
+         "import run_witness as w;t,c,_=w.telegram_credentials();"
+         "print(bool(t) and bool(c))"],
+        capture_output=True, text=True, timeout=60)
+    step("they resolve with an empty environment (the cron case)",
+         r.stdout.strip(), "True")
+
+    def newest():
+        c2 = sqlite3.connect(DB, timeout=15)
+        try:
+            return c2.execute(
+                "SELECT delivered, reason, http_status, caller FROM telegram_sends"
+                " ORDER BY id DESC LIMIT 1").fetchone()
+        finally:
+            c2.close()
+
+    # 3. a REFUSED send is recorded, with the reason. Invalid token on
+    #    purpose: Telegram rejects it before any chat is touched.
+    real_env = w._env
+    w._env = lambda: dict(real_env(), TELEGRAM_BOT_TOKEN="000000:invalid-on-purpose")
+    try:
+        sent = w.send_telegram("prove_guards.py — must never be delivered")
+    finally:
+        w._env = real_env
+    step("a refused send returns False", sent, False)
+    row = newest()
+    step("...and is recorded as not delivered", row[0], 0)
+    step("...with a reason, not just a flag", bool(row[1]), True)
+    print(f"       delivered={row[0]}  http={row[2]}  reason={str(row[1])[:60]}")
+    print(f"       caller recorded as: {row[3]}")
+
+    # Checked here, not at the top: the table is created on first write, so
+    # asking before any send has happened tests the wrong moment.
+    step("the telegram_sends table exists once something has been attempted",
+         table_exists(), 1)
+
+
 # ─────────────────────── guard 5: quick_check's witness ─────────────────
 def prove_witness():
     """Does the witness actually record the red?
@@ -574,6 +648,7 @@ try:
     prove_db_sanity()
     prove_falsy_sentinel()
     prove_witness()
+    prove_telegram()
 finally:
     # Belt and braces: each case drops its own copy, this catches an
     # interrupted run. 87MB a piece on a 4GB tmpfs is not survivable.
