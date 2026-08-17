@@ -79,6 +79,8 @@ nohup.out
 _forensics/
 .claude/*
 !.claude/skills/
+!.claude/settings.json
+!.claude/hooks/
 
 # Cleanup 2026-08-12: logs, inbox, scratch, binaries
 server.log*
@@ -88,3 +90,4 @@ tmp/
 *.mp3
 data/yahoo_gate.db*
 _tools/_falsy_probe_artificial.py
+.probe_work/
