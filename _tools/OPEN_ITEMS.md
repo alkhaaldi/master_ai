@@ -368,6 +368,58 @@ nothing marks them as five months old.
 - the three `tg_radar_*` commands that mutate state (add/remove/toggle) were
   not called.
 
+**4i. THE SECOND CLASS — correct numbers with no context**
+
+The class this whole phase was built to catch is *invented numbers*: `rsi or
+50`, `direction or "long"`, a fabricated all-zero snapshot. Every guard we
+have looks for a wrong value.
+
+This is the other one, and it is quieter: **numbers that are entirely
+correct, served with no way to judge them.** `/dashboard/signals` carried 131
+real signals for months with no `data_state`, no `source`, no `as_of`.
+Nothing in that payload was wrong. Nothing in it could be checked either.
+
+**Why no existing guard finds it.** The falsy sentinel reads syntax. db_sanity
+reads values. quick_check reads endpoints for presence and shape. All three
+pass a payload of correct undated numbers, because there is nothing in it to
+fail. A value check cannot ask a question about what is *absent from the
+frame around* the value.
+
+**The only method that works** is a sweep that calls each endpoint and asks
+it directly: *do you declare your age and your source?* Implemented in
+`_tools/call_human_paths.py` (the SECOND CLASS section) against
+`as_of · as_of_kind · source · source_state · data_state`.
+
+First measurement, 2026-08-17, page-reachable GETs:
+
+```
+NO CONTEXT 20 · partial 1 · full 3 · n/a 3
+```
+
+- **full 3** — `/dashboard/swing`, `/dashboard/signals`,
+  `/dashboard/signals-daily`. The last two joined today; all three now build
+  the contract from one place, `dashboard_api._data_contract()`.
+- **partial 1** — `/dashboard/radar` has source and data_state but no `as_of`
+  or `as_of_kind`. That is item 2, still open, now with a number on it.
+- **NO CONTEXT 20** — including `/dashboard/portfolio`, `/dashboard/equity`,
+  `/dashboard/journal`, `/dashboard/reviews`, `/dashboard/risk-status`,
+  `/api/decisions-now`. Several of these are money surfaces.
+
+**A known false positive, left in rather than tuned away.**
+`/dashboard/signals-30m` is listed as NO CONTEXT and is not: it declares
+`layer_state` / `layer_reason` / `layer_rebuildable`, which is the right
+vocabulary for an offline layer but not the contract's five keys. The
+classifier is syntactic and this is its limit. Widening it to accept
+`layer_state` would make the tool flatter its author's own earlier work,
+which is how a sweep stops being evidence.
+
+**Not a ratchet yet, and deliberately.** Twenty is too many to hold at zero
+and too varied to fix in one pass - a diagnostics endpoint and a portfolio
+endpoint do not owe the reader the same thing. Triage first: which of the 20
+serve numbers a human acts on. Those get the contract; the rest get a written
+reason for not having it. Then, and only then, a ratchet at whatever the
+number is.
+
 **5. The 30m layer**
 `/dashboard/signals-30m` returns nothing. G-1 proved Yahoo **does** serve 30m
 for `.KW` (41 bars, tier-1 names 100% populated). So the layer is rebuildable

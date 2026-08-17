@@ -850,6 +850,56 @@ def _source_state() -> dict:
     return {"source_state": "ok", "source_reason": None, **_src}
 
 
+def _data_contract() -> dict:
+    """The evidence contract, in ONE place.
+
+    Extracted 2026-08-17. It was inline in /dashboard/swing, and
+    /dashboard/radar had its own copy, while /dashboard/signals and
+    /dashboard/signals-daily had none at all - three sibling endpoints
+    answering the same question in three vocabularies, which is how a
+    vocabulary drifts in the first place. A fourth copy would have been
+    the joke writing itself.
+
+    Everything here describes stock_radar_daily, which is what all of these
+    endpoints actually read. as_of is MAX(captured_at): the SOURCE's own
+    last-trade time, not our fetch time (see SCALES.md, and the caveat in
+    OPEN_ITEMS 4b about the two writers).
+    """
+    out = {"data_state": "blind", "data_state_ar": "أعمى · لا بيانات",
+           "data_sessions_old": None, "as_of": None, "as_of_kind": None,
+           "as_of_age_minutes": None}
+    out.update(_source_state())
+    try:
+        import sqlite3 as _sqc
+        from price_source import classify_data_state, as_of_age_minutes
+        # An absolute path off this file, not BASE_DIR (undefined here) and
+        # not a relative "data/life.db" (which only works while the process
+        # cwd happens to be right). The first version used BASE_DIR, raised
+        # NameError, and the except below turned it into a confident
+        # `blind` - the failure mode this whole contract exists to prevent,
+        # reproduced inside the contract itself.
+        _dbp = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "data", "life.db")
+        _c = _sqc.connect(_dbp, timeout=3)
+        _mx = _c.execute(
+            "SELECT MAX(captured_at) FROM stock_radar_daily").fetchone()[0]
+        _c.close()
+        _st = classify_data_state(_mx)
+        out["data_state"] = _st.get("data_state")
+        out["data_state_ar"] = _st.get("data_state_ar")
+        out["data_sessions_old"] = _st.get("sessions_old")
+        out["as_of"] = _mx
+        out["as_of_kind"] = "source_market_time" if _mx else None
+        out["as_of_age_minutes"] = as_of_age_minutes(_mx)
+    except Exception as _dce:
+        # `blind` with no reason is indistinguishable from a genuinely empty
+        # table. Say which it was.
+        logging.getLogger("master_ai").warning("data contract error: %r", _dce)
+        out["data_state_ar"] = "أعمى · تعذّر قراءة حالة البيانات"
+        out["data_state_reason"] = repr(_dce)[:160]
+    return out
+
+
 def _session_freshness(as_of, was_open) -> dict:
     """Session-aged freshness block (PHASE2_SECTION_D, D-4). The 999
     sentinel is dead: an age that cannot be computed is null plus a
@@ -1822,11 +1872,35 @@ def _get_bridge_candidates(mode: str = "auto") -> list[str]:
 # Signal Engine endpoint (composite trading signals)
 # ═══════════════════════════════════════════════════
 
+def _retire_bridge_flag(payload: dict) -> dict:
+    """`bridge_online: false` names a RETIRED dependency as though it might
+    come back, which invites someone to go and fix a host that no longer
+    exists. Replaced by a field that says what actually happened, once.
+
+    Kept as a key rather than deleted so an old page reading it does not
+    throw - but it now reads `retired`, which is not a boolean anyone will
+    mistake for a health signal.
+    """
+    payload.pop("bridge_online", None)
+    payload.pop("bridge_cached_count", None)
+    payload["bridge"] = "retired 2026-08-16 (G-4) — not offline, gone. "\
+                        "Prices come from the local store; see source below."
+    return payload
+
+
 @router.get("/dashboard/signals")
 def dashboard_signals():
-    """Composite trading signals: radar + bridge + journal merged."""
+    """Composite trading signals: radar + journal merged.
+
+    Joined the data contract 2026-08-17. It served 131 real signals with no
+    data_state, no source_state and no as_of - correct numbers with no way
+    to judge their age. That class does not fail a value check, because
+    every value in it is fine.
+    """
     from signal_engine import build_signals
-    return build_signals()
+    out = build_signals()
+    out.update(_data_contract())
+    return _retire_bridge_flag(out)
 
 
 @router.get("/dashboard/signals-daily")
@@ -1960,7 +2034,12 @@ def dashboard_signals_daily():
     except Exception:
         pass
 
-    return data
+    # Same contract as /dashboard/signals and /dashboard/swing, from the same
+    # builder (2026-08-17). This endpoint replaces the live prices with daily
+    # closes, so the age question matters here MORE than on its siblings, not
+    # less - and it was the one carrying no answer to it at all.
+    data.update(_data_contract())
+    return _retire_bridge_flag(data)
 
 
 @router.get("/dashboard/signals-30m")
@@ -2115,6 +2194,11 @@ def dashboard_swing():
     # Page-level data state, session-aged (swing.html falls back to
     # bridge_online only while this field is absent). The page's snapshot
     # age is the age of the newest radar row.
+    # The contract now comes from _data_contract(), one place, shared with
+    # /dashboard/signals and /dashboard/signals-daily. The block below is
+    # kept only for the two keys the swing payload has always spelled its
+    # own way (`data_sessions_old` arrives from the contract; `market_open`
+    # is swing-local).
     _page_state = {"data_state": "blind", "data_state_ar": "أعمى · لا بيانات",
                    "sessions_old": None, "market_open": False}
     try:
