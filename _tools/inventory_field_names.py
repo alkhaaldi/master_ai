@@ -53,8 +53,16 @@ STOP_FIELD = {
     "onclick", "onchange", "oninput", "disabled", "selected", "scrollTop",
     "offsetWidth", "offsetHeight", "files", "result", "data",
 }
-ACCESS = re.compile(r"\b([A-Za-z_$][\w$]*)\.([A-Za-z_][\w]*)\b(?!\s*\()")
-URLPAT = re.compile(r"""['"`](/(?:api|dashboard)/[A-Za-z0-9_\-/]*)""")
+# The lookbehind is the point. Without it this matched inside URLs
+# ("googleapis.com"), filenames ("swing.html") and CSS selectors (".ic"), and
+# reported every one of them as a payload read that nothing ships.
+ACCESS = re.compile(r"""(?<![\w/'"`.])([A-Za-z_$][\w$]*)\.([A-Za-z_][\w]*)\b(?!\s*\()""")
+# The trailing segment is OPTIONAL. It was mandatory until 2026-08-17, so a
+# page fetching bare '/dashboard' was recorded as fetching nothing from it -
+# and every field that lives there came back as READ NOT SHIPPED. That
+# produced a confident "25 pages point at the wrong URL" finding about two
+# pages that were fetching it correctly all along.
+URLPAT = re.compile(r"""['"`](/(?:api|dashboard)(?:/[A-Za-z0-9_\-/]*)?)['"`]""")
 
 
 def script_text(path):
@@ -88,6 +96,33 @@ def page_reads(path):
 def page_urls(path):
     return sorted(set(URLPAT.findall(open(path, encoding="utf-8",
                                           errors="replace").read())))
+
+
+SAMPLE_VALUE = "NBK"
+SAMPLES = {"symbol": SAMPLE_VALUE, "sym": SAMPLE_VALUE, "ticker": SAMPLE_VALUE,
+           "id": "1"}
+
+
+def concrete(url):
+    """A parameterised route with a real value, or None if we cannot guess one.
+
+    Skipping these was a silent hole: personality.html fetches
+    /api/stocks/symbol/{symbol}, so all sixteen detailed-profile fields it
+    reads were counted as shipped by nothing.
+    """
+    # A trailing slash means the page CONCATENATES the value:
+    # `fetch('/api/stocks/symbol/' + sym)`. The literal in the source carries
+    # no {param} at all, so a brace-substitution alone never fired and the
+    # route was silently never called - which is how sixteen fields that ARE
+    # shipped came back as shipped by nothing.
+    if url.endswith("/") and url.count("/") > 2:
+        return url + SAMPLE_VALUE
+    if "{" not in url:
+        return url
+    def sub(m):
+        return SAMPLES.get(m.group(1), SAMPLE_VALUE)
+    filled = re.sub(r"\{(\w+)\}", sub, url)
+    return filled if "{" not in filled else None
 
 
 def call(path):
@@ -130,9 +165,10 @@ def main():
     everywhere = {}
     for page0 in pages:
         for u0 in page_urls(page0):
-            if "{" in u0 or u0 == "/api/analyze" or u0 in cache:
+            c0 = concrete(u0)
+            if c0 is None or u0 == "/api/analyze" or c0 in cache:
                 continue
-            cache[u0] = call(u0)
+            cache[c0] = call(c0)
     for u0, pay in cache.items():
         if pay is not None:
             for k0 in keys_of(pay):
@@ -145,12 +181,15 @@ def main():
         shipped = set()
         called = []
         for u in urls:
-            if "{" in u or u == "/api/analyze":     # parameterised / expensive
+            if u == "/api/analyze":                 # a Gemini call per request
                 continue
-            if u not in cache:
-                cache[u] = call(u)
-            if cache[u] is not None:
-                shipped |= keys_of(cache[u])
+            c = concrete(u)
+            if c is None:
+                continue
+            if c not in cache:
+                cache[c] = call(c)
+            if cache[c] is not None:
+                shipped |= keys_of(cache[c])
                 called.append(u)
         if not called:
             continue

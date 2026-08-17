@@ -466,26 +466,65 @@ on swing.html read `ts.score ?? ts.confluence_score` while the payload shipped
 **The method:** compare the field names each page READS against the field
 names its endpoints SHIP. `_tools/inventory_field_names.py`, read-only.
 
-First measurement, 16 pages with endpoints:
+**Measurement, corrected four times. The correction history is the finding.**
 
 ```
-READ NOT SHIPPED, uncovered  89    <- renders empty, silently
-    shipped by another endpoint  25    the page fetches the wrong URL
-    shipped by no endpoint       64    wrong name, or never built
-read not shipped, covered   120    a shipped name sits beside it in a fallback
-SHIPPED NOT READ           1257
+104   first run
+ 89   after filtering DOM handlers, leading-underscore locals, 1-char names
+ 69   after the URL pattern stopped requiring a segment after /dashboard
+ 28   after two more tool defects, below
 ```
 
-**The 25 are the sharpest finding, and they are not naming errors at all.**
-`assistant.html` and `home.html` fetch `/dashboard/extended` and read
-`api_online`, `priority_engine`, `assistant_surface`, `version` — every one of
-which is built and shipped, on `/dashboard`. The Priority Engine and
-Assistant Surface Layer described in CLAUDE.md are running; two pages are
-pointed at the wrong URL to see them. Others read `swing_rr` and `ema_state`
-from pages fetching endpoints that do not carry them while siblings do.
+**Everything the first three numbers claimed about `assistant.html` and
+`home.html` was false, and was my tool's fault.** They were reported as
+fetching the wrong URL for 25 fields including `priority_engine` and
+`assistant_surface`. Both pages have always fetched `/dashboard` — the URL
+regex required a segment after `dashboard`, so bare `'/dashboard'` matched
+nothing and every field living there was scored as unshipped. Verified after
+the fix: assistant 28 reads satisfied / 0 wrong-endpoint, home 32 / 0.
 
-Worst pages by uncovered reads: personality 23, radar 13, positions 12,
-home 11, assistant 10, signals 8, swing 6, system 4.
+Two further defects, each inflating the count:
+- **parameterised routes were skipped.** `personality.html` reads sixteen
+  detailed-profile fields and fetches `/api/stocks/symbol/` + symbol. The
+  literal in the source has no `{param}` — the page concatenates — so the
+  route was never called and all sixteen counted as shipped by nothing.
+- **`x.field` matched inside strings.** `googleapis.com`, `swing.html`,
+  `.ic`, `details.diag`, `c.tip` were all reported as payload reads.
+
+Honest state, 17 pages:
+
+```
+READ NOT SHIPPED, uncovered  28    <- renders empty, silently
+    shipped by another endpoint   7    the page fetches the wrong URL
+    shipped by no endpoint       21    wrong name, or never built
+read not shipped, covered    61
+SHIPPED NOT READ           1770
+```
+
+The 7 wrong-endpoint reads are real and hand-verified: `positions.html` reads
+`support`, `resistance`, `atr`, `trend`, `signal` while fetching
+`/dashboard/portfolio` and `/dashboard/risk-status`, and every one of those
+lives on `/dashboard/radar` or `/dashboard/signals`. `home.html` reads
+`swing_rr` from `/dashboard/swing`, which is shipped by `/dashboard/signals`.
+`personality.html` reads `ema_state`, same shape.
+
+Triage of the 21, by `_tools/triage_field_reads.py`:
+
+```
+RENAME  0    no near-neighbour on the wire - that class was already fixed
+SHIP   15    a Python builder names it; it does not reach the payload
+DELETE  6    appears nowhere
+```
+
+`RENAME 0` is worth noting: the `rsi` vs `rsi_14` family that started this
+item has no remaining instances in the uncovered set. It survives only inside
+fallback chains, which is the `covered 61`.
+
+The SHIP bucket's evidence is weak for generic names — `msg`, `text`,
+`level`, `structured` grep-match unrelated Python — so it needs reading, not
+trusting. The strong ones are `autonomy_level` (server.py, read by two
+pages), `brain_weighted` (trading_brain, read by two), `trailing_distance_pct`
+and `prefetch_savings_ms` (both named in dashboard_api and never emitted).
 
 **Triage order, because these repairs are different:**
 1. the 25 wrong-endpoint reads — likely the cheapest and the highest value,
