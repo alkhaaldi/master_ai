@@ -126,6 +126,46 @@ producing a confident reading. Five of the other eight string defaults in
 decision paths are display placeholders (`'—'`, `'?'`) that render absence AS
 absence, which is correct and should stay.
 
+**4e. `direction` is read three ways — one fixed 2026-08-17, two open**
+`position_engine.py:176` invented a default and is fixed: an unrecognised
+direction now refuses to compute P&L and logs why, instead of reading as
+`long`. The other two readers still disagree with it and with each other:
+
+```
+journal_engine.py:211   direction = trade["direction"]
+                        if direction == "long": … else: …   -> anything else
+                                                              computes a SHORT
+journal_engine.py:410   trade.get("direction", "long")      -> the key EXISTS
+                                                              with a falsy value,
+                                                              so the default never
+                                                              fires; falls to SHORT
+```
+
+So the same row can produce **+10% in one module and −10% in another**. This
+is the `decision_time` two-clock shape applied to the sign of money.
+
+What the schema actually allows, measured rather than assumed:
+
+```
+direction TEXT NOT NULL DEFAULT 'long'
+  NULL        impossible - the constraint holds
+  ''          ACCEPTED, and falsy: this is what `or "long"` fired on
+  'lomg'      ACCEPTED, and TRUTHY: it sailed past the default and landed in
+              the else branch, so one mistyped letter inverted the P&L sign
+```
+
+And `DEFAULT 'long'` is the same defect one layer down: an INSERT that omits
+the column gets a BUY, silently, before any code is involved. A CHECK
+constraint (`direction IN ('long','short')`) plus dropping the default would
+close it at the source — but that is a schema migration on the trades table,
+which is its own batch.
+
+Fix: `VALID_DIRECTIONS` already exists in `position_engine`. The two
+`journal_engine` sites should use it and refuse the same way. Proved in
+`prove_guards.py` for the fixed site: empty and typo both refuse, a stated
+long reads −10% and a stated short +10% — the two answers the default used to
+choose between without telling anyone.
+
 **5. The 30m layer**
 `/dashboard/signals-30m` returns nothing. G-1 proved Yahoo **does** serve 30m
 for `.KW` (41 bars, tier-1 names 100% populated). So the layer is rebuildable

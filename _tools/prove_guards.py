@@ -27,6 +27,8 @@ restored.
                                             reason and the service uptime
   telegram         refuse a send with an -> the refusal must be recorded.
                    invalid token            Nothing is delivered here.
+  direction        an empty direction,   -> no P&L at all, and above all
+                   and a typo, on a copy    not the long or short reading
 
 Restoration runs from a finally block, so an interrupted run does not leave
 the door shut or a fake row behind.
@@ -409,6 +411,106 @@ def prove_db_sanity():
             _drop_probe(broken)
 
 
+# ──────────────────── guard 7: a missing direction is not a BUY ─────────
+def prove_direction():
+    """A trade with no direction must be refused, not read as long.
+
+    Driven on a COPY. The trades table holds the user's real money records;
+    inserting a phantom open position into it, even for two seconds, would
+    also drop that symbol into the live positions cycle. So this points
+    position_engine at a VACUUM INTO copy and works there.
+    """
+    print("\n[guard] direction: absence is not a BUY")
+    probe = _probe_db()
+    try:
+        import position_engine as pe
+        real_path = pe.DB_PATH
+        pe.DB_PATH = probe
+        try:
+            c = sqlite3.connect(probe, timeout=15)
+            # entry 100, price 90: a LONG reads -10%, a SHORT reads +10%.
+            # If anything gets written at all, the sign says which default
+            # was silently applied.
+            # An EMPTY STRING, not NULL: the column is `TEXT NOT NULL
+            # DEFAULT 'long'`, so NULL cannot be stored - but '' can, and ''
+            # is falsy, which is exactly what the old `or "long"` fired on.
+            # The schema's own DEFAULT 'long' is the same defect one layer
+            # down, and is recorded in OPEN_ITEMS rather than fixed here.
+            c.execute(
+                "INSERT INTO trades (symbol, status, direction, entry_price,"
+                " quantity, entry_date, created_at) VALUES"
+                " ('NODIR', 'open', '', 100, 10, date('now'), datetime('now'))")
+            tid = c.execute("SELECT id FROM trades WHERE symbol='NODIR'").fetchone()[0]
+            c.commit()
+            c.close()
+
+            pe._update_position_pnl(tid, 90.0)
+
+            c = sqlite3.connect(probe, timeout=15)
+            row = c.execute("SELECT pnl_pct, pnl_fils FROM trades WHERE id=?",
+                            (tid,)).fetchone()
+            c.close()
+            step("empty direction -> no P&L written at all", row, (None, None))
+            print(f"       stored pnl_pct={row[0]!r} pnl_fils={row[1]!r}")
+            step("...and specifically NOT the long reading (-10%)",
+                 row[0] == -10.0, False)
+
+            # and the same row, given a direction, is computed normally -
+            # the guard refuses the unknown, it does not break the known.
+            c = sqlite3.connect(probe, timeout=15)
+            c.execute("UPDATE trades SET direction='long' WHERE id=?", (tid,))
+            c.commit()
+            c.close()
+            pe._update_position_pnl(tid, 90.0)
+            c = sqlite3.connect(probe, timeout=15)
+            row2 = c.execute("SELECT pnl_pct FROM trades WHERE id=?",
+                             (tid,)).fetchone()
+            c.close()
+            step("a stated 'long' still computes", row2[0], -10.0)
+
+            # a stated short is the opposite sign - which is what the old
+            # default was quietly choosing between
+            c = sqlite3.connect(probe, timeout=15)
+            c.execute("UPDATE trades SET direction='short', pnl_pct=NULL WHERE id=?",
+                      (tid,))
+            c.commit()
+            c.close()
+            pe._update_position_pnl(tid, 90.0)
+            c = sqlite3.connect(probe, timeout=15)
+            row3 = c.execute("SELECT pnl_pct FROM trades WHERE id=?",
+                             (tid,)).fetchone()
+            c.close()
+            step("a stated 'short' computes the opposite sign", row3[0], 10.0)
+            print(f"       long {row2[0]}%  vs  short {row3[0]}%  - the "
+                  f"default used to pick one of these for you")
+
+            # A typo is the nastiest case and the schema accepts it: 'lomg'
+            # is TRUTHY, so the old code sailed past `or "long"` and landed in
+            # the else branch - computing a SHORT. One mistyped letter
+            # inverted the sign of the money.
+            c = sqlite3.connect(probe, timeout=15)
+            c.execute("UPDATE trades SET direction='lomg', pnl_pct=NULL WHERE id=?",
+                      (tid,))
+            c.commit()
+            c.close()
+            pe._update_position_pnl(tid, 90.0)
+            c = sqlite3.connect(probe, timeout=15)
+            row4 = c.execute("SELECT pnl_pct FROM trades WHERE id=?",
+                             (tid,)).fetchone()
+            c.close()
+            step("a typo ('lomg') is refused, not read as a SHORT", row4[0], None)
+        finally:
+            pe.DB_PATH = real_path
+    finally:
+        _drop_probe(probe)
+
+    # nothing may have touched the real table
+    c = sqlite3.connect(DB, timeout=15)
+    left = c.execute("SELECT COUNT(*) FROM trades WHERE symbol='NODIR'").fetchone()[0]
+    c.close()
+    step("the real trades table was never written to", left, 0)
+
+
 # ──────────────────────── guard 6: the telegram channel ─────────────────
 def prove_telegram():
     """An alert that does not arrive is not an alert.
@@ -697,6 +799,7 @@ try:
     prove_falsy_sentinel()
     prove_witness()
     prove_telegram()
+    prove_direction()
 finally:
     # Belt and braces: each case drops its own copy, this catches an
     # interrupted run. 87MB a piece on a 4GB tmpfs is not survivable.

@@ -25,6 +25,11 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "data", "life.db")
 # DB HELPERS
 # ═══════════════════════════════════════════════════
 
+# The only two readings a trade direction can have. Anything else - NULL,
+# empty, a typo - is an unknown position, not a default one.
+VALID_DIRECTIONS = ("long", "short")
+
+
 def _conn():
     c = sqlite3.connect(DB_PATH, timeout=10)
     c.row_factory = sqlite3.Row
@@ -173,8 +178,30 @@ def _update_position_pnl(trade_id: int, current_price: float):
             return
         entry = float(row["entry_price"] or 0)
         qty = int(row["quantity"] or 0)
-        direction = row["direction"] or "long"
+        direction = row["direction"]
+        # `or "long"` until 2026-08-17. A row with no direction was read as a
+        # BUY, so an unknown position reported a profit on exactly the move
+        # that was losing it money - and the sign is the whole answer here.
+        #
+        # Worse, it was not read that way everywhere: journal_engine tests
+        # `if direction == "long"` and falls through to the short branch, so
+        # the same NULL row produced +5% here and -5% there. Tracked in
+        # OPEN_ITEMS; this fixes the site that invented the default.
+        #
+        # The guard for entry_price was already on the next line. It just
+        # never covered this field.
+        if direction not in VALID_DIRECTIONS:
+            logger.warning(
+                "trade %s: direction is %r, not one of %s - P&L NOT computed. "
+                "An unknown direction is not a long position.",
+                trade_id, direction, VALID_DIRECTIONS)
+            return
         if entry <= 0:
+            # Was a bare `return`. A refusal nobody can see is the same
+            # silence this file was just fixed for.
+            logger.warning(
+                "trade %s: entry_price is %r - P&L NOT computed",
+                trade_id, row["entry_price"])
             return
         if direction == "long":
             pnl_pct = ((current_price - entry) / entry) * 100

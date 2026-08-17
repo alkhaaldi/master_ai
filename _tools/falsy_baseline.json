@@ -24,8 +24,13 @@
    "decision_path_str": 9,
    "other_str": 81,
    "note": "first measurement of the string family - a discovery, not a regression: the numeric baselines did not move. Of the 9 in decision paths, 5 are display placeholders ('-', '?') that render absence AS absence and 2 are honest labels; the one that matters is position_engine.py:176, `direction = row[\"direction\"] or \"long\"`, where a missing trade direction becomes a BUY. server.py carries 42 of the 81, including the 18 hardcoded telegram destinations."
+  },
+  {
+   "date": "2026-08-17",
+   "decision_path_str": 8,
+   "note": "position_engine.py:176 - `direction = row[\"direction\"] or \"long\"` removed. An unrecognised direction now refuses to compute P&L and logs why. The schema permits  (falsy, which fired the default) and lomg (truthy, which sailed past it into the SHORT branch); both are refused now. The remaining 8 are 5 display placeholders and 3 honest labels."
   }
  ],
- "decision_path_str": 9,
+ "decision_path_str": 8,
  "other_str": 81
 }
