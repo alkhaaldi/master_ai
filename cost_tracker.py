@@ -17,11 +17,14 @@ logger = logging.getLogger("cost_tracker")
 DB_PATH = Path("data/traces.db")
 
 # ═══ PRICING (USD per 1M tokens) ═══
+from model_tiers import MODEL_CHEAP, MODEL_ROUTINE, MODEL_DEEP
+
 PRICING = {
-    "claude-sonnet-4-6": {"input": 3.0, "output": 15.0},
-    "claude-opus-4-6":   {"input": 5.0, "output": 25.0},
+    MODEL_CHEAP:   {"input": 0.8, "output": 4.0},
+    MODEL_ROUTINE: {"input": 3.0, "output": 15.0},
+    MODEL_DEEP:    {"input": 5.0, "output": 25.0},
     # OpenAI fallback
-    "gpt-4o":                   {"input": 2.5, "output": 10.0},
+    "gpt-4o":      {"input": 2.5, "output": 10.0},
 }
 
 # Fallback for unknown models

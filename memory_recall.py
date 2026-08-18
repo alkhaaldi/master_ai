@@ -79,7 +79,7 @@ async def find_relevant_memories(
     try:
         if anthropic_client:
             response = await anthropic_client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model=__import__("model_tiers").MODEL_CHEAP,
                 max_tokens=256,
                 system=SELECT_MEMORIES_PROMPT,
                 messages=[{

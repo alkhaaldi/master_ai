@@ -107,7 +107,7 @@ class AutoMemoryExtractor:
         if self._client:
             try:
                 response = await self._client.messages.create(
-                    model="claude-haiku-4-5-20251001",
+                    model=__import__("model_tiers").MODEL_CHEAP,
                     max_tokens=1024,
                     system=EXTRACTION_PROMPT,
                     messages=[{

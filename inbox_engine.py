@@ -33,7 +33,8 @@ async def _triage_haiku(messages):
             items.append(str(i) + '. FROM:' + m.get('from','') + ' SUBJ:' + m.get('subject','') + ' PRE:' + m.get('body_preview','')[:80])
         prompt = ('Classify each email: 1=low 2=normal 3=high 4=critical.' + chr(10) +
                   'Reply ONLY JSON array of integers.' + chr(10) + chr(10).join(items))
-        resp = client.messages.create(model='claude-haiku-4-5-20251001', max_tokens=80,
+        from model_tiers import MODEL_CHEAP
+        resp = client.messages.create(model=MODEL_CHEAP, max_tokens=80,
             messages=[{'role':'user','content':prompt}])
         hit = re.search(r'\[([0-9, ]+)\]', resp.content[0].text)
         if hit:

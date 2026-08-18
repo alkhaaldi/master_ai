@@ -1157,9 +1157,13 @@ async def audit_log(task, actions=None, results=None, status="ok", duration=0.0,
 # ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 
 async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048,
-                   temperature: float = 0.3, trace: RequestTrace = None) -> str:
+                   temperature: float = 0.3, trace: RequestTrace = None,
+                   model: str = None) -> str:
     """Call LLM with Anthropic primary, OpenAI fallback."""
+    from model_tiers import MODEL_ROUTINE
+    _model = model or MODEL_ROUTINE
     t0 = time.time()
+    logger.info("LLM call model=%s", _model)
     # Step 10: Circuit breaker check
     if not _cb_llm.is_available():
         return "⚠️ خدمة AI مو متوفرة حالياً، جرب بعد شوي"
@@ -1168,7 +1172,7 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
     if anthropic_client:
         try:
             resp = await anthropic_client.messages.create(
-                model="claude-opus-4-6",
+                model=_model,
                 max_tokens=max_tokens,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_message}],
@@ -1177,7 +1181,7 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
             text = resp.content[0].text
             _cb_llm.record_success()
             if trace:
-                trace.llm("claude-opus-4-6", time.time() - t0,
+                trace.llm(_model, time.time() - t0,
                           tokens_in=resp.usage.input_tokens, tokens_out=resp.usage.output_tokens)
             return text
         except Exception as e:
@@ -5114,6 +5118,13 @@ async def system_context():
     except Exception as e:
         warnings.append(f"features: {e}")
 
+    # --- models ---
+    try:
+        from model_tiers import tiers as _model_tiers
+        result["models"] = _model_tiers()
+    except Exception as e:
+        warnings.append(f"models: {e}")
+
     # --- git ---
     try:
         import subprocess as _sp
@@ -7473,8 +7484,10 @@ async def llm_call_stream(system_prompt: str, user_message: str, chat_id=None,
         msg_id = None
         last_edit = 0
         
+        from model_tiers import MODEL_ROUTINE as _stream_model
+        logger.info("LLM stream model=%s", _stream_model)
         async with anthropic_client.messages.stream(
-            model="claude-opus-4-6",
+            model=_stream_model,
             max_tokens=max_tokens,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],

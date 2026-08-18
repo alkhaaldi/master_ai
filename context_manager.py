@@ -78,7 +78,7 @@ async def layer3_summarize(messages: list[dict], anthropic_client=None) -> list[
     if anthropic_client:
         try:
             response = await anthropic_client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model=__import__("model_tiers").MODEL_CHEAP,
                 max_tokens=500,
                 system="Summarize this conversation in Arabic. Focus on decisions, topics, current state. Max 200 words.",
                 messages=[{"role": "user", "content": summary_text}],

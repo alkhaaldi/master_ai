@@ -219,9 +219,11 @@ SESSION: Each message is independent. Use tools for ALL info — never assume fr
 # ── Smart Model Routing ─────────────────────────────────────
 import re as _model_re
 
+from model_tiers import MODEL_ROUTINE, MODEL_DEEP
+
 MODEL_MAP = {
-    "sonnet": "claude-sonnet-4-6",
-    "opus": "claude-opus-4-6",
+    "sonnet": MODEL_ROUTINE,
+    "opus": MODEL_DEEP,
 }
 
 # Opus for: reasoning, dates, memory, follow-up, Hijri, calculations
@@ -486,7 +488,7 @@ async def execute_tool(name, args, executors):
                 def _sync_advisor():
                     _client = _anth.Anthropic(api_key=_os.getenv("ANTHROPIC_API_KEY", ""))
                     return _client.messages.create(
-                        model="claude-sonnet-5", max_tokens=500,
+                        model=MODEL_ROUTINE, max_tokens=500,
                         messages=[{"role": "user", "content": advisor_prompt}])
                 _resp = await _aio.to_thread(_sync_advisor)
                 _advice = _resp.content[0].text
