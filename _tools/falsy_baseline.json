@@ -34,8 +34,13 @@
    "date": "2026-08-17",
    "other_str": 82,
    "note": "RAISED, deliberately - the first raise of this phase, and it is not a waiver. stock_analyzer.py:652 (commit 1fbd0d1, parallel session) reads `p.get(\"reason\") or \"...\"` inside _price_line, in the branch that already REFUSES to give Gemini a price. The fallback supplies readable prose where a reason string was missing; it invents no measurement. That is the opposite of the family this ratchet counts, and the counter cannot tell prose from data - which is a known limit of a syntactic sentinel, noted here rather than papered over."
+  },
+  {
+   "date": "2026-08-18",
+   "other_str": 88,
+   "note": "RAISED 82 to 88, deliberately. All six are in _tools/depmap.py, the dependency-map generator added today: five render absence as absence in the generated report (sensor_id or 'unknown' x1, name or 'unknown' x3, handler or '?' x1) and one is path normalisation (rstrip('/') or '/'). None of them touches a measurement or a decision path - depmap.py never runs inside the service, it reads source files and writes markdown. Recorded here rather than excluding _tools/ from the count, because _tools/intraday_refresh.py is in the same directory and does run."
   }
  ],
  "decision_path_str": 8,
- "other_str": 82
+ "other_str": 88
 }

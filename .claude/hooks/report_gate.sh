@@ -8,6 +8,9 @@ INPUT=$(cat)
 
 MARK=/home/pi/master_ai/_tools/.session_task
 [ -f "$MARK" ] || exit 0
+# An orphaned marker - a run killed before its trap fired - must not hold
+# every later session hostage. Seen for real on 2026-08-18.
+if [ $(( $(date +%s) - $(stat -c %Y "$MARK") )) -gt 7200 ]; then exit 0; fi
 REPORT=$(head -1 "$MARK")
 [ -n "$REPORT" ] || exit 0
 
