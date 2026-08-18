@@ -40,7 +40,7 @@ style.textContent = `
 .mnav-item.active{background:rgba(198,151,75,.08);border-color:rgba(198,151,75,.15)}
 .mnav-more{position:relative}
 .mnav-more-panel{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:rgba(14,25,41,.97);backdrop-filter:blur(20px);border:1px solid rgba(198,151,75,.2);border-radius:12px;padding:8px;width:max-content;max-width:85vw;box-shadow:0 -8px 32px rgba(0,0,0,.5);z-index:10000}
-.mnav-more-panel.show{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.mnav-more-panel.show{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
 .mnav-more-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 8px;border-radius:8px;cursor:pointer;text-decoration:none;transition:all .15s;border:1px solid transparent}
 .mnav-more-item:active{background:rgba(198,151,75,.12)}
 .mnav-more-item.active{background:rgba(198,151,75,.08);border-color:rgba(198,151,75,.15)}
