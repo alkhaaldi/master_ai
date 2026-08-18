@@ -109,3 +109,4 @@ _tools/avg_volume_fill.json
 _tools/.allow_restart_now
 _tools/.allow_db_write
 _tools/.session_task
+graphify-out/

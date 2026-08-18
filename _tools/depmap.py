@@ -195,6 +195,10 @@ def scan_routes(files: list[str]) -> list[dict]:
 _FETCH_OPEN_RE = re.compile(r'fetch\s*\(\s*(?P<arg>.{1,200})')
 _NAV_PATH_RE   = re.compile(r'path\s*:\s*"(/trading/[^"]+)"')
 _HREF_TRADING_RE = re.compile(r'href=["\'](?P<url>/trading/[^"\']+)["\']')
+# An endpoint literal anywhere on the line, not only inside fetch(). Pages
+# that build the URL into a const and fetch the variable later were invisible
+# to who_consumes; the path itself is still written out, so it is findable.
+_URL_LITERAL_RE = re.compile(r'["\'`](?P<url>/(?:dashboard|api)/[^"\'`\s?]+)')
 
 
 def _classify_fetch_arg(arg: str) -> tuple[str | None, bool, str]:
@@ -264,6 +268,21 @@ def scan_html_requests(html_dir: Path) -> tuple[list[dict], list[dict]]:
                         "line": ln,
                         "kind": "fetch",
                     })
+
+            # Endpoint literals outside fetch() - const API = base + '/dashboard/x'
+            _seen_here = {e["endpoint"] for e in static
+                          if e["page"] == _rel(fpath) and e["line"] == ln}
+            for m in _URL_LITERAL_RE.finditer(line):
+                url = m.group("url").split("?")[0]
+                if url in _seen_here:
+                    continue
+                _seen_here.add(url)
+                static.append({
+                    "page": _rel(fpath),
+                    "endpoint": url,
+                    "line": ln,
+                    "kind": "url_const",
+                })
 
             # href links to /trading/* pages
             for m in _HREF_TRADING_RE.finditer(line):
@@ -894,7 +913,8 @@ Coverage domains this scanner handles:
   ha_automation    — automations.yaml references to master_ai rest/shell commands
   ha_script        — scripts.yaml references to master_ai rest/shell commands
   telegram_command — static if/cmd== dispatch entries in Python files
-Not covered: dynamic endpoint construction, runtime module loading (importlib),
+Not covered: endpoints assembled from fragments with no literal path
+  (e.g. base + "/dash" + "board/x"), runtime module loading (importlib),
   HA template sensors that read attributes rather than URLs.\
 """
 

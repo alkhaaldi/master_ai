@@ -1,26 +1,26 @@
 # Master AI — Dependency Map
 
-**Generated:** 2026-08-18T12:36:00.658386+00:00  
-**Commit:** 4b2ecd8  
-**Elapsed:** 2.67 s  
+**Generated:** 2026-08-18T23:14:09.853011+00:00  
+**Commit:** b77e5ca  
+**Elapsed:** 6.25 s  
 
 
 ## Scan coverage
 
 | Item | Count |
 | --- | --- |
-| python files scanned | 356 |
-| html files scanned | 20 |
+| python files scanned | 355 |
+| html files scanned | 18 |
 | yaml files scanned | 3 |
-| routes found | 188 |
+| routes found | 185 |
 | ha sensors found | 9 |
 | ha rest commands found | 2 |
 | ha shell commands found | 7 |
 | ha yaml edges found | 17 |
-| telegram commands found | 124 |
-| python import edges | 2250 |
-| sql edges | 2410 |
-| schedules found | 55 |
+| telegram commands found | 115 |
+| python import edges | 2194 |
+| sql edges | 2370 |
+| schedules found | 56 |
 | shell scripts found | 4 |
 | dynamic requests found | 13 |
 | parse errors | 0 |
@@ -40,194 +40,191 @@
 
 | Method | Path | Handler | File | Line |
 | --- | --- | --- | --- | --- |
-| POST | `/action/execute` | action_execute_endpoint | server.py | 4908 |
-| POST | `/agent` | agent_endpoint | server.py | 4191 |
-| GET | `/aliases` | aliases_endpoint | server.py | 8437 |
-| GET | `/anomalies` | get_anomalies_ep | server.py | 4058 |
-| GET | `/anomalies` | anomalies_endpoint | server.py | 9285 |
-| GET | `/api/analyze` | api_analyze | server.py | 8115 |
-| POST | `/api/analyze/refresh` | api_analyze_refresh | server.py | 8142 |
-| POST | `/api/analyze/refresh-all` | api_analyze_refresh_all | server.py | 8148 |
-| GET | `/api/brain/stats` | api_brain_stats | dashboard_api.py | 3500 |
-| POST | `/api/collect-now` | api_collect_now | dashboard_api.py | 3260 |
-| GET | `/api/context-health` | api_context_health | dashboard_api.py | 3589 |
-| GET | `/api/data-freshness` | api_data_freshness | dashboard_api.py | 3164 |
-| GET | `/api/data-health` | api_data_health | dashboard_api.py | 3153 |
-| GET | `/api/decisions-now` | api_decisions_now | server.py | 3615 |
-| GET | `/api/flags` | get_feature_flags | server.py | 8071 |
-| POST | `/api/flags/{name}/toggle` | toggle_feature_flag | server.py | 8075 |
-| GET | `/api/hooks/log` | get_hooks_log | server.py | 8280 |
-| GET | `/api/hooks/stats` | get_hooks_stats | server.py | 8276 |
-| GET | `/api/intent-analytics` | api_intent_analytics | dashboard_api.py | 3439 |
-| GET | `/api/kairos/log` | get_kairos_log | server.py | 8269 |
-| GET | `/api/kairos/status` | get_kairos_status | server.py | 8263 |
-| GET | `/api/latency-stats` | api_latency_stats | dashboard_api.py | 3638 |
-| GET | `/api/memory-extraction/stats` | api_memory_extraction_stats | dashboard_api.py | 3387 |
-| GET | `/api/news` | api_news | server.py | 8300 |
-| POST | `/api/news/refresh-boursa` | api_news_refresh_boursa | server.py | 8314 |
-| POST | `/api/news/refresh-gemini` | api_news_refresh_gemini | server.py | 8337 |
-| POST | `/api/paper-trade/close` | api_paper_trade_close | dashboard_api.py | 2400 |
-| POST | `/api/paper-trade/open` | api_paper_trade_open | dashboard_api.py | 2388 |
-| POST | `/api/portfolio-alert-ack` | api_portfolio_alert_ack | dashboard_api.py | 3341 |
-| POST | `/api/portfolio-monitor` | api_portfolio_monitor | dashboard_api.py | 3328 |
-| GET | `/api/portfolio-status` | api_portfolio_status | dashboard_api.py | 3298 |
-| POST | `/api/portfolio/add-more` | api_add_more | server.py | 8195 |
-| POST | `/api/portfolio/partial-sell` | api_partial_sell | server.py | 8174 |
-| GET | `/api/portfolio/transactions/{trade_id}` | api_trade_transactions | server.py | 8216 |
-| GET | `/api/radar/progress` | api_radar_progress | dashboard_api.py | 3632 |
-| POST | `/api/refresh-analysis` | api_refresh_analysis | server.py | 8163 |
-| POST | `/api/review-now` | manual_review | server.py | 3673 |
-| GET | `/api/risk-config` | api_risk_config_get | dashboard_api.py | 3117 |
-| POST | `/api/risk-config` | api_risk_config_update | dashboard_api.py | 3126 |
-| GET | `/api/service-health` | get_service_health | server.py | 8090 |
-| GET | `/api/skills` | api_skills | dashboard_api.py | 3671 |
-| GET | `/api/stocks/profiles` | get_all_stock_profiles | server.py | 3659 |
-| GET | `/api/stocks/symbol/{symbol}` | get_stock_personality | server.py | 3653 |
-| GET | `/api/symbols` | api_symbols | dashboard_api.py | 3358 |
-| GET | `/api/tasks` | get_tasks | server.py | 8228 |
-| GET | `/api/tools` | get_tools | server.py | 8284 |
-| GET | `/api/tools/{name}` | get_tool_detail | server.py | 8290 |
-| POST | `/api/trade/close` | api_trade_close | dashboard_api.py | 3046 |
-| POST | `/api/trade/open` | api_trade_open | dashboard_api.py | 3016 |
-| POST | `/api/trade/update` | api_trade_update | dashboard_api.py | 3063 |
-| GET | `/approvals/pending` | list_pending_approvals | server.py | 4340 |
-| POST | `/approve/{approval_id}` | approve_action | server.py | 4292 |
-| POST | `/ask` | ask | server.py | 4075 |
-| GET | `/audit` | get_audit | server.py | 4841 |
-| GET | `/brain/analytics` | analytics_endpoint | server.py | 3296 |
-| GET | `/brain/diag` | brain_diag_endpoint | server.py | 3316 |
-| GET | `/brain/expertise` | brain_expertise | server.py | 5163 |
-| POST | `/brain/feedback` | feedback_endpoint | server.py | 3308 |
-| GET | `/brain/stats` | brain_stats_endpoint | server.py | 3251 |
-| GET | `/brain/users` | users_endpoint | server.py | 3302 |
-| GET | `/bridge/status` | bridge_circuit_status | server.py | 3109 |
-| GET | `/calendar/stats` | calendar_stats_endpoint | server.py | 3513 |
-| POST | `/calendar/sync` | calendar_sync_endpoint | server.py | 3523 |
-| POST | `/chat/clear` | clear_chat_history | server.py | 8365 |
-| POST | `/classify` | classify_msg | server.py | 9250 |
-| GET | `/claude` | claude_context | server.py | 4496 |
-| GET | `/corrections` | get_corrections_stats | server.py | 9214 |
-| POST | `/corrections/decay` | decay_corrections_endpoint | server.py | 9223 |
-| GET | `/cost` | cost_dashboard | server.py | 9297 |
-| POST | `/daily-snapshot/refresh` | refresh_daily_snapshot_manual | server.py | 3127 |
+| POST | `/action/execute` | action_execute_endpoint | server.py | 4881 |
+| POST | `/agent` | agent_endpoint | server.py | 4164 |
+| GET | `/aliases` | aliases_endpoint | server.py | 8295 |
+| GET | `/anomalies` | get_anomalies_ep | server.py | 4031 |
+| GET | `/anomalies` | anomalies_endpoint | server.py | 9137 |
+| GET | `/api/analyze` | api_analyze | server.py | 8004 |
+| POST | `/api/analyze/refresh` | api_analyze_refresh | server.py | 8060 |
+| POST | `/api/analyze/refresh-all` | api_analyze_refresh_all | server.py | 8066 |
+| GET | `/api/brain/stats` | api_brain_stats | dashboard_api.py | 3356 |
+| POST | `/api/collect-now` | api_collect_now | dashboard_api.py | 3116 |
+| GET | `/api/context-health` | api_context_health | dashboard_api.py | 3445 |
+| GET | `/api/data-freshness` | api_data_freshness | dashboard_api.py | 3016 |
+| GET | `/api/data-health` | api_data_health | dashboard_api.py | 3005 |
+| GET | `/api/decisions-now` | api_decisions_now | server.py | 3568 |
+| GET | `/api/flags` | get_feature_flags | server.py | 7965 |
+| POST | `/api/flags/{name}/toggle` | toggle_feature_flag | server.py | 7969 |
+| GET | `/api/hooks/log` | get_hooks_log | server.py | 8198 |
+| GET | `/api/hooks/stats` | get_hooks_stats | server.py | 8194 |
+| GET | `/api/intent-analytics` | api_intent_analytics | dashboard_api.py | 3295 |
+| GET | `/api/kairos/log` | get_kairos_log | server.py | 8187 |
+| GET | `/api/kairos/status` | get_kairos_status | server.py | 8181 |
+| GET | `/api/latency-stats` | api_latency_stats | dashboard_api.py | 3494 |
+| GET | `/api/memory-extraction/stats` | api_memory_extraction_stats | dashboard_api.py | 3243 |
+| POST | `/api/paper-trade/close` | api_paper_trade_close | dashboard_api.py | 2252 |
+| POST | `/api/paper-trade/open` | api_paper_trade_open | dashboard_api.py | 2240 |
+| POST | `/api/portfolio-alert-ack` | api_portfolio_alert_ack | dashboard_api.py | 3197 |
+| POST | `/api/portfolio-monitor` | api_portfolio_monitor | dashboard_api.py | 3184 |
+| GET | `/api/portfolio-status` | api_portfolio_status | dashboard_api.py | 3154 |
+| POST | `/api/portfolio/add-more` | api_add_more | server.py | 8113 |
+| POST | `/api/portfolio/partial-sell` | api_partial_sell | server.py | 8092 |
+| GET | `/api/portfolio/transactions/{trade_id}` | api_trade_transactions | server.py | 8134 |
+| GET | `/api/radar/progress` | api_radar_progress | dashboard_api.py | 3488 |
+| POST | `/api/refresh-analysis` | api_refresh_analysis | server.py | 8081 |
+| POST | `/api/review-now` | manual_review | server.py | 3626 |
+| GET | `/api/risk-config` | api_risk_config_get | dashboard_api.py | 2969 |
+| POST | `/api/risk-config` | api_risk_config_update | dashboard_api.py | 2978 |
+| GET | `/api/service-health` | get_service_health | server.py | 7984 |
+| GET | `/api/skills` | api_skills | dashboard_api.py | 3527 |
+| GET | `/api/stocks/profiles` | get_all_stock_profiles | server.py | 3612 |
+| GET | `/api/stocks/symbol/{symbol}` | get_stock_personality | server.py | 3606 |
+| GET | `/api/symbols` | api_symbols | dashboard_api.py | 3214 |
+| GET | `/api/tasks` | get_tasks | server.py | 8146 |
+| GET | `/api/tools` | get_tools | server.py | 8202 |
+| GET | `/api/tools/{name}` | get_tool_detail | server.py | 8208 |
+| POST | `/api/trade/close` | api_trade_close | dashboard_api.py | 2898 |
+| POST | `/api/trade/open` | api_trade_open | dashboard_api.py | 2868 |
+| POST | `/api/trade/update` | api_trade_update | dashboard_api.py | 2915 |
+| GET | `/approvals/pending` | list_pending_approvals | server.py | 4313 |
+| POST | `/approve/{approval_id}` | approve_action | server.py | 4265 |
+| POST | `/ask` | ask | server.py | 4048 |
+| GET | `/audit` | get_audit | server.py | 4814 |
+| GET | `/brain/analytics` | analytics_endpoint | server.py | 3249 |
+| GET | `/brain/diag` | brain_diag_endpoint | server.py | 3269 |
+| GET | `/brain/expertise` | brain_expertise | server.py | 5143 |
+| POST | `/brain/feedback` | feedback_endpoint | server.py | 3261 |
+| GET | `/brain/stats` | brain_stats_endpoint | server.py | 3204 |
+| GET | `/brain/users` | users_endpoint | server.py | 3255 |
+| GET | `/bridge/status` | bridge_circuit_status | server.py | 3062 |
+| GET | `/calendar/stats` | calendar_stats_endpoint | server.py | 3466 |
+| POST | `/calendar/sync` | calendar_sync_endpoint | server.py | 3476 |
+| POST | `/chat/clear` | clear_chat_history | server.py | 8224 |
+| POST | `/classify` | classify_msg | server.py | 9102 |
+| GET | `/claude` | claude_context | server.py | 4469 |
+| GET | `/corrections` | get_corrections_stats | server.py | 9066 |
+| POST | `/corrections/decay` | decay_corrections_endpoint | server.py | 9075 |
+| GET | `/cost` | cost_dashboard | server.py | 9149 |
+| POST | `/daily-snapshot/refresh` | refresh_daily_snapshot_manual | server.py | 3080 |
 | GET | `/dashboard` | ha_dashboard | dashboard_api.py | 151 |
-| GET | `/dashboard/alerts` | ha_dashboard_alerts | dashboard_api.py | 1336 |
-| GET | `/dashboard/analysis` | ha_dashboard_analysis | dashboard_api.py | 1487 |
-| GET | `/dashboard/brain` | dashboard_brain | dashboard_api.py | 2599 |
-| GET | `/dashboard/brain-insights` | dashboard_brain_insights | dashboard_api.py | 2920 |
-| GET | `/dashboard/bridge` | dashboard_bridge | dashboard_api.py | 1879 |
-| GET | `/dashboard/bridge/{symbol}` | dashboard_bridge_symbol | dashboard_api.py | 1903 |
-| POST | `/dashboard/cmd` | dashboard_cmd | dashboard_api.py | 399 |
-| GET | `/dashboard/confluence` | ha_dashboard_confluence | dashboard_api.py | 1423 |
-| GET | `/dashboard/ema-active` | dashboard_ema_active | server.py | 3798 |
-| GET | `/dashboard/ema-crosses` | dashboard_ema_crosses | server.py | 3686 |
-| GET | `/dashboard/ema-live` | dashboard_ema_live | server.py | 3880 |
-| GET | `/dashboard/ema-proximity` | dashboard_ema_proximity | server.py | 3753 |
-| GET | `/dashboard/equity` | dashboard_equity | dashboard_api.py | 2414 |
-| GET | `/dashboard/extended` | ha_dashboard_extended | dashboard_api.py | 1646 |
-| GET | `/dashboard/jobs` | dashboard_jobs_list | dashboard_api.py | 431 |
-| GET | `/dashboard/journal` | ha_dashboard_journal | dashboard_api.py | 1212 |
-| GET | `/dashboard/paper-trading` | dashboard_paper_trading | dashboard_api.py | 2378 |
-| GET | `/dashboard/portfolio` | ha_dashboard_portfolio | dashboard_api.py | 1004 |
-| GET | `/dashboard/radar` | ha_dashboard_radar | dashboard_api.py | 441 |
-| GET | `/dashboard/regime` | dashboard_regime | dashboard_api.py | 2565 |
-| GET | `/dashboard/reviews` | dashboard_reviews | server.py | 3666 |
-| GET | `/dashboard/risk-status` | dashboard_risk_status | dashboard_api.py | 2424 |
-| GET | `/dashboard/scalper` | dashboard_scalper | dashboard_api.py | 2434 |
-| GET | `/dashboard/signals` | dashboard_signals | dashboard_api.py | 1965 |
-| GET | `/dashboard/signals-30m` | dashboard_signals_30m | dashboard_api.py | 2119 |
-| GET | `/dashboard/signals-daily` | dashboard_signals_daily | dashboard_api.py | 1980 |
-| GET | `/dashboard/strategies` | dashboard_strategies | dashboard_api.py | 2940 |
-| GET | `/dashboard/swing` | dashboard_swing | dashboard_api.py | 2126 |
-| POST | `/debug/test_approval` | debug_test_approval | server.py | 3346 |
-| POST | `/decompose` | decompose_msg | server.py | 9255 |
-| POST | `/deploy` | deploy_file | server.py | 4707 |
-| GET | `/dev/context` | dev_context | server.py | 5181 |
-| POST | `/dream/run` | dream_run_endpoint | server.py | 3280 |
-| GET | `/dream/status` | dream_status_endpoint | server.py | 3271 |
-| POST | `/entity-map/arabize` | entity_map_arabize | server.py | 8498 |
-| GET | `/entity-map/health` | entity_map_health | server.py | 8485 |
-| POST | `/event` | ingest_event | server.py | 4937 |
-| GET | `/event_rules` | get_event_rules | server.py | 4985 |
-| GET | `/events` | list_events_ep | server.py | 4974 |
-| GET | `/events/{event_id}` | get_event_ep | server.py | 4978 |
-| GET | `/feedback/digest` | feedback_digest_endpoint | server.py | 9274 |
-| GET | `/feedback/stats` | feedback_stats_endpoint | server.py | 9266 |
-| GET | `/gmail/auth` | gmail_auth_start | server.py | 3362 |
-| GET | `/gmail/callback` | gmail_auth_callback | server.py | 3397 |
-| GET | `/google/auth` | google_auth_start | server.py | 3453 |
-| GET | `/google/auth/status` | google_auth_status | server.py | 3503 |
-| GET | `/google/callback` | google_auth_callback | server.py | 3471 |
-| POST | `/ha/service` | ha_call_service_ep | server.py | 4256 |
-| GET | `/ha/states` | ha_get_states | server.py | 4265 |
-| GET | `/ha/states/{entity_id:path}` | ha_get_state | server.py | 4270 |
-| GET | `/health` | health | server.py | 3973 |
-| GET | `/health/external` | health_external | server.py | 8046 |
-| POST | `/health/external/test` | health_external_test | server.py | 8404 |
-| GET | `/history/{entity_id:path}` | entity_history_endpoint | server.py | 3993 |
-| GET | `/knowledge` | list_knowledge | server.py | 4603 |
-| POST | `/knowledge` | create_knowledge | server.py | 4626 |
-| DELETE | `/knowledge/{kid}` | delete_knowledge | server.py | 4649 |
-| GET | `/knowledge/{kid}` | get_knowledge | server.py | 4617 |
-| PUT | `/knowledge/{kid}` | update_knowledge | server.py | 4637 |
-| GET | `/kpi` | kpi_dashboard | server.py | 9308 |
-| GET | `/memory` | list_memories_ep | server.py | 4756 |
-| POST | `/memory` | create_memory_ep | server.py | 4747 |
-| POST | `/memory/message` | save_msg | server.py | 4798 |
-| GET | `/memory/recent` | memory_recent | server.py | 4791 |
-| GET | `/memory/stats` | mem_stats | server.py | 4769 |
-| GET | `/patterns` | patterns_endpoint | server.py | 4040 |
-| POST | `/patterns/learn` | patterns_learn_endpoint | server.py | 4067 |
-| GET | `/patterns/suggestions` | patterns_suggestions_endpoint | server.py | 4051 |
-| GET | `/plugins` | list_plugins | server.py | 4902 |
-| POST | `/plugins/{name}/disable` | disable_plugin | server.py | 4922 |
-| POST | `/plugins/{name}/enable` | enable_plugin | server.py | 4915 |
-| GET | `/router/stats` | router_stats_endpoint | server.py | 8446 |
-| GET | `/schema` | schema_status | server.py | 4867 |
-| POST | `/schema/ensure` | schema_ensure | server.py | 4887 |
-| GET | `/sessions` | list_sessions | server.py | 4568 |
-| POST | `/sessions` | create_session | server.py | 4556 |
-| GET | `/sessions/latest` | latest_session | server.py | 4578 |
-| GET | `/shift` | shift_info | server.py | 4469 |
-| POST | `/ssh/run` | ssh_run | server.py | 4283 |
-| GET | `/stability` | stability_endpoint | server.py | 8422 |
-| POST | `/stats/capture` | stats_capture | server.py | 4454 |
-| GET | `/stats/daily` | stats_daily | server.py | 4439 |
-| GET | `/stocks/alerts` | stock_alerts_history | server.py | 4688 |
-| GET | `/stocks/portfolio` | stock_portfolio | server.py | 4679 |
-| GET | `/structured-memory` | smem_stats | server.py | 9142 |
-| GET | `/structured-memory/context` | smem_context | server.py | 9147 |
-| POST | `/structured-memory/correction` | smem_save_correction | server.py | 9174 |
-| POST | `/structured-memory/decay` | smem_decay | server.py | 9203 |
-| POST | `/structured-memory/event` | smem_save_event | server.py | 9163 |
-| POST | `/structured-memory/fact` | smem_save_fact | server.py | 9152 |
-| POST | `/structured-memory/migrate` | smem_migrate | server.py | 9193 |
-| GET | `/structured-memory/search` | smem_search | server.py | 9184 |
-| POST | `/structured-memory/seed` | smem_seed | server.py | 9198 |
-| DELETE | `/structured-memory/{memory_id}` | smem_delete | server.py | 9209 |
-| POST | `/system/backup` | backup_endpoint | server.py | 3265 |
-| GET | `/system/context` | system_context | server.py | 5019 |
-| GET | `/system/diag` | system_diag_endpoint | server.py | 3258 |
-| GET | `/system/knowledge` | system_knowledge_endpoint | server.py | 5142 |
-| GET | `/system/knowledge/summary` | system_knowledge_summary | server.py | 5152 |
-| GET | `/tasks` | list_tasks_ep | server.py | 4662 |
-| GET | `/tasks/{task_id}` | get_task_ep | server.py | 4667 |
-| GET | `/tg/stats` | tg_stats | server.py | 8374 |
-| GET | `/tips` | tips_endpoint | server.py | 3289 |
-| GET | `/tool-stats` | tool_stats_endpoint | server.py | 3545 |
-| GET | `/traces` | traces_list | server.py | 9242 |
-| GET | `/traces/stats` | traces_stats | server.py | 9246 |
-| GET | `/trading/{page}` | serve_trading_page | server.py | 3156 |
-| POST | `/tradingview/webhook` | tradingview_webhook | server.py | 3554 |
-| GET | `/users` | list_users | server.py | 4827 |
-| POST | `/users` | create_user | server.py | 4812 |
-| POST | `/webhook/event` | webhook_event | server.py | 5004 |
-| POST | `/webhook/event/{token}` | webhook_event_legacy | server.py | 4992 |
-| GET | `/win/jobs` | win_jobs | server.py | 4421 |
-| GET | `/win/poll` | win_poll | server.py | 4398 |
-| POST | `/win/register` | win_register | server.py | 4390 |
-| POST | `/win/report` | win_report | server.py | 4409 |
-| GET | `/world-state` | world_state_endpoint | server.py | 3534 |
+| GET | `/dashboard/alerts` | ha_dashboard_alerts | dashboard_api.py | 1326 |
+| GET | `/dashboard/analysis` | ha_dashboard_analysis | dashboard_api.py | 1477 |
+| GET | `/dashboard/brain` | dashboard_brain | dashboard_api.py | 2451 |
+| GET | `/dashboard/brain-insights` | dashboard_brain_insights | dashboard_api.py | 2772 |
+| GET | `/dashboard/bridge` | dashboard_bridge | dashboard_api.py | 1731 |
+| GET | `/dashboard/bridge/{symbol}` | dashboard_bridge_symbol | dashboard_api.py | 1755 |
+| POST | `/dashboard/cmd` | dashboard_cmd | dashboard_api.py | 389 |
+| GET | `/dashboard/confluence` | ha_dashboard_confluence | dashboard_api.py | 1413 |
+| GET | `/dashboard/ema-active` | dashboard_ema_active | server.py | 3766 |
+| GET | `/dashboard/ema-crosses` | dashboard_ema_crosses | server.py | 3639 |
+| GET | `/dashboard/ema-live` | dashboard_ema_live | server.py | 3848 |
+| GET | `/dashboard/ema-proximity` | dashboard_ema_proximity | server.py | 3706 |
+| GET | `/dashboard/equity` | dashboard_equity | dashboard_api.py | 2266 |
+| GET | `/dashboard/extended` | ha_dashboard_extended | dashboard_api.py | 1593 |
+| GET | `/dashboard/jobs` | dashboard_jobs_list | dashboard_api.py | 421 |
+| GET | `/dashboard/journal` | ha_dashboard_journal | dashboard_api.py | 1202 |
+| GET | `/dashboard/paper-trading` | dashboard_paper_trading | dashboard_api.py | 2230 |
+| GET | `/dashboard/portfolio` | ha_dashboard_portfolio | dashboard_api.py | 994 |
+| GET | `/dashboard/radar` | ha_dashboard_radar | dashboard_api.py | 431 |
+| GET | `/dashboard/regime` | dashboard_regime | dashboard_api.py | 2417 |
+| GET | `/dashboard/reviews` | dashboard_reviews | server.py | 3619 |
+| GET | `/dashboard/risk-status` | dashboard_risk_status | dashboard_api.py | 2276 |
+| GET | `/dashboard/scalper` | dashboard_scalper | dashboard_api.py | 2286 |
+| GET | `/dashboard/signals` | dashboard_signals | dashboard_api.py | 1817 |
+| GET | `/dashboard/signals-30m` | dashboard_signals_30m | dashboard_api.py | 1971 |
+| GET | `/dashboard/signals-daily` | dashboard_signals_daily | dashboard_api.py | 1832 |
+| GET | `/dashboard/strategies` | dashboard_strategies | dashboard_api.py | 2792 |
+| GET | `/dashboard/swing` | dashboard_swing | dashboard_api.py | 1978 |
+| POST | `/debug/test_approval` | debug_test_approval | server.py | 3299 |
+| POST | `/decompose` | decompose_msg | server.py | 9107 |
+| POST | `/deploy` | deploy_file | server.py | 4680 |
+| GET | `/dev/context` | dev_context | server.py | 5161 |
+| POST | `/dream/run` | dream_run_endpoint | server.py | 3233 |
+| GET | `/dream/status` | dream_status_endpoint | server.py | 3224 |
+| POST | `/entity-map/arabize` | entity_map_arabize | server.py | 8356 |
+| GET | `/entity-map/health` | entity_map_health | server.py | 8343 |
+| POST | `/event` | ingest_event | server.py | 4910 |
+| GET | `/event_rules` | get_event_rules | server.py | 4958 |
+| GET | `/events` | list_events_ep | server.py | 4947 |
+| GET | `/events/{event_id}` | get_event_ep | server.py | 4951 |
+| GET | `/feedback/digest` | feedback_digest_endpoint | server.py | 9126 |
+| GET | `/feedback/stats` | feedback_stats_endpoint | server.py | 9118 |
+| GET | `/gmail/auth` | gmail_auth_start | server.py | 3315 |
+| GET | `/gmail/callback` | gmail_auth_callback | server.py | 3350 |
+| GET | `/google/auth` | google_auth_start | server.py | 3406 |
+| GET | `/google/auth/status` | google_auth_status | server.py | 3456 |
+| GET | `/google/callback` | google_auth_callback | server.py | 3424 |
+| POST | `/ha/service` | ha_call_service_ep | server.py | 4229 |
+| GET | `/ha/states` | ha_get_states | server.py | 4238 |
+| GET | `/ha/states/{entity_id:path}` | ha_get_state | server.py | 4243 |
+| GET | `/health` | health | server.py | 3946 |
+| GET | `/health/external` | health_external | server.py | 7940 |
+| POST | `/health/external/test` | health_external_test | server.py | 8262 |
+| GET | `/history/{entity_id:path}` | entity_history_endpoint | server.py | 3966 |
+| GET | `/knowledge` | list_knowledge | server.py | 4576 |
+| POST | `/knowledge` | create_knowledge | server.py | 4599 |
+| DELETE | `/knowledge/{kid}` | delete_knowledge | server.py | 4622 |
+| GET | `/knowledge/{kid}` | get_knowledge | server.py | 4590 |
+| PUT | `/knowledge/{kid}` | update_knowledge | server.py | 4610 |
+| GET | `/kpi` | kpi_dashboard | server.py | 9160 |
+| GET | `/memory` | list_memories_ep | server.py | 4729 |
+| POST | `/memory` | create_memory_ep | server.py | 4720 |
+| POST | `/memory/message` | save_msg | server.py | 4771 |
+| GET | `/memory/recent` | memory_recent | server.py | 4764 |
+| GET | `/memory/stats` | mem_stats | server.py | 4742 |
+| GET | `/patterns` | patterns_endpoint | server.py | 4013 |
+| POST | `/patterns/learn` | patterns_learn_endpoint | server.py | 4040 |
+| GET | `/patterns/suggestions` | patterns_suggestions_endpoint | server.py | 4024 |
+| GET | `/plugins` | list_plugins | server.py | 4875 |
+| POST | `/plugins/{name}/disable` | disable_plugin | server.py | 4895 |
+| POST | `/plugins/{name}/enable` | enable_plugin | server.py | 4888 |
+| GET | `/router/stats` | router_stats_endpoint | server.py | 8304 |
+| GET | `/schema` | schema_status | server.py | 4840 |
+| POST | `/schema/ensure` | schema_ensure | server.py | 4860 |
+| GET | `/sessions` | list_sessions | server.py | 4541 |
+| POST | `/sessions` | create_session | server.py | 4529 |
+| GET | `/sessions/latest` | latest_session | server.py | 4551 |
+| GET | `/shift` | shift_info | server.py | 4442 |
+| POST | `/ssh/run` | ssh_run | server.py | 4256 |
+| GET | `/stability` | stability_endpoint | server.py | 8280 |
+| POST | `/stats/capture` | stats_capture | server.py | 4427 |
+| GET | `/stats/daily` | stats_daily | server.py | 4412 |
+| GET | `/stocks/alerts` | stock_alerts_history | server.py | 4661 |
+| GET | `/stocks/portfolio` | stock_portfolio | server.py | 4652 |
+| GET | `/structured-memory` | smem_stats | server.py | 8994 |
+| GET | `/structured-memory/context` | smem_context | server.py | 8999 |
+| POST | `/structured-memory/correction` | smem_save_correction | server.py | 9026 |
+| POST | `/structured-memory/decay` | smem_decay | server.py | 9055 |
+| POST | `/structured-memory/event` | smem_save_event | server.py | 9015 |
+| POST | `/structured-memory/fact` | smem_save_fact | server.py | 9004 |
+| POST | `/structured-memory/migrate` | smem_migrate | server.py | 9045 |
+| GET | `/structured-memory/search` | smem_search | server.py | 9036 |
+| POST | `/structured-memory/seed` | smem_seed | server.py | 9050 |
+| DELETE | `/structured-memory/{memory_id}` | smem_delete | server.py | 9061 |
+| POST | `/system/backup` | backup_endpoint | server.py | 3218 |
+| GET | `/system/context` | system_context | server.py | 4992 |
+| GET | `/system/diag` | system_diag_endpoint | server.py | 3211 |
+| GET | `/system/knowledge` | system_knowledge_endpoint | server.py | 5122 |
+| GET | `/system/knowledge/summary` | system_knowledge_summary | server.py | 5132 |
+| GET | `/tasks` | list_tasks_ep | server.py | 4635 |
+| GET | `/tasks/{task_id}` | get_task_ep | server.py | 4640 |
+| GET | `/tg/stats` | tg_stats | server.py | 8233 |
+| GET | `/tips` | tips_endpoint | server.py | 3242 |
+| GET | `/tool-stats` | tool_stats_endpoint | server.py | 3498 |
+| GET | `/traces` | traces_list | server.py | 9094 |
+| GET | `/traces/stats` | traces_stats | server.py | 9098 |
+| GET | `/trading/{page}` | serve_trading_page | server.py | 3109 |
+| POST | `/tradingview/webhook` | tradingview_webhook | server.py | 3507 |
+| GET | `/users` | list_users | server.py | 4800 |
+| POST | `/users` | create_user | server.py | 4785 |
+| POST | `/webhook/event` | webhook_event | server.py | 4977 |
+| POST | `/webhook/event/{token}` | webhook_event_legacy | server.py | 4965 |
+| GET | `/win/jobs` | win_jobs | server.py | 4394 |
+| GET | `/win/poll` | win_poll | server.py | 4371 |
+| POST | `/win/register` | win_register | server.py | 4363 |
+| POST | `/win/report` | win_report | server.py | 4382 |
+| GET | `/world-state` | world_state_endpoint | server.py | 3487 |
 
 
 ## Home Assistant REST sensors
@@ -303,8 +300,8 @@ _Static `if cmd == "/x"` / `cmd.startswith("/x")` entries in Python files._
 | --- | --- | --- | --- |
 | `/report` | exact | _tools/_patch_phase34.py | 92 |
 | `/kairos` | exact | _tools/_patch_phase34.py | 94 |
-| `/something` | exact | _tools/depmap.py | 542 |
-| `/something` | prefix | _tools/depmap.py | 543 |
+| `/something` | exact | _tools/depmap.py | 561 |
+| `/something` | prefix | _tools/depmap.py | 562 |
 | `/tv_stats` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 9 |
 | `/kpi` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 14 |
 | `/tv_sync` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 20 |
@@ -315,116 +312,107 @@ _Static `if cmd == "/x"` / `cmd.startswith("/x")` entries in Python files._
 | `/backup` | exact | scripts/patch_tg_cmds.py | 31 |
 | `/restart` | exact | scripts/patch_tg_cmds.py | 41 |
 | `/errors` | exact | scripts/patch_tg_cmds.py | 56 |
-| `/start` | exact | server.py | 5362 |
-| `/kairos` | exact | server.py | 5365 |
-| `/report` | exact | server.py | 5370 |
-| `/reset` | exact | server.py | 5378 |
-| `/status` | exact | server.py | 5385 |
-| `/stats` | exact | server.py | 5392 |
-| `/lights` | exact | server.py | 5481 |
-| `/covers` | exact | server.py | 5505 |
-| `/weather` | exact | server.py | 5521 |
-| `/locks` | exact | server.py | 5531 |
-| `/media` | exact | server.py | 5541 |
-| `/temp` | exact | server.py | 5551 |
-| `/health` | exact | server.py | 5577 |
-| `/brain` | exact | server.py | 5590 |
-| `/learn` | exact | server.py | 5607 |
-| `/patterns` | exact | server.py | 5624 |
-| `/email` | exact | server.py | 5633 |
-| `/scenes` | exact | server.py | 5641 |
-| `/summary` | exact | server.py | 5660 |
-| `/suggest` | exact | server.py | 5668 |
-| `/anomaly` | exact | server.py | 5685 |
-| `/diag` | exact | server.py | 5693 |
-| `/home` | exact | server.py | 5779 |
-| `/rooms` | exact | server.py | 5816 |
-| `/devices` | prefix | server.py | 5840 |
-| `/find` | prefix | server.py | 5851 |
-| `/scenes_dynamic` | exact | server.py | 5873 |
-| `/scenes2` | exact | server.py | 5902 |
-| `/alloff` | exact | server.py | 5928 |
-| `/find` | exact | server.py | 5937 |
-| `/cam` | exact | server.py | 5967 |
-| `/approvals` | exact | server.py | 5980 |
-| `/backup` | exact | server.py | 5993 |
-| `/restart` | exact | server.py | 6003 |
-| `/errors` | exact | server.py | 6018 |
-| `/update_stock` | prefix | server.py | 6035 |
-| `/log` | exact | server.py | 6046 |
-| `/crash` | exact | server.py | 6051 |
-| `/me` | exact | server.py | 6055 |
-| `/suggest_tasks` | exact | server.py | 6121 |
-| `/life` | exact | server.py | 6129 |
-| `/week_summary` | exact | server.py | 6189 |
-| `/inbox` | exact | server.py | 6222 |
-| `/inbox_week` | exact | server.py | 6226 |
-| `/inbox48` | exact | server.py | 6229 |
-| `/tasks` | exact | server.py | 6237 |
-| `/news` | exact | server.py | 6253 |
-| `/news_now` | exact | server.py | 6261 |
-| `/news_sources` | exact | server.py | 6275 |
-| `/trade` | exact | server.py | 6280 |
-| `/close` | exact | server.py | 6311 |
-| `/trades` | exact | server.py | 6334 |
-| `/journal` | exact | server.py | 6349 |
-| `/add_expense` | exact | server.py | 6375 |
-| `/spent` | exact | server.py | 6386 |
-| `/expenses` | exact | server.py | 6393 |
-| `/contacts` | exact | server.py | 6398 |
-| `/occasions` | exact | server.py | 6402 |
-| `/person` | exact | server.py | 6408 |
-| `/فرص` | exact | server.py | 6418 |
-| `/تقييم` | exact | server.py | 6467 |
-| `/stocks` | exact | server.py | 6491 |
-| `/price` | prefix | server.py | 6495 |
-| `/radar` | exact | server.py | 6500 |
-| `/radar_add` | prefix | server.py | 6504 |
-| `/radar_remove` | prefix | server.py | 6509 |
-| `/radar_check` | prefix | server.py | 6514 |
-| `/radar_last` | exact | server.py | 6519 |
-| `/radar_status` | exact | server.py | 6528 |
-| `/radar_top` | exact | server.py | 6532 |
-| `/radar_toggle` | exact | server.py | 6536 |
-| `/news` | prefix | server.py | 6548 |
-| `/remind` | prefix | server.py | 6554 |
-| `/reminders` | prefix | server.py | 6554 |
-| `/reminders` | exact | server.py | 6564 |
-| `/cancel` | prefix | server.py | 6569 |
-| `/health_log` | exact | server.py | 6578 |
-| `/health_summary` | exact | server.py | 6583 |
-| `/health_streak` | exact | server.py | 6588 |
-| `/trade_review` | exact | server.py | 6604 |
-| `/tv_watchlist` | exact | server.py | 6611 |
-| `/tv_add` | exact | server.py | 6615 |
-| `/tv_remove` | exact | server.py | 6620 |
-| `/tv_last` | exact | server.py | 6625 |
-| `/tv_summary` | exact | server.py | 6630 |
-| `/tv_test` | exact | server.py | 6635 |
-| `/tv_stats` | exact | server.py | 6639 |
-| `/tv_sync` | exact | server.py | 6643 |
-| `/kpi` | exact | server.py | 6648 |
-| `/menu` | exact | server.py | 6655 |
-| `/shift` | exact | server.py | 6659 |
-| `/schedule` | exact | server.py | 6672 |
-| `/expense` | prefix | server.py | 6681 |
-| `/expenses` | prefix | server.py | 6681 |
-| `/health` | prefix | server.py | 6701 |
-| `/ping` | exact | server.py | 6722 |
-| `/help` | exact | server.py | 6735 |
-| `/family` | exact | server.py | 6764 |
-| `/guardian` | exact | server.py | 6771 |
-| `/timeline` | exact | server.py | 6778 |
-| `/today` | exact | server.py | 6791 |
-| `/tomorrow` | exact | server.py | 6822 |
-| `/week` | exact | server.py | 6851 |
-| `/agenda` | exact | server.py | 6860 |
-| `/habits` | exact | server.py | 6874 |
-| `/cost` | exact | server.py | 6881 |
-| `/feedback` | exact | server.py | 6901 |
-| `/corrections` | exact | server.py | 6930 |
-| `/plans` | exact | server.py | 6978 |
-| `/mode` | exact | server.py | 7009 |
+| `/start` | exact | server.py | 5342 |
+| `/kairos` | exact | server.py | 5345 |
+| `/report` | exact | server.py | 5350 |
+| `/reset` | exact | server.py | 5358 |
+| `/status` | exact | server.py | 5365 |
+| `/stats` | exact | server.py | 5372 |
+| `/lights` | exact | server.py | 5461 |
+| `/covers` | exact | server.py | 5485 |
+| `/weather` | exact | server.py | 5501 |
+| `/locks` | exact | server.py | 5511 |
+| `/media` | exact | server.py | 5521 |
+| `/temp` | exact | server.py | 5531 |
+| `/health` | exact | server.py | 5557 |
+| `/brain` | exact | server.py | 5570 |
+| `/learn` | exact | server.py | 5587 |
+| `/patterns` | exact | server.py | 5604 |
+| `/scenes` | exact | server.py | 5613 |
+| `/summary` | exact | server.py | 5632 |
+| `/suggest` | exact | server.py | 5640 |
+| `/anomaly` | exact | server.py | 5657 |
+| `/diag` | exact | server.py | 5665 |
+| `/home` | exact | server.py | 5751 |
+| `/rooms` | exact | server.py | 5788 |
+| `/devices` | prefix | server.py | 5812 |
+| `/find` | prefix | server.py | 5823 |
+| `/scenes_dynamic` | exact | server.py | 5845 |
+| `/scenes2` | exact | server.py | 5874 |
+| `/alloff` | exact | server.py | 5900 |
+| `/find` | exact | server.py | 5909 |
+| `/cam` | exact | server.py | 5939 |
+| `/approvals` | exact | server.py | 5952 |
+| `/backup` | exact | server.py | 5965 |
+| `/restart` | exact | server.py | 5975 |
+| `/errors` | exact | server.py | 5990 |
+| `/update_stock` | prefix | server.py | 6007 |
+| `/log` | exact | server.py | 6018 |
+| `/crash` | exact | server.py | 6023 |
+| `/me` | exact | server.py | 6027 |
+| `/life` | exact | server.py | 6082 |
+| `/week_summary` | exact | server.py | 6128 |
+| `/tasks` | exact | server.py | 6156 |
+| `/trade` | exact | server.py | 6172 |
+| `/close` | exact | server.py | 6203 |
+| `/trades` | exact | server.py | 6226 |
+| `/journal` | exact | server.py | 6241 |
+| `/add_expense` | exact | server.py | 6267 |
+| `/spent` | exact | server.py | 6278 |
+| `/expenses` | exact | server.py | 6285 |
+| `/contacts` | exact | server.py | 6290 |
+| `/occasions` | exact | server.py | 6294 |
+| `/person` | exact | server.py | 6300 |
+| `/فرص` | exact | server.py | 6310 |
+| `/تقييم` | exact | server.py | 6359 |
+| `/stocks` | exact | server.py | 6383 |
+| `/price` | prefix | server.py | 6387 |
+| `/radar` | exact | server.py | 6392 |
+| `/radar_add` | prefix | server.py | 6396 |
+| `/radar_remove` | prefix | server.py | 6401 |
+| `/radar_check` | prefix | server.py | 6406 |
+| `/radar_last` | exact | server.py | 6411 |
+| `/radar_status` | exact | server.py | 6420 |
+| `/radar_top` | exact | server.py | 6424 |
+| `/radar_toggle` | exact | server.py | 6428 |
+| `/remind` | prefix | server.py | 6440 |
+| `/reminders` | prefix | server.py | 6440 |
+| `/reminders` | exact | server.py | 6450 |
+| `/cancel` | prefix | server.py | 6455 |
+| `/health_log` | exact | server.py | 6464 |
+| `/health_summary` | exact | server.py | 6469 |
+| `/health_streak` | exact | server.py | 6474 |
+| `/trade_review` | exact | server.py | 6490 |
+| `/tv_watchlist` | exact | server.py | 6497 |
+| `/tv_add` | exact | server.py | 6501 |
+| `/tv_remove` | exact | server.py | 6506 |
+| `/tv_last` | exact | server.py | 6511 |
+| `/tv_summary` | exact | server.py | 6516 |
+| `/tv_test` | exact | server.py | 6521 |
+| `/tv_stats` | exact | server.py | 6525 |
+| `/tv_sync` | exact | server.py | 6529 |
+| `/kpi` | exact | server.py | 6534 |
+| `/menu` | exact | server.py | 6541 |
+| `/shift` | exact | server.py | 6545 |
+| `/schedule` | exact | server.py | 6558 |
+| `/expense` | prefix | server.py | 6567 |
+| `/expenses` | prefix | server.py | 6567 |
+| `/health` | prefix | server.py | 6587 |
+| `/ping` | exact | server.py | 6608 |
+| `/help` | exact | server.py | 6621 |
+| `/family` | exact | server.py | 6650 |
+| `/guardian` | exact | server.py | 6657 |
+| `/timeline` | exact | server.py | 6664 |
+| `/today` | exact | server.py | 6677 |
+| `/tomorrow` | exact | server.py | 6708 |
+| `/week` | exact | server.py | 6737 |
+| `/agenda` | exact | server.py | 6746 |
+| `/habits` | exact | server.py | 6760 |
+| `/cost` | exact | server.py | 6767 |
+| `/feedback` | exact | server.py | 6787 |
+| `/corrections` | exact | server.py | 6816 |
+| `/plans` | exact | server.py | 6864 |
+| `/mode` | exact | server.py | 6895 |
 
 
 ## Schedules
@@ -441,6 +429,9 @@ _Static `if cmd == "/x"` / `cmd.startswith("/x")` entries in Python files._
 | cron | 0 14 * * 0-4 | _tools/backfill_daily_bars.py |
 | cron | 20 14 * * 0-4 | _tools/daily_signal_review.py |
 | cron | 30 14 * * * | _tools/nas_backup.py |
+| cron | 40 14 * * 0-4 | cd /home/pi/master_ai && venv/bin/python3 -c "import equity_ |
+| cron | */30 9-12 * * 0-4 | _tools/collect_30m.py |
+| cron | 45 14 * * 0-4 | _tools/collect_30m.py |
 | asyncio_startup_task | on_startup | _learn_worker |
 | asyncio_startup_task | on_startup | _send_progress_after_delay |
 | asyncio_startup_task | on_startup | fn |
@@ -472,8 +463,6 @@ _Static `if cmd == "/x"` / `cmd.startswith("/x")` entries in Python files._
 | asyncio_startup_task | on_startup | calendar_sync_loop |
 | asyncio_startup_task | on_startup | run_reminder_loop |
 | asyncio_startup_task | on_startup | reminder_loop |
-| asyncio_startup_task | on_startup | news_scheduler |
-| asyncio_startup_task | on_startup | _news_digest_loop |
 | asyncio_startup_task | on_startup | radar_loop |
 | asyncio_startup_task | on_startup | _daily_trading_summary_loop |
 | asyncio_startup_task | on_startup | proactive_loop |
@@ -519,465 +508,462 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 
 ### `/action/execute`
 
-- **Defined:** `server.py:4908` `POST` handler=`action_execute_endpoint`
+- **Defined:** `server.py:4881` `POST` handler=`action_execute_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/agent`
 
-- **Defined:** `server.py:4191` `POST` handler=`agent_endpoint`
+- **Defined:** `server.py:4164` `POST` handler=`agent_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/aliases`
 
-- **Defined:** `server.py:8437` `GET` handler=`aliases_endpoint`
+- **Defined:** `server.py:8295` `GET` handler=`aliases_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/anomalies`
 
-- **Defined:** `server.py:4058` `GET` handler=`get_anomalies_ep`
-- **Defined:** `server.py:9285` `GET` handler=`anomalies_endpoint`
+- **Defined:** `server.py:4031` `GET` handler=`get_anomalies_ep`
+- **Defined:** `server.py:9137` `GET` handler=`anomalies_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/analyze`
 
-- **Defined:** `server.py:8115` `GET` handler=`api_analyze`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
+- **Defined:** `server.py:8004` `GET` handler=`api_analyze`
+- **[url_const]** `www/trading/analysis.html:253`
+- **[url_const]** `www/trading/positions.html:726`
 
 
 ### `/api/analyze/refresh`
 
-- **Defined:** `server.py:8142` `POST` handler=`api_analyze_refresh`
+- **Defined:** `server.py:8060` `POST` handler=`api_analyze_refresh`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/analyze/refresh-all`
 
-- **Defined:** `server.py:8148` `POST` handler=`api_analyze_refresh_all`
+- **Defined:** `server.py:8066` `POST` handler=`api_analyze_refresh_all`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/brain/stats`
 
-- **Defined:** `dashboard_api.py:3500` `GET` handler=`api_brain_stats`
-- **[fetch]** `www/trading/system.html:335`
+- **Defined:** `dashboard_api.py:3356` `GET` handler=`api_brain_stats`
+- **[fetch]** `www/trading/system.html:333`
 
 
 ### `/api/collect-now`
 
-- **Defined:** `dashboard_api.py:3260` `POST` handler=`api_collect_now`
+- **Defined:** `dashboard_api.py:3116` `POST` handler=`api_collect_now`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/context-health`
 
-- **Defined:** `dashboard_api.py:3589` `GET` handler=`api_context_health`
-- **[fetch]** `www/trading/system.html:356`
+- **Defined:** `dashboard_api.py:3445` `GET` handler=`api_context_health`
+- **[fetch]** `www/trading/system.html:354`
 
 
 ### `/api/data-freshness`
 
-- **Defined:** `dashboard_api.py:3164` `GET` handler=`api_data_freshness`
+- **Defined:** `dashboard_api.py:3016` `GET` handler=`api_data_freshness`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/data-health`
 
-- **Defined:** `dashboard_api.py:3153` `GET` handler=`api_data_health`
+- **Defined:** `dashboard_api.py:3005` `GET` handler=`api_data_health`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/decisions-now`
 
-- **Defined:** `server.py:3615` `GET` handler=`api_decisions_now`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
+- **Defined:** `server.py:3568` `GET` handler=`api_decisions_now`
+- **[url_const]** `www/trading/decisions.html:165`
 
 
 ### `/api/flags`
 
-- **Defined:** `server.py:8071` `GET` handler=`get_feature_flags`
-- **[fetch]** `www/trading/system.html:419`
+- **Defined:** `server.py:7965` `GET` handler=`get_feature_flags`
+- **[fetch]** `www/trading/system.html:417`
+
+
+### `/api/flags/`
+
+- **Defined:** _(not in scanned files)_
+- **[url_const]** `www/trading/system.html:427`
 
 
 ### `/api/flags/{name}/toggle`
 
-- **Defined:** `server.py:8075` `POST` handler=`toggle_feature_flag`
+- **Defined:** `server.py:7969` `POST` handler=`toggle_feature_flag`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/hooks/log`
 
-- **Defined:** `server.py:8280` `GET` handler=`get_hooks_log`
+- **Defined:** `server.py:8198` `GET` handler=`get_hooks_log`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/hooks/stats`
 
-- **Defined:** `server.py:8276` `GET` handler=`get_hooks_stats`
+- **Defined:** `server.py:8194` `GET` handler=`get_hooks_stats`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/intent-analytics`
 
-- **Defined:** `dashboard_api.py:3439` `GET` handler=`api_intent_analytics`
-- **[fetch]** `www/trading/system.html:300`
+- **Defined:** `dashboard_api.py:3295` `GET` handler=`api_intent_analytics`
+- **[fetch]** `www/trading/system.html:298`
 
 
 ### `/api/kairos/log`
 
-- **Defined:** `server.py:8269` `GET` handler=`get_kairos_log`
+- **Defined:** `server.py:8187` `GET` handler=`get_kairos_log`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/kairos/status`
 
-- **Defined:** `server.py:8263` `GET` handler=`get_kairos_status`
-- **[fetch]** `www/trading/system.html:399`
+- **Defined:** `server.py:8181` `GET` handler=`get_kairos_status`
+- **[fetch]** `www/trading/system.html:397`
 
 
 ### `/api/latency-stats`
 
-- **Defined:** `dashboard_api.py:3638` `GET` handler=`api_latency_stats`
-- **[fetch]** `www/trading/system.html:379`
+- **Defined:** `dashboard_api.py:3494` `GET` handler=`api_latency_stats`
+- **[fetch]** `www/trading/system.html:377`
 
 
 ### `/api/memory-extraction/stats`
 
-- **Defined:** `dashboard_api.py:3387` `GET` handler=`api_memory_extraction_stats`
-- **[fetch]** `www/trading/system.html:273`
-
-
-### `/api/news`
-
-- **Defined:** `server.py:8300` `GET` handler=`api_news`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
-
-
-### `/api/news/refresh-boursa`
-
-- **Defined:** `server.py:8314` `POST` handler=`api_news_refresh_boursa`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
-
-
-### `/api/news/refresh-gemini`
-
-- **Defined:** `server.py:8337` `POST` handler=`api_news_refresh_gemini`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
+- **Defined:** `dashboard_api.py:3243` `GET` handler=`api_memory_extraction_stats`
+- **[fetch]** `www/trading/system.html:271`
 
 
 ### `/api/paper-trade/close`
 
-- **Defined:** `dashboard_api.py:2400` `POST` handler=`api_paper_trade_close`
+- **Defined:** `dashboard_api.py:2252` `POST` handler=`api_paper_trade_close`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/paper-trade/open`
 
-- **Defined:** `dashboard_api.py:2388` `POST` handler=`api_paper_trade_open`
+- **Defined:** `dashboard_api.py:2240` `POST` handler=`api_paper_trade_open`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/portfolio-alert-ack`
 
-- **Defined:** `dashboard_api.py:3341` `POST` handler=`api_portfolio_alert_ack`
+- **Defined:** `dashboard_api.py:3197` `POST` handler=`api_portfolio_alert_ack`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/portfolio-monitor`
 
-- **Defined:** `dashboard_api.py:3328` `POST` handler=`api_portfolio_monitor`
+- **Defined:** `dashboard_api.py:3184` `POST` handler=`api_portfolio_monitor`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/portfolio-status`
 
-- **Defined:** `dashboard_api.py:3298` `GET` handler=`api_portfolio_status`
+- **Defined:** `dashboard_api.py:3154` `GET` handler=`api_portfolio_status`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/portfolio/add-more`
 
-- **Defined:** `server.py:8195` `POST` handler=`api_add_more`
+- **Defined:** `server.py:8113` `POST` handler=`api_add_more`
 - **[fetch]** `www/trading/positions.html:670`
 
 
 ### `/api/portfolio/partial-sell`
 
-- **Defined:** `server.py:8174` `POST` handler=`api_partial_sell`
+- **Defined:** `server.py:8092` `POST` handler=`api_partial_sell`
 - **[fetch]** `www/trading/positions.html:640`
 
 
 ### `/api/portfolio/transactions/{trade_id}`
 
-- **Defined:** `server.py:8216` `GET` handler=`api_trade_transactions`
+- **Defined:** `server.py:8134` `GET` handler=`api_trade_transactions`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/radar/progress`
 
-- **Defined:** `dashboard_api.py:3632` `GET` handler=`api_radar_progress`
+- **Defined:** `dashboard_api.py:3488` `GET` handler=`api_radar_progress`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/refresh-analysis`
 
-- **Defined:** `server.py:8163` `POST` handler=`api_refresh_analysis`
+- **Defined:** `server.py:8081` `POST` handler=`api_refresh_analysis`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/review-now`
 
-- **Defined:** `server.py:3673` `POST` handler=`manual_review`
+- **Defined:** `server.py:3626` `POST` handler=`manual_review`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/risk-config`
 
-- **Defined:** `dashboard_api.py:3117` `GET` handler=`api_risk_config_get`
-- **Defined:** `dashboard_api.py:3126` `POST` handler=`api_risk_config_update`
+- **Defined:** `dashboard_api.py:2969` `GET` handler=`api_risk_config_get`
+- **Defined:** `dashboard_api.py:2978` `POST` handler=`api_risk_config_update`
 - **[fetch]** `www/trading/positions.html:682`
 - **[fetch]** `www/trading/positions.html:714`
 
 
 ### `/api/service-health`
 
-- **Defined:** `server.py:8090` `GET` handler=`get_service_health`
-- **[fetch]** `www/trading/system.html:230`
+- **Defined:** `server.py:7984` `GET` handler=`get_service_health`
+- **[fetch]** `www/trading/system.html:228`
 
 
 ### `/api/skills`
 
-- **Defined:** `dashboard_api.py:3671` `GET` handler=`api_skills`
+- **Defined:** `dashboard_api.py:3527` `GET` handler=`api_skills`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/stocks/profiles`
 
-- **Defined:** `server.py:3659` `GET` handler=`get_all_stock_profiles`
+- **Defined:** `server.py:3612` `GET` handler=`get_all_stock_profiles`
 - **[fetch]** `www/trading/personality.html:215`
+
+
+### `/api/stocks/symbol/`
+
+- **Defined:** _(not in scanned files)_
+- **[url_const]** `www/trading/personality.html:233`
+- **[url_const]** `www/trading/radar.html:1036`
+- **[url_const]** `www/trading/signals.html:1062`
 
 
 ### `/api/stocks/symbol/{symbol}`
 
-- **Defined:** `server.py:3653` `GET` handler=`get_stock_personality`
+- **Defined:** `server.py:3606` `GET` handler=`get_stock_personality`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/symbols`
 
-- **Defined:** `dashboard_api.py:3358` `GET` handler=`api_symbols`
+- **Defined:** `dashboard_api.py:3214` `GET` handler=`api_symbols`
 - **[fetch]** `www/trading/positions.html:584`
 
 
 ### `/api/tasks`
 
-- **Defined:** `server.py:8228` `GET` handler=`get_tasks`
-- **[fetch]** `www/trading/system.html:256`
+- **Defined:** `server.py:8146` `GET` handler=`get_tasks`
+- **[fetch]** `www/trading/system.html:254`
 
 
 ### `/api/tools`
 
-- **Defined:** `server.py:8284` `GET` handler=`get_tools`
+- **Defined:** `server.py:8202` `GET` handler=`get_tools`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/tools/{name}`
 
-- **Defined:** `server.py:8290` `GET` handler=`get_tool_detail`
+- **Defined:** `server.py:8208` `GET` handler=`get_tool_detail`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/api/trade/close`
 
-- **Defined:** `dashboard_api.py:3046` `POST` handler=`api_trade_close`
+- **Defined:** `dashboard_api.py:2898` `POST` handler=`api_trade_close`
 - **[fetch]** `www/trading/positions.html:823`
 
 
 ### `/api/trade/open`
 
-- **Defined:** `dashboard_api.py:3016` `POST` handler=`api_trade_open`
+- **Defined:** `dashboard_api.py:2868` `POST` handler=`api_trade_open`
 - **[fetch]** `www/trading/positions.html:792`
 
 
 ### `/api/trade/update`
 
-- **Defined:** `dashboard_api.py:3063` `POST` handler=`api_trade_update`
+- **Defined:** `dashboard_api.py:2915` `POST` handler=`api_trade_update`
 - **[fetch]** `www/trading/positions.html:860`
 
 
 ### `/approvals/pending`
 
-- **Defined:** `server.py:4340` `GET` handler=`list_pending_approvals`
+- **Defined:** `server.py:4313` `GET` handler=`list_pending_approvals`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/approve/{approval_id}`
 
-- **Defined:** `server.py:4292` `POST` handler=`approve_action`
+- **Defined:** `server.py:4265` `POST` handler=`approve_action`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/ask`
 
-- **Defined:** `server.py:4075` `POST` handler=`ask`
+- **Defined:** `server.py:4048` `POST` handler=`ask`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/audit`
 
-- **Defined:** `server.py:4841` `GET` handler=`get_audit`
+- **Defined:** `server.py:4814` `GET` handler=`get_audit`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/brain/analytics`
 
-- **Defined:** `server.py:3296` `GET` handler=`analytics_endpoint`
+- **Defined:** `server.py:3249` `GET` handler=`analytics_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/brain/diag`
 
-- **Defined:** `server.py:3316` `GET` handler=`brain_diag_endpoint`
+- **Defined:** `server.py:3269` `GET` handler=`brain_diag_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/brain/expertise`
 
-- **Defined:** `server.py:5163` `GET` handler=`brain_expertise`
+- **Defined:** `server.py:5143` `GET` handler=`brain_expertise`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/brain/feedback`
 
-- **Defined:** `server.py:3308` `POST` handler=`feedback_endpoint`
+- **Defined:** `server.py:3261` `POST` handler=`feedback_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/brain/stats`
 
-- **Defined:** `server.py:3251` `GET` handler=`brain_stats_endpoint`
+- **Defined:** `server.py:3204` `GET` handler=`brain_stats_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/brain/users`
 
-- **Defined:** `server.py:3302` `GET` handler=`users_endpoint`
+- **Defined:** `server.py:3255` `GET` handler=`users_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/bridge/status`
 
-- **Defined:** `server.py:3109` `GET` handler=`bridge_circuit_status`
+- **Defined:** `server.py:3062` `GET` handler=`bridge_circuit_status`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/calendar/stats`
 
-- **Defined:** `server.py:3513` `GET` handler=`calendar_stats_endpoint`
+- **Defined:** `server.py:3466` `GET` handler=`calendar_stats_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/calendar/sync`
 
-- **Defined:** `server.py:3523` `POST` handler=`calendar_sync_endpoint`
+- **Defined:** `server.py:3476` `POST` handler=`calendar_sync_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/chat/clear`
 
-- **Defined:** `server.py:8365` `POST` handler=`clear_chat_history`
+- **Defined:** `server.py:8224` `POST` handler=`clear_chat_history`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/classify`
 
-- **Defined:** `server.py:9250` `POST` handler=`classify_msg`
+- **Defined:** `server.py:9102` `POST` handler=`classify_msg`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/claude`
 
-- **Defined:** `server.py:4496` `GET` handler=`claude_context`
+- **Defined:** `server.py:4469` `GET` handler=`claude_context`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/corrections`
 
-- **Defined:** `server.py:9214` `GET` handler=`get_corrections_stats`
+- **Defined:** `server.py:9066` `GET` handler=`get_corrections_stats`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/corrections/decay`
 
-- **Defined:** `server.py:9223` `POST` handler=`decay_corrections_endpoint`
+- **Defined:** `server.py:9075` `POST` handler=`decay_corrections_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/cost`
 
-- **Defined:** `server.py:9297` `GET` handler=`cost_dashboard`
+- **Defined:** `server.py:9149` `GET` handler=`cost_dashboard`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/daily-snapshot/refresh`
 
-- **Defined:** `server.py:3127` `POST` handler=`refresh_daily_snapshot_manual`
+- **Defined:** `server.py:3080` `POST` handler=`refresh_daily_snapshot_manual`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard`
 
 - **Defined:** `dashboard_api.py:151` `GET` handler=`ha_dashboard`
-- **[fetch]** `www/trading/assistant.html:131`
-- **[fetch]** `www/trading/calendar.html:123`
-- **[fetch]** `www/trading/home-control.html:112`
-- **[fetch]** `www/trading/home.html:272`
-- **[fetch]** `www/trading/system.html:434`
+- **[fetch]** `www/trading/assistant.html:129`
+- **[fetch]** `www/trading/calendar.html:121`
+- **[fetch]** `www/trading/home-control.html:110`
+- **[fetch]** `www/trading/home.html:289`
+- **[fetch]** `www/trading/system.html:432`
 - **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:196` sensor=`master_ai_dashboard`
 
 
 ### `/dashboard/alerts`
 
-- **Defined:** `dashboard_api.py:1336` `GET` handler=`ha_dashboard_alerts`
-- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:376` sensor=`master_ai_alerts`
+- **Defined:** `dashboard_api.py:1326` `GET` handler=`ha_dashboard_alerts`
+- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:367` sensor=`master_ai_alerts`
 
 
 ### `/dashboard/analysis`
 
-- **Defined:** `dashboard_api.py:1487` `GET` handler=`ha_dashboard_analysis`
-- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:336` sensor=`master_ai_analysis`
+- **Defined:** `dashboard_api.py:1477` `GET` handler=`ha_dashboard_analysis`
+- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:327` sensor=`master_ai_analysis`
 
 
 ### `/dashboard/brain`
 
-- **Defined:** `dashboard_api.py:2599` `GET` handler=`dashboard_brain`
+- **Defined:** `dashboard_api.py:2451` `GET` handler=`dashboard_brain`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/brain-insights`
 
-- **Defined:** `dashboard_api.py:2920` `GET` handler=`dashboard_brain_insights`
+- **Defined:** `dashboard_api.py:2772` `GET` handler=`dashboard_brain_insights`
 - **[fetch]** `www/trading/brain.html:141`
 
 
 ### `/dashboard/bridge`
 
-- **Defined:** `dashboard_api.py:1879` `GET` handler=`dashboard_bridge`
+- **Defined:** `dashboard_api.py:1731` `GET` handler=`dashboard_bridge`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/bridge/{symbol}`
 
-- **Defined:** `dashboard_api.py:1903` `GET` handler=`dashboard_bridge_symbol`
+- **Defined:** `dashboard_api.py:1755` `GET` handler=`dashboard_bridge_symbol`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/cmd`
 
-- **Defined:** `dashboard_api.py:399` `POST` handler=`dashboard_cmd`
+- **Defined:** `dashboard_api.py:389` `POST` handler=`dashboard_cmd`
 - **[ha_rest_command]** `/var/lib/homeassistant/homeassistant/configuration.yaml:62`
 - **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:19`
 - **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:37`
@@ -994,118 +980,121 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 
 ### `/dashboard/confluence`
 
-- **Defined:** `dashboard_api.py:1423` `GET` handler=`ha_dashboard_confluence`
-- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:399` sensor=`master_ai_confluence`
+- **Defined:** `dashboard_api.py:1413` `GET` handler=`ha_dashboard_confluence`
+- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:390` sensor=`master_ai_confluence`
 
 
 ### `/dashboard/ema-active`
 
-- **Defined:** `server.py:3798` `GET` handler=`dashboard_ema_active`
+- **Defined:** `server.py:3766` `GET` handler=`dashboard_ema_active`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/ema-crosses`
 
-- **Defined:** `server.py:3686` `GET` handler=`dashboard_ema_crosses`
+- **Defined:** `server.py:3639` `GET` handler=`dashboard_ema_crosses`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/ema-live`
 
-- **Defined:** `server.py:3880` `GET` handler=`dashboard_ema_live`
+- **Defined:** `server.py:3848` `GET` handler=`dashboard_ema_live`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/ema-proximity`
 
-- **Defined:** `server.py:3753` `GET` handler=`dashboard_ema_proximity`
+- **Defined:** `server.py:3706` `GET` handler=`dashboard_ema_proximity`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/equity`
 
-- **Defined:** `dashboard_api.py:2414` `GET` handler=`dashboard_equity`
+- **Defined:** `dashboard_api.py:2266` `GET` handler=`dashboard_equity`
 - **[fetch]** `www/trading/journal.html:337`
 
 
 ### `/dashboard/extended`
 
-- **Defined:** `dashboard_api.py:1646` `GET` handler=`ha_dashboard_extended`
-- **[fetch]** `www/trading/email.html:121`
-- **[fetch]** `www/trading/home.html:273`
-- **[fetch]** `www/trading/news.html:107`
+- **Defined:** `dashboard_api.py:1593` `GET` handler=`ha_dashboard_extended`
+- **[url_const]** `www/trading/assistant.html:129`
+- **[url_const]** `www/trading/calendar.html:121`
+- **[fetch]** `www/trading/home.html:290`
+- **[url_const]** `www/trading/system.html:432`
 - **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:247` sensor=`master_ai_extended`
 
 
 ### `/dashboard/jobs`
 
-- **Defined:** `dashboard_api.py:431` `GET` handler=`dashboard_jobs_list`
+- **Defined:** `dashboard_api.py:421` `GET` handler=`dashboard_jobs_list`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/journal`
 
-- **Defined:** `dashboard_api.py:1212` `GET` handler=`ha_dashboard_journal`
+- **Defined:** `dashboard_api.py:1202` `GET` handler=`ha_dashboard_journal`
 - **[fetch]** `www/trading/journal.html:329`
-- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:355` sensor=`master_ai_journal`
+- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:346` sensor=`master_ai_journal`
 
 
 ### `/dashboard/paper-trading`
 
-- **Defined:** `dashboard_api.py:2378` `GET` handler=`dashboard_paper_trading`
+- **Defined:** `dashboard_api.py:2230` `GET` handler=`dashboard_paper_trading`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/portfolio`
 
-- **Defined:** `dashboard_api.py:1004` `GET` handler=`ha_dashboard_portfolio`
+- **Defined:** `dashboard_api.py:994` `GET` handler=`ha_dashboard_portfolio`
 - **[fetch]** `www/trading/personality.html:238`
-- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:318` sensor=`master_ai_portfolio`
+- **[url_const]** `www/trading/positions.html:530`
+- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:309` sensor=`master_ai_portfolio`
 
 
 ### `/dashboard/radar`
 
-- **Defined:** `dashboard_api.py:441` `GET` handler=`ha_dashboard_radar`
+- **Defined:** `dashboard_api.py:431` `GET` handler=`ha_dashboard_radar`
 - **[fetch]** `www/trading/personality.html:258`
 - **[fetch]** `www/trading/personality.html:273`
 - **[fetch]** `www/trading/signals.html:669`
-- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:294` sensor=`master_ai_radar`
+- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:285` sensor=`master_ai_radar`
 
 
 ### `/dashboard/regime`
 
-- **Defined:** `dashboard_api.py:2565` `GET` handler=`dashboard_regime`
+- **Defined:** `dashboard_api.py:2417` `GET` handler=`dashboard_regime`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/reviews`
 
-- **Defined:** `server.py:3666` `GET` handler=`dashboard_reviews`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
+- **Defined:** `server.py:3619` `GET` handler=`dashboard_reviews`
+- **[url_const]** `www/trading/decisions.html:166`
+- **[url_const]** `www/trading/reviews.html:231`
 
 
 ### `/dashboard/risk-status`
 
-- **Defined:** `dashboard_api.py:2424` `GET` handler=`dashboard_risk_status`
+- **Defined:** `dashboard_api.py:2276` `GET` handler=`dashboard_risk_status`
 - **[fetch]** `www/trading/positions.html:1255`
 
 
 ### `/dashboard/scalper`
 
-- **Defined:** `dashboard_api.py:2434` `GET` handler=`dashboard_scalper`
+- **Defined:** `dashboard_api.py:2286` `GET` handler=`dashboard_scalper`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dashboard/signals`
 
-- **Defined:** `dashboard_api.py:1965` `GET` handler=`dashboard_signals`
+- **Defined:** `dashboard_api.py:1817` `GET` handler=`dashboard_signals`
 - **[fetch]** `www/trading/signals.html:668`
-- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:424` sensor=`master_ai_signals`
+- **[ha_sensor]** `/var/lib/homeassistant/homeassistant/configuration.yaml:415` sensor=`master_ai_signals`
 
 
 ### `/dashboard/signals-30m`
 
-- **Defined:** `dashboard_api.py:2119` `GET` handler=`dashboard_signals_30m`
+- **Defined:** `dashboard_api.py:1971` `GET` handler=`dashboard_signals_30m`
 - **[fetch]** `www/trading/personality.html:248`
 - **[fetch]** `www/trading/personality.html:290`
 - **[fetch]** `www/trading/signals.html:670`
@@ -1113,476 +1102,477 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 
 ### `/dashboard/signals-daily`
 
-- **Defined:** `dashboard_api.py:1980` `GET` handler=`dashboard_signals_daily`
+- **Defined:** `dashboard_api.py:1832` `GET` handler=`dashboard_signals_daily`
 - **[fetch]** `www/trading/radar.html:738`
 
 
 ### `/dashboard/strategies`
 
-- **Defined:** `dashboard_api.py:2940` `GET` handler=`dashboard_strategies`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
+- **Defined:** `dashboard_api.py:2792` `GET` handler=`dashboard_strategies`
+- **[url_const]** `www/trading/strategies.html:137`
 
 
 ### `/dashboard/swing`
 
-- **Defined:** `dashboard_api.py:2126` `GET` handler=`dashboard_swing`
-- **[fetch]** `www/trading/home.html:274`
+- **Defined:** `dashboard_api.py:1978` `GET` handler=`dashboard_swing`
+- **[fetch]** `www/trading/home.html:291`
 - **[fetch]** `www/trading/radar.html:744`
+- **[url_const]** `www/trading/swing.html:225`
 
 
 ### `/debug/test_approval`
 
-- **Defined:** `server.py:3346` `POST` handler=`debug_test_approval`
+- **Defined:** `server.py:3299` `POST` handler=`debug_test_approval`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/decompose`
 
-- **Defined:** `server.py:9255` `POST` handler=`decompose_msg`
+- **Defined:** `server.py:9107` `POST` handler=`decompose_msg`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/deploy`
 
-- **Defined:** `server.py:4707` `POST` handler=`deploy_file`
+- **Defined:** `server.py:4680` `POST` handler=`deploy_file`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dev/context`
 
-- **Defined:** `server.py:5181` `GET` handler=`dev_context`
+- **Defined:** `server.py:5161` `GET` handler=`dev_context`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dream/run`
 
-- **Defined:** `server.py:3280` `POST` handler=`dream_run_endpoint`
+- **Defined:** `server.py:3233` `POST` handler=`dream_run_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/dream/status`
 
-- **Defined:** `server.py:3271` `GET` handler=`dream_status_endpoint`
+- **Defined:** `server.py:3224` `GET` handler=`dream_status_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/entity-map/arabize`
 
-- **Defined:** `server.py:8498` `POST` handler=`entity_map_arabize`
+- **Defined:** `server.py:8356` `POST` handler=`entity_map_arabize`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/entity-map/health`
 
-- **Defined:** `server.py:8485` `GET` handler=`entity_map_health`
+- **Defined:** `server.py:8343` `GET` handler=`entity_map_health`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/event`
 
-- **Defined:** `server.py:4937` `POST` handler=`ingest_event`
+- **Defined:** `server.py:4910` `POST` handler=`ingest_event`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/event_rules`
 
-- **Defined:** `server.py:4985` `GET` handler=`get_event_rules`
+- **Defined:** `server.py:4958` `GET` handler=`get_event_rules`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/events`
 
-- **Defined:** `server.py:4974` `GET` handler=`list_events_ep`
+- **Defined:** `server.py:4947` `GET` handler=`list_events_ep`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/events/{event_id}`
 
-- **Defined:** `server.py:4978` `GET` handler=`get_event_ep`
+- **Defined:** `server.py:4951` `GET` handler=`get_event_ep`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/feedback/digest`
 
-- **Defined:** `server.py:9274` `GET` handler=`feedback_digest_endpoint`
+- **Defined:** `server.py:9126` `GET` handler=`feedback_digest_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/feedback/stats`
 
-- **Defined:** `server.py:9266` `GET` handler=`feedback_stats_endpoint`
+- **Defined:** `server.py:9118` `GET` handler=`feedback_stats_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/gmail/auth`
 
-- **Defined:** `server.py:3362` `GET` handler=`gmail_auth_start`
+- **Defined:** `server.py:3315` `GET` handler=`gmail_auth_start`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/gmail/callback`
 
-- **Defined:** `server.py:3397` `GET` handler=`gmail_auth_callback`
+- **Defined:** `server.py:3350` `GET` handler=`gmail_auth_callback`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/google/auth`
 
-- **Defined:** `server.py:3453` `GET` handler=`google_auth_start`
+- **Defined:** `server.py:3406` `GET` handler=`google_auth_start`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/google/auth/status`
 
-- **Defined:** `server.py:3503` `GET` handler=`google_auth_status`
+- **Defined:** `server.py:3456` `GET` handler=`google_auth_status`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/google/callback`
 
-- **Defined:** `server.py:3471` `GET` handler=`google_auth_callback`
+- **Defined:** `server.py:3424` `GET` handler=`google_auth_callback`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/ha/service`
 
-- **Defined:** `server.py:4256` `POST` handler=`ha_call_service_ep`
+- **Defined:** `server.py:4229` `POST` handler=`ha_call_service_ep`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/ha/states`
 
-- **Defined:** `server.py:4265` `GET` handler=`ha_get_states`
+- **Defined:** `server.py:4238` `GET` handler=`ha_get_states`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/ha/states/{entity_id:path}`
 
-- **Defined:** `server.py:4270` `GET` handler=`ha_get_state`
+- **Defined:** `server.py:4243` `GET` handler=`ha_get_state`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/health`
 
-- **Defined:** `server.py:3973` `GET` handler=`health`
+- **Defined:** `server.py:3946` `GET` handler=`health`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/health/external`
 
-- **Defined:** `server.py:8046` `GET` handler=`health_external`
+- **Defined:** `server.py:7940` `GET` handler=`health_external`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/health/external/test`
 
-- **Defined:** `server.py:8404` `POST` handler=`health_external_test`
+- **Defined:** `server.py:8262` `POST` handler=`health_external_test`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/history/{entity_id:path}`
 
-- **Defined:** `server.py:3993` `GET` handler=`entity_history_endpoint`
+- **Defined:** `server.py:3966` `GET` handler=`entity_history_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/knowledge`
 
-- **Defined:** `server.py:4603` `GET` handler=`list_knowledge`
-- **Defined:** `server.py:4626` `POST` handler=`create_knowledge`
+- **Defined:** `server.py:4576` `GET` handler=`list_knowledge`
+- **Defined:** `server.py:4599` `POST` handler=`create_knowledge`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/knowledge/{kid}`
 
-- **Defined:** `server.py:4617` `GET` handler=`get_knowledge`
-- **Defined:** `server.py:4637` `PUT` handler=`update_knowledge`
-- **Defined:** `server.py:4649` `DELETE` handler=`delete_knowledge`
+- **Defined:** `server.py:4590` `GET` handler=`get_knowledge`
+- **Defined:** `server.py:4610` `PUT` handler=`update_knowledge`
+- **Defined:** `server.py:4622` `DELETE` handler=`delete_knowledge`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/kpi`
 
-- **Defined:** `server.py:9308` `GET` handler=`kpi_dashboard`
+- **Defined:** `server.py:9160` `GET` handler=`kpi_dashboard`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/memory`
 
-- **Defined:** `server.py:4747` `POST` handler=`create_memory_ep`
-- **Defined:** `server.py:4756` `GET` handler=`list_memories_ep`
+- **Defined:** `server.py:4720` `POST` handler=`create_memory_ep`
+- **Defined:** `server.py:4729` `GET` handler=`list_memories_ep`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/memory/message`
 
-- **Defined:** `server.py:4798` `POST` handler=`save_msg`
+- **Defined:** `server.py:4771` `POST` handler=`save_msg`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/memory/recent`
 
-- **Defined:** `server.py:4791` `GET` handler=`memory_recent`
+- **Defined:** `server.py:4764` `GET` handler=`memory_recent`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/memory/stats`
 
-- **Defined:** `server.py:4769` `GET` handler=`mem_stats`
+- **Defined:** `server.py:4742` `GET` handler=`mem_stats`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/patterns`
 
-- **Defined:** `server.py:4040` `GET` handler=`patterns_endpoint`
+- **Defined:** `server.py:4013` `GET` handler=`patterns_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/patterns/learn`
 
-- **Defined:** `server.py:4067` `POST` handler=`patterns_learn_endpoint`
+- **Defined:** `server.py:4040` `POST` handler=`patterns_learn_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/patterns/suggestions`
 
-- **Defined:** `server.py:4051` `GET` handler=`patterns_suggestions_endpoint`
+- **Defined:** `server.py:4024` `GET` handler=`patterns_suggestions_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/plugins`
 
-- **Defined:** `server.py:4902` `GET` handler=`list_plugins`
+- **Defined:** `server.py:4875` `GET` handler=`list_plugins`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/plugins/{name}/disable`
 
-- **Defined:** `server.py:4922` `POST` handler=`disable_plugin`
+- **Defined:** `server.py:4895` `POST` handler=`disable_plugin`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/plugins/{name}/enable`
 
-- **Defined:** `server.py:4915` `POST` handler=`enable_plugin`
+- **Defined:** `server.py:4888` `POST` handler=`enable_plugin`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/router/stats`
 
-- **Defined:** `server.py:8446` `GET` handler=`router_stats_endpoint`
+- **Defined:** `server.py:8304` `GET` handler=`router_stats_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/schema`
 
-- **Defined:** `server.py:4867` `GET` handler=`schema_status`
+- **Defined:** `server.py:4840` `GET` handler=`schema_status`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/schema/ensure`
 
-- **Defined:** `server.py:4887` `POST` handler=`schema_ensure`
+- **Defined:** `server.py:4860` `POST` handler=`schema_ensure`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/sessions`
 
-- **Defined:** `server.py:4556` `POST` handler=`create_session`
-- **Defined:** `server.py:4568` `GET` handler=`list_sessions`
+- **Defined:** `server.py:4529` `POST` handler=`create_session`
+- **Defined:** `server.py:4541` `GET` handler=`list_sessions`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/sessions/latest`
 
-- **Defined:** `server.py:4578` `GET` handler=`latest_session`
+- **Defined:** `server.py:4551` `GET` handler=`latest_session`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/shift`
 
-- **Defined:** `server.py:4469` `GET` handler=`shift_info`
+- **Defined:** `server.py:4442` `GET` handler=`shift_info`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/ssh/run`
 
-- **Defined:** `server.py:4283` `POST` handler=`ssh_run`
+- **Defined:** `server.py:4256` `POST` handler=`ssh_run`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/stability`
 
-- **Defined:** `server.py:8422` `GET` handler=`stability_endpoint`
+- **Defined:** `server.py:8280` `GET` handler=`stability_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/stats/capture`
 
-- **Defined:** `server.py:4454` `POST` handler=`stats_capture`
+- **Defined:** `server.py:4427` `POST` handler=`stats_capture`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/stats/daily`
 
-- **Defined:** `server.py:4439` `GET` handler=`stats_daily`
+- **Defined:** `server.py:4412` `GET` handler=`stats_daily`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/stocks/alerts`
 
-- **Defined:** `server.py:4688` `GET` handler=`stock_alerts_history`
+- **Defined:** `server.py:4661` `GET` handler=`stock_alerts_history`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/stocks/portfolio`
 
-- **Defined:** `server.py:4679` `GET` handler=`stock_portfolio`
+- **Defined:** `server.py:4652` `GET` handler=`stock_portfolio`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory`
 
-- **Defined:** `server.py:9142` `GET` handler=`smem_stats`
+- **Defined:** `server.py:8994` `GET` handler=`smem_stats`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/context`
 
-- **Defined:** `server.py:9147` `GET` handler=`smem_context`
+- **Defined:** `server.py:8999` `GET` handler=`smem_context`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/correction`
 
-- **Defined:** `server.py:9174` `POST` handler=`smem_save_correction`
+- **Defined:** `server.py:9026` `POST` handler=`smem_save_correction`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/decay`
 
-- **Defined:** `server.py:9203` `POST` handler=`smem_decay`
+- **Defined:** `server.py:9055` `POST` handler=`smem_decay`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/event`
 
-- **Defined:** `server.py:9163` `POST` handler=`smem_save_event`
+- **Defined:** `server.py:9015` `POST` handler=`smem_save_event`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/fact`
 
-- **Defined:** `server.py:9152` `POST` handler=`smem_save_fact`
+- **Defined:** `server.py:9004` `POST` handler=`smem_save_fact`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/migrate`
 
-- **Defined:** `server.py:9193` `POST` handler=`smem_migrate`
+- **Defined:** `server.py:9045` `POST` handler=`smem_migrate`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/search`
 
-- **Defined:** `server.py:9184` `GET` handler=`smem_search`
+- **Defined:** `server.py:9036` `GET` handler=`smem_search`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/seed`
 
-- **Defined:** `server.py:9198` `POST` handler=`smem_seed`
+- **Defined:** `server.py:9050` `POST` handler=`smem_seed`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/structured-memory/{memory_id}`
 
-- **Defined:** `server.py:9209` `DELETE` handler=`smem_delete`
+- **Defined:** `server.py:9061` `DELETE` handler=`smem_delete`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/system/backup`
 
-- **Defined:** `server.py:3265` `POST` handler=`backup_endpoint`
+- **Defined:** `server.py:3218` `POST` handler=`backup_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/system/context`
 
-- **Defined:** `server.py:5019` `GET` handler=`system_context`
+- **Defined:** `server.py:4992` `GET` handler=`system_context`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/system/diag`
 
-- **Defined:** `server.py:3258` `GET` handler=`system_diag_endpoint`
+- **Defined:** `server.py:3211` `GET` handler=`system_diag_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/system/knowledge`
 
-- **Defined:** `server.py:5142` `GET` handler=`system_knowledge_endpoint`
+- **Defined:** `server.py:5122` `GET` handler=`system_knowledge_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/system/knowledge/summary`
 
-- **Defined:** `server.py:5152` `GET` handler=`system_knowledge_summary`
+- **Defined:** `server.py:5132` `GET` handler=`system_knowledge_summary`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/tasks`
 
-- **Defined:** `server.py:4662` `GET` handler=`list_tasks_ep`
+- **Defined:** `server.py:4635` `GET` handler=`list_tasks_ep`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/tasks/{task_id}`
 
-- **Defined:** `server.py:4667` `GET` handler=`get_task_ep`
+- **Defined:** `server.py:4640` `GET` handler=`get_task_ep`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/tg/stats`
 
-- **Defined:** `server.py:8374` `GET` handler=`tg_stats`
+- **Defined:** `server.py:8233` `GET` handler=`tg_stats`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/tips`
 
-- **Defined:** `server.py:3289` `GET` handler=`tips_endpoint`
+- **Defined:** `server.py:3242` `GET` handler=`tips_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/tool-stats`
 
-- **Defined:** `server.py:3545` `GET` handler=`tool_stats_endpoint`
+- **Defined:** `server.py:3498` `GET` handler=`tool_stats_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/traces`
 
-- **Defined:** `server.py:9242` `GET` handler=`traces_list`
+- **Defined:** `server.py:9094` `GET` handler=`traces_list`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/traces/stats`
 
-- **Defined:** `server.py:9246` `GET` handler=`traces_stats`
+- **Defined:** `server.py:9098` `GET` handler=`traces_stats`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/trading/analysis`
 
 - **Defined:** _(not in scanned files)_
-- **[nav_link]** `www/trading/nav.js:22`
+- **[nav_link]** `www/trading/nav.js:20`
 
 
 ### `/trading/assistant`
 
 - **Defined:** _(not in scanned files)_
-- **[nav_link]** `www/trading/nav.js:20`
+- **[nav_link]** `www/trading/nav.js:18`
 
 
 ### `/trading/brain`
@@ -1600,13 +1590,7 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 ### `/trading/decisions`
 
 - **Defined:** _(not in scanned files)_
-- **[nav_link]** `www/trading/nav.js:23`
-
-
-### `/trading/email`
-
-- **Defined:** _(not in scanned files)_
-- **[nav_link]** `www/trading/nav.js:19`
+- **[nav_link]** `www/trading/nav.js:21`
 
 
 ### `/trading/home`
@@ -1618,19 +1602,13 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 ### `/trading/home-control`
 
 - **Defined:** _(not in scanned files)_
-- **[nav_link]** `www/trading/nav.js:21`
+- **[nav_link]** `www/trading/nav.js:19`
 
 
 ### `/trading/journal`
 
 - **Defined:** _(not in scanned files)_
 - **[nav_link]** `www/trading/nav.js:16`
-
-
-### `/trading/news`
-
-- **Defined:** _(not in scanned files)_
-- **[nav_link]** `www/trading/nav.js:18`
 
 
 ### `/trading/positions`
@@ -1665,32 +1643,32 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 
 ### `/trading/{page}`
 
-- **Defined:** `server.py:3156` `GET` handler=`serve_trading_page`
+- **Defined:** `server.py:3109` `GET` handler=`serve_trading_page`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/tradingview/webhook`
 
-- **Defined:** `server.py:3554` `POST` handler=`tradingview_webhook`
+- **Defined:** `server.py:3507` `POST` handler=`tradingview_webhook`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/users`
 
-- **Defined:** `server.py:4812` `POST` handler=`create_user`
-- **Defined:** `server.py:4827` `GET` handler=`list_users`
+- **Defined:** `server.py:4785` `POST` handler=`create_user`
+- **Defined:** `server.py:4800` `GET` handler=`list_users`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/webhook/event`
 
-- **Defined:** `server.py:5004` `POST` handler=`webhook_event`
+- **Defined:** `server.py:4977` `POST` handler=`webhook_event`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/webhook/event/{token}`
 
-- **Defined:** `server.py:4992` `POST` handler=`webhook_event_legacy`
+- **Defined:** `server.py:4965` `POST` handler=`webhook_event_legacy`
 - **[ha_rest_command]** `/var/lib/homeassistant/homeassistant/configuration.yaml:49`
 - **[ha_automation]** `/var/lib/homeassistant/homeassistant/automations.yaml:455`
 - **[ha_automation]** `/var/lib/homeassistant/homeassistant/automations.yaml:480`
@@ -1700,31 +1678,31 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 
 ### `/win/jobs`
 
-- **Defined:** `server.py:4421` `GET` handler=`win_jobs`
+- **Defined:** `server.py:4394` `GET` handler=`win_jobs`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/win/poll`
 
-- **Defined:** `server.py:4398` `GET` handler=`win_poll`
+- **Defined:** `server.py:4371` `GET` handler=`win_poll`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/win/register`
 
-- **Defined:** `server.py:4390` `POST` handler=`win_register`
+- **Defined:** `server.py:4363` `POST` handler=`win_register`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/win/report`
 
-- **Defined:** `server.py:4409` `POST` handler=`win_report`
+- **Defined:** `server.py:4382` `POST` handler=`win_report`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
 ### `/world-state`
 
-- **Defined:** `server.py:3534` `GET` handler=`world_state_endpoint`
+- **Defined:** `server.py:3487` `GET` handler=`world_state_endpoint`
 - **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
 
 
@@ -1740,11 +1718,11 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - `www/trading/positions.html:1248` — `API_URL, {headers: authHeaders()});`
 - `www/trading/radar.html:1036` — `'/api/stocks/symbol/'+sym);`
 - `www/trading/reviews.html:232` — `url);if(!r.ok)throw new Error('HTTP '+r.status);`
-- `www/trading/scalper.html:517` — ``${API_BASE}/dashboard/scalper`, { headers });`
-- `www/trading/signals.html:1052` — `'/api/stocks/symbol/'+sym);`
+- `www/trading/scalper.html:516` — ``${API_BASE}/dashboard/scalper`, { headers });`
+- `www/trading/signals.html:1062` — `'/api/stocks/symbol/'+sym);`
 - `www/trading/strategies.html:137` — `API + '/dashboard/strategies');`
-- `www/trading/swing.html:542` — `API+'?t='+Date.now(), {cache:'no-store'});`
-- `www/trading/system.html:429` — `'/api/flags/'+n+'/toggle',{method:'POST'});setTimeout(loadFlags,300)}catch(e){}};`
+- `www/trading/swing.html:548` — `API+'?t='+Date.now(), {cache:'no-store'});`
+- `www/trading/system.html:427` — `'/api/flags/'+n+'/toggle',{method:'POST'});setTimeout(loadFlags,300)}catch(e){}};`
 
 
 ## SQL table reverse index
@@ -1791,19 +1769,18 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `all`
 
 - **READ** `brain.py:143`
-- **READ** `tg_email.py:253`
 
 
 ### `anomaly_engine`
 
-- **READ** `quick_query.py:467`
-- **READ** `server.py:9293`
+- **READ** `quick_query.py:442`
+- **READ** `server.py:9145`
 - **READ** `tg_alerts.py:15`
 
 
 ### `anomaly_log`
 
-- **READ** `dashboard_api.py:1771`
+- **READ** `dashboard_api.py:1718`
 
 
 ### `anthropic`
@@ -1839,16 +1816,16 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `approval_queue`
 
-- **CREATE** `server.py:1065`
-- **WRITE** `server.py:1309`
-- **WRITE** `server.py:1338`
-- **WRITE** `server.py:2143`
-- **WRITE** `server.py:3354`
+- **CREATE** `server.py:1037`
+- **WRITE** `server.py:1297`
+- **WRITE** `server.py:1326`
+- **WRITE** `server.py:2131`
+- **WRITE** `server.py:3307`
+- **WRITE** `server.py:4282`
 - **WRITE** `server.py:4309`
-- **WRITE** `server.py:4336`
 - **WRITE** `tg_ops.py:63`
-- **READ** `server.py:4300`
-- **READ** `server.py:4350`
+- **READ** `server.py:4273`
+- **READ** `server.py:4323`
 - **READ** `tg_ops.py:40`
 - **READ** `tg_ops.py:54`
 
@@ -1874,26 +1851,26 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `audit_log`
 
-- **CREATE** `server.py:1032`
+- **CREATE** `server.py:1004`
 - **WRITE** `_tools/patchers/phase1b_backfill_route_type.py:14`
-- **WRITE** `server.py:1141`
-- **WRITE** `server.py:1578`
-- **WRITE** `server.py:1579`
+- **WRITE** `server.py:1113`
+- **WRITE** `server.py:1566`
+- **WRITE** `server.py:1567`
 - **READ** `_tools/patchers/phase1b_backfill_route_type.py:10`
 - **READ** `_tools/patchers/phase1b_backfill_route_type.py:17`
 - **READ** `_tools/patchers/phase1b_backfill_route_type.py:21`
 - **READ** `_tools/patchers/phase4_fix_cost.py:14`
 - **READ** `_tools/patchers/phase4_fix_cost.py:16`
-- **READ** `dashboard_api.py:1721`
-- **READ** `dashboard_api.py:1723`
-- **READ** `server.py:4516`
-- **READ** `server.py:4518`
-- **READ** `server.py:4851`
-- **READ** `server.py:4853`
-- **READ** `server.py:4856`
-- **READ** `server.py:8457`
-- **READ** `server.py:8459`
-- **READ** `server.py:8468`
+- **READ** `dashboard_api.py:1668`
+- **READ** `dashboard_api.py:1670`
+- **READ** `server.py:4489`
+- **READ** `server.py:4491`
+- **READ** `server.py:4824`
+- **READ** `server.py:4826`
+- **READ** `server.py:4829`
+- **READ** `server.py:8315`
+- **READ** `server.py:8317`
+- **READ** `server.py:8326`
 
 
 ### `auto_memory_extractor`
@@ -1901,7 +1878,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_fix_extractor_client.py:9`
 - **READ** `_tools/_fix_extractor_client.py:14`
 - **READ** `_tools/_int5_tg.py:24`
-- **READ** `server.py:7550`
+- **READ** `server.py:7444`
 
 
 ### `backup`
@@ -1929,9 +1906,9 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **READ** `scripts/patch_v2.py:82`
 - **READ** `server.py:53`
-- **READ** `signal_engine.py:952`
-- **READ** `signal_engine.py:1046`
-- **READ** `signal_engine.py:1058`
+- **READ** `signal_engine.py:1003`
+- **READ** `signal_engine.py:1097`
+- **READ** `signal_engine.py:1109`
 
 
 ### `brain_analytics`
@@ -1945,17 +1922,17 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `auto_memory_extractor.py:98`
 - **READ** `brain.py:14`
 - **READ** `brain_core.py:675`
-- **READ** `chat_v7.py:652`
-- **READ** `dashboard_api.py:3544`
+- **READ** `chat_v7.py:637`
+- **READ** `dashboard_api.py:3400`
 - **READ** `memory_recall.py:56`
-- **READ** `server.py:367`
-- **READ** `server.py:2453`
-- **READ** `server.py:4130`
-- **READ** `server.py:4207`
-- **READ** `server.py:5160`
-- **READ** `server.py:5171`
-- **READ** `server.py:7632`
-- **READ** `server.py:7999`
+- **READ** `server.py:364`
+- **READ** `server.py:2441`
+- **READ** `server.py:4103`
+- **READ** `server.py:4180`
+- **READ** `server.py:5140`
+- **READ** `server.py:5151`
+- **READ** `server.py:7526`
+- **READ** `server.py:7893`
 
 
 ### `brain_learning`
@@ -1967,14 +1944,14 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `server.py:149`
 - **READ** `server.py:150`
 - **READ** `server.py:151`
-- **READ** `server.py:158`
-- **READ** `server.py:159`
-- **READ** `tg_intent_router.py:317`
-- **READ** `tg_intent_router.py:326`
-- **READ** `tg_intent_router.py:335`
-- **READ** `tg_intent_router.py:344`
-- **READ** `tg_intent_router.py:1133`
-- **READ** `tg_intent_router.py:1158`
+- **READ** `server.py:155`
+- **READ** `server.py:156`
+- **READ** `tg_intent_router.py:307`
+- **READ** `tg_intent_router.py:316`
+- **READ** `tg_intent_router.py:325`
+- **READ** `tg_intent_router.py:334`
+- **READ** `tg_intent_router.py:1122`
+- **READ** `tg_intent_router.py:1147`
 - **READ** `tg_morning_report.py:158`
 
 
@@ -2013,11 +1990,11 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `brain_backfill.py:34`
 - **READ** `data_integrity.py:119`
 - **READ** `kse_data_collector.py:139`
-- **READ** `server.py:3882`
-- **READ** `signal_engine.py:1234`
+- **READ** `server.py:3850`
+- **READ** `signal_engine.py:1285`
 - **READ** `sr_engine.py:137`
 - **READ** `stock_radar.py:758`
-- **READ** `stock_radar.py:1295`
+- **READ** `stock_radar.py:1379`
 
 
 ### `bridge_client`
@@ -2030,25 +2007,29 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_patch_expand_tools_hooks.py:48`
 - **READ** `_tools/_patch_health.py:40`
 - **READ** `_tools/_patch_phase6.py:55`
-- **READ** `dashboard_api.py:1886`
-- **READ** `dashboard_api.py:1899`
-- **READ** `dashboard_api.py:1910`
+- **READ** `dashboard_api.py:1738`
+- **READ** `dashboard_api.py:1751`
+- **READ** `dashboard_api.py:1762`
 - **READ** `data_integrity.py:121`
 - **READ** `gemini_scanner.py:193`
 - **READ** `kairos.py:207`
-- **READ** `server.py:2912`
-- **READ** `server.py:3037`
-- **READ** `server.py:3120`
-- **READ** `server.py:3140`
-- **READ** `server.py:3890`
-- **READ** `server.py:8099`
+- **READ** `server.py:2871`
+- **READ** `server.py:2996`
+- **READ** `server.py:3073`
+- **READ** `server.py:3093`
+- **READ** `server.py:7993`
 - **READ** `service_health.py:110`
-- **READ** `signal_engine.py:1329`
-- **READ** `signal_engine.py:1342`
-- **READ** `signal_engine.py:1394`
-- **READ** `signal_engine.py:1405`
-- **READ** `signal_engine.py:1612`
+- **READ** `signal_engine.py:1380`
+- **READ** `signal_engine.py:1393`
+- **READ** `signal_engine.py:1445`
+- **READ** `signal_engine.py:1456`
+- **READ** `signal_engine.py:1725`
 - **READ** `trading_brain.py:374`
+
+
+### `built`
+
+- **READ** `signal_engine.py:1499`
 
 
 ### `buy_now_shadow`
@@ -2079,24 +2060,24 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **READ** `calendar_engine.py:18`
 - **READ** `calendar_reminders.py:11`
-- **READ** `server.py:3517`
+- **READ** `server.py:3470`
 
 
 ### `calendar_engine`
 
-- **READ** `chat_v7.py:614`
-- **READ** `chat_v7.py:626`
-- **READ** `chat_v7.py:630`
-- **READ** `quick_query.py:297`
-- **READ** `quick_query.py:320`
-- **READ** `quick_query.py:328`
-- **READ** `server.py:2712`
-- **READ** `server.py:3527`
-- **READ** `server.py:6135`
-- **READ** `server.py:6793`
-- **READ** `server.py:6824`
-- **READ** `server.py:6853`
-- **READ** `server.py:6862`
+- **READ** `chat_v7.py:599`
+- **READ** `chat_v7.py:611`
+- **READ** `chat_v7.py:615`
+- **READ** `quick_query.py:282`
+- **READ** `quick_query.py:305`
+- **READ** `quick_query.py:313`
+- **READ** `server.py:2700`
+- **READ** `server.py:3480`
+- **READ** `server.py:6088`
+- **READ** `server.py:6679`
+- **READ** `server.py:6710`
+- **READ** `server.py:6739`
+- **READ** `server.py:6748`
 - **READ** `tg_morning_report.py:221`
 
 
@@ -2114,10 +2095,10 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `calendar_db.py:432`
 - **READ** `dashboard_api.py:248`
 - **READ** `dashboard_api.py:249`
-- **READ** `dashboard_api.py:1674`
+- **READ** `dashboard_api.py:1621`
 - **READ** `domain_kpis.py:72`
 - **READ** `domain_kpis.py:73`
-- **READ** `priority_engine.py:50`
+- **READ** `priority_engine.py:48`
 - **DELETE** `calendar_db.py:273`
 
 
@@ -2135,21 +2116,21 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `calendar_db.py:274`
 - **READ** `calendar_db.py:351`
 - **READ** `calendar_db.py:435`
-- **READ** `server.py:2713`
+- **READ** `server.py:2701`
 - **DELETE** `calendar_db.py:274`
 
 
 ### `calendar_reporting`
 
-- **READ** `chat_v7.py:615`
-- **READ** `quick_query.py:298`
-- **READ** `quick_query.py:321`
-- **READ** `quick_query.py:329`
-- **READ** `server.py:6136`
-- **READ** `server.py:6797`
-- **READ** `server.py:6826`
-- **READ** `server.py:6855`
-- **READ** `server.py:6863`
+- **READ** `chat_v7.py:600`
+- **READ** `quick_query.py:283`
+- **READ** `quick_query.py:306`
+- **READ** `quick_query.py:314`
+- **READ** `server.py:6089`
+- **READ** `server.py:6683`
+- **READ** `server.py:6712`
+- **READ** `server.py:6741`
+- **READ** `server.py:6749`
 - **READ** `tg_morning_report.py:222`
 
 
@@ -2168,9 +2149,9 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `chat_v7`
 
 - **READ** `server.py:108`
-- **READ** `server.py:7626`
-- **READ** `server.py:7649`
-- **READ** `server.py:8373`
+- **READ** `server.py:7520`
+- **READ** `server.py:7543`
+- **READ** `server.py:8232`
 - **READ** `structured_memory.py:635`
 
 
@@ -2184,8 +2165,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `circuit_breaker`
 
 - **READ** `_tools/_patch_cron_routing.py:38`
-- **READ** `news_engine.py:16`
-- **READ** `server.py:5327`
+- **READ** `server.py:5307`
 
 
 ### `claude`
@@ -2199,12 +2179,17 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **CREATE** `home_brain.py:30`
 - **WRITE** `home_brain.py:79`
 - **READ** `anomaly_engine.py:106`
-- **READ** `cost_tracker.py:296`
+- **READ** `cost_tracker.py:313`
 - **READ** `ha_doctor.py:259`
 - **READ** `habit_engine.py:35`
 - **READ** `home_brain.py:146`
-- **DELETE** `cost_tracker.py:296`
+- **DELETE** `cost_tracker.py:313`
 - **DELETE** `home_brain.py:146`
+
+
+### `closed`
+
+- **READ** `equity_tracker.py:106`
 
 
 ### `coalesced_executor`
@@ -2261,7 +2246,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `configuration`
 
-- **READ** `_tools/depmap.py:353`
+- **READ** `_tools/depmap.py:372`
 
 
 ### `confluence_decisions`
@@ -2272,8 +2257,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `confluence_engine`
 
-- **READ** `dashboard_api.py:1432`
-- **READ** `server.py:565`
+- **READ** `dashboard_api.py:1422`
+- **READ** `server.py:537`
 
 
 ### `confluence_signals`
@@ -2317,7 +2302,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `context`
 
-- **READ** `chat_v7.py:168`
+- **READ** `chat_v7.py:167`
 
 
 ### `context_cache`
@@ -2379,20 +2364,20 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `corrections_loop.py:351`
 - **READ** `corrections_loop.py:353`
 - **READ** `corrections_loop.py:356`
-- **READ** `server.py:6959`
-- **READ** `server.py:6966`
-- **DELETE** `server.py:6959`
-- **DELETE** `server.py:6966`
+- **READ** `server.py:6845`
+- **READ** `server.py:6852`
+- **DELETE** `server.py:6845`
+- **DELETE** `server.py:6852`
 
 
 ### `corrections_loop`
 
 - **READ** `chat_v7.py:32`
-- **READ** `server.py:6932`
-- **READ** `server.py:6953`
-- **READ** `server.py:8851`
-- **READ** `server.py:9221`
-- **READ** `server.py:9230`
+- **READ** `server.py:6818`
+- **READ** `server.py:6839`
+- **READ** `server.py:8709`
+- **READ** `server.py:9073`
+- **READ** `server.py:9082`
 
 
 ### `correlated`
@@ -2402,34 +2387,42 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `cost_log`
 
-- **CREATE** `cost_tracker.py:36`
-- **WRITE** `cost_tracker.py:84`
-- **WRITE** `cost_tracker.py:114`
-- **READ** `cost_tracker.py:144`
-- **READ** `cost_tracker.py:162`
-- **READ** `cost_tracker.py:178`
-- **READ** `cost_tracker.py:197`
-- **READ** `cost_tracker.py:215`
-- **READ** `cost_tracker.py:229`
-- **READ** `cost_tracker.py:255`
-- **READ** `cost_tracker.py:259`
-- **READ** `cost_tracker.py:263`
-- **READ** `cost_tracker.py:286`
-- **DELETE** `cost_tracker.py:286`
+- **CREATE** `cost_tracker.py:43`
+- **WRITE** `cost_tracker.py:96`
+- **WRITE** `cost_tracker.py:131`
+- **READ** `cost_tracker.py:161`
+- **READ** `cost_tracker.py:179`
+- **READ** `cost_tracker.py:195`
+- **READ** `cost_tracker.py:214`
+- **READ** `cost_tracker.py:232`
+- **READ** `cost_tracker.py:246`
+- **READ** `cost_tracker.py:272`
+- **READ** `cost_tracker.py:276`
+- **READ** `cost_tracker.py:280`
+- **READ** `cost_tracker.py:303`
+- **DELETE** `cost_tracker.py:303`
 
 
 ### `cost_tracker`
 
 - **READ** `_tools/patchers/phase4_fix_cost.py:22`
 - **READ** `_tools/patchers/phase4_fix_cost.py:24`
+- **READ** `auto_memory_extractor.py:120`
 - **READ** `chat_v7.py:73`
-- **READ** `dashboard_api.py:1730`
-- **READ** `quick_query.py:483`
-- **READ** `server.py:5449`
-- **READ** `server.py:6112`
-- **READ** `server.py:6883`
-- **READ** `server.py:9305`
-- **READ** `server.py:9361`
+- **READ** `chat_v7.py:474`
+- **READ** `context_manager.py:89`
+- **READ** `dashboard_api.py:1677`
+- **READ** `memory_recall.py:92`
+- **READ** `quick_query.py:458`
+- **READ** `server.py:1159`
+- **READ** `server.py:1185`
+- **READ** `server.py:5429`
+- **READ** `server.py:6073`
+- **READ** `server.py:6769`
+- **READ** `server.py:7399`
+- **READ** `server.py:9157`
+- **READ** `server.py:9213`
+- **READ** `tg_logbook.py:143`
 
 
 ### `cron`
@@ -2445,7 +2438,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `current`
 
 - **WRITE** `_tools/_patch_dashboard_tier3.py:211`
-- **WRITE** `dashboard_api.py:3584`
+- **WRITE** `dashboard_api.py:3440`
 
 
 ### `cursor`
@@ -2459,18 +2452,18 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **CREATE** `kse_data_collector.py:45`
 - **READ** `_tools/backfill_daily_bars.py:117`
-- **READ** `dashboard_api.py:1995`
-- **READ** `dashboard_api.py:1996`
-- **READ** `kse_data_collector.py:371`
-- **READ** `kse_data_collector.py:376`
-- **READ** `kse_data_collector.py:381`
-- **READ** `kse_data_collector.py:386`
+- **READ** `dashboard_api.py:1847`
+- **READ** `dashboard_api.py:1848`
+- **READ** `kse_data_collector.py:391`
+- **READ** `kse_data_collector.py:396`
+- **READ** `kse_data_collector.py:401`
+- **READ** `kse_data_collector.py:406`
 - **READ** `price_source.py:190`
 - **READ** `signal_engine.py:222`
 - **READ** `signal_engine.py:237`
-- **READ** `signal_engine.py:727`
-- **READ** `signal_engine.py:923`
-- **READ** `signal_engine.py:928`
+- **READ** `signal_engine.py:737`
+- **READ** `signal_engine.py:974`
+- **READ** `signal_engine.py:979`
 - **READ** `signal_review.py:151`
 - **READ** `signal_review.py:164`
 - **READ** `signal_review.py:191`
@@ -2504,19 +2497,20 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/patchers/phase2_extract_dashboard.py:2`
 - **READ** `_tools/patchers/phase2_extract_dashboard.py:51`
 - **READ** `_tools/patchers/phase2_wire_router.py:23`
-- **READ** `server.py:2611`
-- **READ** `server.py:3170`
+- **READ** `server.py:2599`
+- **READ** `server.py:3123`
 
 
 ### `data`
 
-- **READ** `dashboard_api.py:870`
+- **READ** `dashboard_api.py:860`
 - **READ** `stock_radar.py:242`
 
 
 ### `data_fetch_runs`
 
 - **CREATE** `kse_data_collector.py:63`
+- **WRITE** `_tools/collect_30m.py:43`
 - **WRITE** `_tools/prove_guards.py:143`
 - **WRITE** `_tools/prove_guards.py:168`
 - **WRITE** `_tools/prove_guards.py:171`
@@ -2535,7 +2529,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/run_witness.py:281`
 - **READ** `_tools/verify_sunday.py:120`
 - **READ** `health_watchdog.py:99`
-- **READ** `kse_data_collector.py:366`
+- **READ** `kse_data_collector.py:386`
 - **DELETE** `_tools/prove_guards.py:157`
 
 
@@ -2574,6 +2568,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/backfill_daily_bars.py:29`
 - **READ** `_tools/bar_completeness_probe.py:23`
 - **READ** `_tools/check_stable.py:23`
+- **READ** `_tools/collect_30m.py:17`
 - **READ** `_tools/depmap.py:27`
 - **READ** `_tools/fractal_backtest.py:9`
 - **READ** `_tools/fractal_backtest_v2.py:17`
@@ -2608,24 +2603,24 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `calendar_engine.py:93`
 - **READ** `calendar_reminders.py:9`
 - **READ** `calendar_reporting.py:8`
-- **READ** `chat_v7.py:568`
-- **READ** `chat_v7.py:649`
+- **READ** `chat_v7.py:553`
+- **READ** `chat_v7.py:634`
 - **READ** `confluence_engine.py:9`
 - **READ** `context_compactor.py:13`
 - **READ** `corrections_loop.py:22`
 - **READ** `cost_tracker.py:13`
 - **READ** `dashboard_api.py:11`
 - **READ** `dashboard_api.py:205`
-- **READ** `dashboard_api.py:451`
-- **READ** `dashboard_api.py:1444`
-- **READ** `dashboard_api.py:1566`
-- **READ** `dashboard_api.py:1650`
-- **READ** `dashboard_api.py:1751`
-- **READ** `dashboard_api.py:2033`
-- **READ** `dashboard_api.py:2133`
-- **READ** `dashboard_api.py:2440`
-- **READ** `dashboard_api.py:3101`
-- **READ** `dashboard_api.py:3195`
+- **READ** `dashboard_api.py:441`
+- **READ** `dashboard_api.py:1434`
+- **READ** `dashboard_api.py:1556`
+- **READ** `dashboard_api.py:1597`
+- **READ** `dashboard_api.py:1698`
+- **READ** `dashboard_api.py:1885`
+- **READ** `dashboard_api.py:1985`
+- **READ** `dashboard_api.py:2292`
+- **READ** `dashboard_api.py:2953`
+- **READ** `dashboard_api.py:3047`
 - **READ** `data_integrity.py:13`
 - **READ** `db_backup.py:10`
 - **READ** `degraded_mode.py:10`
@@ -2634,7 +2629,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `dream_consolidator.py:18`
 - **READ** `dropzone_watcher.py:22`
 - **READ** `entity_map_generator.py:27`
-- **READ** `equity_tracker.py:7`
+- **READ** `equity_tracker.py:16`
 - **READ** `expenses_engine.py:11`
 - **READ** `family_assistant.py:8`
 - **READ** `feedback_learner.py:24`
@@ -2651,18 +2646,16 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `health_watchdog.py:19`
 - **READ** `home_brain.py:6`
 - **READ** `hooks.py:13`
-- **READ** `inbox_engine.py:2`
-- **READ** `inbox_engine.py:221`
 - **READ** `journal_engine.py:8`
 - **READ** `kairos.py:12`
 - **READ** `kse_data_collector.py:18`
+- **READ** `kse_data_collector.py:365`
 - **READ** `life_expenses.py:9`
 - **READ** `life_health.py:9`
 - **READ** `life_stocks.py:10`
 - **READ** `life_work.py:6`
 - **READ** `memory_db.py:4`
 - **READ** `mini_planner.py:7`
-- **READ** `news_engine.py:13`
 - **READ** `paper_trading.py:7`
 - **READ** `plan_engine.py:10`
 - **READ** `position_engine.py:17`
@@ -2671,31 +2664,31 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `price_source.py:214`
 - **READ** `priority_engine.py:7`
 - **READ** `priority_engine.py:39`
-- **READ** `priority_engine.py:85`
-- **READ** `priority_engine.py:699`
+- **READ** `priority_engine.py:62`
+- **READ** `priority_engine.py:676`
 - **READ** `proactive_engine.py:7`
 - **READ** `proactive_suggestions.py:17`
 - **READ** `quick_query.py:22`
-- **READ** `quick_query.py:359`
+- **READ** `quick_query.py:344`
 - **READ** `relationships_engine.py:16`
 - **READ** `risk_engine.py:12`
 - **READ** `risk_engine.py:221`
 - **READ** `self_check.py:6`
 - **READ** `server.py:35`
-- **READ** `server.py:2813`
-- **READ** `server.py:2980`
-- **READ** `server.py:3085`
-- **READ** `server.py:3690`
-- **READ** `server.py:3864`
-- **READ** `server.py:3884`
-- **READ** `server.py:6132`
-- **READ** `server.py:6831`
-- **READ** `server.py:6839`
+- **READ** `server.py:2772`
+- **READ** `server.py:2939`
+- **READ** `server.py:3038`
+- **READ** `server.py:3643`
+- **READ** `server.py:3832`
+- **READ** `server.py:3852`
+- **READ** `server.py:6085`
+- **READ** `server.py:6717`
+- **READ** `server.py:6725`
 - **READ** `service_health.py:8`
 - **READ** `service_health.py:162`
 - **READ** `signal_engine.py:16`
 - **READ** `signal_engine.py:317`
-- **READ** `signal_engine.py:606`
+- **READ** `signal_engine.py:616`
 - **READ** `signal_review.py:13`
 - **READ** `smart_tools.py:12`
 - **READ** `sr_engine.py:10`
@@ -2707,11 +2700,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `task_engine.py:2`
 - **READ** `tasks_db.py:9`
 - **READ** `tg_alerts.py:9`
-- **READ** `tg_email.py:3`
 - **READ** `tg_logbook.py:3`
 - **READ** `tg_morning_report.py:3`
-- **READ** `tg_news.py:8`
-- **READ** `tg_news.py:107`
 - **READ** `tg_reminders.py:7`
 - **READ** `tg_session.py:3`
 - **READ** `tg_stocks.py:9`
@@ -2730,7 +2720,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `db_backup`
 
-- **READ** `server.py:205`
+- **READ** `server.py:202`
 
 
 ### `decision_audit`
@@ -2738,16 +2728,16 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **CREATE** `kse_data_collector.py:76`
 - **WRITE** `kse_data_collector.py:321`
 - **WRITE** `signal_review.py:432`
-- **READ** `dashboard_api.py:2803`
-- **READ** `dashboard_api.py:2809`
-- **READ** `dashboard_api.py:2824`
-- **READ** `dashboard_api.py:2839`
-- **READ** `dashboard_api.py:2850`
-- **READ** `dashboard_api.py:2861`
-- **READ** `dashboard_api.py:2908`
-- **READ** `dashboard_api.py:2909`
+- **READ** `dashboard_api.py:2655`
+- **READ** `dashboard_api.py:2661`
+- **READ** `dashboard_api.py:2676`
+- **READ** `dashboard_api.py:2691`
+- **READ** `dashboard_api.py:2702`
+- **READ** `dashboard_api.py:2713`
+- **READ** `dashboard_api.py:2760`
+- **READ** `dashboard_api.py:2761`
 - **READ** `kse_data_collector.py:314`
-- **READ** `kse_data_collector.py:416`
+- **READ** `kse_data_collector.py:439`
 - **READ** `signal_review.py:3`
 - **READ** `signal_review.py:139`
 - **READ** `signal_review.py:606`
@@ -2755,7 +2745,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `degraded_mode`
 
-- **READ** `server.py:197`
+- **READ** `server.py:194`
 
 
 ### `deployments`
@@ -2799,17 +2789,17 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `discovery.py:302`
 - **READ** `scripts/patch_smart.py:10`
 - **READ** `scripts/patch_smart.py:11`
-- **READ** `server.py:166`
+- **READ** `server.py:163`
 
 
 ### `disk`
 
-- **READ** `server.py:299`
+- **READ** `server.py:296`
 
 
 ### `domain_kpis`
 
-- **READ** `server.py:6650`
+- **READ** `server.py:6536`
 
 
 ### `dotenv`
@@ -2821,16 +2811,11 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `dream_consolidator`
 
-- **READ** `server.py:2941`
-- **READ** `server.py:3275`
-- **READ** `server.py:3284`
-- **READ** `server.py:5458`
-- **READ** `server.py:5467`
-
-
-### `email`
-
-- **READ** `tg_email.py:5`
+- **READ** `server.py:2900`
+- **READ** `server.py:3228`
+- **READ** `server.py:3237`
+- **READ** `server.py:5438`
+- **READ** `server.py:5447`
 
 
 ### `entity`
@@ -2840,9 +2825,9 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `entity_health`
 
-- **READ** `server.py:8495`
-- **READ** `server.py:8508`
-- **READ** `server.py:8622`
+- **READ** `server.py:8353`
+- **READ** `server.py:8366`
+- **READ** `server.py:8480`
 
 
 ### `entity_id`
@@ -2857,14 +2842,14 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `brain_core.py:294`
 - **READ** `brain_learning.py:569`
 - **READ** `entity_health.py:39`
-- **READ** `server.py:7526`
+- **READ** `server.py:7420`
 - **READ** `tg_intent_router.py:137`
 - **READ** `world_state.py:56`
 
 
 ### `entry`
 
-- **READ** `dashboard_api.py:2269`
+- **READ** `dashboard_api.py:2121`
 
 
 ### `entry_idx`
@@ -2882,14 +2867,14 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `equity_snapshots`
 
-- **READ** `equity_tracker.py:58`
-- **READ** `equity_tracker.py:93`
-- **READ** `equity_tracker.py:97`
+- **READ** `equity_tracker.py:167`
+- **READ** `equity_tracker.py:198`
+- **READ** `equity_tracker.py:201`
 
 
 ### `equity_tracker`
 
-- **READ** `dashboard_api.py:2418`
+- **READ** `dashboard_api.py:2270`
 
 
 ### `errors`
@@ -2900,37 +2885,37 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `events`
 
 - **CREATE** `habit_tracker.py:20`
-- **CREATE** `server.py:1095`
+- **CREATE** `server.py:1067`
 - **WRITE** `habit_tracker.py:61`
-- **WRITE** `server.py:1575`
-- **WRITE** `server.py:1576`
-- **WRITE** `server.py:1577`
-- **WRITE** `server.py:2329`
-- **WRITE** `server.py:2355`
+- **WRITE** `server.py:1563`
+- **WRITE** `server.py:1564`
+- **WRITE** `server.py:1565`
+- **WRITE** `server.py:2317`
+- **WRITE** `server.py:2343`
 - **READ** `habit_tracker.py:78`
 - **READ** `habit_tracker.py:150`
 - **READ** `habit_tracker.py:152`
 - **READ** `health_watchdog.py:161`
-- **READ** `server.py:2261`
-- **READ** `server.py:2363`
-- **READ** `server.py:2370`
-- **READ** `server.py:2377`
-- **READ** `server.py:2384`
-- **READ** `server.py:2385`
-- **READ** `server.py:2387`
+- **READ** `server.py:2249`
+- **READ** `server.py:2351`
+- **READ** `server.py:2358`
+- **READ** `server.py:2365`
+- **READ** `server.py:2372`
+- **READ** `server.py:2373`
+- **READ** `server.py:2375`
 
 
 ### `exec_policy`
 
 - **READ** `chat_v7.py:80`
-- **READ** `server.py:3549`
+- **READ** `server.py:3502`
 
 
 ### `existing`
 
 - **WRITE** `_tools/patch_dashboard_v9.py:2`
 - **READ** `_tools/_patch_health.py:37`
-- **READ** `server.py:8096`
+- **READ** `server.py:7990`
 - **READ** `service_health.py:3`
 
 
@@ -2951,15 +2936,15 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `expenses_engine`
 
-- **READ** `chat_v7.py:412`
-- **READ** `chat_v7.py:415`
-- **READ** `chat_v7.py:418`
-- **READ** `quick_query.py:167`
-- **READ** `quick_query.py:174`
-- **READ** `quick_query.py:181`
-- **READ** `quick_query.py:188`
-- **READ** `server.py:519`
-- **READ** `tg_morning_report.py:274`
+- **READ** `chat_v7.py:403`
+- **READ** `chat_v7.py:406`
+- **READ** `chat_v7.py:409`
+- **READ** `quick_query.py:152`
+- **READ** `quick_query.py:159`
+- **READ** `quick_query.py:166`
+- **READ** `quick_query.py:173`
+- **READ** `server.py:509`
+- **READ** `tg_morning_report.py:256`
 
 
 ### `failed`
@@ -2969,26 +2954,26 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `family_assistant`
 
-- **READ** `quick_query.py:430`
+- **READ** `quick_query.py:405`
 - **READ** `relationships_engine.py:447`
-- **READ** `server.py:6766`
+- **READ** `server.py:6652`
 
 
 ### `fastapi`
 
 - **READ** `dashboard_api.py:13`
 - **READ** `dashboard_api.py:14`
-- **READ** `dashboard_api.py:3014`
+- **READ** `dashboard_api.py:2866`
 - **READ** `modules/panel.py:3`
 - **READ** `modules/panel.py:4`
 - **READ** `server.py:42`
 - **READ** `server.py:43`
 - **READ** `server.py:44`
 - **READ** `server.py:45`
-- **READ** `server.py:3104`
-- **READ** `server.py:3391`
-- **READ** `server.py:3465`
-- **READ** `server.py:5187`
+- **READ** `server.py:3057`
+- **READ** `server.py:3344`
+- **READ** `server.py:3418`
+- **READ** `server.py:5167`
 
 
 ### `feature_flags`
@@ -3006,10 +2991,10 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `feature_flags.py:84`
 - **READ** `feature_flags.py:122`
 - **READ** `google_auth_ext.py:61`
-- **READ** `kse_data_collector.py:500`
-- **READ** `server.py:628`
-- **READ** `stock_radar.py:911`
-- **READ** `stock_radar.py:926`
+- **READ** `kse_data_collector.py:523`
+- **READ** `server.py:600`
+- **READ** `stock_radar.py:995`
+- **READ** `stock_radar.py:1010`
 - **READ** `tg_session.py:123`
 
 
@@ -3023,18 +3008,23 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `feedback_learner`
 
 - **READ** `confidence_engine.py:8`
-- **READ** `server.py:181`
-- **READ** `server.py:6903`
-- **READ** `server.py:6922`
-- **READ** `server.py:7114`
-- **READ** `server.py:8964`
-- **READ** `server.py:9273`
-- **READ** `server.py:9281`
+- **READ** `server.py:178`
+- **READ** `server.py:6789`
+- **READ** `server.py:6808`
+- **READ** `server.py:6991`
+- **READ** `server.py:8819`
+- **READ** `server.py:9125`
+- **READ** `server.py:9133`
 
 
 ### `fixed`
 
 - **READ** `_tools/fix_adhan_v5.py:113`
+
+
+### `fragments`
+
+- **READ** `_tools/depmap.py:916`
 
 
 ### `fresher`
@@ -3091,7 +3081,6 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `gmail`
 
-- **READ** `chat_v7.py:347`
 - **READ** `tg_logbook.py:80`
 
 
@@ -3104,8 +3093,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **READ** `_tools/daily_signal_review.py:44`
 - **READ** `gemini_scanner.py:313`
-- **READ** `server.py:3618`
-- **READ** `server.py:6420`
+- **READ** `server.py:3571`
+- **READ** `server.py:6312`
 - **READ** `trading_decision_engine.py:39`
 
 
@@ -3116,9 +3105,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `google_auth_ext.py:89`
 - **READ** `google_auth_ext.py:90`
 - **READ** `google_auth_ext.py:218`
-- **READ** `server.py:3426`
-- **READ** `tg_email.py:42`
-- **READ** `tg_email.py:43`
+- **READ** `server.py:3379`
 - **READ** `tg_logbook.py:28`
 - **READ** `tg_logbook.py:29`
 - **READ** `tg_stocks.py:35`
@@ -3127,18 +3114,16 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `google_auth_ext`
 
 - **READ** `calendar_engine.py:108`
-- **READ** `server.py:3458`
-- **READ** `server.py:3479`
-- **READ** `server.py:3507`
-- **READ** `tg_email.py:33`
+- **READ** `server.py:3411`
+- **READ** `server.py:3432`
+- **READ** `server.py:3460`
 
 
 ### `googleapiclient`
 
 - **READ** `google_auth_ext.py:150`
 - **READ** `google_auth_ext.py:171`
-- **READ** `server.py:3440`
-- **READ** `tg_email.py:44`
+- **READ** `server.py:3393`
 - **READ** `tg_logbook.py:30`
 
 
@@ -3151,14 +3136,14 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **READ** `ha_history.py:6`
 - **READ** `server.py:146`
-- **READ** `tg_intent_router.py:972`
+- **READ** `tg_intent_router.py:961`
 
 
 ### `habit_engine`
 
 - **READ** `proactive_engine.py:80`
-- **READ** `quick_query.py:459`
-- **READ** `server.py:6876`
+- **READ** `quick_query.py:434`
+- **READ** `server.py:6762`
 
 
 ### `health`
@@ -3176,10 +3161,10 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `health_engine`
 
-- **READ** `chat_v7.py:433`
-- **READ** `chat_v7.py:436`
-- **READ** `server.py:578`
-- **READ** `tg_morning_report.py:301`
+- **READ** `chat_v7.py:413`
+- **READ** `chat_v7.py:416`
+- **READ** `server.py:550`
+- **READ** `tg_morning_report.py:265`
 
 
 ### `health_logs`
@@ -3210,9 +3195,9 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `hijridate`
 
 - **READ** `brain_core.py:918`
-- **READ** `quick_query.py:621`
-- **READ** `quick_query.py:647`
-- **READ** `quick_query.py:669`
+- **READ** `quick_query.py:596`
+- **READ** `quick_query.py:622`
+- **READ** `quick_query.py:644`
 
 
 ### `historical`
@@ -3243,7 +3228,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `hooks`
 
 - **READ** `_tools/_patch_phase6.py:10`
-- **READ** `server.py:631`
+- **READ** `server.py:603`
 
 
 ### `https`
@@ -3254,20 +3239,6 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `inbox_engine`
 
 - **READ** `_tools/patch_email_news.py:16`
-- **READ** `chat_v7.py:376`
-- **READ** `dashboard_api.py:338`
-- **READ** `dashboard_api.py:1778`
-- **READ** `proactive_suggestions.py:188`
-- **READ** `quick_query.py:408`
-- **READ** `server.py:6060`
-- **READ** `server.py:6123`
-- **READ** `server.py:6137`
-- **READ** `server.py:6193`
-- **READ** `server.py:6224`
-- **READ** `server.py:8861`
-- **READ** `server.py:8974`
-- **READ** `tg_morning_report.py:255`
-- **READ** `tg_morning_report.py:292`
 
 
 ### `indicator`
@@ -3315,13 +3286,13 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_patch_dashboard_tier3.py:100`
 - **READ** `_tools/_patch_dashboard_tier3.py:109`
 - **READ** `_tools/_patch_dashboard_tier3.py:274`
-- **READ** `dashboard_api.py:3450`
-- **READ** `dashboard_api.py:3455`
-- **READ** `dashboard_api.py:3460`
-- **READ** `dashboard_api.py:3466`
-- **READ** `dashboard_api.py:3473`
-- **READ** `dashboard_api.py:3482`
-- **READ** `dashboard_api.py:3647`
+- **READ** `dashboard_api.py:3306`
+- **READ** `dashboard_api.py:3311`
+- **READ** `dashboard_api.py:3316`
+- **READ** `dashboard_api.py:3322`
+- **READ** `dashboard_api.py:3329`
+- **READ** `dashboard_api.py:3338`
+- **READ** `dashboard_api.py:3503`
 
 
 ### `intent_state_machine`
@@ -3357,28 +3328,30 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_fix_tool_reg.py:10`
 - **READ** `_tools/_patch_expand_tools_hooks.py:70`
 - **READ** `_tools/intraday_refresh.py:60`
-- **READ** `dashboard_api.py:714`
-- **READ** `dashboard_api.py:726`
-- **READ** `dashboard_api.py:1015`
-- **READ** `dashboard_api.py:1150`
-- **READ** `dashboard_api.py:1169`
-- **READ** `dashboard_api.py:1177`
-- **READ** `dashboard_api.py:1217`
-- **READ** `dashboard_api.py:2508`
-- **READ** `dashboard_api.py:3020`
-- **READ** `dashboard_api.py:3050`
+- **READ** `dashboard_api.py:704`
+- **READ** `dashboard_api.py:716`
+- **READ** `dashboard_api.py:1005`
+- **READ** `dashboard_api.py:1140`
+- **READ** `dashboard_api.py:1159`
+- **READ** `dashboard_api.py:1167`
+- **READ** `dashboard_api.py:1207`
+- **READ** `dashboard_api.py:2360`
+- **READ** `dashboard_api.py:2872`
+- **READ** `dashboard_api.py:2902`
+- **READ** `equity_tracker.py:27`
+- **READ** `equity_tracker.py:29`
 - **READ** `golden_engine.py:944`
 - **READ** `position_engine.py:96`
 - **READ** `position_engine.py:282`
 - **READ** `position_engine.py:441`
 - **READ** `risk_engine.py:60`
-- **READ** `server.py:551`
-- **READ** `server.py:8188`
-- **READ** `server.py:8209`
-- **READ** `server.py:8224`
-- **READ** `server.py:9008`
-- **READ** `signal_engine.py:536`
-- **READ** `signal_engine.py:1301`
+- **READ** `server.py:523`
+- **READ** `server.py:8106`
+- **READ** `server.py:8127`
+- **READ** `server.py:8142`
+- **READ** `server.py:8860`
+- **READ** `signal_engine.py:546`
+- **READ** `signal_engine.py:1352`
 - **READ** `tg_stocks.py:73`
 - **READ** `tg_stocks.py:75`
 - **READ** `tg_stocks.py:154`
@@ -3389,7 +3362,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_patch_phase34.py:12`
 - **READ** `_tools/_patch_phase6.py:12`
 - **READ** `_tools/_patch_phase6.py:13`
-- **READ** `server.py:630`
+- **READ** `server.py:602`
 
 
 ### `kairos_alerts`
@@ -3404,49 +3377,50 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **CREATE** `kairos.py:124`
 - **WRITE** `kairos.py:138`
-- **READ** `kairos.py:339`
-- **READ** `kairos.py:363`
-- **DELETE** `kairos.py:339`
+- **READ** `kairos.py:334`
+- **READ** `kairos.py:358`
+- **DELETE** `kairos.py:334`
 
 
 ### `keyword`
 
-- **READ** `auto_memory_extractor.py:191`
+- **READ** `auto_memory_extractor.py:197`
 
 
 ### `knowledge`
 
-- **CREATE** `server.py:4611`
-- **CREATE** `server.py:4633`
-- **WRITE** `server.py:4634`
-- **WRITE** `server.py:4645`
-- **WRITE** `server.py:4647`
+- **CREATE** `server.py:4584`
+- **CREATE** `server.py:4606`
+- **WRITE** `server.py:4607`
+- **WRITE** `server.py:4618`
+- **WRITE** `server.py:4620`
 - **WRITE** `tasks_db.py:207`
 - **WRITE** `tasks_db.py:263`
 - **READ** `_deprecated/brain_backup.py:73`
 - **READ** `brain_core.py:311`
 - **READ** `brain_multiuser.py:18`
-- **READ** `server.py:4613`
-- **READ** `server.py:4616`
-- **READ** `server.py:4625`
-- **READ** `server.py:4656`
+- **READ** `server.py:4586`
+- **READ** `server.py:4589`
+- **READ** `server.py:4598`
+- **READ** `server.py:4629`
 - **READ** `tasks_db.py:217`
 - **READ** `tasks_db.py:241`
 - **READ** `tasks_db.py:248`
 - **READ** `tasks_db.py:269`
 - **READ** `tasks_db.py:272`
-- **DELETE** `server.py:4656`
+- **DELETE** `server.py:4629`
 - **DELETE** `tasks_db.py:272`
 
 
 ### `kse_data_collector`
 
 - **READ** `_tools/debug_collector.py:6`
-- **READ** `dashboard_api.py:3157`
-- **READ** `dashboard_api.py:3270`
+- **READ** `dashboard_api.py:3009`
+- **READ** `dashboard_api.py:3048`
+- **READ** `dashboard_api.py:3126`
 - **READ** `golden_engine.py:996`
-- **READ** `server.py:2649`
-- **READ** `server.py:2655`
+- **READ** `server.py:2637`
+- **READ** `server.py:2643`
 
 
 ### `kwse`
@@ -3456,7 +3430,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `last`
 
-- **READ** `signal_engine.py:717`
+- **READ** `signal_engine.py:727`
 - **READ** `world_state_delta.py:16`
 
 
@@ -3467,7 +3441,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `learned`
 
-- **READ** `server.py:4053`
+- **READ** `server.py:4026`
 
 
 ### `learning_runs`
@@ -3500,25 +3474,25 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `life_expenses`
 
-- **READ** `server.py:233`
-- **READ** `server.py:6695`
+- **READ** `server.py:230`
+- **READ** `server.py:6581`
 - **READ** `tg_report.py:79`
 
 
 ### `life_health`
 
-- **READ** `server.py:240`
-- **READ** `server.py:6707`
+- **READ** `server.py:237`
+- **READ** `server.py:6593`
 
 
 ### `life_router`
 
-- **READ** `server.py:219`
+- **READ** `server.py:216`
 
 
 ### `life_stocks`
 
-- **READ** `server.py:226`
+- **READ** `server.py:223`
 - **READ** `tg_morning_report.py:142`
 - **READ** `tg_stocks.py:99`
 
@@ -3526,22 +3500,22 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `life_work`
 
 - **READ** `calendar_reporting.py:43`
-- **READ** `chat_v7.py:567`
+- **READ** `chat_v7.py:552`
 - **READ** `dashboard_api.py:204`
-- **READ** `dashboard_api.py:1750`
+- **READ** `dashboard_api.py:1697`
 - **READ** `proactive_engine.py:92`
-- **READ** `quick_query.py:299`
-- **READ** `quick_query.py:358`
-- **READ** `server.py:247`
-- **READ** `server.py:6058`
-- **READ** `server.py:6133`
-- **READ** `server.py:6675`
-- **READ** `server.py:6802`
-- **READ** `server.py:6830`
-- **READ** `server.py:7970`
-- **READ** `server.py:8542`
-- **READ** `server.py:8596`
-- **READ** `server.py:8798`
+- **READ** `quick_query.py:284`
+- **READ** `quick_query.py:343`
+- **READ** `server.py:244`
+- **READ** `server.py:6030`
+- **READ** `server.py:6086`
+- **READ** `server.py:6561`
+- **READ** `server.py:6688`
+- **READ** `server.py:6716`
+- **READ** `server.py:7864`
+- **READ** `server.py:8400`
+- **READ** `server.py:8454`
+- **READ** `server.py:8656`
 - **READ** `tg_report.py:23`
 
 
@@ -3554,7 +3528,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `llm`
 
-- **READ** `server.py:1218`
+- **READ** `server.py:1206`
 
 
 ### `local`
@@ -3567,7 +3541,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `logging`
 
-- **READ** `server.py:709`
+- **READ** `server.py:681`
 
 
 ### `master_ai`
@@ -3590,8 +3564,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **WRITE** `structured_memory.py:269`
 - **WRITE** `structured_memory.py:278`
 - **WRITE** `structured_memory.py:286`
-- **READ** `dashboard_api.py:1741`
-- **READ** `dashboard_api.py:1742`
+- **READ** `dashboard_api.py:1688`
+- **READ** `dashboard_api.py:1689`
 - **READ** `structured_memory.py:155`
 - **READ** `structured_memory.py:210`
 - **READ** `structured_memory.py:222`
@@ -3652,17 +3626,17 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `brain_multiuser.py:93`
 - **READ** `brain_multiuser.py:98`
 - **READ** `brain_multiuser.py:134`
+- **READ** `dashboard_api.py:3251`
+- **READ** `dashboard_api.py:3255`
+- **READ** `dashboard_api.py:3262`
+- **READ** `dashboard_api.py:3269`
+- **READ** `dashboard_api.py:3275`
+- **READ** `dashboard_api.py:3363`
+- **READ** `dashboard_api.py:3367`
+- **READ** `dashboard_api.py:3374`
+- **READ** `dashboard_api.py:3384`
+- **READ** `dashboard_api.py:3388`
 - **READ** `dashboard_api.py:3395`
-- **READ** `dashboard_api.py:3399`
-- **READ** `dashboard_api.py:3406`
-- **READ** `dashboard_api.py:3413`
-- **READ** `dashboard_api.py:3419`
-- **READ** `dashboard_api.py:3507`
-- **READ** `dashboard_api.py:3511`
-- **READ** `dashboard_api.py:3518`
-- **READ** `dashboard_api.py:3528`
-- **READ** `dashboard_api.py:3532`
-- **READ** `dashboard_api.py:3539`
 - **READ** `dream_consolidator.py:75`
 - **READ** `dream_consolidator.py:88`
 - **READ** `dream_consolidator.py:106`
@@ -3688,7 +3662,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `memory_db.py:126`
 - **READ** `memory_db.py:184`
 - **READ** `scripts/apply_patches.py:35`
-- **READ** `server.py:3329`
+- **READ** `server.py:3282`
 - **READ** `structured_memory.py:466`
 - **DELETE** `dream_consolidator.py:109`
 - **DELETE** `dream_consolidator.py:151`
@@ -3706,15 +3680,15 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `memory_db`
 
-- **READ** `chat_v7.py:542`
-- **READ** `chat_v7.py:551`
-- **READ** `chat_v7.py:711`
-- **READ** `chat_v7.py:801`
-- **READ** `chat_v7.py:856`
-- **READ** `chat_v7.py:1008`
+- **READ** `chat_v7.py:527`
+- **READ** `chat_v7.py:536`
+- **READ** `chat_v7.py:696`
+- **READ** `chat_v7.py:786`
+- **READ** `chat_v7.py:841`
+- **READ** `chat_v7.py:993`
 - **READ** `exec_policy.py:57`
-- **READ** `server.py:928`
-- **READ** `server.py:5102`
+- **READ** `server.py:900`
+- **READ** `server.py:5075`
 
 
 ### `memory_recall`
@@ -3730,16 +3704,16 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `mined_strategies`
 
-- **READ** `dashboard_api.py:2649`
-- **READ** `dashboard_api.py:2662`
-- **READ** `dashboard_api.py:2759`
-- **READ** `dashboard_api.py:2773`
-- **READ** `dashboard_api.py:2786`
-- **READ** `dashboard_api.py:2905`
-- **READ** `dashboard_api.py:2910`
-- **READ** `dashboard_api.py:2951`
-- **READ** `dashboard_api.py:2965`
-- **READ** `dashboard_api.py:2992`
+- **READ** `dashboard_api.py:2501`
+- **READ** `dashboard_api.py:2514`
+- **READ** `dashboard_api.py:2611`
+- **READ** `dashboard_api.py:2625`
+- **READ** `dashboard_api.py:2638`
+- **READ** `dashboard_api.py:2757`
+- **READ** `dashboard_api.py:2762`
+- **READ** `dashboard_api.py:2803`
+- **READ** `dashboard_api.py:2817`
+- **READ** `dashboard_api.py:2844`
 - **READ** `golden_engine.py:548`
 - **READ** `signal_review.py:174`
 - **READ** `signal_review.py:178`
@@ -3748,7 +3722,16 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `mini_planner`
 
 - **READ** `chat_v7.py:52`
-- **READ** `server.py:9240`
+- **READ** `server.py:9092`
+
+
+### `model_tiers`
+
+- **READ** `chat_v7.py:217`
+- **READ** `cost_tracker.py:20`
+- **READ** `server.py:1135`
+- **READ** `server.py:5096`
+- **READ** `server.py:7357`
 
 
 ### `module`
@@ -3758,7 +3741,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `modules`
 
-- **READ** `server.py:3229`
+- **READ** `server.py:3182`
 
 
 ### `multiple`
@@ -3768,40 +3751,18 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `news_digests`
 
-- **CREATE** `news_engine.py:89`
-- **WRITE** `news_engine.py:267`
 - **READ** `_tools/_patch_news_api.py:49`
 - **READ** `_tools/_patch_news_api.py:54`
 - **READ** `_tools/_patch_news_api.py:69`
 - **READ** `_tools/_patch_news_api.py:84`
 - **READ** `_tools/_patch_news_api.py:98`
-- **READ** `domain_kpis.py:109`
-- **READ** `domain_kpis.py:110`
-- **READ** `news_engine.py:291`
-- **READ** `news_engine.py:293`
-- **READ** `news_engine.py:301`
-- **READ** `news_engine.py:404`
-- **READ** `news_engine.py:409`
-- **READ** `news_engine.py:424`
-- **READ** `news_engine.py:441`
-- **READ** `news_engine.py:455`
 - **DELETE** `_tools/_patch_news_api.py:98`
-- **DELETE** `news_engine.py:455`
 
 
 ### `news_engine`
 
 - **READ** `_tools/_patch_health.py:47`
 - **READ** `_tools/patch_email_news.py:51`
-- **READ** `chat_v7.py:422`
-- **READ** `chat_v7.py:425`
-- **READ** `dashboard_api.py:1819`
-- **READ** `kairos.py:214`
-- **READ** `quick_query.py:150`
-- **READ** `server.py:532`
-- **READ** `server.py:8106`
-- **READ** `server.py:8312`
-- **READ** `tg_morning_report.py:283`
 
 
 ### `nightly`
@@ -3844,19 +3805,19 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `old`
 
-- **READ** `server.py:9199`
+- **READ** `server.py:9051`
 - **READ** `structured_memory.py:18`
 
 
 ### `open`
 
-- **READ** `quick_query.py:837`
+- **READ** `quick_query.py:812`
 
 
 ### `openai`
 
 - **READ** `chat_v7.py:92`
-- **READ** `cost_tracker.py:101`
+- **READ** `cost_tracker.py:113`
 - **READ** `server.py:47`
 
 
@@ -3869,12 +3830,6 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **WRITE** `paper_trading.py:49`
 - **WRITE** `paper_trading.py:91`
-- **READ** `equity_tracker.py:31`
-- **READ** `equity_tracker.py:34`
-- **READ** `equity_tracker.py:35`
-- **READ** `equity_tracker.py:36`
-- **READ** `equity_tracker.py:42`
-- **READ** `equity_tracker.py:108`
 - **READ** `paper_trading.py:75`
 - **READ** `paper_trading.py:114`
 - **READ** `paper_trading.py:145`
@@ -3883,9 +3838,9 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `paper_trading`
 
-- **READ** `dashboard_api.py:2382`
-- **READ** `dashboard_api.py:2394`
-- **READ** `dashboard_api.py:2406`
+- **READ** `dashboard_api.py:2234`
+- **READ** `dashboard_api.py:2246`
+- **READ** `dashboard_api.py:2258`
 
 
 ### `parallel_coordinator`
@@ -3895,7 +3850,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `past`
 
-- **READ** `chat_v7.py:216`
+- **READ** `chat_v7.py:211`
 
 
 ### `pathlib`
@@ -3941,7 +3896,6 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `entity_map_generator.py:26`
 - **READ** `feedback_learner.py:26`
 - **READ** `google_auth_ext.py:14`
-- **READ** `inbox_engine.py:3`
 - **READ** `mini_planner.py:6`
 - **READ** `price_source.py:40`
 - **READ** `relationships_engine.py:17`
@@ -3950,7 +3904,6 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `stock_radar.py:20`
 - **READ** `structured_memory.py:27`
 - **READ** `task_engine.py:3`
-- **READ** `tg_email.py:4`
 - **READ** `tg_logbook.py:4`
 - **READ** `tg_morning_report.py:4`
 - **READ** `tmp/kse_equipment_backtest.py:11`
@@ -3991,7 +3944,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `plan_engine`
 
-- **READ** `server.py:189`
+- **READ** `server.py:186`
 
 
 ### `plans`
@@ -4028,7 +3981,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **WRITE** `life_stocks.py:155`
 - **WRITE** `life_stocks.py:226`
 - **WRITE** `life_stocks.py:236`
-- **READ** `dashboard_api.py:1917`
+- **READ** `dashboard_api.py:1769`
 - **READ** `life_stocks.py:132`
 - **READ** `life_stocks.py:170`
 - **READ** `life_stocks.py:204`
@@ -4047,13 +4000,13 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `position_engine`
 
-- **READ** `dashboard_api.py:3302`
-- **READ** `dashboard_api.py:3333`
-- **READ** `dashboard_api.py:3350`
+- **READ** `dashboard_api.py:3158`
+- **READ** `dashboard_api.py:3189`
+- **READ** `dashboard_api.py:3206`
 - **READ** `journal_engine.py:102`
 - **READ** `journal_engine.py:217`
 - **READ** `journal_engine.py:427`
-- **READ** `kse_data_collector.py:570`
+- **READ** `kse_data_collector.py:593`
 
 
 ### `pragma`
@@ -4063,7 +4016,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `price`
 
-- **READ** `signal_engine.py:762`
+- **READ** `signal_engine.py:772`
 
 
 ### `price_source`
@@ -4076,15 +4029,16 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/run_witness.py:249`
 - **READ** `_tools/run_witness.py:294`
 - **READ** `_tools/run_witness.py:302`
-- **READ** `dashboard_api.py:806`
-- **READ** `dashboard_api.py:882`
-- **READ** `dashboard_api.py:926`
-- **READ** `dashboard_api.py:959`
-- **READ** `dashboard_api.py:2307`
-- **READ** `dashboard_api.py:2329`
+- **READ** `dashboard_api.py:796`
+- **READ** `dashboard_api.py:872`
+- **READ** `dashboard_api.py:916`
+- **READ** `dashboard_api.py:949`
+- **READ** `dashboard_api.py:2159`
+- **READ** `dashboard_api.py:2181`
 - **READ** `journal_engine.py:329`
 - **READ** `risk_engine.py:171`
 - **READ** `stock_analyzer.py:699`
+- **READ** `stock_radar.py:793`
 
 
 ### `priority_engine`
@@ -4094,7 +4048,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/patchers/phase1_wire_inbox_cache.py:13`
 - **READ** `_tools/patchers/phase1_wire_inbox_cache.py:19`
 - **READ** `dashboard_api.py:16`
-- **READ** `server.py:9395`
+- **READ** `server.py:9247`
 
 
 ### `proactive_alerts`
@@ -4114,7 +4068,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `proactive_suggestions`
 
-- **READ** `server.py:456`
+- **READ** `server.py:453`
 
 
 ### `processing_cursor`
@@ -4122,7 +4076,6 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_int1_clean.py:20`
 - **READ** `_tools/_int1_radar.py:20`
 - **READ** `auto_memory_extractor.py:19`
-- **READ** `news_engine.py:22`
 - **READ** `stock_radar.py:29`
 
 
@@ -4141,7 +4094,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `progress`
 
 - **WRITE** `_tools/_patch_dashboard_tier3.py:255`
-- **WRITE** `dashboard_api.py:3628`
+- **WRITE** `dashboard_api.py:3484`
 
 
 ### `project`
@@ -4156,8 +4109,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `python`
 
-- **READ** `_tools/depmap.py:538`
-- **READ** `_tools/depmap.py:610`
+- **READ** `_tools/depmap.py:557`
+- **READ** `_tools/depmap.py:629`
 - **READ** `_tools/patchers/apply_text_patch.py:8`
 
 
@@ -4178,10 +4131,10 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `quick_query`
 
 - **READ** `server.py:114`
-- **READ** `server.py:5508`
+- **READ** `server.py:5488`
+- **READ** `server.py:5504`
+- **READ** `server.py:5514`
 - **READ** `server.py:5524`
-- **READ** `server.py:5534`
-- **READ** `server.py:5544`
 - **READ** `tg_report.py:31`
 - **READ** `tg_report.py:41`
 
@@ -4211,9 +4164,14 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `golden_engine.py:199`
 
 
+### `realized`
+
+- **READ** `equity_tracker.py:110`
+
+
 ### `recent`
 
-- **READ** `stock_radar.py:1198`
+- **READ** `stock_radar.py:1282`
 
 
 ### `relationship_notes`
@@ -4225,13 +4183,13 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `relationships_engine`
 
-- **READ** `chat_v7.py:389`
-- **READ** `chat_v7.py:394`
-- **READ** `chat_v7.py:408`
-- **READ** `quick_query.py:272`
-- **READ** `quick_query.py:289`
-- **READ** `server.py:505`
-- **READ** `tg_morning_report.py:265`
+- **READ** `chat_v7.py:380`
+- **READ** `chat_v7.py:385`
+- **READ** `chat_v7.py:399`
+- **READ** `quick_query.py:257`
+- **READ** `quick_query.py:274`
+- **READ** `server.py:495`
+- **READ** `tg_morning_report.py:247`
 
 
 ### `request_log`
@@ -4251,28 +4209,27 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `rest`
 
-- **READ** `tg_intent_router.py:779`
+- **READ** `tg_intent_router.py:769`
 
 
 ### `risk`
 
-- **WRITE** `dashboard_api.py:3128`
+- **WRITE** `dashboard_api.py:2980`
 
 
 ### `risk_config`
 
-- **CREATE** `dashboard_api.py:3133`
+- **CREATE** `dashboard_api.py:2985`
 - **READ** `risk_engine.py:295`
 
 
 ### `risk_engine`
 
 - **READ** `_tools/intraday_refresh.py:74`
-- **READ** `dashboard_api.py:2077`
-- **READ** `dashboard_api.py:2428`
-- **READ** `dashboard_api.py:3121`
-- **READ** `equity_tracker.py:22`
-- **READ** `equity_tracker.py:84`
+- **READ** `dashboard_api.py:1929`
+- **READ** `dashboard_api.py:2280`
+- **READ** `dashboard_api.py:2973`
+- **READ** `equity_tracker.py:57`
 - **READ** `golden_engine.py:943`
 - **READ** `paper_trading.py:36`
 - **READ** `paper_trading.py:164`
@@ -4287,7 +4244,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `run_witness`
 
-- **READ** `kse_data_collector.py:448`
+- **READ** `kse_data_collector.py:471`
 - **READ** `signal_review.py:644`
 - **READ** `signal_review.py:693`
 
@@ -4309,8 +4266,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `schema_migrations`
 
-- **WRITE** `server.py:1601`
-- **READ** `server.py:1713`
+- **WRITE** `server.py:1589`
+- **READ** `server.py:1701`
 
 
 ### `scratch`
@@ -4335,7 +4292,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_deprecated/brain_backup.py:3`
 - **READ** `dashboard_api.py:3`
 - **READ** `gemini_scanner.py:180`
-- **READ** `kse_data_collector.py:512`
+- **READ** `kse_data_collector.py:535`
 - **READ** `memory_recall.py:47`
 - **READ** `priority_engine.py:3`
 - **READ** `service_health.py:99`
@@ -4356,12 +4313,12 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_patch_layer24.py:126`
 - **READ** `_tools/_patch_phase34.py:14`
 - **READ** `_tools/_patch_phase34.py:15`
-- **READ** `server.py:629`
-- **READ** `server.py:641`
-- **READ** `stock_radar.py:950`
-- **READ** `stock_radar.py:989`
-- **READ** `stock_radar.py:1017`
-- **READ** `stock_radar.py:1578`
+- **READ** `server.py:601`
+- **READ** `server.py:613`
+- **READ** `stock_radar.py:1034`
+- **READ** `stock_radar.py:1073`
+- **READ** `stock_radar.py:1101`
+- **READ** `stock_radar.py:1662`
 
 
 ### `session_log`
@@ -4374,7 +4331,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `session_memory`
 
 - **READ** `_tools/_int5_tg.py:19`
-- **READ** `server.py:7545`
+- **READ** `server.py:7439`
 
 
 ### `session_summaries`
@@ -4385,34 +4342,37 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `sessions`
 
-- **CREATE** `server.py:4564`
-- **CREATE** `server.py:4576`
-- **CREATE** `server.py:4586`
-- **WRITE** `server.py:4565`
-- **READ** `server.py:4577`
-- **READ** `server.py:4587`
+- **CREATE** `server.py:4537`
+- **CREATE** `server.py:4549`
+- **CREATE** `server.py:4559`
+- **WRITE** `server.py:4538`
+- **READ** `server.py:4550`
+- **READ** `server.py:4560`
 
 
 ### `signal`
 
-- **READ** `dashboard_api.py:2390`
+- **READ** `dashboard_api.py:2242`
 
 
 ### `signal_engine`
 
-- **READ** `dashboard_api.py:1088`
+- **READ** `dashboard_api.py:1078`
+- **READ** `dashboard_api.py:1826`
+- **READ** `dashboard_api.py:1837`
 - **READ** `dashboard_api.py:1974`
-- **READ** `dashboard_api.py:1985`
-- **READ** `dashboard_api.py:2122`
-- **READ** `dashboard_api.py:2134`
-- **READ** `dashboard_api.py:2192`
-- **READ** `dashboard_api.py:2247`
-- **READ** `dashboard_api.py:2441`
-- **READ** `server.py:2919`
-- **READ** `server.py:3621`
-- **READ** `server.py:3628`
-- **READ** `server.py:6424`
-- **READ** `server.py:6431`
+- **READ** `dashboard_api.py:1986`
+- **READ** `dashboard_api.py:2044`
+- **READ** `dashboard_api.py:2099`
+- **READ** `dashboard_api.py:2293`
+- **READ** `server.py:2878`
+- **READ** `server.py:3574`
+- **READ** `server.py:3581`
+- **READ** `server.py:3715`
+- **READ** `server.py:3861`
+- **READ** `server.py:6316`
+- **READ** `server.py:6323`
+- **READ** `stock_radar.py:823`
 - **READ** `trading_brain.py:161`
 - **READ** `trading_brain.py:164`
 - **READ** `trading_brain.py:648`
@@ -4420,22 +4380,22 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `signal_outcomes`
 
-- **READ** `dashboard_api.py:2679`
-- **READ** `dashboard_api.py:2704`
-- **READ** `dashboard_api.py:2717`
-- **READ** `dashboard_api.py:2734`
-- **READ** `dashboard_api.py:2883`
-- **READ** `dashboard_api.py:2895`
-- **READ** `dashboard_api.py:2906`
-- **READ** `dashboard_api.py:2907`
+- **READ** `dashboard_api.py:2531`
+- **READ** `dashboard_api.py:2556`
+- **READ** `dashboard_api.py:2569`
+- **READ** `dashboard_api.py:2586`
+- **READ** `dashboard_api.py:2735`
+- **READ** `dashboard_api.py:2747`
+- **READ** `dashboard_api.py:2758`
+- **READ** `dashboard_api.py:2759`
 
 
 ### `signal_review`
 
 - **READ** `_tools/daily_signal_review.py:29`
-- **READ** `server.py:254`
-- **READ** `server.py:3680`
-- **READ** `server.py:6469`
+- **READ** `server.py:251`
+- **READ** `server.py:3633`
+- **READ** `server.py:6361`
 
 
 ### `signal_reviews`
@@ -4461,7 +4421,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/verify_sunday.py:223`
 - **READ** `_tools/verify_sunday.py:250`
 - **READ** `brain_backfill.py:237`
-- **READ** `dashboard_api.py:2635`
+- **READ** `dashboard_api.py:2487`
 - **READ** `stock_personality_engine.py:558`
 - **READ** `trading_brain.py:191`
 - **READ** `trading_brain.py:285`
@@ -4481,12 +4441,12 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `skill_loader`
 
 - **READ** `_tools/full_audit.py:203`
-- **READ** `dashboard_api.py:3675`
+- **READ** `dashboard_api.py:3531`
 
 
 ### `skills`
 
-- **READ** `dashboard_api.py:3673`
+- **READ** `dashboard_api.py:3529`
 - **READ** `skill_loader.py:4`
 
 
@@ -4508,15 +4468,15 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/full_audit.py:188`
 - **READ** `_tools/prove_guards.py:565`
 - **READ** `_tools/prove_guards.py:640`
-- **READ** `server.py:1493`
-- **READ** `server.py:5058`
+- **READ** `server.py:1481`
+- **READ** `server.py:5031`
 - **READ** `structured_memory.py:460`
 
 
 ### `sr_engine`
 
-- **READ** `dashboard_api.py:1064`
-- **READ** `stock_radar.py:1571`
+- **READ** `dashboard_api.py:1054`
+- **READ** `stock_radar.py:1655`
 
 
 ### `stale`
@@ -4526,8 +4486,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `starlette`
 
-- **READ** `server.py:3181`
-- **READ** `server.py:5139`
+- **READ** `server.py:3134`
+- **READ** `server.py:5119`
 
 
 ### `start`
@@ -4547,7 +4507,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `anomaly_engine.py:174`
 - **READ** `anomaly_engine.py:202`
 - **READ** `anomaly_engine.py:205`
-- **READ** `cost_tracker.py:295`
+- **READ** `cost_tracker.py:312`
 - **READ** `ha_doctor.py:126`
 - **READ** `ha_doctor.py:152`
 - **READ** `ha_doctor.py:156`
@@ -4569,14 +4529,14 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `world_state_delta.py:152`
 - **READ** `world_state_delta.py:171`
 - **READ** `world_state_delta.py:189`
-- **DELETE** `cost_tracker.py:295`
+- **DELETE** `cost_tracker.py:312`
 - **DELETE** `home_brain.py:143`
 
 
 ### `stock_alerts`
 
-- **READ** `server.py:4686`
-- **READ** `server.py:4695`
+- **READ** `server.py:4659`
+- **READ** `server.py:4668`
 
 
 ### `stock_analysis_cache`
@@ -4590,16 +4550,16 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `stock_analyzer`
 
 - **READ** `_tools/_patch_api_analyze.py:28`
-- **READ** `dashboard_api.py:2022`
+- **READ** `dashboard_api.py:1874`
 - **READ** `gemini_scanner.py:462`
-- **READ** `server.py:2688`
-- **READ** `server.py:8128`
+- **READ** `server.py:2676`
+- **READ** `server.py:8029`
 
 
 ### `stock_personality_engine`
 
-- **READ** `server.py:3656`
-- **READ** `server.py:3662`
+- **READ** `server.py:3609`
+- **READ** `server.py:3615`
 
 
 ### `stock_profiles`
@@ -4634,22 +4594,23 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `brain_backfill.py:291`
 - **READ** `brain_backfill.py:426`
 - **READ** `dashboard_api.py:213`
-- **READ** `dashboard_api.py:457`
-- **READ** `dashboard_api.py:1341`
-- **READ** `dashboard_api.py:1933`
-- **READ** `dashboard_api.py:2568`
-- **READ** `dashboard_api.py:3373`
+- **READ** `dashboard_api.py:447`
+- **READ** `dashboard_api.py:1331`
+- **READ** `dashboard_api.py:1785`
+- **READ** `dashboard_api.py:2420`
+- **READ** `dashboard_api.py:3229`
 - **READ** `gemini_scanner.py:194`
 - **READ** `kse_data_collector.py:115`
 - **READ** `kse_data_collector.py:274`
-- **READ** `priority_engine.py:83`
-- **READ** `server.py:493`
-- **READ** `server.py:3043`
-- **READ** `server.py:3146`
-- **READ** `server.py:3891`
-- **READ** `signal_engine.py:1349`
-- **READ** `signal_engine.py:1412`
-- **READ** `signal_engine.py:1602`
+- **READ** `priority_engine.py:60`
+- **READ** `server.py:483`
+- **READ** `server.py:3002`
+- **READ** `server.py:3099`
+- **READ** `server.py:3714`
+- **READ** `server.py:3859`
+- **READ** `signal_engine.py:1400`
+- **READ** `signal_engine.py:1463`
+- **READ** `signal_engine.py:1715`
 - **READ** `trading_brain.py:360`
 - **READ** `tradingview_bridge.py:398`
 
@@ -4687,40 +4648,42 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/verify_sunday.py:203`
 - **READ** `_tools/verify_sunday.py:206`
 - **READ** `confluence_engine.py:282`
-- **READ** `dashboard_api.py:808`
-- **READ** `dashboard_api.py:937`
-- **READ** `dashboard_api.py:2310`
-- **READ** `dashboard_api.py:3174`
-- **READ** `dashboard_api.py:3185`
-- **READ** `dashboard_api.py:3191`
-- **READ** `dashboard_api.py:3366`
+- **READ** `dashboard_api.py:798`
+- **READ** `dashboard_api.py:927`
+- **READ** `dashboard_api.py:2162`
+- **READ** `dashboard_api.py:3026`
+- **READ** `dashboard_api.py:3037`
+- **READ** `dashboard_api.py:3043`
+- **READ** `dashboard_api.py:3222`
 - **READ** `data_integrity.py:139`
 - **READ** `data_integrity.py:143`
 - **READ** `data_integrity.py:253`
-- **READ** `equity_tracker.py:43`
+- **READ** `equity_tracker.py:85`
 - **READ** `health_watchdog.py:170`
 - **READ** `kse_data_collector.py:123`
-- **READ** `kse_data_collector.py:394`
+- **READ** `kse_data_collector.py:414`
 - **READ** `paper_trading.py:121`
 - **READ** `price_source.py:413`
 - **READ** `risk_engine.py:180`
-- **READ** `server.py:2861`
-- **READ** `server.py:3644`
-- **READ** `server.py:6445`
+- **READ** `server.py:2820`
+- **READ** `server.py:3597`
+- **READ** `server.py:6337`
 - **READ** `service_health.py:156`
 - **READ** `signal_engine.py:192`
 - **READ** `signal_engine.py:249`
 - **READ** `signal_engine.py:281`
-- **READ** `signal_engine.py:586`
-- **READ** `signal_engine.py:601`
-- **READ** `signal_engine.py:745`
+- **READ** `signal_engine.py:596`
+- **READ** `signal_engine.py:611`
+- **READ** `signal_engine.py:755`
 - **READ** `sr_engine.py:138`
 - **READ** `sr_engine.py:160`
-- **READ** `stock_radar.py:1596`
-- **READ** `stock_radar.py:1626`
+- **READ** `stock_radar.py:1680`
+- **READ** `stock_radar.py:1710`
 - **READ** `tg_stocks.py:112`
 - **READ** `trading_brain.py:363`
 - **READ** `tradingview_bridge.py:288`
+- **READ** `yahoo_30m.py:56`
+- **READ** `yahoo_30m.py:67`
 - **DELETE** `_tools/prove_guards.py:376`
 
 
@@ -4746,27 +4709,27 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/patchers/phase5_daily_summary.py:76`
 - **READ** `_tools/prove_guards.py:375`
 - **READ** `_tools/radar_diag.py:28`
-- **READ** `dashboard_api.py:1188`
-- **READ** `dashboard_api.py:1521`
-- **READ** `dashboard_api.py:1547`
-- **READ** `dashboard_api.py:1549`
-- **READ** `dashboard_api.py:1552`
-- **READ** `dashboard_api.py:1554`
-- **READ** `dashboard_api.py:1569`
-- **READ** `dashboard_api.py:1572`
-- **READ** `dashboard_api.py:1576`
+- **READ** `dashboard_api.py:1178`
+- **READ** `dashboard_api.py:1511`
+- **READ** `dashboard_api.py:1537`
+- **READ** `dashboard_api.py:1539`
+- **READ** `dashboard_api.py:1542`
+- **READ** `dashboard_api.py:1544`
+- **READ** `dashboard_api.py:1559`
+- **READ** `dashboard_api.py:1562`
+- **READ** `dashboard_api.py:1566`
 - **READ** `journal_engine.py:596`
 - **READ** `journal_engine.py:610`
-- **READ** `server.py:2830`
-- **READ** `server.py:3710`
-- **READ** `server.py:3818`
-- **READ** `server.py:3821`
+- **READ** `server.py:2789`
+- **READ** `server.py:3663`
+- **READ** `server.py:3786`
+- **READ** `server.py:3789`
 - **READ** `stock_radar.py:290`
-- **READ** `stock_radar.py:1141`
-- **READ** `stock_radar.py:1145`
-- **READ** `stock_radar.py:1177`
-- **READ** `stock_radar.py:1178`
-- **READ** `stock_radar.py:1207`
+- **READ** `stock_radar.py:1225`
+- **READ** `stock_radar.py:1229`
+- **READ** `stock_radar.py:1261`
+- **READ** `stock_radar.py:1262`
+- **READ** `stock_radar.py:1291`
 - **DELETE** `_tools/prove_guards.py:375`
 
 
@@ -4783,8 +4746,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_verify_scalper.py:33`
 - **READ** `_tools/prove_guards.py:378`
 - **READ** `_tools/radar_diag.py:32`
-- **READ** `server.py:3762`
-- **READ** `server.py:3810`
+- **READ** `server.py:3778`
 - **READ** `stock_radar.py:533`
 - **READ** `stock_radar.py:738`
 - **DELETE** `_tools/prove_guards.py:378`
@@ -4794,6 +4756,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **CREATE** `stock_radar.py:77`
 - **WRITE** `stock_radar.py:261`
+- **READ** `_tools/collect_30m.py:31`
 - **READ** `_tools/prove_guards.py:377`
 - **READ** `stock_radar.py:228`
 - **READ** `stock_radar.py:255`
@@ -4849,20 +4812,20 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `system_guardian`
 
-- **READ** `quick_query.py:438`
-- **READ** `server.py:6773`
+- **READ** `quick_query.py:413`
+- **READ** `server.py:6659`
 - **READ** `tg_alerts.py:223`
 
 
 ### `system_settings`
 
-- **CREATE** `server.py:1115`
-- **WRITE** `server.py:1594`
+- **CREATE** `server.py:1087`
+- **WRITE** `server.py:1582`
 - **READ** `dashboard_api.py:174`
-- **READ** `server.py:1121`
-- **READ** `server.py:1618`
-- **READ** `server.py:1699`
-- **READ** `server.py:2302`
+- **READ** `server.py:1093`
+- **READ** `server.py:1606`
+- **READ** `server.py:1687`
+- **READ** `server.py:2290`
 
 
 ### `target`
@@ -4882,24 +4845,22 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `task_engine`
 
-- **READ** `inbox_engine.py:183`
-- **READ** `inbox_engine.py:210`
 - **READ** `proactive_suggestions.py:174`
-- **READ** `quick_query.py:300`
-- **READ** `quick_query.py:337`
-- **READ** `quick_query.py:344`
-- **READ** `quick_query.py:351`
-- **READ** `quick_query.py:375`
-- **READ** `quick_query.py:394`
-- **READ** `server.py:5440`
-- **READ** `server.py:6059`
-- **READ** `server.py:6134`
-- **READ** `server.py:6192`
-- **READ** `server.py:6809`
-- **READ** `server.py:6838`
-- **READ** `server.py:8860`
-- **READ** `server.py:8973`
-- **READ** `tg_morning_report.py:246`
+- **READ** `quick_query.py:285`
+- **READ** `quick_query.py:322`
+- **READ** `quick_query.py:329`
+- **READ** `quick_query.py:336`
+- **READ** `quick_query.py:360`
+- **READ** `quick_query.py:379`
+- **READ** `server.py:5420`
+- **READ** `server.py:6031`
+- **READ** `server.py:6087`
+- **READ** `server.py:6131`
+- **READ** `server.py:6695`
+- **READ** `server.py:6724`
+- **READ** `server.py:8718`
+- **READ** `server.py:8828`
+- **READ** `tg_morning_report.py:237`
 - **READ** `tg_tasks.py:3`
 
 
@@ -4919,31 +4880,29 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_int7_tasks.py:22`
 - **READ** `_tools/_int7_tasks.py:56`
 - **READ** `_tools/_patch_api_tasks.py:23`
-- **READ** `server.py:8236`
-- **READ** `server.py:8325`
-- **READ** `server.py:8347`
+- **READ** `server.py:8154`
 
 
 ### `tasks`
 
-- **CREATE** `server.py:1048`
+- **CREATE** `server.py:1020`
 - **CREATE** `task_engine.py:21`
-- **WRITE** `server.py:2511`
-- **WRITE** `server.py:2542`
+- **WRITE** `server.py:2499`
+- **WRITE** `server.py:2530`
 - **WRITE** `task_engine.py:57`
 - **WRITE** `task_engine.py:85`
 - **READ** `dashboard_api.py:240`
 - **READ** `dashboard_api.py:241`
-- **READ** `dashboard_api.py:1661`
-- **READ** `dashboard_api.py:1663`
+- **READ** `dashboard_api.py:1608`
+- **READ** `dashboard_api.py:1610`
 - **READ** `domain_kpis.py:80`
 - **READ** `domain_kpis.py:81`
 - **READ** `domain_kpis.py:82`
 - **READ** `memory_db.py:5`
-- **READ** `priority_engine.py:46`
-- **READ** `server.py:2522`
-- **READ** `server.py:2578`
-- **READ** `server.py:2582`
+- **READ** `priority_engine.py:44`
+- **READ** `server.py:2510`
+- **READ** `server.py:2566`
+- **READ** `server.py:2570`
 - **READ** `task_engine.py:65`
 - **READ** `task_engine.py:93`
 - **READ** `task_engine.py:109`
@@ -4995,24 +4954,14 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `text`
 
-- **READ** `tg_intent_router.py:943`
-- **READ** `tg_news.py:25`
+- **READ** `tg_intent_router.py:932`
 - **READ** `tg_session.py:203`
 
 
 ### `tg_alerts`
 
 - **READ** `_tools/patchers/v12_patch_stocks_import.py:2`
-- **READ** `server.py:455`
-
-
-### `tg_email`
-
-- **READ** `inbox_engine.py:48`
-- **READ** `priority_engine.py:67`
-- **READ** `server.py:152`
-- **READ** `tg_intent_router.py:307`
-- **READ** `tg_morning_report.py:237`
+- **READ** `server.py:452`
 
 
 ### `tg_home`
@@ -5027,12 +4976,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `tg_morning_report`
 
-- **READ** `server.py:212`
-
-
-### `tg_news`
-
-- **READ** `server.py:470`
+- **READ** `server.py:209`
 
 
 ### `tg_ops`
@@ -5042,7 +4986,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `tg_reminders`
 
-- **READ** `server.py:463`
+- **READ** `server.py:460`
 
 
 ### `tg_report`
@@ -5055,8 +4999,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/_patch_phase5.py:93`
 - **READ** `_tools/_patch_phase5.py:94`
 - **READ** `server.py:73`
-- **READ** `server.py:7138`
-- **READ** `server.py:7152`
+- **READ** `server.py:7015`
+- **READ** `server.py:7029`
 
 
 ### `tg_session_resolver`
@@ -5081,24 +5025,28 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/patchers/v12_patch_stocks_import.py:2`
 - **READ** `_tools/patchers/v12_patch_stocks_import.py:9`
 - **READ** `_tools/patchers/v12_patch_stocks_import.py:10`
-- **READ** `server.py:487`
+- **READ** `server.py:477`
 
 
 ### `tg_suggestions`
 
-- **READ** `server.py:173`
+- **READ** `server.py:170`
 
 
 ### `tg_tasks`
 
 - **READ** `_tools/patchers/v12_patch_imports.py:10`
 - **READ** `_tools/patchers/v12_patch_imports.py:20`
-- **READ** `chat_v7.py:379`
-- **READ** `chat_v7.py:382`
-- **READ** `chat_v7.py:385`
-- **READ** `quick_query.py:395`
-- **READ** `server.py:479`
-- **READ** `server.py:7033`
+- **READ** `chat_v7.py:370`
+- **READ** `chat_v7.py:373`
+- **READ** `chat_v7.py:376`
+- **READ** `quick_query.py:380`
+- **READ** `server.py:469`
+
+
+### `that`
+
+- **READ** `server.py:8016`
 
 
 ### `the`
@@ -5120,27 +5068,33 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/test_exact_templates.py:2`
 - **READ** `_tools/verify_sunday.py:194`
 - **READ** `brain_core.py:858`
-- **READ** `dashboard_api.py:1961`
+- **READ** `dashboard_api.py:1813`
 - **READ** `entity_map_generator.py:6`
 - **READ** `health_watchdog.py:110`
 - **READ** `memory_recall.py:5`
 - **READ** `price_source.py:437`
 - **READ** `risk_engine.py:31`
 - **READ** `risk_engine.py:161`
-- **READ** `server.py:3114`
+- **READ** `server.py:3067`
 - **READ** `signal_engine.py:171`
-- **READ** `signal_engine.py:1267`
+- **READ** `signal_engine.py:1318`
 - **READ** `stock_analyzer.py:348`
 - **READ** `stock_analyzer.py:696`
 - **READ** `stock_analyzer.py:696`
 - **READ** `structured_memory.py:444`
+- **READ** `yahoo_30m.py:8`
+
+
+### `then`
+
+- **READ** `signal_engine.py:1525`
 
 
 ### `this`
 
-- **READ** `_tools/depmap.py:963`
-- **READ** `_tools/depmap.py:970`
-- **READ** `dashboard_api.py:984`
+- **READ** `_tools/depmap.py:983`
+- **READ** `_tools/depmap.py:990`
+- **READ** `dashboard_api.py:974`
 - **READ** `price_source.py:236`
 
 
@@ -5167,7 +5121,6 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `today`
 
 - **READ** `_tools/verify_sunday.py:92`
-- **READ** `news_engine.py:298`
 - **READ** `world_state_delta.py:148`
 
 
@@ -5178,39 +5131,39 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `tool_registry`
 
-- **READ** `server.py:632`
+- **READ** `server.py:604`
 
 
 ### `tool_summary`
 
-- **READ** `server.py:7684`
+- **READ** `server.py:7578`
 
 
 ### `top`
 
-- **READ** `priority_engine.py:473`
+- **READ** `priority_engine.py:450`
 
 
 ### `traces`
 
 - **CREATE** `mini_planner.py:99`
 - **WRITE** `mini_planner.py:126`
-- **READ** `cost_tracker.py:285`
+- **READ** `cost_tracker.py:302`
 - **READ** `mini_planner.py:159`
 - **READ** `mini_planner.py:171`
 - **READ** `mini_planner.py:173`
 - **READ** `mini_planner.py:175`
 - **READ** `mini_planner.py:177`
 - **READ** `mini_planner.py:180`
-- **READ** `server.py:9321`
-- **READ** `server.py:9322`
-- **READ** `server.py:9336`
-- **DELETE** `cost_tracker.py:285`
+- **READ** `server.py:9173`
+- **READ** `server.py:9174`
+- **READ** `server.py:9188`
+- **DELETE** `cost_tracker.py:302`
 
 
 ### `trade`
 
-- **WRITE** `dashboard_api.py:3065`
+- **WRITE** `dashboard_api.py:2917`
 
 
 ### `trade_journal`
@@ -5238,7 +5191,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **CREATE** `journal_engine.py:82`
 - **WRITE** `journal_engine.py:466`
 - **WRITE** `journal_engine.py:524`
-- **READ** `dashboard_api.py:2101`
+- **READ** `dashboard_api.py:1953`
 - **READ** `journal_engine.py:550`
 
 
@@ -5258,7 +5211,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **WRITE** `_tools/prove_guards.py:487`
 - **WRITE** `_tools/prove_guards.py:506`
 - **WRITE** `_tools/prove_guards.py:518`
-- **WRITE** `dashboard_api.py:3105`
+- **WRITE** `dashboard_api.py:2957`
 - **WRITE** `journal_engine.py:183`
 - **WRITE** `journal_engine.py:232`
 - **WRITE** `journal_engine.py:256`
@@ -5290,10 +5243,14 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/prove_guards.py:512`
 - **READ** `_tools/prove_guards.py:524`
 - **READ** `_tools/prove_guards.py:537`
-- **READ** `dashboard_api.py:1193`
-- **READ** `dashboard_api.py:1303`
-- **READ** `dashboard_api.py:1582`
-- **READ** `dashboard_api.py:3077`
+- **READ** `dashboard_api.py:1183`
+- **READ** `dashboard_api.py:1293`
+- **READ** `dashboard_api.py:1572`
+- **READ** `dashboard_api.py:2929`
+- **READ** `equity_tracker.py:74`
+- **READ** `equity_tracker.py:84`
+- **READ** `equity_tracker.py:121`
+- **READ** `equity_tracker.py:147`
 - **READ** `journal_engine.py:201`
 - **READ** `journal_engine.py:253`
 - **READ** `journal_engine.py:264`
@@ -5324,12 +5281,12 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **READ** `brain_backfill.py:314`
 - **READ** `brain_backfill.py:444`
-- **READ** `dashboard_api.py:2603`
+- **READ** `dashboard_api.py:2455`
 - **READ** `gemini_scanner.py:299`
-- **READ** `server.py:2963`
-- **READ** `server.py:2979`
+- **READ** `server.py:2922`
+- **READ** `server.py:2938`
 - **READ** `signal_engine.py:86`
-- **READ** `signal_engine.py:1272`
+- **READ** `signal_engine.py:1323`
 - **READ** `stock_radar.py:363`
 - **READ** `stock_radar.py:664`
 
@@ -5341,27 +5298,27 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `trading_engine`
 
-- **READ** `chat_v7.py:440`
-- **READ** `chat_v7.py:443`
-- **READ** `server.py:590`
-- **READ** `tg_morning_report.py:308`
+- **READ** `chat_v7.py:420`
+- **READ** `chat_v7.py:423`
+- **READ** `server.py:562`
+- **READ** `tg_morning_report.py:272`
 
 
 ### `tradingview`
 
 - **READ** `_tools/_debug_ema.py:50`
-- **READ** `chat_v7.py:364`
+- **READ** `chat_v7.py:358`
 - **READ** `stock_alerts.py:84`
 
 
 ### `tradingview_bridge`
 
-- **READ** `chat_v7.py:448`
-- **READ** `chat_v7.py:451`
-- **READ** `chat_v7.py:454`
-- **READ** `chat_v7.py:457`
-- **READ** `server.py:602`
-- **READ** `tg_morning_report.py:315`
+- **READ** `chat_v7.py:428`
+- **READ** `chat_v7.py:431`
+- **READ** `chat_v7.py:434`
+- **READ** `chat_v7.py:437`
+- **READ** `server.py:574`
+- **READ** `tg_morning_report.py:279`
 
 
 ### `trailing`
@@ -5371,7 +5328,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `tv_advisor`
 
-- **READ** `chat_v7.py:477`
+- **READ** `chat_v7.py:457`
 
 
 ### `tv_alert_events`
@@ -5383,7 +5340,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **WRITE** `tradingview_bridge.py:669`
 - **READ** `_tools/patchers/fix_tv_alert_price.py:62`
 - **READ** `_tools/patchers/fix_tv_alert_price.py:73`
-- **READ** `dashboard_api.py:1502`
+- **READ** `dashboard_api.py:1492`
 - **READ** `domain_kpis.py:62`
 - **READ** `domain_kpis.py:63`
 - **READ** `domain_kpis.py:64`
@@ -5403,9 +5360,9 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `tv_analysis`
 
 - **READ** `_tools/patch_daily_indicators.py:130`
-- **READ** `chat_v7.py:467`
-- **READ** `chat_v7.py:476`
-- **READ** `quick_query.py:251`
+- **READ** `chat_v7.py:447`
+- **READ** `chat_v7.py:456`
+- **READ** `quick_query.py:236`
 - **READ** `tv_advisor.py:62`
 
 
@@ -5430,42 +5387,42 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `_tools/verify_sunday.py:134`
 - **READ** `_tools/verify_sunday.py:145`
 - **READ** `_tools/verify_sunday.py:200`
-- **READ** `chat_v7.py:462`
-- **READ** `chat_v7.py:466`
-- **READ** `chat_v7.py:475`
-- **READ** `chat_v7.py:498`
+- **READ** `chat_v7.py:442`
+- **READ** `chat_v7.py:446`
+- **READ** `chat_v7.py:455`
+- **READ** `chat_v7.py:483`
 - **READ** `dashboard_api.py:214`
-- **READ** `dashboard_api.py:458`
-- **READ** `dashboard_api.py:719`
-- **READ** `dashboard_api.py:1218`
-- **READ** `dashboard_api.py:1342`
-- **READ** `priority_engine.py:84`
-- **READ** `quick_query.py:198`
-- **READ** `quick_query.py:250`
-- **READ** `server.py:2857`
-- **READ** `server.py:3571`
-- **READ** `server.py:3717`
-- **READ** `server.py:3767`
-- **READ** `server.py:3826`
-- **READ** `server.py:3892`
+- **READ** `dashboard_api.py:448`
+- **READ** `dashboard_api.py:709`
+- **READ** `dashboard_api.py:1208`
+- **READ** `dashboard_api.py:1332`
+- **READ** `priority_engine.py:61`
+- **READ** `quick_query.py:183`
+- **READ** `quick_query.py:235`
+- **READ** `server.py:2816`
+- **READ** `server.py:3524`
+- **READ** `server.py:3670`
+- **READ** `server.py:3735`
+- **READ** `server.py:3794`
+- **READ** `server.py:3860`
 - **READ** `signal_engine.py:352`
-- **READ** `signal_engine.py:1290`
+- **READ** `signal_engine.py:1341`
 - **READ** `stock_radar.py:208`
 - **READ** `stock_radar.py:225`
 - **READ** `stock_radar.py:252`
 - **READ** `stock_radar.py:585`
-- **READ** `stock_radar.py:794`
-- **READ** `stock_radar.py:811`
-- **READ** `stock_radar.py:939`
-- **READ** `stock_radar.py:962`
-- **READ** `stock_radar.py:1058`
-- **READ** `stock_radar.py:1091`
-- **READ** `stock_radar.py:1134`
-- **READ** `stock_radar.py:1174`
-- **READ** `stock_radar.py:1190`
-- **READ** `stock_radar.py:1242`
-- **READ** `stock_radar.py:1279`
-- **READ** `stock_radar.py:1600`
+- **READ** `stock_radar.py:788`
+- **READ** `stock_radar.py:895`
+- **READ** `stock_radar.py:1023`
+- **READ** `stock_radar.py:1046`
+- **READ** `stock_radar.py:1142`
+- **READ** `stock_radar.py:1175`
+- **READ** `stock_radar.py:1218`
+- **READ** `stock_radar.py:1258`
+- **READ** `stock_radar.py:1274`
+- **READ** `stock_radar.py:1326`
+- **READ** `stock_radar.py:1363`
+- **READ** `stock_radar.py:1684`
 - **READ** `tg_stocks.py:109`
 - **READ** `tradingview_bridge.py:304`
 
@@ -5475,7 +5432,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **CREATE** `tradingview_bridge.py:63`
 - **WRITE** `tradingview_bridge.py:358`
 - **WRITE** `tradingview_bridge.py:363`
-- **READ** `dashboard_api.py:1535`
+- **READ** `dashboard_api.py:1525`
 - **READ** `tradingview_bridge.py:352`
 
 
@@ -5513,7 +5470,6 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 - **READ** `context_manager.py:15`
 - **READ** `feedback_learner.py:25`
 - **READ** `hooks.py:14`
-- **READ** `inbox_engine.py:4`
 - **READ** `intent_state_machine.py:25`
 - **READ** `life_expenses.py:10`
 - **READ** `life_stocks.py:11`
@@ -5544,9 +5500,9 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `urllib`
 
 - **READ** `_tools/depmap.py:29`
-- **READ** `chat_v7.py:528`
+- **READ** `chat_v7.py:513`
 - **READ** `google_auth_ext.py:177`
-- **READ** `server.py:3367`
+- **READ** `server.py:3320`
 
 
 ### `user`
@@ -5586,10 +5542,10 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `users`
 
-- **CREATE** `server.py:4819`
-- **CREATE** `server.py:4835`
-- **WRITE** `server.py:4821`
-- **READ** `server.py:4836`
+- **CREATE** `server.py:4792`
+- **CREATE** `server.py:4808`
+- **WRITE** `server.py:4794`
+- **READ** `server.py:4809`
 
 
 ### `watchlist`
@@ -5610,17 +5566,17 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `win_jobs`
 
-- **CREATE** `server.py:1078`
-- **WRITE** `server.py:1316`
-- **WRITE** `server.py:4316`
-- **WRITE** `server.py:4337`
-- **WRITE** `server.py:4416`
+- **CREATE** `server.py:1050`
+- **WRITE** `server.py:1304`
+- **WRITE** `server.py:4289`
+- **WRITE** `server.py:4310`
+- **WRITE** `server.py:4389`
 - **WRITE** `tg_ops.py:70`
 - **WRITE** `tg_ops.py:72`
-- **READ** `server.py:4014`
+- **READ** `server.py:3987`
+- **READ** `server.py:4379`
+- **READ** `server.py:4402`
 - **READ** `server.py:4406`
-- **READ** `server.py:4429`
-- **READ** `server.py:4433`
 
 
 ### `windows`
@@ -5630,23 +5586,17 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `world_state`
 
-- **READ** `chat_v7.py:662`
+- **READ** `chat_v7.py:647`
 - **READ** `server.py:136`
 - **READ** `world_state.py:7`
 
 
 ### `world_state_delta`
 
-- **READ** `chat_v7.py:664`
-- **READ** `quick_query.py:446`
-- **READ** `server.py:6780`
+- **READ** `chat_v7.py:649`
+- **READ** `quick_query.py:421`
+- **READ** `server.py:6666`
 - **READ** `world_state.py:266`
-
-
-### `xml`
-
-- **READ** `news_engine.py:14`
-- **READ** `tg_news.py:9`
 
 
 ### `yahoo`
@@ -5665,12 +5615,12 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 - **READ** `_tools/quick_check.py:403`
 - **READ** `dashboard_api.py:134`
-- **READ** `dashboard_api.py:887`
+- **READ** `dashboard_api.py:877`
 
 
 ### `yesterday`
 
-- **READ** `signal_engine.py:850`
+- **READ** `signal_engine.py:860`
 - **READ** `world_state_delta.py:167`
 
 
@@ -5706,8 +5656,8 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `anomaly_engine.get_anomaly_summary`
 
 - **Defined in:** `anomaly_engine.py`
-- **Imported by:** `quick_query.py:467`
-- **Imported by:** `server.py:9289`
+- **Imported by:** `quick_query.py:442`
+- **Imported by:** `server.py:9141`
 
 
 ### `anomaly_engine.run_anomaly_checks`
@@ -5725,7 +5675,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `auto_memory_extractor.AutoMemoryExtractor`
 
 - **Defined in:** `auto_memory_extractor.py`
-- **Imported by:** `server.py:7546`
+- **Imported by:** `server.py:7440`
 
 
 ### `brain.backup_loop`
@@ -5845,7 +5795,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `brain_core._expert_knowledge`
 
 - **Defined in:** `brain_core.py`
-- **Imported by:** `server.py:5167`
+- **Imported by:** `server.py:5147`
 
 
 ### `brain_core.build_room_index`
@@ -5863,11 +5813,11 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `brain_core.build_system_prompt_v7`
 
 - **Defined in:** `brain_core.py`
-- **Imported by:** `server.py:2453`
-- **Imported by:** `server.py:4127`
-- **Imported by:** `server.py:4204`
-- **Imported by:** `server.py:7628`
-- **Imported by:** `server.py:7995`
+- **Imported by:** `server.py:2441`
+- **Imported by:** `server.py:4100`
+- **Imported by:** `server.py:4177`
+- **Imported by:** `server.py:7522`
+- **Imported by:** `server.py:7889`
 
 
 ### `brain_core.format_observation_manifest`
@@ -5892,7 +5842,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `brain_core.get_islamic_dates_context`
 
 - **Defined in:** `brain_core.py`
-- **Imported by:** `chat_v7.py:652`
+- **Imported by:** `chat_v7.py:637`
 
 
 ### `brain_core.get_observation_manifest`
@@ -5905,31 +5855,31 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `brain_core.get_owner_context`
 
 - **Defined in:** `brain_core.py`
-- **Imported by:** `server.py:367`
+- **Imported by:** `server.py:364`
 
 
 ### `brain_core.get_relevant_memories`
 
 - **Defined in:** `brain_core.py`
-- **Imported by:** `server.py:367`
+- **Imported by:** `server.py:364`
 
 
 ### `brain_core.get_system_awareness`
 
 - **Defined in:** `brain_core.py`
-- **Imported by:** `server.py:5156`
+- **Imported by:** `server.py:5136`
 
 
 ### `brain_core.lookup_expertise`
 
 - **Defined in:** `brain_core.py`
-- **Imported by:** `server.py:5167`
+- **Imported by:** `server.py:5147`
 
 
 ### `brain_core.memory_age_days`
 
 - **Defined in:** `brain_core.py`
-- **Imported by:** `dashboard_api.py:3544`
+- **Imported by:** `dashboard_api.py:3400`
 
 
 ### `brain_core.reload`
@@ -5948,7 +5898,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 
 - **Defined in:** `brain_learning.py`
 - **Imported by:** `server.py:151`
-- **Imported by:** `tg_intent_router.py:326`
+- **Imported by:** `tg_intent_router.py:316`
 
 
 ### `brain_learning.create_ha_automation`
@@ -5960,7 +5910,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `brain_learning.create_ha_scene`
 
 - **Defined in:** `brain_learning.py`
-- **Imported by:** `server.py:158`
+- **Imported by:** `server.py:155`
 
 
 ### `brain_learning.detect_anomalies`
@@ -5973,27 +5923,27 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `brain_learning.discover_scenes`
 
 - **Defined in:** `brain_learning.py`
-- **Imported by:** `server.py:158`
+- **Imported by:** `server.py:155`
 
 
 ### `brain_learning.filter_existing_automations`
 
 - **Defined in:** `brain_learning.py`
-- **Imported by:** `server.py:159`
+- **Imported by:** `server.py:156`
 
 
 ### `brain_learning.format_anomaly_report`
 
 - **Defined in:** `brain_learning.py`
 - **Imported by:** `server.py:149`
-- **Imported by:** `tg_intent_router.py:335`
+- **Imported by:** `tg_intent_router.py:325`
 
 
 ### `brain_learning.format_maturity_report`
 
 - **Defined in:** `brain_learning.py`
 - **Imported by:** `server.py:148`
-- **Imported by:** `tg_intent_router.py:344`
+- **Imported by:** `tg_intent_router.py:334`
 
 
 ### `brain_learning.format_patterns_report`
@@ -6001,14 +5951,14 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `brain_learning.py`
 - **Imported by:** `brain.py:31`
 - **Imported by:** `server.py:147`
-- **Imported by:** `tg_intent_router.py:1133`
+- **Imported by:** `tg_intent_router.py:1122`
 
 
 ### `brain_learning.format_scenes_report`
 
 - **Defined in:** `brain_learning.py`
-- **Imported by:** `server.py:158`
-- **Imported by:** `tg_intent_router.py:317`
+- **Imported by:** `server.py:155`
+- **Imported by:** `tg_intent_router.py:307`
 
 
 ### `brain_learning.get_learning_stats`
@@ -6016,7 +5966,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `brain_learning.py`
 - **Imported by:** `brain.py:31`
 - **Imported by:** `server.py:147`
-- **Imported by:** `tg_intent_router.py:1158`
+- **Imported by:** `tg_intent_router.py:1147`
 
 
 ### `brain_learning.get_maturity_report`
@@ -6051,7 +6001,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `brain_learning.py`
 - **Imported by:** `brain.py:31`
 - **Imported by:** `server.py:147`
-- **Imported by:** `tg_intent_router.py:1133`
+- **Imported by:** `tg_intent_router.py:1122`
 
 
 ### `brain_multiuser.detect_user`
@@ -6143,11 +6093,10 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `bridge_client.py`
 - **Imported by:** `_tools/_debug_ema.py:20`
 - **Imported by:** `kairos.py:207`
-- **Imported by:** `server.py:3890`
-- **Imported by:** `server.py:3037`
-- **Imported by:** `server.py:8095`
-- **Imported by:** `signal_engine.py:1342`
-- **Imported by:** `signal_engine.py:1405`
+- **Imported by:** `server.py:2996`
+- **Imported by:** `server.py:7989`
+- **Imported by:** `signal_engine.py:1393`
+- **Imported by:** `signal_engine.py:1456`
 
 
 ### `bridge_client.BridgeClient`
@@ -6155,43 +6104,42 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `bridge_client.py`
 - **Imported by:** `_tools/_debug_ema.py:20`
 - **Imported by:** `kairos.py:207`
-- **Imported by:** `server.py:3890`
-- **Imported by:** `server.py:3037`
-- **Imported by:** `server.py:8095`
-- **Imported by:** `signal_engine.py:1342`
-- **Imported by:** `signal_engine.py:1405`
+- **Imported by:** `server.py:2996`
+- **Imported by:** `server.py:7989`
+- **Imported by:** `signal_engine.py:1393`
+- **Imported by:** `signal_engine.py:1456`
 
 
 ### `bridge_client.circuit_stats`
 
 - **Defined in:** `bridge_client.py`
-- **Imported by:** `dashboard_api.py:1899`
-- **Imported by:** `server.py:3120`
-- **Imported by:** `signal_engine.py:1329`
-- **Imported by:** `signal_engine.py:1394`
+- **Imported by:** `dashboard_api.py:1751`
+- **Imported by:** `server.py:3073`
+- **Imported by:** `signal_engine.py:1380`
+- **Imported by:** `signal_engine.py:1445`
 
 
 ### `bridge_client.get_bridge_client`
 
 - **Defined in:** `bridge_client.py`
-- **Imported by:** `dashboard_api.py:1886`
-- **Imported by:** `dashboard_api.py:1910`
+- **Imported by:** `dashboard_api.py:1738`
+- **Imported by:** `dashboard_api.py:1762`
 - **Imported by:** `data_integrity.py:121`
 - **Imported by:** `gemini_scanner.py:193`
-- **Imported by:** `signal_engine.py:1612`
+- **Imported by:** `signal_engine.py:1725`
 - **Imported by:** `trading_brain.py:374`
 
 
 ### `bridge_client.init_bridge_client`
 
 - **Defined in:** `bridge_client.py`
-- **Imported by:** `server.py:2912`
+- **Imported by:** `server.py:2871`
 
 
 ### `bridge_client.reset_circuit`
 
 - **Defined in:** `bridge_client.py`
-- **Imported by:** `server.py:3140`
+- **Imported by:** `server.py:3093`
 
 
 ### `calendar_db.cancel_event_reminders`
@@ -6215,7 +6163,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `calendar_db.get_calendar_stats`
 
 - **Defined in:** `calendar_db.py`
-- **Imported by:** `server.py:3517`
+- **Imported by:** `server.py:3470`
 
 
 ### `calendar_db.get_db`
@@ -6287,118 +6235,118 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `calendar_engine.calendar_sync_loop`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `server.py:2712`
+- **Imported by:** `server.py:2700`
 
 
 ### `calendar_engine.create_event`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `chat_v7.py:626`
+- **Imported by:** `chat_v7.py:611`
 
 
 ### `calendar_engine.delete_event`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `chat_v7.py:630`
+- **Imported by:** `chat_v7.py:615`
 
 
 ### `calendar_engine.ensure_fresh_cache`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `server.py:6789`
+- **Imported by:** `server.py:6675`
 
 
 ### `calendar_engine.get_events_range`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `chat_v7.py:614`
+- **Imported by:** `chat_v7.py:599`
 
 
 ### `calendar_engine.get_today_events`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `chat_v7.py:614`
-- **Imported by:** `quick_query.py:297`
-- **Imported by:** `server.py:6131`
-- **Imported by:** `server.py:6789`
-- **Imported by:** `server.py:6858`
+- **Imported by:** `chat_v7.py:599`
+- **Imported by:** `quick_query.py:282`
+- **Imported by:** `server.py:6084`
+- **Imported by:** `server.py:6675`
+- **Imported by:** `server.py:6744`
 - **Imported by:** `tg_morning_report.py:221`
 
 
 ### `calendar_engine.get_tomorrow_events`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `chat_v7.py:614`
-- **Imported by:** `quick_query.py:320`
-- **Imported by:** `server.py:6820`
-- **Imported by:** `server.py:6858`
+- **Imported by:** `chat_v7.py:599`
+- **Imported by:** `quick_query.py:305`
+- **Imported by:** `server.py:6706`
+- **Imported by:** `server.py:6744`
 
 
 ### `calendar_engine.get_week_events`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `chat_v7.py:614`
-- **Imported by:** `chat_v7.py:630`
-- **Imported by:** `quick_query.py:328`
-- **Imported by:** `server.py:6849`
+- **Imported by:** `chat_v7.py:599`
+- **Imported by:** `chat_v7.py:615`
+- **Imported by:** `quick_query.py:313`
+- **Imported by:** `server.py:6735`
 
 
 ### `calendar_engine.sync_full`
 
 - **Defined in:** `calendar_engine.py`
-- **Imported by:** `server.py:3527`
+- **Imported by:** `server.py:3480`
 
 
 ### `calendar_reminders.run_reminder_loop`
 
 - **Defined in:** `calendar_reminders.py`
-- **Imported by:** `server.py:2713`
+- **Imported by:** `server.py:2701`
 
 
 ### `calendar_reporting.render_morning_calendar_section`
 
 - **Defined in:** `calendar_reporting.py`
-- **Imported by:** `server.py:6132`
+- **Imported by:** `server.py:6085`
 - **Imported by:** `tg_morning_report.py:222`
 
 
 ### `calendar_reporting.render_today`
 
 - **Defined in:** `calendar_reporting.py`
-- **Imported by:** `chat_v7.py:615`
-- **Imported by:** `quick_query.py:298`
-- **Imported by:** `server.py:6793`
-- **Imported by:** `server.py:6859`
+- **Imported by:** `chat_v7.py:600`
+- **Imported by:** `quick_query.py:283`
+- **Imported by:** `server.py:6679`
+- **Imported by:** `server.py:6745`
 
 
 ### `calendar_reporting.render_tomorrow`
 
 - **Defined in:** `calendar_reporting.py`
-- **Imported by:** `chat_v7.py:615`
-- **Imported by:** `quick_query.py:321`
-- **Imported by:** `server.py:6822`
-- **Imported by:** `server.py:6859`
+- **Imported by:** `chat_v7.py:600`
+- **Imported by:** `quick_query.py:306`
+- **Imported by:** `server.py:6708`
+- **Imported by:** `server.py:6745`
 
 
 ### `calendar_reporting.render_week`
 
 - **Defined in:** `calendar_reporting.py`
-- **Imported by:** `chat_v7.py:615`
-- **Imported by:** `quick_query.py:329`
-- **Imported by:** `server.py:6851`
+- **Imported by:** `chat_v7.py:600`
+- **Imported by:** `quick_query.py:314`
+- **Imported by:** `server.py:6737`
 
 
 ### `chat_v7.choose_model`
 
 - **Defined in:** `chat_v7.py`
-- **Imported by:** `server.py:7622`
-- **Imported by:** `server.py:7645`
+- **Imported by:** `server.py:7516`
+- **Imported by:** `server.py:7539`
 
 
 ### `chat_v7.clear_chat_v7_history`
 
 - **Defined in:** `chat_v7.py`
-- **Imported by:** `server.py:8369`
+- **Imported by:** `server.py:8228`
 
 
 ### `chat_v7.handle_chat_v7`
@@ -6416,8 +6364,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `circuit_breaker.CircuitBreaker`
 
 - **Defined in:** `circuit_breaker.py`
-- **Imported by:** `news_engine.py:16`
-- **Imported by:** `server.py:5323`
+- **Imported by:** `server.py:5303`
 
 
 ### `coalesced_executor.CoalescedExecutor`
@@ -6442,52 +6389,52 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `confluence_engine._dedup_items_keep_latest`
 
 - **Defined in:** `confluence_engine.py`
-- **Imported by:** `dashboard_api.py:1432`
+- **Imported by:** `dashboard_api.py:1422`
 
 
 ### `confluence_engine.build_tg_alert`
 
 - **Defined in:** `confluence_engine.py`
-- **Imported by:** `server.py:565`
+- **Imported by:** `server.py:537`
 
 
 ### `confluence_engine.get_actionable_signals`
 
 - **Defined in:** `confluence_engine.py`
-- **Imported by:** `dashboard_api.py:1432`
-- **Imported by:** `server.py:565`
+- **Imported by:** `dashboard_api.py:1422`
+- **Imported by:** `server.py:537`
 
 
 ### `confluence_engine.get_confluence_stats`
 
 - **Defined in:** `confluence_engine.py`
-- **Imported by:** `dashboard_api.py:1432`
-- **Imported by:** `server.py:565`
+- **Imported by:** `dashboard_api.py:1422`
+- **Imported by:** `server.py:537`
 
 
 ### `confluence_engine.get_watchlist_signals`
 
 - **Defined in:** `confluence_engine.py`
-- **Imported by:** `dashboard_api.py:1432`
-- **Imported by:** `server.py:565`
+- **Imported by:** `dashboard_api.py:1422`
+- **Imported by:** `server.py:537`
 
 
 ### `confluence_engine.init_schema`
 
 - **Defined in:** `confluence_engine.py`
-- **Imported by:** `server.py:565`
+- **Imported by:** `server.py:537`
 
 
 ### `confluence_engine.record_decision`
 
 - **Defined in:** `confluence_engine.py`
-- **Imported by:** `server.py:565`
+- **Imported by:** `server.py:537`
 
 
 ### `confluence_engine.run_confluence_scan`
 
 - **Defined in:** `confluence_engine.py`
-- **Imported by:** `server.py:565`
+- **Imported by:** `server.py:537`
 
 
 ### `context_compactor.ContextCompactor`
@@ -6524,11 +6471,11 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `corrections_loop.get_corrections_loop`
 
 - **Defined in:** `corrections_loop.py`
-- **Imported by:** `server.py:6928`
-- **Imported by:** `server.py:6949`
-- **Imported by:** `server.py:9217`
-- **Imported by:** `server.py:9226`
-- **Imported by:** `server.py:8847`
+- **Imported by:** `server.py:6814`
+- **Imported by:** `server.py:6835`
+- **Imported by:** `server.py:9069`
+- **Imported by:** `server.py:9078`
+- **Imported by:** `server.py:8705`
 
 
 ### `corrections_loop.process_correction`
@@ -6540,54 +6487,62 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `cost_tracker.get_cost_for_kpi`
 
 - **Defined in:** `cost_tracker.py`
-- **Imported by:** `dashboard_api.py:1730`
-- **Imported by:** `quick_query.py:483`
-- **Imported by:** `server.py:9357`
-- **Imported by:** `server.py:5445`
-- **Imported by:** `server.py:6879`
-- **Imported by:** `server.py:6108`
+- **Imported by:** `dashboard_api.py:1677`
+- **Imported by:** `quick_query.py:458`
+- **Imported by:** `server.py:9209`
+- **Imported by:** `server.py:5425`
+- **Imported by:** `server.py:6765`
+- **Imported by:** `server.py:6069`
 
 
 ### `cost_tracker.get_cost_summary`
 
 - **Defined in:** `cost_tracker.py`
-- **Imported by:** `server.py:9301`
+- **Imported by:** `server.py:9153`
 
 
 ### `cost_tracker.track_cost`
 
 - **Defined in:** `cost_tracker.py`
+- **Imported by:** `auto_memory_extractor.py:120`
 - **Imported by:** `chat_v7.py:73`
+- **Imported by:** `chat_v7.py:474`
+- **Imported by:** `context_manager.py:89`
+- **Imported by:** `memory_recall.py:92`
+- **Imported by:** `server.py:1159`
+- **Imported by:** `server.py:7395`
+- **Imported by:** `tg_logbook.py:143`
 
 
 ### `cost_tracker.track_cost_openai`
 
 - **Defined in:** `cost_tracker.py`
 - **Imported by:** `chat_v7.py:73`
+- **Imported by:** `server.py:1185`
 
 
 ### `dashboard_api._require_api_key`
 
 - **Defined in:** `dashboard_api.py`
-- **Imported by:** `server.py:3170`
+- **Imported by:** `server.py:3123`
 
 
 ### `dashboard_api.ha_dashboard_extended`
 
 - **Defined in:** `dashboard_api.py`
-- **Imported by:** `server.py:2611`
+- **Imported by:** `server.py:2599`
 
 
 ### `dashboard_api.init_dashboard_context`
 
 - **Defined in:** `dashboard_api.py`
-- **Imported by:** `server.py:2611`
+- **Imported by:** `server.py:2599`
 
 
 ### `dashboard_api.router`
 
 - **Defined in:** `dashboard_api.py`
-- **Imported by:** `server.py:3170`
+- **Imported by:** `server.py:3123`
 
 
 ### `data_integrity.DataIntegrityGate`
@@ -6599,143 +6554,143 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `db_backup.format_status`
 
 - **Defined in:** `db_backup.py`
-- **Imported by:** `server.py:205`
+- **Imported by:** `server.py:202`
 
 
 ### `db_backup.get_status`
 
 - **Defined in:** `db_backup.py`
-- **Imported by:** `server.py:205`
+- **Imported by:** `server.py:202`
 
 
 ### `db_backup.init`
 
 - **Defined in:** `db_backup.py`
-- **Imported by:** `server.py:205`
+- **Imported by:** `server.py:202`
 
 
 ### `db_backup.run_daily`
 
 - **Defined in:** `db_backup.py`
-- **Imported by:** `server.py:205`
+- **Imported by:** `server.py:202`
 
 
 ### `degraded_mode.format_status`
 
 - **Defined in:** `degraded_mode.py`
-- **Imported by:** `server.py:197`
+- **Imported by:** `server.py:194`
 
 
 ### `degraded_mode.get_mode`
 
 - **Defined in:** `degraded_mode.py`
-- **Imported by:** `server.py:197`
+- **Imported by:** `server.py:194`
 
 
 ### `degraded_mode.init`
 
 - **Defined in:** `degraded_mode.py`
-- **Imported by:** `server.py:197`
+- **Imported by:** `server.py:194`
 
 
 ### `degraded_mode.is_degraded`
 
 - **Defined in:** `degraded_mode.py`
-- **Imported by:** `server.py:197`
+- **Imported by:** `server.py:194`
 
 
 ### `degraded_mode.is_ok`
 
 - **Defined in:** `degraded_mode.py`
-- **Imported by:** `server.py:197`
+- **Imported by:** `server.py:194`
 
 
 ### `degraded_mode.mark_fail`
 
 - **Defined in:** `degraded_mode.py`
-- **Imported by:** `server.py:197`
+- **Imported by:** `server.py:194`
 
 
 ### `degraded_mode.mark_ok`
 
 - **Defined in:** `degraded_mode.py`
-- **Imported by:** `server.py:197`
+- **Imported by:** `server.py:194`
 
 
 ### `discovery.get_discovery_stats`
 
 - **Defined in:** `discovery.py`
-- **Imported by:** `server.py:166`
+- **Imported by:** `server.py:163`
 
 
 ### `discovery.get_home_summary`
 
 - **Defined in:** `discovery.py`
-- **Imported by:** `server.py:166`
+- **Imported by:** `server.py:163`
 
 
 ### `discovery.sync_entities`
 
 - **Defined in:** `discovery.py`
-- **Imported by:** `server.py:166`
+- **Imported by:** `server.py:163`
 
 
 ### `domain_kpis.handle_kpi`
 
 - **Defined in:** `domain_kpis.py`
-- **Imported by:** `server.py:6646`
+- **Imported by:** `server.py:6532`
 
 
 ### `dream_consolidator.format_dream_status`
 
 - **Defined in:** `dream_consolidator.py`
-- **Imported by:** `server.py:5454`
+- **Imported by:** `server.py:5434`
 
 
 ### `dream_consolidator.get_dream_status`
 
 - **Defined in:** `dream_consolidator.py`
-- **Imported by:** `server.py:3275`
-- **Imported by:** `server.py:5454`
+- **Imported by:** `server.py:3228`
+- **Imported by:** `server.py:5434`
 
 
 ### `dream_consolidator.run_dream_consolidation`
 
 - **Defined in:** `dream_consolidator.py`
-- **Imported by:** `server.py:3284`
-- **Imported by:** `server.py:5463`
-- **Imported by:** `server.py:2941`
+- **Imported by:** `server.py:3237`
+- **Imported by:** `server.py:5443`
+- **Imported by:** `server.py:2900`
 
 
 ### `entity_health.ENTITY_MAP_PATH`
 
 - **Defined in:** `entity_health.py`
-- **Imported by:** `server.py:8504`
+- **Imported by:** `server.py:8362`
 
 
 ### `entity_health.arabize_entity_map`
 
 - **Defined in:** `entity_health.py`
-- **Imported by:** `server.py:8504`
+- **Imported by:** `server.py:8362`
 
 
 ### `entity_health.load_entity_map`
 
 - **Defined in:** `entity_health.py`
-- **Imported by:** `server.py:8504`
+- **Imported by:** `server.py:8362`
 
 
 ### `entity_health.validate_entity_map`
 
 - **Defined in:** `entity_health.py`
-- **Imported by:** `server.py:8491`
-- **Imported by:** `server.py:8618`
+- **Imported by:** `server.py:8349`
+- **Imported by:** `server.py:8476`
 
 
 ### `equity_tracker.get_equity_dashboard`
 
 - **Defined in:** `equity_tracker.py`
-- **Imported by:** `dashboard_api.py:2418`
+- **Imported by:** `dashboard_api.py:2270`
 
 
 ### `exec_policy.check_policy`
@@ -6748,7 +6703,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 
 - **Defined in:** `exec_policy.py`
 - **Imported by:** `chat_v7.py:80`
-- **Imported by:** `server.py:3549`
+- **Imported by:** `server.py:3502`
 
 
 ### `exec_policy.record_outcome`
@@ -6766,103 +6721,103 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `expenses_engine.add_expense`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `chat_v7.py:412`
-- **Imported by:** `server.py:519`
+- **Imported by:** `chat_v7.py:403`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.delete_expense`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `server.py:519`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.format_add_confirmation`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `chat_v7.py:412`
-- **Imported by:** `server.py:519`
+- **Imported by:** `chat_v7.py:403`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.format_recent_tg`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `chat_v7.py:418`
-- **Imported by:** `server.py:519`
+- **Imported by:** `chat_v7.py:409`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.format_summary_tg`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `chat_v7.py:415`
-- **Imported by:** `server.py:519`
+- **Imported by:** `chat_v7.py:406`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.get_morning_expense_text`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `server.py:519`
-- **Imported by:** `tg_morning_report.py:274`
+- **Imported by:** `server.py:509`
+- **Imported by:** `tg_morning_report.py:256`
 
 
 ### `expenses_engine.get_summary`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `chat_v7.py:415`
-- **Imported by:** `server.py:519`
+- **Imported by:** `chat_v7.py:406`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.handle_recent_expenses`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `quick_query.py:188`
-- **Imported by:** `server.py:519`
+- **Imported by:** `quick_query.py:173`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.handle_spent_month`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `quick_query.py:181`
-- **Imported by:** `server.py:519`
+- **Imported by:** `quick_query.py:166`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.handle_spent_today`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `quick_query.py:167`
-- **Imported by:** `server.py:519`
+- **Imported by:** `quick_query.py:152`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.handle_spent_week`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `quick_query.py:174`
-- **Imported by:** `server.py:519`
+- **Imported by:** `quick_query.py:159`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.init_schema`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `server.py:519`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.list_expenses`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `chat_v7.py:418`
-- **Imported by:** `server.py:519`
+- **Imported by:** `chat_v7.py:409`
+- **Imported by:** `server.py:509`
 
 
 ### `expenses_engine.parse_expense`
 
 - **Defined in:** `expenses_engine.py`
-- **Imported by:** `server.py:519`
+- **Imported by:** `server.py:509`
 
 
 ### `family_assistant.get_family_info`
 
 - **Defined in:** `family_assistant.py`
-- **Imported by:** `quick_query.py:430`
-- **Imported by:** `server.py:6762`
+- **Imported by:** `quick_query.py:405`
+- **Imported by:** `server.py:6648`
 
 
 ### `feature_flags.FeatureFlags`
@@ -6870,51 +6825,51 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `feature_flags.py`
 - **Imported by:** `_tools/verify_sunday.py:112`
 - **Imported by:** `google_auth_ext.py:61`
-- **Imported by:** `kse_data_collector.py:500`
-- **Imported by:** `server.py:628`
-- **Imported by:** `stock_radar.py:911`
-- **Imported by:** `stock_radar.py:926`
+- **Imported by:** `kse_data_collector.py:523`
+- **Imported by:** `server.py:600`
+- **Imported by:** `stock_radar.py:995`
+- **Imported by:** `stock_radar.py:1010`
 - **Imported by:** `tg_session.py:123`
 
 
 ### `feedback_learner.apply_learning`
 
 - **Defined in:** `feedback_learner.py`
-- **Imported by:** `server.py:181`
+- **Imported by:** `server.py:178`
 
 
 ### `feedback_learner.generate_digest`
 
 - **Defined in:** `feedback_learner.py`
-- **Imported by:** `server.py:9277`
-- **Imported by:** `server.py:6918`
-- **Imported by:** `server.py:8960`
+- **Imported by:** `server.py:9129`
+- **Imported by:** `server.py:6804`
+- **Imported by:** `server.py:8815`
 
 
 ### `feedback_learner.get_confidence_adjustment`
 
 - **Defined in:** `feedback_learner.py`
 - **Imported by:** `confidence_engine.py:8`
-- **Imported by:** `server.py:181`
+- **Imported by:** `server.py:178`
 
 
 ### `feedback_learner.get_stats`
 
 - **Defined in:** `feedback_learner.py`
-- **Imported by:** `server.py:9269`
-- **Imported by:** `server.py:6899`
+- **Imported by:** `server.py:9121`
+- **Imported by:** `server.py:6785`
 
 
 ### `feedback_learner.init`
 
 - **Defined in:** `feedback_learner.py`
-- **Imported by:** `server.py:181`
+- **Imported by:** `server.py:178`
 
 
 ### `feedback_learner.record_feedback`
 
 - **Defined in:** `feedback_learner.py`
-- **Imported by:** `server.py:7110`
+- **Imported by:** `server.py:6987`
 
 
 ### `golden_engine.scan_opportunities`
@@ -6922,46 +6877,34 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `golden_engine.py`
 - **Imported by:** `_tools/daily_signal_review.py:44`
 - **Imported by:** `gemini_scanner.py:313`
-- **Imported by:** `server.py:3618`
-- **Imported by:** `server.py:6416`
-
-
-### `google_auth_ext._google_integrations_enabled`
-
-- **Defined in:** `google_auth_ext.py`
-- **Imported by:** `tg_email.py:33`
+- **Imported by:** `server.py:3571`
+- **Imported by:** `server.py:6308`
 
 
 ### `google_auth_ext.build_auth_url`
 
 - **Defined in:** `google_auth_ext.py`
-- **Imported by:** `server.py:3458`
+- **Imported by:** `server.py:3411`
 
 
 ### `google_auth_ext.build_calendar_service`
 
 - **Defined in:** `google_auth_ext.py`
 - **Imported by:** `calendar_engine.py:108`
-- **Imported by:** `server.py:3479`
-
-
-### `google_auth_ext.build_gmail_service`
-
-- **Defined in:** `google_auth_ext.py`
-- **Imported by:** `tg_email.py:33`
+- **Imported by:** `server.py:3432`
 
 
 ### `google_auth_ext.exchange_code`
 
 - **Defined in:** `google_auth_ext.py`
-- **Imported by:** `server.py:3479`
+- **Imported by:** `server.py:3432`
 
 
 ### `google_auth_ext.get_auth_status`
 
 - **Defined in:** `google_auth_ext.py`
-- **Imported by:** `server.py:3479`
-- **Imported by:** `server.py:3507`
+- **Imported by:** `server.py:3432`
+- **Imported by:** `server.py:3460`
 
 
 ### `ha_doctor.check_ac_performance`
@@ -7004,7 +6947,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 
 - **Defined in:** `ha_history.py`
 - **Imported by:** `server.py:146`
-- **Imported by:** `tg_intent_router.py:972`
+- **Imported by:** `tg_intent_router.py:961`
 
 
 ### `ha_history.get_entity_history`
@@ -7016,8 +6959,8 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `habit_engine.format_habit_report`
 
 - **Defined in:** `habit_engine.py`
-- **Imported by:** `quick_query.py:459`
-- **Imported by:** `server.py:6872`
+- **Imported by:** `quick_query.py:434`
+- **Imported by:** `server.py:6758`
 
 
 ### `habit_engine.learn_morning_routine`
@@ -7029,55 +6972,55 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `health_engine.get_morning_health_text`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `tg_morning_report.py:301`
+- **Imported by:** `tg_morning_report.py:265`
 
 
 ### `health_engine.handle_health_log`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `server.py:578`
+- **Imported by:** `server.py:550`
 
 
 ### `health_engine.handle_health_streak`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `server.py:578`
+- **Imported by:** `server.py:550`
 
 
 ### `health_engine.handle_health_summary`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `server.py:578`
+- **Imported by:** `server.py:550`
 
 
 ### `health_engine.init_schema`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `server.py:578`
+- **Imported by:** `server.py:550`
 
 
 ### `health_engine.llm_tool_health_log`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `chat_v7.py:433`
+- **Imported by:** `chat_v7.py:413`
 
 
 ### `health_engine.llm_tool_health_summary`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `chat_v7.py:436`
+- **Imported by:** `chat_v7.py:416`
 
 
 ### `health_engine.quick_health_summary`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `server.py:578`
+- **Imported by:** `server.py:550`
 
 
 ### `health_engine.quick_health_today`
 
 - **Defined in:** `health_engine.py`
-- **Imported by:** `server.py:578`
+- **Imported by:** `server.py:550`
 
 
 ### `home_brain.build_digest_prompt`
@@ -7131,68 +7074,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `hooks.HookRegistry`
 
 - **Defined in:** `hooks.py`
-- **Imported by:** `server.py:631`
-
-
-### `inbox_engine.P_CRITICAL`
-
-- **Defined in:** `inbox_engine.py`
-- **Imported by:** `proactive_suggestions.py:188`
-- **Imported by:** `server.py:6056`
-- **Imported by:** `server.py:6133`
-
-
-### `inbox_engine.P_HIGH`
-
-- **Defined in:** `inbox_engine.py`
-- **Imported by:** `server.py:6056`
-- **Imported by:** `server.py:6133`
-
-
-### `inbox_engine.fetch_unified_inbox`
-
-- **Defined in:** `inbox_engine.py`
-- **Imported by:** `dashboard_api.py:1778`
-- **Imported by:** `dashboard_api.py:338`
-- **Imported by:** `proactive_suggestions.py:188`
-- **Imported by:** `server.py:6056`
-- **Imported by:** `server.py:6133`
-- **Imported by:** `server.py:6220`
-
-
-### `inbox_engine.format_email_task_suggestions`
-
-- **Defined in:** `inbox_engine.py`
-- **Imported by:** `quick_query.py:408`
-- **Imported by:** `server.py:6119`
-- **Imported by:** `tg_morning_report.py:292`
-
-
-### `inbox_engine.format_inbox_tg`
-
-- **Defined in:** `inbox_engine.py`
-- **Imported by:** `server.py:6220`
-
-
-### `inbox_engine.inbox_digest`
-
-- **Defined in:** `inbox_engine.py`
-- **Imported by:** `server.py:8857`
-- **Imported by:** `tg_morning_report.py:255`
-
-
-### `inbox_engine.inbox_weekly_digest`
-
-- **Defined in:** `inbox_engine.py`
-- **Imported by:** `server.py:6189`
-- **Imported by:** `server.py:6220`
-- **Imported by:** `server.py:8970`
-
-
-### `inbox_engine.llm_tool_inbox_summary`
-
-- **Defined in:** `inbox_engine.py`
-- **Imported by:** `chat_v7.py:376`
+- **Imported by:** `server.py:603`
 
 
 ### `indicators.KSE_CLOSE_UTC_H`
@@ -7243,137 +7125,143 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Imported by:** `tg_intent_router.py:17`
 
 
+### `journal_engine.BROKER_FEE_PCT`
+
+- **Defined in:** `journal_engine.py`
+- **Imported by:** `equity_tracker.py:29`
+
+
 ### `journal_engine.add_more_trade`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:8205`
+- **Imported by:** `server.py:8123`
 
 
 ### `journal_engine.calculate_real_pnl`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `dashboard_api.py:1217`
-- **Imported by:** `dashboard_api.py:1015`
-- **Imported by:** `dashboard_api.py:714`
+- **Imported by:** `dashboard_api.py:1207`
+- **Imported by:** `dashboard_api.py:1005`
+- **Imported by:** `dashboard_api.py:704`
 - **Imported by:** `position_engine.py:441`
 
 
 ### `journal_engine.cancel_trade`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:551`
+- **Imported by:** `server.py:523`
 
 
 ### `journal_engine.close_trade`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `dashboard_api.py:3050`
-- **Imported by:** `server.py:551`
+- **Imported by:** `dashboard_api.py:2902`
+- **Imported by:** `server.py:523`
 
 
 ### `journal_engine.format_weekly_report_tg`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:9004`
+- **Imported by:** `server.py:8856`
 
 
 ### `journal_engine.generate_weekly_report`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:9004`
+- **Imported by:** `server.py:8856`
 
 
 ### `journal_engine.get_fresh_price`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `dashboard_api.py:1217`
-- **Imported by:** `dashboard_api.py:1015`
-- **Imported by:** `dashboard_api.py:726`
+- **Imported by:** `dashboard_api.py:1207`
+- **Imported by:** `dashboard_api.py:1005`
+- **Imported by:** `dashboard_api.py:716`
 - **Imported by:** `position_engine.py:96`
-- **Imported by:** `signal_engine.py:536`
+- **Imported by:** `signal_engine.py:546`
 
 
 ### `journal_engine.get_open_trades`
 
 - **Defined in:** `journal_engine.py`
 - **Imported by:** `_tools/intraday_refresh.py:60`
-- **Imported by:** `dashboard_api.py:1217`
-- **Imported by:** `dashboard_api.py:2508`
-- **Imported by:** `dashboard_api.py:1015`
+- **Imported by:** `dashboard_api.py:1207`
+- **Imported by:** `dashboard_api.py:2360`
+- **Imported by:** `dashboard_api.py:1005`
 - **Imported by:** `golden_engine.py:944`
 - **Imported by:** `position_engine.py:282`
 - **Imported by:** `position_engine.py:441`
-- **Imported by:** `server.py:551`
-- **Imported by:** `signal_engine.py:1301`
+- **Imported by:** `server.py:523`
+- **Imported by:** `signal_engine.py:1352`
 - **Imported by:** `tg_stocks.py:75`
 
 
 ### `journal_engine.get_recent_trades`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `dashboard_api.py:1169`
-- **Imported by:** `dashboard_api.py:1217`
-- **Imported by:** `dashboard_api.py:1015`
-- **Imported by:** `server.py:551`
+- **Imported by:** `dashboard_api.py:1159`
+- **Imported by:** `dashboard_api.py:1207`
+- **Imported by:** `dashboard_api.py:1005`
+- **Imported by:** `server.py:523`
 
 
 ### `journal_engine.get_trade`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:551`
+- **Imported by:** `server.py:523`
 
 
 ### `journal_engine.get_trade_stats`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `dashboard_api.py:1177`
-- **Imported by:** `dashboard_api.py:1217`
-- **Imported by:** `dashboard_api.py:1015`
-- **Imported by:** `server.py:551`
+- **Imported by:** `dashboard_api.py:1167`
+- **Imported by:** `dashboard_api.py:1207`
+- **Imported by:** `dashboard_api.py:1005`
+- **Imported by:** `server.py:523`
 - **Imported by:** `tg_stocks.py:75`
 
 
 ### `journal_engine.get_trade_transactions`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:8220`
+- **Imported by:** `server.py:8138`
 
 
 ### `journal_engine.init_schema`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:551`
+- **Imported by:** `server.py:523`
 
 
 ### `journal_engine.open_trade`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `dashboard_api.py:3020`
-- **Imported by:** `server.py:551`
+- **Imported by:** `dashboard_api.py:2872`
+- **Imported by:** `server.py:523`
 
 
 ### `journal_engine.partial_sell_trade`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:8184`
+- **Imported by:** `server.py:8102`
 
 
 ### `journal_engine.suggest_trailing_stop`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `dashboard_api.py:1150`
+- **Imported by:** `dashboard_api.py:1140`
 
 
 ### `journal_engine.update_trade_notes`
 
 - **Defined in:** `journal_engine.py`
-- **Imported by:** `server.py:551`
+- **Imported by:** `server.py:523`
 
 
 ### `kairos.KairosAgent`
 
 - **Defined in:** `kairos.py`
-- **Imported by:** `server.py:630`
+- **Imported by:** `server.py:602`
 
 
 ### `kse_data_collector.BRIDGE_URL`
@@ -7397,25 +7285,25 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `kse_data_collector.collect_and_refresh`
 
 - **Defined in:** `kse_data_collector.py`
-- **Imported by:** `dashboard_api.py:3270`
+- **Imported by:** `dashboard_api.py:3126`
 
 
 ### `kse_data_collector.daily_collection_scheduler`
 
 - **Defined in:** `kse_data_collector.py`
-- **Imported by:** `server.py:2649`
+- **Imported by:** `server.py:2637`
 
 
 ### `kse_data_collector.get_data_health`
 
 - **Defined in:** `kse_data_collector.py`
-- **Imported by:** `dashboard_api.py:3157`
+- **Imported by:** `dashboard_api.py:3009`
 
 
 ### `kse_data_collector.is_collecting`
 
 - **Defined in:** `kse_data_collector.py`
-- **Imported by:** `dashboard_api.py:3270`
+- **Imported by:** `dashboard_api.py:3126`
 
 
 ### `kse_data_collector.log_decision`
@@ -7427,38 +7315,44 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `kse_data_collector.market_hours_scanner`
 
 - **Defined in:** `kse_data_collector.py`
-- **Imported by:** `server.py:2655`
+- **Imported by:** `server.py:2643`
+
+
+### `kse_data_collector.parse_utc_naive`
+
+- **Defined in:** `kse_data_collector.py`
+- **Imported by:** `dashboard_api.py:3048`
 
 
 ### `life_expenses.get_expenses`
 
 - **Defined in:** `life_expenses.py`
-- **Imported by:** `server.py:6691`
+- **Imported by:** `server.py:6577`
 - **Imported by:** `tg_report.py:79`
 
 
 ### `life_expenses.handle_expense_command`
 
 - **Defined in:** `life_expenses.py`
-- **Imported by:** `server.py:233`
+- **Imported by:** `server.py:230`
 
 
 ### `life_health.handle_health_command`
 
 - **Defined in:** `life_health.py`
-- **Imported by:** `server.py:240`
+- **Imported by:** `server.py:237`
 
 
 ### `life_health.health_summary`
 
 - **Defined in:** `life_health.py`
-- **Imported by:** `server.py:6703`
+- **Imported by:** `server.py:6589`
 
 
 ### `life_router.detect_life_domain`
 
 - **Defined in:** `life_router.py`
-- **Imported by:** `server.py:219`
+- **Imported by:** `server.py:216`
 
 
 ### `life_stocks.KNOWN_TICKERS`
@@ -7470,115 +7364,115 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `life_stocks.handle_stock_command`
 
 - **Defined in:** `life_stocks.py`
-- **Imported by:** `server.py:226`
+- **Imported by:** `server.py:223`
 
 
 ### `life_stocks.portfolio_summary`
 
 - **Defined in:** `life_stocks.py`
-- **Imported by:** `server.py:226`
+- **Imported by:** `server.py:223`
 - **Imported by:** `tg_morning_report.py:142`
 
 
 ### `life_work.SHIFT_EMOJI`
 
 - **Defined in:** `life_work.py`
-- **Imported by:** `server.py:8538`
-- **Imported by:** `server.py:8794`
+- **Imported by:** `server.py:8396`
+- **Imported by:** `server.py:8652`
 
 
 ### `life_work.get_shift`
 
 - **Defined in:** `life_work.py`
 - **Imported by:** `calendar_reporting.py:43`
-- **Imported by:** `chat_v7.py:567`
+- **Imported by:** `chat_v7.py:552`
 - **Imported by:** `dashboard_api.py:204`
-- **Imported by:** `dashboard_api.py:1750`
-- **Imported by:** `quick_query.py:299`
-- **Imported by:** `quick_query.py:358`
-- **Imported by:** `server.py:8538`
-- **Imported by:** `server.py:6054`
-- **Imported by:** `server.py:6129`
-- **Imported by:** `server.py:6798`
-- **Imported by:** `server.py:6826`
-- **Imported by:** `server.py:7966`
-- **Imported by:** `server.py:8592`
-- **Imported by:** `server.py:8794`
+- **Imported by:** `dashboard_api.py:1697`
+- **Imported by:** `quick_query.py:284`
+- **Imported by:** `quick_query.py:343`
+- **Imported by:** `server.py:8396`
+- **Imported by:** `server.py:6026`
+- **Imported by:** `server.py:6082`
+- **Imported by:** `server.py:6684`
+- **Imported by:** `server.py:6712`
+- **Imported by:** `server.py:7860`
+- **Imported by:** `server.py:8450`
+- **Imported by:** `server.py:8652`
 - **Imported by:** `tg_report.py:23`
 
 
 ### `life_work.get_shift_display`
 
 - **Defined in:** `life_work.py`
-- **Imported by:** `chat_v7.py:567`
+- **Imported by:** `chat_v7.py:552`
 - **Imported by:** `proactive_engine.py:92`
-- **Imported by:** `server.py:247`
+- **Imported by:** `server.py:244`
 
 
 ### `life_work.get_week_schedule`
 
 - **Defined in:** `life_work.py`
-- **Imported by:** `quick_query.py:358`
-- **Imported by:** `server.py:6671`
+- **Imported by:** `quick_query.py:343`
+- **Imported by:** `server.py:6557`
 
 
 ### `life_work.handle_work_command`
 
 - **Defined in:** `life_work.py`
-- **Imported by:** `server.py:247`
+- **Imported by:** `server.py:244`
 
 
 ### `memory_db.add_memory`
 
 - **Defined in:** `memory_db.py`
-- **Imported by:** `server.py:928`
+- **Imported by:** `server.py:900`
 
 
 ### `memory_db.build_context`
 
 - **Defined in:** `memory_db.py`
-- **Imported by:** `server.py:928`
+- **Imported by:** `server.py:900`
 
 
 ### `memory_db.get_memories`
 
 - **Defined in:** `memory_db.py`
-- **Imported by:** `chat_v7.py:542`
-- **Imported by:** `server.py:928`
+- **Imported by:** `chat_v7.py:527`
+- **Imported by:** `server.py:900`
 
 
 ### `memory_db.get_memory_stats`
 
 - **Defined in:** `memory_db.py`
-- **Imported by:** `server.py:928`
-- **Imported by:** `server.py:5098`
+- **Imported by:** `server.py:900`
+- **Imported by:** `server.py:5071`
 
 
 ### `memory_db.init_memory_db`
 
 - **Defined in:** `memory_db.py`
-- **Imported by:** `server.py:928`
+- **Imported by:** `server.py:900`
 
 
 ### `memory_db.save_memory_with_facts`
 
 - **Defined in:** `memory_db.py`
-- **Imported by:** `chat_v7.py:1008`
-- **Imported by:** `chat_v7.py:856`
-- **Imported by:** `chat_v7.py:551`
-- **Imported by:** `chat_v7.py:801`
+- **Imported by:** `chat_v7.py:993`
+- **Imported by:** `chat_v7.py:841`
+- **Imported by:** `chat_v7.py:536`
+- **Imported by:** `chat_v7.py:786`
 
 
 ### `memory_db.save_message`
 
 - **Defined in:** `memory_db.py`
-- **Imported by:** `server.py:928`
+- **Imported by:** `server.py:900`
 
 
 ### `memory_db.search_memory_smart`
 
 - **Defined in:** `memory_db.py`
-- **Imported by:** `chat_v7.py:711`
+- **Imported by:** `chat_v7.py:696`
 
 
 ### `memory_db.store_memory`
@@ -7597,27 +7491,27 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 
 - **Defined in:** `mini_planner.py`
 - **Imported by:** `chat_v7.py:52`
-- **Imported by:** `server.py:9236`
+- **Imported by:** `server.py:9088`
 
 
 ### `mini_planner.decompose_compound`
 
 - **Defined in:** `mini_planner.py`
 - **Imported by:** `chat_v7.py:52`
-- **Imported by:** `server.py:9236`
+- **Imported by:** `server.py:9088`
 
 
 ### `mini_planner.get_trace_stats`
 
 - **Defined in:** `mini_planner.py`
 - **Imported by:** `chat_v7.py:52`
-- **Imported by:** `server.py:9236`
+- **Imported by:** `server.py:9088`
 
 
 ### `mini_planner.get_traces`
 
 - **Defined in:** `mini_planner.py`
-- **Imported by:** `server.py:9236`
+- **Imported by:** `server.py:9088`
 
 
 ### `mini_planner.save_trace`
@@ -7626,143 +7520,56 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Imported by:** `chat_v7.py:52`
 
 
+### `model_tiers.MODEL_CHEAP`
+
+- **Defined in:** `model_tiers.py`
+- **Imported by:** `cost_tracker.py:20`
+
+
+### `model_tiers.MODEL_DEEP`
+
+- **Defined in:** `model_tiers.py`
+- **Imported by:** `chat_v7.py:217`
+- **Imported by:** `cost_tracker.py:20`
+
+
+### `model_tiers.MODEL_ROUTINE`
+
+- **Defined in:** `model_tiers.py`
+- **Imported by:** `chat_v7.py:217`
+- **Imported by:** `cost_tracker.py:20`
+- **Imported by:** `server.py:1135`
+- **Imported by:** `server.py:7353`
+
+
+### `model_tiers.tiers`
+
+- **Defined in:** `model_tiers.py`
+- **Imported by:** `server.py:5092`
+
+
 ### `modules.panel.register_panel_routes`
 
 - **Defined in:** `modules/__init__.py`
-- **Imported by:** `server.py:3229`
-
-
-### `news_engine.CATEGORIES`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `dashboard_api.py:1819`
-
-
-### `news_engine.cleanup_old`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.format_digest_tg`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `chat_v7.py:422`
-- **Imported by:** `chat_v7.py:425`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.format_sources_tg`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.generate_digest`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `chat_v7.py:425`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.get_counts`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.get_latest_digest`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `chat_v7.py:422`
-- **Imported by:** `chat_v7.py:425`
-- **Imported by:** `dashboard_api.py:1819`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.get_morning_news_text`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
-- **Imported by:** `tg_morning_report.py:283`
-
-
-### `news_engine.get_news`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.get_today_digests`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `dashboard_api.py:1819`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.get_urgent_items`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.handle_news_latest`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `quick_query.py:150`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.init_schema`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.last_boursa_refresh`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `kairos.py:214`
-- **Imported by:** `server.py:8102`
-- **Imported by:** `server.py:8308`
-
-
-### `news_engine.last_gemini_refresh`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `kairos.py:214`
-- **Imported by:** `server.py:8102`
-- **Imported by:** `server.py:8308`
-
-
-### `news_engine.refresh_boursa`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
-
-
-### `news_engine.refresh_gemini`
-
-- **Defined in:** `news_engine.py`
-- **Imported by:** `server.py:532`
+- **Imported by:** `server.py:3182`
 
 
 ### `paper_trading.close_paper_trade`
 
 - **Defined in:** `paper_trading.py`
-- **Imported by:** `dashboard_api.py:2406`
+- **Imported by:** `dashboard_api.py:2258`
 
 
 ### `paper_trading.get_paper_trading_stats`
 
 - **Defined in:** `paper_trading.py`
-- **Imported by:** `dashboard_api.py:2382`
+- **Imported by:** `dashboard_api.py:2234`
 
 
 ### `paper_trading.open_paper_trade`
 
 - **Defined in:** `paper_trading.py`
-- **Imported by:** `dashboard_api.py:2394`
+- **Imported by:** `dashboard_api.py:2246`
 
 
 ### `parallel_coordinator.ParallelCoordinator`
@@ -7774,80 +7581,80 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `plan_engine.add_plan`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.complete_plan`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.delete_plan`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.format_plans_list`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.get_due_plans`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.get_plan`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.get_stats`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.init`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.list_plans`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.pause_plan`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.record_run`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `plan_engine.resume_plan`
 
 - **Defined in:** `plan_engine.py`
-- **Imported by:** `server.py:189`
+- **Imported by:** `server.py:186`
 
 
 ### `position_engine.PositionEngine`
 
 - **Defined in:** `position_engine.py`
-- **Imported by:** `dashboard_api.py:3302`
-- **Imported by:** `dashboard_api.py:3350`
+- **Imported by:** `dashboard_api.py:3158`
+- **Imported by:** `dashboard_api.py:3206`
 
 
 ### `position_engine.VALID_DIRECTIONS`
@@ -7860,21 +7667,21 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `position_engine.init_position_schema`
 
 - **Defined in:** `position_engine.py`
-- **Imported by:** `dashboard_api.py:3302`
+- **Imported by:** `dashboard_api.py:3158`
 - **Imported by:** `journal_engine.py:102`
 
 
 ### `position_engine.run_daily_monitor`
 
 - **Defined in:** `position_engine.py`
-- **Imported by:** `dashboard_api.py:3333`
-- **Imported by:** `kse_data_collector.py:570`
+- **Imported by:** `dashboard_api.py:3189`
+- **Imported by:** `kse_data_collector.py:593`
 
 
 ### `price_source.SOURCE_DELAY_MINUTES`
 
 - **Defined in:** `price_source.py`
-- **Imported by:** `dashboard_api.py:882`
+- **Imported by:** `dashboard_api.py:872`
 
 
 ### `price_source.YAHOO_TIMEOUT`
@@ -7949,17 +7756,17 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `price_source.as_of_age_minutes`
 
 - **Defined in:** `price_source.py`
-- **Imported by:** `dashboard_api.py:926`
-- **Imported by:** `dashboard_api.py:2329`
+- **Imported by:** `dashboard_api.py:916`
+- **Imported by:** `dashboard_api.py:2181`
 
 
 ### `price_source.classify_data_state`
 
 - **Defined in:** `price_source.py`
-- **Imported by:** `dashboard_api.py:959`
-- **Imported by:** `dashboard_api.py:806`
-- **Imported by:** `dashboard_api.py:926`
-- **Imported by:** `dashboard_api.py:2307`
+- **Imported by:** `dashboard_api.py:949`
+- **Imported by:** `dashboard_api.py:796`
+- **Imported by:** `dashboard_api.py:916`
+- **Imported by:** `dashboard_api.py:2159`
 
 
 ### `price_source.combine`
@@ -7980,57 +7787,62 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Imported by:** `risk_engine.py:171`
 
 
+### `price_source.market_open_now`
+
+- **Defined in:** `price_source.py`
+- **Imported by:** `stock_radar.py:793`
+
+
 ### `priority_engine._pe_get_extended_snapshot`
 
 - **Defined in:** `priority_engine.py`
 - **Imported by:** `dashboard_api.py:16`
-- **Imported by:** `server.py:9391`
+- **Imported by:** `server.py:9243`
 
 
 ### `priority_engine._pe_get_radar_snapshot`
 
 - **Defined in:** `priority_engine.py`
 - **Imported by:** `dashboard_api.py:16`
-- **Imported by:** `server.py:9391`
+- **Imported by:** `server.py:9243`
 
 
 ### `priority_engine.build_assistant_surface`
 
 - **Defined in:** `priority_engine.py`
 - **Imported by:** `dashboard_api.py:16`
-- **Imported by:** `server.py:9391`
+- **Imported by:** `server.py:9243`
 
 
 ### `priority_engine.build_priority_engine`
 
 - **Defined in:** `priority_engine.py`
 - **Imported by:** `dashboard_api.py:16`
-- **Imported by:** `server.py:9391`
+- **Imported by:** `server.py:9243`
 
 
 ### `priority_engine.set_inbox_cache_ref`
 
 - **Defined in:** `priority_engine.py`
-- **Imported by:** `server.py:9391`
+- **Imported by:** `server.py:9243`
 
 
 ### `proactive_suggestions.get_suggestion_stats`
 
 - **Defined in:** `proactive_suggestions.py`
-- **Imported by:** `server.py:456`
+- **Imported by:** `server.py:453`
 
 
 ### `proactive_suggestions.proactive_loop`
 
 - **Defined in:** `proactive_suggestions.py`
-- **Imported by:** `server.py:456`
+- **Imported by:** `server.py:453`
 
 
 ### `processing_cursor.ProcessingCursor`
 
 - **Defined in:** `processing_cursor.py`
 - **Imported by:** `auto_memory_extractor.py:19`
-- **Imported by:** `news_engine.py:22`
 - **Imported by:** `stock_radar.py:29`
 
 
@@ -8043,25 +7855,25 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `quick_query._covers_status`
 
 - **Defined in:** `quick_query.py`
-- **Imported by:** `server.py:5504`
+- **Imported by:** `server.py:5484`
 
 
 ### `quick_query._locks_status`
 
 - **Defined in:** `quick_query.py`
-- **Imported by:** `server.py:5530`
+- **Imported by:** `server.py:5510`
 
 
 ### `quick_query._media_status`
 
 - **Defined in:** `quick_query.py`
-- **Imported by:** `server.py:5540`
+- **Imported by:** `server.py:5520`
 
 
 ### `quick_query._weather`
 
 - **Defined in:** `quick_query.py`
-- **Imported by:** `server.py:5520`
+- **Imported by:** `server.py:5500`
 - **Imported by:** `tg_report.py:31`
 
 
@@ -8074,121 +7886,121 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `relationships_engine.add_contact`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `chat_v7.py:394`
+- **Imported by:** `chat_v7.py:385`
 
 
 ### `relationships_engine.add_note`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `chat_v7.py:394`
+- **Imported by:** `chat_v7.py:385`
 
 
 ### `relationships_engine.add_occasion`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `chat_v7.py:394`
+- **Imported by:** `chat_v7.py:385`
 
 
 ### `relationships_engine.build_contact_snapshot`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `chat_v7.py:389`
-- **Imported by:** `server.py:505`
+- **Imported by:** `chat_v7.py:380`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.find_contact`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `chat_v7.py:394`
-- **Imported by:** `server.py:505`
+- **Imported by:** `chat_v7.py:385`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.format_contacts_tg`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `server.py:505`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.format_person_tg`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `chat_v7.py:389`
-- **Imported by:** `server.py:505`
+- **Imported by:** `chat_v7.py:380`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.format_today_tg`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `server.py:505`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.format_upcoming_tg`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `chat_v7.py:408`
-- **Imported by:** `server.py:505`
+- **Imported by:** `chat_v7.py:399`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.get_morning_occasions_text`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `server.py:505`
-- **Imported by:** `tg_morning_report.py:265`
+- **Imported by:** `server.py:495`
+- **Imported by:** `tg_morning_report.py:247`
 
 
 ### `relationships_engine.get_today_occasions`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `server.py:505`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.get_upcoming_occasions`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `chat_v7.py:408`
-- **Imported by:** `server.py:505`
+- **Imported by:** `chat_v7.py:399`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.handle_birthday_lookup`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `quick_query.py:289`
+- **Imported by:** `quick_query.py:274`
 
 
 ### `relationships_engine.handle_occasions_today`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `quick_query.py:272`
+- **Imported by:** `quick_query.py:257`
 
 
 ### `relationships_engine.handle_occasions_tomorrow`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `quick_query.py:272`
+- **Imported by:** `quick_query.py:257`
 
 
 ### `relationships_engine.handle_occasions_upcoming`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `quick_query.py:272`
+- **Imported by:** `quick_query.py:257`
 
 
 ### `relationships_engine.init_schema`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `server.py:505`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.list_contacts`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `server.py:505`
+- **Imported by:** `server.py:495`
 
 
 ### `relationships_engine.seed_family_data`
 
 - **Defined in:** `relationships_engine.py`
-- **Imported by:** `server.py:505`
+- **Imported by:** `server.py:495`
 
 
 ### `risk_engine.RiskEngine`
@@ -8202,10 +8014,9 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `risk_engine._get_risk_config`
 
 - **Defined in:** `risk_engine.py`
-- **Imported by:** `dashboard_api.py:2077`
-- **Imported by:** `dashboard_api.py:3121`
-- **Imported by:** `equity_tracker.py:22`
-- **Imported by:** `equity_tracker.py:84`
+- **Imported by:** `dashboard_api.py:1929`
+- **Imported by:** `dashboard_api.py:2973`
+- **Imported by:** `equity_tracker.py:57`
 - **Imported by:** `paper_trading.py:164`
 
 
@@ -8224,7 +8035,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `risk_engine.get_risk_status`
 
 - **Defined in:** `risk_engine.py`
-- **Imported by:** `dashboard_api.py:2428`
+- **Imported by:** `dashboard_api.py:2280`
 
 
 ### `run_witness.send_telegram`
@@ -8236,7 +8047,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `run_witness.telegram_credentials`
 
 - **Defined in:** `_tools/run_witness.py`
-- **Imported by:** `kse_data_collector.py:448`
+- **Imported by:** `kse_data_collector.py:471`
 - **Imported by:** `signal_review.py:644`
 
 
@@ -8280,135 +8091,148 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `service_health.ServiceHealthHub`
 
 - **Defined in:** `service_health.py`
-- **Imported by:** `server.py:629`
+- **Imported by:** `server.py:601`
 
 
 ### `service_health.get_health_hub`
 
 - **Defined in:** `service_health.py`
-- **Imported by:** `stock_radar.py:1578`
-- **Imported by:** `stock_radar.py:950`
-- **Imported by:** `stock_radar.py:989`
-- **Imported by:** `stock_radar.py:1017`
+- **Imported by:** `stock_radar.py:1662`
+- **Imported by:** `stock_radar.py:1034`
+- **Imported by:** `stock_radar.py:1073`
+- **Imported by:** `stock_radar.py:1101`
 
 
 ### `service_health.set_health_hub`
 
 - **Defined in:** `service_health.py`
-- **Imported by:** `server.py:641`
+- **Imported by:** `server.py:613`
 
 
 ### `session_memory.SessionTracker`
 
 - **Defined in:** `session_memory.py`
-- **Imported by:** `server.py:7541`
+- **Imported by:** `server.py:7435`
 
 
 ### `signal_engine.BLACKLIST`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
 
 
 ### `signal_engine.DAILY_TREND_FILTER`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
 
 
 ### `signal_engine.LIQUIDITY_FILTER`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
 
 
 ### `signal_engine.MARKET_REGIME_FILTER`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
 
 
 ### `signal_engine.SCALPING_MODE`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2441`
+- **Imported by:** `dashboard_api.py:2293`
 
 
 ### `signal_engine.SWING_MODE`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
 
 
 ### `signal_engine.WHITELIST`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
 
 
 ### `signal_engine.WHITELIST_MODE`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
+
+
+### `signal_engine._get_vwap_for_symbol`
+
+- **Defined in:** `signal_engine.py`
+- **Imported by:** `stock_radar.py:823`
+
+
+### `signal_engine._is_market_open_safe`
+
+- **Defined in:** `signal_engine.py`
+- **Imported by:** `server.py:3715`
+- **Imported by:** `server.py:3861`
 
 
 ### `signal_engine._name_ar`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2247`
-- **Imported by:** `dashboard_api.py:2192`
+- **Imported by:** `dashboard_api.py:2099`
+- **Imported by:** `dashboard_api.py:2044`
 
 
 ### `signal_engine.build_signals`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:1974`
-- **Imported by:** `dashboard_api.py:1985`
-- **Imported by:** `dashboard_api.py:2134`
-- **Imported by:** `dashboard_api.py:1088`
-- **Imported by:** `server.py:3628`
-- **Imported by:** `server.py:6427`
+- **Imported by:** `dashboard_api.py:1826`
+- **Imported by:** `dashboard_api.py:1837`
+- **Imported by:** `dashboard_api.py:1986`
+- **Imported by:** `dashboard_api.py:1078`
+- **Imported by:** `server.py:3581`
+- **Imported by:** `server.py:6319`
 - **Imported by:** `trading_brain.py:164`
 
 
 ### `signal_engine.build_signals_30m`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2122`
-- **Imported by:** `dashboard_api.py:2441`
-- **Imported by:** `server.py:3621`
-- **Imported by:** `server.py:6420`
+- **Imported by:** `dashboard_api.py:1974`
+- **Imported by:** `dashboard_api.py:2293`
+- **Imported by:** `server.py:3574`
+- **Imported by:** `server.py:6312`
 
 
 ### `signal_engine.calculate_scalping_stop`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2441`
+- **Imported by:** `dashboard_api.py:2293`
 
 
 ### `signal_engine.check_market_regime`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
 
 
 ### `signal_engine.check_scalping_exit`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
-- **Imported by:** `dashboard_api.py:2441`
+- **Imported by:** `dashboard_api.py:1986`
+- **Imported by:** `dashboard_api.py:2293`
 
 
 ### `signal_engine.get_trading_flags`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `dashboard_api.py:2134`
+- **Imported by:** `dashboard_api.py:1986`
 
 
 ### `signal_engine.init_signal_context`
 
 - **Defined in:** `signal_engine.py`
-- **Imported by:** `server.py:2919`
+- **Imported by:** `server.py:2878`
 
 
 ### `signal_review._send_review_telegram`
@@ -8420,40 +8244,40 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `signal_review.get_reviews_for_dashboard`
 
 - **Defined in:** `signal_review.py`
-- **Imported by:** `server.py:254`
-- **Imported by:** `server.py:6465`
+- **Imported by:** `server.py:251`
+- **Imported by:** `server.py:6357`
 
 
 ### `signal_review.init_review_schema`
 
 - **Defined in:** `signal_review.py`
-- **Imported by:** `server.py:254`
+- **Imported by:** `server.py:251`
 
 
 ### `signal_review.review_all_pending`
 
 - **Defined in:** `signal_review.py`
 - **Imported by:** `_tools/daily_signal_review.py:29`
-- **Imported by:** `server.py:3680`
+- **Imported by:** `server.py:3633`
 
 
 ### `signal_review.review_scheduler`
 
 - **Defined in:** `signal_review.py`
-- **Imported by:** `server.py:254`
+- **Imported by:** `server.py:251`
 
 
 ### `signal_review.review_signals`
 
 - **Defined in:** `signal_review.py`
-- **Imported by:** `server.py:254`
+- **Imported by:** `server.py:251`
 
 
 ### `skill_loader.SkillLoader`
 
 - **Defined in:** `skill_loader.py`
 - **Imported by:** `_tools/full_audit.py:203`
-- **Imported by:** `dashboard_api.py:3675`
+- **Imported by:** `dashboard_api.py:3531`
 
 
 ### `smart_router.classify_message`
@@ -8483,56 +8307,68 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `sr_engine.compute_sr`
 
 - **Defined in:** `sr_engine.py`
-- **Imported by:** `dashboard_api.py:1064`
+- **Imported by:** `dashboard_api.py:1054`
 
 
 ### `sr_engine.refresh_sr_for_all`
 
 - **Defined in:** `sr_engine.py`
-- **Imported by:** `stock_radar.py:1571`
+- **Imported by:** `stock_radar.py:1655`
 
 
 ### `stock_alerts.get_alerts`
 
 - **Defined in:** `stock_alerts.py`
-- **Imported by:** `server.py:4691`
+- **Imported by:** `server.py:4664`
 
 
 ### `stock_alerts.get_portfolio`
 
 - **Defined in:** `stock_alerts.py`
-- **Imported by:** `server.py:4682`
+- **Imported by:** `server.py:4655`
 
 
 ### `stock_analyzer.analyze_stock`
 
 - **Defined in:** `stock_analyzer.py`
 - **Imported by:** `gemini_scanner.py:462`
-- **Imported by:** `server.py:8124`
+- **Imported by:** `server.py:8025`
 
 
 ### `stock_analyzer.get_all_cached_analyses`
 
 - **Defined in:** `stock_analyzer.py`
-- **Imported by:** `dashboard_api.py:2022`
+- **Imported by:** `dashboard_api.py:1874`
+
+
+### `stock_analyzer.get_cached_analysis`
+
+- **Defined in:** `stock_analyzer.py`
+- **Imported by:** `server.py:8025`
 
 
 ### `stock_analyzer.refresh_all_analyses_parallel`
 
 - **Defined in:** `stock_analyzer.py`
-- **Imported by:** `server.py:2688`
+- **Imported by:** `server.py:2676`
+
+
+### `stock_analyzer.store_analysis`
+
+- **Defined in:** `stock_analyzer.py`
+- **Imported by:** `server.py:8025`
 
 
 ### `stock_personality_engine.get_all_profiles_summary`
 
 - **Defined in:** `stock_personality_engine.py`
-- **Imported by:** `server.py:3662`
+- **Imported by:** `server.py:3615`
 
 
 ### `stock_personality_engine.get_symbol_personality`
 
 - **Defined in:** `stock_personality_engine.py`
-- **Imported by:** `server.py:3656`
+- **Imported by:** `server.py:3609`
 
 
 ### `stock_radar.WATCHLIST`
@@ -8555,8 +8391,8 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Imported by:** `_tools/radar_diag.py:18`
 - **Imported by:** `_tools/test_radar.py:9`
 - **Imported by:** `dashboard_api.py:213`
-- **Imported by:** `dashboard_api.py:457`
-- **Imported by:** `priority_engine.py:83`
+- **Imported by:** `dashboard_api.py:447`
+- **Imported by:** `priority_engine.py:60`
 
 
 ### `stock_radar.check_symbol`
@@ -8570,26 +8406,26 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `stock_radar.get_daily_snapshot`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `dashboard_api.py:2568`
+- **Imported by:** `dashboard_api.py:2420`
 - **Imported by:** `dashboard_api.py:213`
-- **Imported by:** `dashboard_api.py:457`
-- **Imported by:** `dashboard_api.py:1341`
+- **Imported by:** `dashboard_api.py:447`
+- **Imported by:** `dashboard_api.py:1331`
 - **Imported by:** `gemini_scanner.py:194`
-- **Imported by:** `priority_engine.py:83`
+- **Imported by:** `priority_engine.py:60`
 
 
 ### `stock_radar.get_radar_snapshot`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:3043`
+- **Imported by:** `server.py:3002`
 
 
 ### `stock_radar.get_recent_events`
 
 - **Defined in:** `stock_radar.py`
 - **Imported by:** `dashboard_api.py:213`
-- **Imported by:** `dashboard_api.py:457`
-- **Imported by:** `priority_engine.py:83`
+- **Imported by:** `dashboard_api.py:447`
+- **Imported by:** `priority_engine.py:60`
 
 
 ### `stock_radar.get_watchlist`
@@ -8599,23 +8435,24 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Imported by:** `brain_backfill.py:291`
 - **Imported by:** `brain_backfill.py:426`
 - **Imported by:** `dashboard_api.py:213`
-- **Imported by:** `dashboard_api.py:457`
-- **Imported by:** `dashboard_api.py:1933`
-- **Imported by:** `dashboard_api.py:3373`
+- **Imported by:** `dashboard_api.py:447`
+- **Imported by:** `dashboard_api.py:1785`
+- **Imported by:** `dashboard_api.py:3229`
 - **Imported by:** `kse_data_collector.py:115`
-- **Imported by:** `priority_engine.py:83`
-- **Imported by:** `server.py:3891`
-- **Imported by:** `server.py:3043`
-- **Imported by:** `signal_engine.py:1602`
-- **Imported by:** `signal_engine.py:1349`
-- **Imported by:** `signal_engine.py:1412`
+- **Imported by:** `priority_engine.py:60`
+- **Imported by:** `server.py:3714`
+- **Imported by:** `server.py:3859`
+- **Imported by:** `server.py:3002`
+- **Imported by:** `signal_engine.py:1715`
+- **Imported by:** `signal_engine.py:1400`
+- **Imported by:** `signal_engine.py:1463`
 
 
 ### `stock_radar.init_radar_db`
 
 - **Defined in:** `stock_radar.py`
 - **Imported by:** `_tools/test_radar.py:9`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.radar_loop`
@@ -8623,7 +8460,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `stock_radar.py`
 - **Imported by:** `_tools/test_radar.py:9`
 - **Imported by:** `_tools/test_radar_task.py:13`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.refresh_daily_snapshot`
@@ -8635,55 +8472,55 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Imported by:** `_tools/verify_sunday.py:135`
 - **Imported by:** `_tools/verify_sunday.py:146`
 - **Imported by:** `kse_data_collector.py:274`
-- **Imported by:** `server.py:3146`
+- **Imported by:** `server.py:3099`
 
 
 ### `stock_radar.tg_radar_add`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.tg_radar_check`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.tg_radar_last`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.tg_radar_list`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.tg_radar_remove`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.tg_radar_status`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.tg_radar_toggle`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `stock_radar.tg_radar_top`
 
 - **Defined in:** `stock_radar.py`
-- **Imported by:** `server.py:493`
+- **Imported by:** `server.py:483`
 
 
 ### `system_guardian.check_all`
@@ -8695,8 +8532,8 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `system_guardian.get_status`
 
 - **Defined in:** `system_guardian.py`
-- **Imported by:** `quick_query.py:438`
-- **Imported by:** `server.py:6769`
+- **Imported by:** `quick_query.py:413`
+- **Imported by:** `server.py:6655`
 
 
 ### `task_engine.CATEGORY_LABEL`
@@ -8708,7 +8545,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `task_engine.PRIORITY_LABEL`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `server.py:6188`
+- **Imported by:** `server.py:6127`
 - **Imported by:** `tg_tasks.py:3`
 
 
@@ -8721,53 +8558,51 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `task_engine.STATUS_LABEL`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `server.py:6188`
+- **Imported by:** `server.py:6127`
 - **Imported by:** `tg_tasks.py:3`
 
 
 ### `task_engine.format_task_list`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `server.py:6188`
+- **Imported by:** `server.py:6127`
 - **Imported by:** `tg_tasks.py:3`
 
 
 ### `task_engine.format_tasks_summary`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `server.py:8856`
-- **Imported by:** `server.py:8969`
-- **Imported by:** `tg_morning_report.py:246`
+- **Imported by:** `server.py:8714`
+- **Imported by:** `server.py:8824`
+- **Imported by:** `tg_morning_report.py:237`
 - **Imported by:** `tg_tasks.py:3`
 
 
 ### `task_engine.quick_tasks_active`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `quick_query.py:337`
+- **Imported by:** `quick_query.py:322`
 - **Imported by:** `tg_tasks.py:3`
 
 
 ### `task_engine.quick_tasks_overdue`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `quick_query.py:351`
+- **Imported by:** `quick_query.py:336`
 - **Imported by:** `tg_tasks.py:3`
 
 
 ### `task_engine.quick_tasks_today`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `quick_query.py:344`
+- **Imported by:** `quick_query.py:329`
 - **Imported by:** `tg_tasks.py:3`
 
 
 ### `task_engine.task_create`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `inbox_engine.py:183`
-- **Imported by:** `inbox_engine.py:210`
-- **Imported by:** `quick_query.py:394`
+- **Imported by:** `quick_query.py:379`
 - **Imported by:** `tg_tasks.py:3`
 
 
@@ -8780,7 +8615,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `task_engine.task_done`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `quick_query.py:375`
+- **Imported by:** `quick_query.py:360`
 - **Imported by:** `tg_tasks.py:3`
 
 
@@ -8793,34 +8628,32 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `task_engine.task_list`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `inbox_engine.py:183`
-- **Imported by:** `inbox_engine.py:210`
 - **Imported by:** `proactive_suggestions.py:174`
-- **Imported by:** `quick_query.py:300`
-- **Imported by:** `server.py:6055`
-- **Imported by:** `server.py:6130`
-- **Imported by:** `server.py:6188`
-- **Imported by:** `server.py:6805`
-- **Imported by:** `server.py:6834`
+- **Imported by:** `quick_query.py:285`
+- **Imported by:** `server.py:6027`
+- **Imported by:** `server.py:6083`
+- **Imported by:** `server.py:6127`
+- **Imported by:** `server.py:6691`
+- **Imported by:** `server.py:6720`
 - **Imported by:** `tg_tasks.py:3`
 
 
 ### `task_engine.task_search`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `quick_query.py:375`
+- **Imported by:** `quick_query.py:360`
 - **Imported by:** `tg_tasks.py:3`
 
 
 ### `task_engine.task_stats`
 
 - **Defined in:** `task_engine.py`
-- **Imported by:** `quick_query.py:300`
-- **Imported by:** `server.py:5436`
-- **Imported by:** `server.py:6055`
-- **Imported by:** `server.py:6130`
-- **Imported by:** `server.py:6188`
-- **Imported by:** `server.py:6805`
+- **Imported by:** `quick_query.py:285`
+- **Imported by:** `server.py:5416`
+- **Imported by:** `server.py:6027`
+- **Imported by:** `server.py:6083`
+- **Imported by:** `server.py:6127`
+- **Imported by:** `server.py:6691`
 - **Imported by:** `tg_tasks.py:3`
 
 
@@ -8833,16 +8666,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `task_manager.TaskManager`
 
 - **Defined in:** `task_manager.py`
-- **Imported by:** `server.py:8232`
-- **Imported by:** `server.py:8321`
-- **Imported by:** `server.py:8343`
-
-
-### `task_manager.TaskType`
-
-- **Defined in:** `task_manager.py`
-- **Imported by:** `server.py:8321`
-- **Imported by:** `server.py:8343`
+- **Imported by:** `server.py:8150`
 
 
 ### `tasks_db.get_knowledge`
@@ -8866,34 +8690,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `tg_alerts.alert_loop`
 
 - **Defined in:** `tg_alerts.py`
-- **Imported by:** `server.py:455`
-
-
-### `tg_email.format_email_report`
-
-- **Defined in:** `tg_email.py`
-- **Imported by:** `server.py:152`
-- **Imported by:** `tg_intent_router.py:307`
-
-
-### `tg_email.get_email_for_morning`
-
-- **Defined in:** `tg_email.py`
-- **Imported by:** `server.py:152`
-- **Imported by:** `tg_morning_report.py:237`
-
-
-### `tg_email.get_gmail_summary`
-
-- **Defined in:** `tg_email.py`
-- **Imported by:** `inbox_engine.py:48`
-- **Imported by:** `priority_engine.py:67`
-
-
-### `tg_email.get_outlook_summary`
-
-- **Defined in:** `tg_email.py`
-- **Imported by:** `inbox_engine.py:48`
+- **Imported by:** `server.py:452`
 
 
 ### `tg_home.cmd_devices`
@@ -8953,25 +8750,13 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `tg_morning_report.build_morning_report`
 
 - **Defined in:** `tg_morning_report.py`
-- **Imported by:** `server.py:212`
+- **Imported by:** `server.py:209`
 
 
 ### `tg_morning_report.send_morning_report`
 
 - **Defined in:** `tg_morning_report.py`
-- **Imported by:** `server.py:212`
-
-
-### `tg_news.get_news_digest`
-
-- **Defined in:** `tg_news.py`
-- **Imported by:** `server.py:470`
-
-
-### `tg_news.news_scheduler`
-
-- **Defined in:** `tg_news.py`
-- **Imported by:** `server.py:470`
+- **Imported by:** `server.py:209`
 
 
 ### `tg_ops.format_approval_buttons`
@@ -9013,25 +8798,25 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `tg_reminders.add_reminder`
 
 - **Defined in:** `tg_reminders.py`
-- **Imported by:** `server.py:463`
+- **Imported by:** `server.py:460`
 
 
 ### `tg_reminders.cancel_reminder`
 
 - **Defined in:** `tg_reminders.py`
-- **Imported by:** `server.py:463`
+- **Imported by:** `server.py:460`
 
 
 ### `tg_reminders.list_reminders`
 
 - **Defined in:** `tg_reminders.py`
-- **Imported by:** `server.py:463`
+- **Imported by:** `server.py:460`
 
 
 ### `tg_reminders.reminder_loop`
 
 - **Defined in:** `tg_reminders.py`
-- **Imported by:** `server.py:463`
+- **Imported by:** `server.py:460`
 
 
 ### `tg_report.generate_daily_report`
@@ -9044,8 +8829,8 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 
 - **Defined in:** `tg_session.py`
 - **Imported by:** `server.py:73`
-- **Imported by:** `server.py:7134`
-- **Imported by:** `server.py:7148`
+- **Imported by:** `server.py:7011`
+- **Imported by:** `server.py:7025`
 
 
 ### `tg_session.tg_session_append_context`
@@ -9087,64 +8872,63 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `tg_stocks.cmd_price`
 
 - **Defined in:** `tg_stocks.py`
-- **Imported by:** `server.py:487`
+- **Imported by:** `server.py:477`
 
 
 ### `tg_stocks.cmd_stocks`
 
 - **Defined in:** `tg_stocks.py`
-- **Imported by:** `server.py:487`
+- **Imported by:** `server.py:477`
 
 
 ### `tg_suggestions.get_suggestions`
 
 - **Defined in:** `tg_suggestions.py`
-- **Imported by:** `server.py:173`
+- **Imported by:** `server.py:170`
 
 
 ### `tg_tasks._parse_category`
 
 - **Defined in:** `tg_tasks.py`
-- **Imported by:** `quick_query.py:395`
+- **Imported by:** `quick_query.py:380`
 
 
 ### `tg_tasks._parse_due_date`
 
 - **Defined in:** `tg_tasks.py`
-- **Imported by:** `quick_query.py:395`
+- **Imported by:** `quick_query.py:380`
 
 
 ### `tg_tasks._parse_priority`
 
 - **Defined in:** `tg_tasks.py`
-- **Imported by:** `quick_query.py:395`
+- **Imported by:** `quick_query.py:380`
 
 
 ### `tg_tasks.handle_tasks_command`
 
 - **Defined in:** `tg_tasks.py`
-- **Imported by:** `server.py:479`
-- **Imported by:** `server.py:7029`
+- **Imported by:** `server.py:469`
 
 
 ### `tg_tasks.llm_tool_task_create`
 
 - **Defined in:** `tg_tasks.py`
-- **Imported by:** `chat_v7.py:382`
-- **Imported by:** `server.py:479`
+- **Imported by:** `chat_v7.py:373`
+- **Imported by:** `server.py:469`
 
 
 ### `tg_tasks.llm_tool_task_list`
 
 - **Defined in:** `tg_tasks.py`
-- **Imported by:** `chat_v7.py:379`
+- **Imported by:** `chat_v7.py:370`
 
 
 ### `tg_tasks.llm_tool_task_update`
 
 - **Defined in:** `tg_tasks.py`
-- **Imported by:** `chat_v7.py:385`
-- **Imported by:** `server.py:479`
+- **Imported by:** `chat_v7.py:376`
+- **Imported by:** `server.py:469`
 
 
 ### `tips_engine.TipsEngine`
@@ -9180,13 +8964,13 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `tool_registry.ToolRegistry`
 
 - **Defined in:** `tool_registry.py`
-- **Imported by:** `server.py:632`
+- **Imported by:** `server.py:604`
 
 
 ### `tool_summary.generate_summary`
 
 - **Defined in:** `tool_summary.py`
-- **Imported by:** `server.py:7680`
+- **Imported by:** `server.py:7574`
 
 
 ### `trading_brain.adjust_weights`
@@ -9199,31 +8983,31 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `trading_brain.evaluate_pending_signals`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `server.py:2979`
+- **Imported by:** `server.py:2938`
 
 
 ### `trading_brain.format_weekly_tg`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `server.py:2979`
+- **Imported by:** `server.py:2938`
 
 
 ### `trading_brain.generate_weekly_report`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `server.py:2979`
+- **Imported by:** `server.py:2938`
 
 
 ### `trading_brain.get_adjusted_confluence`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `signal_engine.py:1272`
+- **Imported by:** `signal_engine.py:1323`
 
 
 ### `trading_brain.get_brain_stats`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `dashboard_api.py:2603`
+- **Imported by:** `dashboard_api.py:2455`
 
 
 ### `trading_brain.get_indicator_weights`
@@ -9237,26 +9021,26 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `trading_brain.get_optimal_thresholds`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `dashboard_api.py:2603`
+- **Imported by:** `dashboard_api.py:2455`
 - **Imported by:** `signal_engine.py:86`
 
 
 ### `trading_brain.init_brain_context`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `server.py:2963`
+- **Imported by:** `server.py:2922`
 
 
 ### `trading_brain.init_schema`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `server.py:2963`
+- **Imported by:** `server.py:2922`
 
 
 ### `trading_brain.snapshot_signals`
 
 - **Defined in:** `trading_brain.py`
-- **Imported by:** `server.py:2979`
+- **Imported by:** `server.py:2938`
 
 
 ### `trading_brain.update_indicator_performance`
@@ -9275,228 +9059,229 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `trading_engine.get_morning_trading_text`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `tg_morning_report.py:308`
+- **Imported by:** `tg_morning_report.py:272`
 
 
 ### `trading_engine.handle_trade_log`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `server.py:590`
+- **Imported by:** `server.py:562`
 
 
 ### `trading_engine.handle_trade_review`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `server.py:590`
+- **Imported by:** `server.py:562`
 
 
 ### `trading_engine.handle_trades_list`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `server.py:590`
+- **Imported by:** `server.py:562`
 
 
 ### `trading_engine.init_schema`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `server.py:590`
+- **Imported by:** `server.py:562`
 
 
 ### `trading_engine.llm_tool_trade_journal`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `chat_v7.py:443`
+- **Imported by:** `chat_v7.py:423`
 
 
 ### `trading_engine.llm_tool_trade_log`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `chat_v7.py:440`
+- **Imported by:** `chat_v7.py:420`
 
 
 ### `trading_engine.quick_trade_stats`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `server.py:590`
+- **Imported by:** `server.py:562`
 
 
 ### `trading_engine.quick_trades_recent`
 
 - **Defined in:** `trading_engine.py`
-- **Imported by:** `server.py:590`
+- **Imported by:** `server.py:562`
 
 
 ### `tradingview_bridge.get_morning_tv_text`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `tg_morning_report.py:315`
+- **Imported by:** `tg_morning_report.py:279`
 
 
 ### `tradingview_bridge.handle_tv_add`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.handle_tv_last`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.handle_tv_remove`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.handle_tv_stats`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.handle_tv_summary`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.handle_tv_test`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.handle_tv_watchlist`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.handle_webhook`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.init_tradingview_domain`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.llm_tool_tv_last_signal`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `chat_v7.py:454`
+- **Imported by:** `chat_v7.py:434`
 
 
 ### `tradingview_bridge.llm_tool_tv_signal_summary`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `chat_v7.py:457`
+- **Imported by:** `chat_v7.py:437`
 
 
 ### `tradingview_bridge.llm_tool_tv_watchlist_add`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `chat_v7.py:448`
+- **Imported by:** `chat_v7.py:428`
 
 
 ### `tradingview_bridge.llm_tool_tv_watchlist_list`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `chat_v7.py:451`
+- **Imported by:** `chat_v7.py:431`
 
 
 ### `tradingview_bridge.mark_telegram_sent`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.quick_tv_last`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.quick_tv_summary_today`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.quick_tv_watchlist`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.render_tv_alert_message`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tradingview_bridge.sync_tv_from_radar`
 
 - **Defined in:** `tradingview_bridge.py`
-- **Imported by:** `server.py:602`
+- **Imported by:** `server.py:574`
 
 
 ### `tv_advisor.build_advisor_prompt`
 
 - **Defined in:** `tv_advisor.py`
-- **Imported by:** `chat_v7.py:477`
+- **Imported by:** `chat_v7.py:457`
 
 
 ### `tv_advisor.format_advisor_response`
 
 - **Defined in:** `tv_advisor.py`
-- **Imported by:** `chat_v7.py:477`
+- **Imported by:** `chat_v7.py:457`
 
 
 ### `tv_analysis.format_analysis_arabic`
 
 - **Defined in:** `tv_analysis.py`
-- **Imported by:** `chat_v7.py:467`
-- **Imported by:** `chat_v7.py:476`
-- **Imported by:** `quick_query.py:251`
+- **Imported by:** `chat_v7.py:447`
+- **Imported by:** `chat_v7.py:456`
+- **Imported by:** `quick_query.py:236`
 - **Imported by:** `tv_advisor.py:62`
 
 
 ### `tv_analysis.full_analysis`
 
 - **Defined in:** `tv_analysis.py`
-- **Imported by:** `chat_v7.py:467`
-- **Imported by:** `chat_v7.py:476`
-- **Imported by:** `quick_query.py:251`
+- **Imported by:** `chat_v7.py:447`
+- **Imported by:** `chat_v7.py:456`
+- **Imported by:** `quick_query.py:236`
 
 
 ### `tv_data.KSE_STOCKS`
 
 - **Defined in:** `tv_data.py`
-- **Imported by:** `dashboard_api.py:458`
-- **Imported by:** `dashboard_api.py:1342`
-- **Imported by:** `priority_engine.py:84`
-- **Imported by:** `server.py:3717`
-- **Imported by:** `server.py:3767`
-- **Imported by:** `server.py:3826`
-- **Imported by:** `server.py:3892`
+- **Imported by:** `dashboard_api.py:448`
+- **Imported by:** `dashboard_api.py:1332`
+- **Imported by:** `priority_engine.py:61`
+- **Imported by:** `server.py:3670`
+- **Imported by:** `server.py:3735`
+- **Imported by:** `server.py:3794`
+- **Imported by:** `server.py:3860`
 - **Imported by:** `signal_engine.py:352`
 - **Imported by:** `stock_radar.py:208`
 - **Imported by:** `stock_radar.py:252`
 - **Imported by:** `stock_radar.py:585`
-- **Imported by:** `stock_radar.py:811`
-- **Imported by:** `stock_radar.py:1058`
-- **Imported by:** `stock_radar.py:1091`
-- **Imported by:** `stock_radar.py:1134`
-- **Imported by:** `stock_radar.py:1242`
-- **Imported by:** `stock_radar.py:1600`
-- **Imported by:** `stock_radar.py:1190`
-- **Imported by:** `stock_radar.py:962`
+- **Imported by:** `stock_radar.py:788`
+- **Imported by:** `stock_radar.py:895`
+- **Imported by:** `stock_radar.py:1142`
+- **Imported by:** `stock_radar.py:1175`
+- **Imported by:** `stock_radar.py:1218`
+- **Imported by:** `stock_radar.py:1326`
+- **Imported by:** `stock_radar.py:1684`
+- **Imported by:** `stock_radar.py:1274`
+- **Imported by:** `stock_radar.py:1046`
 
 
 ### `tv_data._get_tv`
@@ -9514,20 +9299,20 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Imported by:** `_tools/verify_sunday.py:145`
 - **Imported by:** `_tools/verify_sunday.py:200`
 - **Imported by:** `dashboard_api.py:214`
-- **Imported by:** `priority_engine.py:84`
-- **Imported by:** `signal_engine.py:1290`
-- **Imported by:** `stock_radar.py:1174`
-- **Imported by:** `stock_radar.py:1279`
-- **Imported by:** `stock_radar.py:939`
+- **Imported by:** `priority_engine.py:61`
+- **Imported by:** `signal_engine.py:1341`
+- **Imported by:** `stock_radar.py:1258`
+- **Imported by:** `stock_radar.py:1363`
+- **Imported by:** `stock_radar.py:1023`
 
 
 ### `tv_data._normalize_price_to_fils`
 
 - **Defined in:** `tv_data.py`
-- **Imported by:** `dashboard_api.py:1218`
-- **Imported by:** `dashboard_api.py:719`
-- **Imported by:** `server.py:3571`
-- **Imported by:** `server.py:2857`
+- **Imported by:** `dashboard_api.py:1208`
+- **Imported by:** `dashboard_api.py:709`
+- **Imported by:** `server.py:3524`
+- **Imported by:** `server.py:2816`
 - **Imported by:** `tg_stocks.py:109`
 - **Imported by:** `tradingview_bridge.py:304`
 
@@ -9535,38 +9320,38 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `tv_data.format_top_volume_arabic`
 
 - **Defined in:** `tv_data.py`
-- **Imported by:** `chat_v7.py:498`
-- **Imported by:** `quick_query.py:198`
+- **Imported by:** `chat_v7.py:483`
+- **Imported by:** `quick_query.py:183`
 
 
 ### `tv_data.get_price`
 
 - **Defined in:** `tv_data.py`
-- **Imported by:** `chat_v7.py:462`
-- **Imported by:** `chat_v7.py:466`
-- **Imported by:** `chat_v7.py:475`
-- **Imported by:** `quick_query.py:250`
+- **Imported by:** `chat_v7.py:442`
+- **Imported by:** `chat_v7.py:446`
+- **Imported by:** `chat_v7.py:455`
+- **Imported by:** `quick_query.py:235`
 
 
 ### `tv_data.get_top_volume`
 
 - **Defined in:** `tv_data.py`
-- **Imported by:** `chat_v7.py:498`
-- **Imported by:** `quick_query.py:198`
+- **Imported by:** `chat_v7.py:483`
+- **Imported by:** `quick_query.py:183`
 
 
 ### `tv_data.resolve_symbol`
 
 - **Defined in:** `tv_data.py`
 - **Imported by:** `_tools/radar_diag.py:40`
-- **Imported by:** `dashboard_api.py:1218`
-- **Imported by:** `dashboard_api.py:719`
-- **Imported by:** `server.py:2857`
+- **Imported by:** `dashboard_api.py:1208`
+- **Imported by:** `dashboard_api.py:709`
+- **Imported by:** `server.py:2816`
 - **Imported by:** `stock_radar.py:208`
 - **Imported by:** `stock_radar.py:225`
-- **Imported by:** `stock_radar.py:794`
-- **Imported by:** `stock_radar.py:811`
-- **Imported by:** `stock_radar.py:1134`
+- **Imported by:** `stock_radar.py:788`
+- **Imported by:** `stock_radar.py:895`
+- **Imported by:** `stock_radar.py:1218`
 - **Imported by:** `tg_stocks.py:109`
 
 
@@ -9579,7 +9364,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `world_state.get_snapshot_text`
 
 - **Defined in:** `world_state.py`
-- **Imported by:** `chat_v7.py:662`
+- **Imported by:** `chat_v7.py:647`
 - **Imported by:** `server.py:136`
 
 
@@ -9598,15 +9383,15 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `world_state_delta._get_db`
 
 - **Defined in:** `world_state_delta.py`
-- **Imported by:** `quick_query.py:446`
-- **Imported by:** `server.py:6776`
+- **Imported by:** `quick_query.py:421`
+- **Imported by:** `server.py:6662`
 
 
 ### `world_state_delta._last_event`
 
 - **Defined in:** `world_state_delta.py`
-- **Imported by:** `quick_query.py:446`
-- **Imported by:** `server.py:6776`
+- **Imported by:** `quick_query.py:421`
+- **Imported by:** `server.py:6662`
 
 
 ### `world_state_delta.build_delta`
@@ -9618,7 +9403,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 ### `world_state_delta.get_delta_text`
 
 - **Defined in:** `world_state_delta.py`
-- **Imported by:** `chat_v7.py:664`
+- **Imported by:** `chat_v7.py:649`
 
 
 ### `yahoo_gate.circuit_state`
@@ -9626,7 +9411,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - **Defined in:** `yahoo_gate.py`
 - **Imported by:** `_tools/quick_check.py:403`
 - **Imported by:** `dashboard_api.py:134`
-- **Imported by:** `dashboard_api.py:887`
+- **Imported by:** `dashboard_api.py:877`
 
 
 ## Zero-consumer summary (retire-safely candidates)
@@ -9638,449 +9423,428 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 
 
 **`/action/execute`**
-  - `server.py:4908` handler=`action_execute_endpoint`
+  - `server.py:4881` handler=`action_execute_endpoint`
 
 **`/agent`**
-  - `server.py:4191` handler=`agent_endpoint`
+  - `server.py:4164` handler=`agent_endpoint`
 
 **`/aliases`**
-  - `server.py:8437` handler=`aliases_endpoint`
+  - `server.py:8295` handler=`aliases_endpoint`
 
 **`/anomalies`**
-  - `server.py:4058` handler=`get_anomalies_ep`
-  - `server.py:9285` handler=`anomalies_endpoint`
-
-**`/api/analyze`**
-  - `server.py:8115` handler=`api_analyze`
+  - `server.py:4031` handler=`get_anomalies_ep`
+  - `server.py:9137` handler=`anomalies_endpoint`
 
 **`/api/analyze/refresh`**
-  - `server.py:8142` handler=`api_analyze_refresh`
+  - `server.py:8060` handler=`api_analyze_refresh`
 
 **`/api/analyze/refresh-all`**
-  - `server.py:8148` handler=`api_analyze_refresh_all`
+  - `server.py:8066` handler=`api_analyze_refresh_all`
 
 **`/api/collect-now`**
-  - `dashboard_api.py:3260` handler=`api_collect_now`
+  - `dashboard_api.py:3116` handler=`api_collect_now`
 
 **`/api/data-freshness`**
-  - `dashboard_api.py:3164` handler=`api_data_freshness`
+  - `dashboard_api.py:3016` handler=`api_data_freshness`
 
 **`/api/data-health`**
-  - `dashboard_api.py:3153` handler=`api_data_health`
-
-**`/api/decisions-now`**
-  - `server.py:3615` handler=`api_decisions_now`
+  - `dashboard_api.py:3005` handler=`api_data_health`
 
 **`/api/flags/{name}/toggle`**
-  - `server.py:8075` handler=`toggle_feature_flag`
+  - `server.py:7969` handler=`toggle_feature_flag`
 
 **`/api/hooks/log`**
-  - `server.py:8280` handler=`get_hooks_log`
+  - `server.py:8198` handler=`get_hooks_log`
 
 **`/api/hooks/stats`**
-  - `server.py:8276` handler=`get_hooks_stats`
+  - `server.py:8194` handler=`get_hooks_stats`
 
 **`/api/kairos/log`**
-  - `server.py:8269` handler=`get_kairos_log`
-
-**`/api/news`**
-  - `server.py:8300` handler=`api_news`
-
-**`/api/news/refresh-boursa`**
-  - `server.py:8314` handler=`api_news_refresh_boursa`
-
-**`/api/news/refresh-gemini`**
-  - `server.py:8337` handler=`api_news_refresh_gemini`
+  - `server.py:8187` handler=`get_kairos_log`
 
 **`/api/paper-trade/close`**
-  - `dashboard_api.py:2400` handler=`api_paper_trade_close`
+  - `dashboard_api.py:2252` handler=`api_paper_trade_close`
 
 **`/api/paper-trade/open`**
-  - `dashboard_api.py:2388` handler=`api_paper_trade_open`
+  - `dashboard_api.py:2240` handler=`api_paper_trade_open`
 
 **`/api/portfolio-alert-ack`**
-  - `dashboard_api.py:3341` handler=`api_portfolio_alert_ack`
+  - `dashboard_api.py:3197` handler=`api_portfolio_alert_ack`
 
 **`/api/portfolio-monitor`**
-  - `dashboard_api.py:3328` handler=`api_portfolio_monitor`
+  - `dashboard_api.py:3184` handler=`api_portfolio_monitor`
 
 **`/api/portfolio-status`**
-  - `dashboard_api.py:3298` handler=`api_portfolio_status`
+  - `dashboard_api.py:3154` handler=`api_portfolio_status`
 
 **`/api/portfolio/transactions/{trade_id}`**
-  - `server.py:8216` handler=`api_trade_transactions`
+  - `server.py:8134` handler=`api_trade_transactions`
 
 **`/api/radar/progress`**
-  - `dashboard_api.py:3632` handler=`api_radar_progress`
+  - `dashboard_api.py:3488` handler=`api_radar_progress`
 
 **`/api/refresh-analysis`**
-  - `server.py:8163` handler=`api_refresh_analysis`
+  - `server.py:8081` handler=`api_refresh_analysis`
 
 **`/api/review-now`**
-  - `server.py:3673` handler=`manual_review`
+  - `server.py:3626` handler=`manual_review`
 
 **`/api/skills`**
-  - `dashboard_api.py:3671` handler=`api_skills`
+  - `dashboard_api.py:3527` handler=`api_skills`
 
 **`/api/stocks/symbol/{symbol}`**
-  - `server.py:3653` handler=`get_stock_personality`
+  - `server.py:3606` handler=`get_stock_personality`
 
 **`/api/tools`**
-  - `server.py:8284` handler=`get_tools`
+  - `server.py:8202` handler=`get_tools`
 
 **`/api/tools/{name}`**
-  - `server.py:8290` handler=`get_tool_detail`
+  - `server.py:8208` handler=`get_tool_detail`
 
 **`/approvals/pending`**
-  - `server.py:4340` handler=`list_pending_approvals`
+  - `server.py:4313` handler=`list_pending_approvals`
 
 **`/approve/{approval_id}`**
-  - `server.py:4292` handler=`approve_action`
+  - `server.py:4265` handler=`approve_action`
 
 **`/ask`**
-  - `server.py:4075` handler=`ask`
+  - `server.py:4048` handler=`ask`
 
 **`/audit`**
-  - `server.py:4841` handler=`get_audit`
+  - `server.py:4814` handler=`get_audit`
 
 **`/brain/analytics`**
-  - `server.py:3296` handler=`analytics_endpoint`
+  - `server.py:3249` handler=`analytics_endpoint`
 
 **`/brain/diag`**
-  - `server.py:3316` handler=`brain_diag_endpoint`
+  - `server.py:3269` handler=`brain_diag_endpoint`
 
 **`/brain/expertise`**
-  - `server.py:5163` handler=`brain_expertise`
+  - `server.py:5143` handler=`brain_expertise`
 
 **`/brain/feedback`**
-  - `server.py:3308` handler=`feedback_endpoint`
+  - `server.py:3261` handler=`feedback_endpoint`
 
 **`/brain/stats`**
-  - `server.py:3251` handler=`brain_stats_endpoint`
+  - `server.py:3204` handler=`brain_stats_endpoint`
 
 **`/brain/users`**
-  - `server.py:3302` handler=`users_endpoint`
+  - `server.py:3255` handler=`users_endpoint`
 
 **`/bridge/status`**
-  - `server.py:3109` handler=`bridge_circuit_status`
+  - `server.py:3062` handler=`bridge_circuit_status`
 
 **`/calendar/stats`**
-  - `server.py:3513` handler=`calendar_stats_endpoint`
+  - `server.py:3466` handler=`calendar_stats_endpoint`
 
 **`/calendar/sync`**
-  - `server.py:3523` handler=`calendar_sync_endpoint`
+  - `server.py:3476` handler=`calendar_sync_endpoint`
 
 **`/chat/clear`**
-  - `server.py:8365` handler=`clear_chat_history`
+  - `server.py:8224` handler=`clear_chat_history`
 
 **`/classify`**
-  - `server.py:9250` handler=`classify_msg`
+  - `server.py:9102` handler=`classify_msg`
 
 **`/claude`**
-  - `server.py:4496` handler=`claude_context`
+  - `server.py:4469` handler=`claude_context`
 
 **`/corrections`**
-  - `server.py:9214` handler=`get_corrections_stats`
+  - `server.py:9066` handler=`get_corrections_stats`
 
 **`/corrections/decay`**
-  - `server.py:9223` handler=`decay_corrections_endpoint`
+  - `server.py:9075` handler=`decay_corrections_endpoint`
 
 **`/cost`**
-  - `server.py:9297` handler=`cost_dashboard`
+  - `server.py:9149` handler=`cost_dashboard`
 
 **`/daily-snapshot/refresh`**
-  - `server.py:3127` handler=`refresh_daily_snapshot_manual`
+  - `server.py:3080` handler=`refresh_daily_snapshot_manual`
 
 **`/dashboard/brain`**
-  - `dashboard_api.py:2599` handler=`dashboard_brain`
+  - `dashboard_api.py:2451` handler=`dashboard_brain`
 
 **`/dashboard/bridge`**
-  - `dashboard_api.py:1879` handler=`dashboard_bridge`
+  - `dashboard_api.py:1731` handler=`dashboard_bridge`
 
 **`/dashboard/bridge/{symbol}`**
-  - `dashboard_api.py:1903` handler=`dashboard_bridge_symbol`
+  - `dashboard_api.py:1755` handler=`dashboard_bridge_symbol`
 
 **`/dashboard/ema-active`**
-  - `server.py:3798` handler=`dashboard_ema_active`
+  - `server.py:3766` handler=`dashboard_ema_active`
 
 **`/dashboard/ema-crosses`**
-  - `server.py:3686` handler=`dashboard_ema_crosses`
+  - `server.py:3639` handler=`dashboard_ema_crosses`
 
 **`/dashboard/ema-live`**
-  - `server.py:3880` handler=`dashboard_ema_live`
+  - `server.py:3848` handler=`dashboard_ema_live`
 
 **`/dashboard/ema-proximity`**
-  - `server.py:3753` handler=`dashboard_ema_proximity`
+  - `server.py:3706` handler=`dashboard_ema_proximity`
 
 **`/dashboard/jobs`**
-  - `dashboard_api.py:431` handler=`dashboard_jobs_list`
+  - `dashboard_api.py:421` handler=`dashboard_jobs_list`
 
 **`/dashboard/paper-trading`**
-  - `dashboard_api.py:2378` handler=`dashboard_paper_trading`
+  - `dashboard_api.py:2230` handler=`dashboard_paper_trading`
 
 **`/dashboard/regime`**
-  - `dashboard_api.py:2565` handler=`dashboard_regime`
-
-**`/dashboard/reviews`**
-  - `server.py:3666` handler=`dashboard_reviews`
+  - `dashboard_api.py:2417` handler=`dashboard_regime`
 
 **`/dashboard/scalper`**
-  - `dashboard_api.py:2434` handler=`dashboard_scalper`
-
-**`/dashboard/strategies`**
-  - `dashboard_api.py:2940` handler=`dashboard_strategies`
+  - `dashboard_api.py:2286` handler=`dashboard_scalper`
 
 **`/debug/test_approval`**
-  - `server.py:3346` handler=`debug_test_approval`
+  - `server.py:3299` handler=`debug_test_approval`
 
 **`/decompose`**
-  - `server.py:9255` handler=`decompose_msg`
+  - `server.py:9107` handler=`decompose_msg`
 
 **`/deploy`**
-  - `server.py:4707` handler=`deploy_file`
+  - `server.py:4680` handler=`deploy_file`
 
 **`/dev/context`**
-  - `server.py:5181` handler=`dev_context`
+  - `server.py:5161` handler=`dev_context`
 
 **`/dream/run`**
-  - `server.py:3280` handler=`dream_run_endpoint`
+  - `server.py:3233` handler=`dream_run_endpoint`
 
 **`/dream/status`**
-  - `server.py:3271` handler=`dream_status_endpoint`
+  - `server.py:3224` handler=`dream_status_endpoint`
 
 **`/entity-map/arabize`**
-  - `server.py:8498` handler=`entity_map_arabize`
+  - `server.py:8356` handler=`entity_map_arabize`
 
 **`/entity-map/health`**
-  - `server.py:8485` handler=`entity_map_health`
+  - `server.py:8343` handler=`entity_map_health`
 
 **`/event`**
-  - `server.py:4937` handler=`ingest_event`
+  - `server.py:4910` handler=`ingest_event`
 
 **`/event_rules`**
-  - `server.py:4985` handler=`get_event_rules`
+  - `server.py:4958` handler=`get_event_rules`
 
 **`/events`**
-  - `server.py:4974` handler=`list_events_ep`
+  - `server.py:4947` handler=`list_events_ep`
 
 **`/events/{event_id}`**
-  - `server.py:4978` handler=`get_event_ep`
+  - `server.py:4951` handler=`get_event_ep`
 
 **`/feedback/digest`**
-  - `server.py:9274` handler=`feedback_digest_endpoint`
+  - `server.py:9126` handler=`feedback_digest_endpoint`
 
 **`/feedback/stats`**
-  - `server.py:9266` handler=`feedback_stats_endpoint`
+  - `server.py:9118` handler=`feedback_stats_endpoint`
 
 **`/gmail/auth`**
-  - `server.py:3362` handler=`gmail_auth_start`
+  - `server.py:3315` handler=`gmail_auth_start`
 
 **`/gmail/callback`**
-  - `server.py:3397` handler=`gmail_auth_callback`
+  - `server.py:3350` handler=`gmail_auth_callback`
 
 **`/google/auth`**
-  - `server.py:3453` handler=`google_auth_start`
+  - `server.py:3406` handler=`google_auth_start`
 
 **`/google/auth/status`**
-  - `server.py:3503` handler=`google_auth_status`
+  - `server.py:3456` handler=`google_auth_status`
 
 **`/google/callback`**
-  - `server.py:3471` handler=`google_auth_callback`
+  - `server.py:3424` handler=`google_auth_callback`
 
 **`/ha/service`**
-  - `server.py:4256` handler=`ha_call_service_ep`
+  - `server.py:4229` handler=`ha_call_service_ep`
 
 **`/ha/states`**
-  - `server.py:4265` handler=`ha_get_states`
+  - `server.py:4238` handler=`ha_get_states`
 
 **`/ha/states/{entity_id:path}`**
-  - `server.py:4270` handler=`ha_get_state`
+  - `server.py:4243` handler=`ha_get_state`
 
 **`/health`**
-  - `server.py:3973` handler=`health`
+  - `server.py:3946` handler=`health`
 
 **`/health/external`**
-  - `server.py:8046` handler=`health_external`
+  - `server.py:7940` handler=`health_external`
 
 **`/health/external/test`**
-  - `server.py:8404` handler=`health_external_test`
+  - `server.py:8262` handler=`health_external_test`
 
 **`/history/{entity_id:path}`**
-  - `server.py:3993` handler=`entity_history_endpoint`
+  - `server.py:3966` handler=`entity_history_endpoint`
 
 **`/knowledge`**
-  - `server.py:4603` handler=`list_knowledge`
-  - `server.py:4626` handler=`create_knowledge`
+  - `server.py:4576` handler=`list_knowledge`
+  - `server.py:4599` handler=`create_knowledge`
 
 **`/knowledge/{kid}`**
-  - `server.py:4617` handler=`get_knowledge`
-  - `server.py:4637` handler=`update_knowledge`
-  - `server.py:4649` handler=`delete_knowledge`
+  - `server.py:4590` handler=`get_knowledge`
+  - `server.py:4610` handler=`update_knowledge`
+  - `server.py:4622` handler=`delete_knowledge`
 
 **`/kpi`**
-  - `server.py:9308` handler=`kpi_dashboard`
+  - `server.py:9160` handler=`kpi_dashboard`
 
 **`/memory`**
-  - `server.py:4747` handler=`create_memory_ep`
-  - `server.py:4756` handler=`list_memories_ep`
+  - `server.py:4720` handler=`create_memory_ep`
+  - `server.py:4729` handler=`list_memories_ep`
 
 **`/memory/message`**
-  - `server.py:4798` handler=`save_msg`
+  - `server.py:4771` handler=`save_msg`
 
 **`/memory/recent`**
-  - `server.py:4791` handler=`memory_recent`
+  - `server.py:4764` handler=`memory_recent`
 
 **`/memory/stats`**
-  - `server.py:4769` handler=`mem_stats`
+  - `server.py:4742` handler=`mem_stats`
 
 **`/patterns`**
-  - `server.py:4040` handler=`patterns_endpoint`
+  - `server.py:4013` handler=`patterns_endpoint`
 
 **`/patterns/learn`**
-  - `server.py:4067` handler=`patterns_learn_endpoint`
+  - `server.py:4040` handler=`patterns_learn_endpoint`
 
 **`/patterns/suggestions`**
-  - `server.py:4051` handler=`patterns_suggestions_endpoint`
+  - `server.py:4024` handler=`patterns_suggestions_endpoint`
 
 **`/plugins`**
-  - `server.py:4902` handler=`list_plugins`
+  - `server.py:4875` handler=`list_plugins`
 
 **`/plugins/{name}/disable`**
-  - `server.py:4922` handler=`disable_plugin`
+  - `server.py:4895` handler=`disable_plugin`
 
 **`/plugins/{name}/enable`**
-  - `server.py:4915` handler=`enable_plugin`
+  - `server.py:4888` handler=`enable_plugin`
 
 **`/router/stats`**
-  - `server.py:8446` handler=`router_stats_endpoint`
+  - `server.py:8304` handler=`router_stats_endpoint`
 
 **`/schema`**
-  - `server.py:4867` handler=`schema_status`
+  - `server.py:4840` handler=`schema_status`
 
 **`/schema/ensure`**
-  - `server.py:4887` handler=`schema_ensure`
+  - `server.py:4860` handler=`schema_ensure`
 
 **`/sessions`**
-  - `server.py:4556` handler=`create_session`
-  - `server.py:4568` handler=`list_sessions`
+  - `server.py:4529` handler=`create_session`
+  - `server.py:4541` handler=`list_sessions`
 
 **`/sessions/latest`**
-  - `server.py:4578` handler=`latest_session`
+  - `server.py:4551` handler=`latest_session`
 
 **`/shift`**
-  - `server.py:4469` handler=`shift_info`
+  - `server.py:4442` handler=`shift_info`
 
 **`/ssh/run`**
-  - `server.py:4283` handler=`ssh_run`
+  - `server.py:4256` handler=`ssh_run`
 
 **`/stability`**
-  - `server.py:8422` handler=`stability_endpoint`
+  - `server.py:8280` handler=`stability_endpoint`
 
 **`/stats/capture`**
-  - `server.py:4454` handler=`stats_capture`
+  - `server.py:4427` handler=`stats_capture`
 
 **`/stats/daily`**
-  - `server.py:4439` handler=`stats_daily`
+  - `server.py:4412` handler=`stats_daily`
 
 **`/stocks/alerts`**
-  - `server.py:4688` handler=`stock_alerts_history`
+  - `server.py:4661` handler=`stock_alerts_history`
 
 **`/stocks/portfolio`**
-  - `server.py:4679` handler=`stock_portfolio`
+  - `server.py:4652` handler=`stock_portfolio`
 
 **`/structured-memory`**
-  - `server.py:9142` handler=`smem_stats`
+  - `server.py:8994` handler=`smem_stats`
 
 **`/structured-memory/context`**
-  - `server.py:9147` handler=`smem_context`
+  - `server.py:8999` handler=`smem_context`
 
 **`/structured-memory/correction`**
-  - `server.py:9174` handler=`smem_save_correction`
+  - `server.py:9026` handler=`smem_save_correction`
 
 **`/structured-memory/decay`**
-  - `server.py:9203` handler=`smem_decay`
+  - `server.py:9055` handler=`smem_decay`
 
 **`/structured-memory/event`**
-  - `server.py:9163` handler=`smem_save_event`
+  - `server.py:9015` handler=`smem_save_event`
 
 **`/structured-memory/fact`**
-  - `server.py:9152` handler=`smem_save_fact`
+  - `server.py:9004` handler=`smem_save_fact`
 
 **`/structured-memory/migrate`**
-  - `server.py:9193` handler=`smem_migrate`
+  - `server.py:9045` handler=`smem_migrate`
 
 **`/structured-memory/search`**
-  - `server.py:9184` handler=`smem_search`
+  - `server.py:9036` handler=`smem_search`
 
 **`/structured-memory/seed`**
-  - `server.py:9198` handler=`smem_seed`
+  - `server.py:9050` handler=`smem_seed`
 
 **`/structured-memory/{memory_id}`**
-  - `server.py:9209` handler=`smem_delete`
+  - `server.py:9061` handler=`smem_delete`
 
 **`/system/backup`**
-  - `server.py:3265` handler=`backup_endpoint`
+  - `server.py:3218` handler=`backup_endpoint`
 
 **`/system/context`**
-  - `server.py:5019` handler=`system_context`
+  - `server.py:4992` handler=`system_context`
 
 **`/system/diag`**
-  - `server.py:3258` handler=`system_diag_endpoint`
+  - `server.py:3211` handler=`system_diag_endpoint`
 
 **`/system/knowledge`**
-  - `server.py:5142` handler=`system_knowledge_endpoint`
+  - `server.py:5122` handler=`system_knowledge_endpoint`
 
 **`/system/knowledge/summary`**
-  - `server.py:5152` handler=`system_knowledge_summary`
+  - `server.py:5132` handler=`system_knowledge_summary`
 
 **`/tasks`**
-  - `server.py:4662` handler=`list_tasks_ep`
+  - `server.py:4635` handler=`list_tasks_ep`
 
 **`/tasks/{task_id}`**
-  - `server.py:4667` handler=`get_task_ep`
+  - `server.py:4640` handler=`get_task_ep`
 
 **`/tg/stats`**
-  - `server.py:8374` handler=`tg_stats`
+  - `server.py:8233` handler=`tg_stats`
 
 **`/tips`**
-  - `server.py:3289` handler=`tips_endpoint`
+  - `server.py:3242` handler=`tips_endpoint`
 
 **`/tool-stats`**
-  - `server.py:3545` handler=`tool_stats_endpoint`
+  - `server.py:3498` handler=`tool_stats_endpoint`
 
 **`/traces`**
-  - `server.py:9242` handler=`traces_list`
+  - `server.py:9094` handler=`traces_list`
 
 **`/traces/stats`**
-  - `server.py:9246` handler=`traces_stats`
+  - `server.py:9098` handler=`traces_stats`
 
 **`/trading/{page}`**
-  - `server.py:3156` handler=`serve_trading_page`
+  - `server.py:3109` handler=`serve_trading_page`
 
 **`/tradingview/webhook`**
-  - `server.py:3554` handler=`tradingview_webhook`
+  - `server.py:3507` handler=`tradingview_webhook`
 
 **`/users`**
-  - `server.py:4812` handler=`create_user`
-  - `server.py:4827` handler=`list_users`
+  - `server.py:4785` handler=`create_user`
+  - `server.py:4800` handler=`list_users`
 
 **`/webhook/event`**
-  - `server.py:5004` handler=`webhook_event`
+  - `server.py:4977` handler=`webhook_event`
 
 **`/win/jobs`**
-  - `server.py:4421` handler=`win_jobs`
+  - `server.py:4394` handler=`win_jobs`
 
 **`/win/poll`**
-  - `server.py:4398` handler=`win_poll`
+  - `server.py:4371` handler=`win_poll`
 
 **`/win/register`**
-  - `server.py:4390` handler=`win_register`
+  - `server.py:4363` handler=`win_register`
 
 **`/win/report`**
-  - `server.py:4409` handler=`win_report`
+  - `server.py:4382` handler=`win_report`
 
 **`/world-state`**
-  - `server.py:3534` handler=`world_state_endpoint`
+  - `server.py:3487` handler=`world_state_endpoint`
 
 
 ### Tables never read (write-only)
@@ -10147,6 +9911,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `brain_proactive`
 - `bridge`
 - `bridge_client`
+- `built`
 - `calendar_db`
 - `calendar_engine`
 - `calendar_reporting`
@@ -10154,6 +9919,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `chatgpt`
 - `circuit_breaker`
 - `claude`
+- `closed`
 - `coalesced_executor`
 - `collections`
 - `complete`
@@ -10183,7 +9949,6 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `domain_kpis`
 - `dotenv`
 - `dream_consolidator`
-- `email`
 - `entity`
 - `entity_health`
 - `entity_id`
@@ -10200,6 +9965,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `fastapi`
 - `feedback_learner`
 - `fixed`
+- `fragments`
 - `fresher`
 - `gdrive`
 - `gemini`
@@ -10248,9 +10014,11 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `memory_recall`
 - `mined_strategies`
 - `mini_planner`
+- `model_tiers`
 - `module`
 - `modules`
 - `multiple`
+- `news_digests`
 - `news_engine`
 - `nightly`
 - `nobody`
@@ -10286,6 +10054,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `radar_config`
 - `radar_events`
 - `raw`
+- `realized`
 - `recent`
 - `relationships_engine`
 - `response`
@@ -10329,11 +10098,9 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `template`
 - `text`
 - `tg_alerts`
-- `tg_email`
 - `tg_home`
 - `tg_intent_router`
 - `tg_morning_report`
-- `tg_news`
 - `tg_ops`
 - `tg_reminders`
 - `tg_report`
@@ -10342,6 +10109,8 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `tg_stocks`
 - `tg_suggestions`
 - `tg_tasks`
+- `that`
+- `then`
 - `this`
 - `those`
 - `tier1`
@@ -10369,7 +10138,6 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `windows`
 - `world_state`
 - `world_state_delta`
-- `xml`
 - `yahoo`
 - `yahoo_gate`
 - `yesterday`
