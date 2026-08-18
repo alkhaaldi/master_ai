@@ -490,7 +490,7 @@ tbody tr.row-tier-w:hover{background:rgba(217,68,82,.05)}
 <!-- BRIDGE DIAGNOSTICS -->
 <div class="bridge-diag" id="bridge-diag">
   <div class="bd-item"><span class="bd-label">حالة الربط:</span><span class="bd-val" id="bd-status">--</span></div>
-  <div class="bd-item"><span class="bd-label">البيانات المخزنة:</span><span class="bd-val ltr" id="bd-cached">--</span></div>
+  <div class="bd-item"><span class="bd-label">الرموز المعروضة:</span><span class="bd-val ltr" id="bd-cached">--</span></div>
   <div class="bd-item"><span class="bd-label">آخر تحديث:</span><span class="bd-val ltr" id="bd-time">--</span></div>
 </div>
 
@@ -845,7 +845,9 @@ function processData(d){
   $('#bd-status').style.color = d.source
     ? (srcOk ? 'var(--green)' : 'var(--amber)')
     : 'var(--text-3)';
-  $('#bd-cached').textContent = d.bridge_cached_count!=null ? d.bridge_cached_count : '--';
+  /* was a bridge cache counter, absent from the payload since the
+     retirement, so this row read '--' on every load. */
+  $('#bd-cached').textContent = total;
   const ts = d.timestamp ? new Date(d.timestamp).toLocaleString('ar-KW',{timeZone:'Asia/Kuwait'}) : new Date().toLocaleString('ar-KW',{timeZone:'Asia/Kuwait'});
   $('#bd-time').textContent = ts;
   $('#footer-time').textContent = '\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: ' + ts;

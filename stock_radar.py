@@ -768,42 +768,126 @@ def _fetch_bridge_30m_retired(ticker: str) -> dict:
 
 
 def check_symbol(symbol, fast=9, slow=21):
-    """OFFLINE since the bridge was retired. Returns the reason, not zeros.
+    """30m snapshot for one symbol, off the local Yahoo layer.
 
-    Measured 2026-08-17, and this is why it is gated rather than repaired:
-    `_fetch_bridge_30m` has returned `{}` since G-4, and every field below it
-    collapses through a chain of `or 0`. The function was answering, for
-    every symbol, with
+    Gated shut 2026-08-17: _fetch_bridge_30m had returned {} since the bridge
+    retired, and every field below it collapsed through a chain of `or 0`, so
+    this answered - for every symbol - price 0.0 / rsi 0.0 / vwap 0.0 /
+    ema 0.0. An RSI of 0 is not "no reading", it is maximum oversold, and
+    tg_radar_check is wired to a live Telegram command. The gate's note named
+    build_signals_30m as the precondition for repair; that is built, so the
+    bars and indicators are local now.
 
-        price 0.0 · rsi 0.0 · vwap 0.0 · vol_ratio 0.0 · ema 0.0/0.0
+    The `or 0` chain is deliberately not restored. A missing indicator stays
+    None: _smart_verdict and _compute_score both guard with `if rsi:`, so an
+    absent reading contributes nothing rather than a false extreme.
 
-    An RSI of 0 is not "no reading", it is the extreme end of the scale -
-    maximum oversold. And `tg_radar_check` is wired to a live Telegram
-    command (server.py:6513), so a fabricated all-zero snapshot was one
-    message away at any time. A dead path that still answers the phone is
-    worse than one that does not.
-
-    This is the 30m layer, so it gets the 30m layer's answer: offline,
-    rebuildable, and NOT substituted with daily data. See build_signals_30m
-    in signal_engine.py and OPEN_ITEMS item 5. Every caller already checks
-    `error`, so nothing downstream changes shape.
-
-    The bridge-era body is preserved below as _check_symbol_bridge_era for
-    the record; do not call it - it computes from an empty dict.
+    The EMA cross comes off the series (yahoo_30m computes the previous bar's
+    pair) instead of a poll-to-poll memory that lost its state on restart.
     """
-    from tv_data import resolve_symbol
+    from tv_data import resolve_symbol, KSE_STOCKS
     ticker = resolve_symbol(symbol)
-    return {
-        "ticker": ticker,
-        "error": ("طبقة 30m متوقفة منذ تقاعد الجسر (2026-08-16). "
-                  "قابلة لإعادة البناء محلياً — وليست بيانات ميتة."),
-        "layer_state": "offline",
-        "layer_reason": ("_fetch_bridge_30m returns {} since G-4; every "
-                         "indicator here would collapse to 0 through `or 0`, "
-                         "and 0 is a real RSI reading, not an absent one"),
-        "layer_rebuildable": True,
-    }
+    try:
+        import yahoo_30m
+        try:
+            from price_source import market_open_now
+            _open = market_open_now()
+        except Exception:
+            _open = False
+        max_age = (yahoo_30m.DEFAULT_MAX_AGE_S if _open
+                   else yahoo_30m.CLOSED_MAX_AGE_S)
 
+        bd, reason = yahoo_30m.symbol_data(ticker, max_age_s=max_age)
+        if bd is None:
+            return {
+                "ticker": ticker,
+                "name_ar": KSE_STOCKS.get(ticker, ticker),
+                "error": "لا توجد شموع 30 دقيقة صالحة لهذا الرمز",
+                "layer_state": "no_data",
+                "layer_reason": reason,
+                "layer_rebuildable": True,
+            }
+
+        price = bd.get("price")
+        change_pct = bd.get("change_pct")
+        change = (round(price * change_pct / 100, 3)
+                  if price is not None and change_pct is not None else None)
+        rsi = bd.get("rsi_14")
+        vol_ratio = bd.get("vol_ratio")
+        volume = bd.get("volume")
+        _ema = bd.get("ema") or {}
+        ema_f, ema_s = _ema.get("ema9"), _ema.get("ema21")
+        signal = _ema.get("cross")
+
+        try:
+            from signal_engine import _get_vwap_for_symbol
+            vwap = _get_vwap_for_symbol(ticker, bd).get("vwap") or None
+        except Exception:
+            vwap = None
+
+        _sup = (bd.get("support") or [None])[0]
+        _res = (bd.get("resistance") or [None])[0]
+        sr = {"support_1": _sup, "resistance_1": _res} if (_sup or _res) else None
+
+        # ratio stays None when there is no baseline; only the label needs a
+        # decision, and "normal" is the honest default for "not measured high"
+        vol_sig = {
+            "signal": ("high_volume" if (vol_ratio is not None and vol_ratio >= 1.5)
+                       else "normal"),
+            "ratio": vol_ratio,
+            "avg_volume": 0,
+        }
+
+        verdict = _smart_verdict(signal, rsi, vwap, price, vol_sig, ema_f, ema_s)
+        score, score_class = _compute_score(signal, rsi, vwap, price, vol_sig,
+                                            ema_f, ema_s, sr)
+
+        candle_time = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+
+        # Persist the pair so /dashboard/ema-proximity and ema-active have a
+        # stored state again; both columns have been 0 since the retirement.
+        if ema_f is not None and ema_s is not None:
+            try:
+                conn = _db()
+                conn.execute("""
+                    INSERT OR REPLACE INTO stock_radar_state
+                    (symbol, exchange, timeframe, fast_len, slow_len, prev_ema_fast, prev_ema_slow, updated_at)
+                    VALUES (?, 'KSE', '30m', 9, 21, ?, ?, ?)
+                """, (ticker, ema_f, ema_s, datetime.utcnow().isoformat()))
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                logger.debug("EMA state persist failed for %s: %r", ticker, e)
+
+        return {
+            "ticker":      ticker,
+            "name_ar":     KSE_STOCKS.get(ticker, ticker),
+            "price":       price,
+            "change":      change,
+            "change_pct":  change_pct,
+            "ema_fast":    ema_f,
+            "ema_slow":    ema_s,
+            "signal":      signal,
+            "candle_time": candle_time,
+            "rsi":         rsi,
+            "vwap":        vwap,
+            "support":     _sup,
+            "resistance":  _res,
+            "volume":      volume,
+            "vol_avg":     0,
+            "vol_ratio":   vol_ratio,
+            "vol_signal":  vol_sig["signal"],
+            "verdict":     verdict,
+            "score":       score,
+            "score_class": score_class,
+            "source":      "yahoo_30m",
+            "stale":       bd.get("stale"),
+            "bar_age_s":   bd.get("bar_age_s"),
+            "coverage_pct": bd.get("coverage_pct"),
+        }
+    except Exception as e:
+        logger.error("check_symbol(%s): %r", ticker, e)
+        return {"ticker": ticker, "error": str(e)}
 
 def _check_symbol_bridge_era(symbol, fast=9, slow=21):
     """The pre-2026-08-17 body. Unreachable. Kept for the record ONLY - it

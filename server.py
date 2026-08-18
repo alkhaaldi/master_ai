@@ -3769,16 +3769,31 @@ async def dashboard_ema_crosses(hours: int = 4, signal_type: str = "all"):
 @app.get("/dashboard/ema-proximity")
 async def dashboard_ema_proximity(threshold_pct: float = 1.5):
     """Stocks where EMA9 and EMA21 are close — about to cross."""
-    import sqlite3
+    # Was stock_radar_state.prev_ema_fast/prev_ema_slow, written by the
+    # bridge. Every one of the 61 30m rows has both columns at 0 since it
+    # retired, so the filter matched nothing and this returned an empty
+    # list on every call. The same two EMAs come off the 30m layer now.
+    import yahoo_30m
+    from stock_radar import get_watchlist
+    from signal_engine import _is_market_open_safe
 
-    conn = sqlite3.connect(os.path.join(BASE_DIR, "data", "life.db"))
-    conn.row_factory = sqlite3.Row
-    rows = conn.execute("""
-        SELECT symbol, prev_ema_fast, prev_ema_slow, updated_at
-        FROM stock_radar_state
-        WHERE timeframe = '30m' AND prev_ema_fast > 0 AND prev_ema_slow > 0
-    """).fetchall()
-    conn.close()
+    data = await asyncio.to_thread(
+        yahoo_30m.collect, [w["symbol"] for w in get_watchlist()],
+        None, _is_market_open_safe())
+
+    rows = []
+    for _sym, _bd in (data.get("symbols") or {}).items():
+        _e = _bd.get("ema") or {}
+        if not _e.get("ema9") or not _e.get("ema21"):
+            continue
+        _age = _bd.get("bar_age_s")
+        rows.append({
+            "symbol": _sym,
+            "prev_ema_fast": _e["ema9"],
+            "prev_ema_slow": _e["ema21"],
+            "updated_at": ((datetime.utcnow() - timedelta(seconds=_age)).isoformat() + "Z")
+                          if _age is not None else None,
+        })
 
     from tv_data import KSE_STOCKS
 
@@ -3903,26 +3918,29 @@ async def dashboard_ema_live():
     if _ema_live_cache["data"] and (_t.time() - _ema_live_cache["ts"]) < _EMA_LIVE_TTL:
         return _ema_live_cache["data"]
 
-    from bridge_client import BridgeClient, BRIDGE_BASE_URL
+    import yahoo_30m
     from stock_radar import get_watchlist
     from tv_data import KSE_STOCKS
+    from signal_engine import _is_market_open_safe
 
     watchlist = get_watchlist()
     symbols = [w["symbol"] for w in watchlist]
 
+    # Was BridgeClient.get_multi_analysis_30m_bulk. The bridge retired
+    # 2026-08-16, so this answered {"error": ..., bridge_online: false} on
+    # every call from then on. yahoo_30m.collect returns the same payload
+    # shape from the local 30m cache, which is why the parsing below did
+    # not have to change.
     try:
-        client = BridgeClient(BRIDGE_BASE_URL)
-        try:
-            data = await client.get_multi_analysis_30m_bulk(symbols)
-        finally:
-            await client.close()
+        data = await asyncio.to_thread(
+            yahoo_30m.collect, symbols, None, _is_market_open_safe())
     except Exception as e:
         # Return stale cache if available
         if _ema_live_cache["data"]:
             stale = _ema_live_cache["data"].copy()
             stale["stale"] = True
             return stale
-        return {"error": str(e), "bridge_online": False}
+        return {"error": str(e), "bridge_online": False, "source": "yahoo"}
 
     bridge_symbols = data.get("symbols", {})
 
@@ -3973,6 +3991,8 @@ async def dashboard_ema_live():
 
     result = {
         "bridge_online": data.get("bridge_online", False),
+        "source": data.get("source", "yahoo"),
+        "symbols_skipped": data.get("skipped_count", 0),
         "total_checked": len(bridge_symbols),
         "bullish_count": len(bullish),
         "bearish_count": len(bearish),

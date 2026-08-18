@@ -124,6 +124,12 @@ def symbol_data(symbol, max_age_s=DEFAULT_MAX_AGE_S, now_utc_ts=None,
     # door but it fetches: measured 7-9s per symbol, so 132 symbols is ~20
     # minutes inside an HTTP handler. Reading the materialised row keeps one
     # price per symbol across the platform without paying for it per call.
+    if price_hint is None:
+        # collect() passes the whole map in; a single-symbol caller such as
+        # check_symbol would otherwise fall through to the 30m close and
+        # quote a different price than the dashboards for the same symbol
+        # (851 vs 848 on NBK, 2026-08-18).
+        price_hint = _radar_prices().get(symbol)
     if price_hint is not None:
         price, price_src = price_hint, "stock_radar_daily"
     else:
@@ -151,11 +157,43 @@ def symbol_data(symbol, max_age_s=DEFAULT_MAX_AGE_S, now_utc_ts=None,
     else:
         ema_state = ""
 
+    # The previous bar's pair, so a cross can be read off the series itself.
+    # The bridge era compared this poll against the last one held in memory,
+    # which made the answer depend on poll cadence and lose every restart.
+    # Off the series it is deterministic and reproducible.
+    prev9 = prev21 = None
+    cross = None
+    # Only when both EMAs cleared indicators.py's coverage floor. ema_series
+    # computes off raw closes and has no floor of its own, so without this
+    # guard a thin name whose ema9/ema21 came back None - refused for want of
+    # coverage - still produced prev pairs and a cross. That is a trading
+    # signal manufactured from data the system had just declined to measure
+    # (ATC and CBK both did it, 2026-08-18).
+    try:
+        if ema9 is None or ema21 is None:
+            raise ValueError("EMA below coverage floor - no cross computed")
+        s9, s21 = _I.ema_series(closes, 9), _I.ema_series(closes, 21)
+        # The two series have different lengths - each needs `period` closes
+        # to seed - but both end on the same final bar, so negative indices
+        # line up.
+        if len(s9) >= 2 and len(s21) >= 2:
+            prev9, prev21 = s9[-2], s21[-2]
+            if prev9 <= prev21 and s9[-1] > s21[-1]:
+                cross = "bullish_cross"
+            elif prev9 >= prev21 and s9[-1] < s21[-1]:
+                cross = "bearish_cross"
+    except Exception as e:
+        logger.debug("ema series unavailable for %s: %r", symbol, e)
+
     macd_state = macd_v.get("cross", "") if macd_v else ""
     hist = macd_v.get("histogram") if macd_v else None
     macd_momentum = ("rising" if hist > 0 else "falling") if hist is not None else ""
 
     vr = _vol_ratio(complete)
+
+    vwap_bars = [b for b in complete
+                 if b.get("high") is not None and b.get("low") is not None
+                 and b.get("close") is not None and b.get("volume") is not None]
 
     bd = {
         # --- flat: what get_adjusted_confluence votes on ---
@@ -171,17 +209,36 @@ def symbol_data(symbol, max_age_s=DEFAULT_MAX_AGE_S, now_utc_ts=None,
         "close_30m": last_close,
         "change_pct": change_pct,
         "atr_14": atr_v,
+        "volume": (complete[-1].get("volume") if complete else None),
+        # The bar series under the key signal_engine's _get_vwap_for_symbol
+        # looks for. Without it VWAP came back 0 for every symbol - and 0 is
+        # a price, not a missing reading, so it rendered as a real VWAP
+        # sitting below every close.
+        #
+        # Only fully-populated bars go in. A thin name carries whole empty
+        # slots in the 30m grid (WARBACAP: 34 of 184 with OHLCV all None),
+        # and calculate_vwap raises TypeError on the first one - caught
+        # upstream and turned back into that same 0. VWAP over the bars that
+        # traded is a real reading; VWAP over holes is not.
+        #
+        # Internal only: callers copy named fields into their rows, so this
+        # never reaches a response body.
+        "bars": vwap_bars,
         "source": "yahoo_30m",
         "stale": is_stale,
         "bar_age_s": bar_age_s,
         # --- nested: what the signal row renders ---
-        "ema": {"stack": ema_state, "ema9": ema9, "ema21": ema21},
+        "ema": {"stack": ema_state, "ema9": ema9, "ema21": ema21,
+                "prev_ema9": prev9, "prev_ema21": prev21, "cross": cross},
         "macd": {"state": macd_state,
                  "histogram": hist,
                  "above_zero": macd_v.get("above_zero") if macd_v else None},
         "signals": {"macd_momentum": macd_momentum,
                     "rsi_divergence": div_v,
-                    "ema_cross": macd_v.get("cross") if macd_v else None},
+                    # The EMA 9/21 cross off the series - not the MACD cross,
+                    # which is what this key used to carry by mistake.
+                    "ema_cross": cross,
+                    "macd_cross": macd_v.get("cross") if macd_v else None},
         "support": [sr_v.get("support")] if sr_v.get("support") is not None else [],
         "resistance": [sr_v.get("resistance")] if sr_v.get("resistance") is not None else [],
         # bb (Bollinger squeeze) and stoch %D have no indicators.py
