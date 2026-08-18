@@ -8153,15 +8153,39 @@ async def get_service_health():
 
 # ── Stock Analysis API (on-demand, NO cache) ──
 @app.get("/api/analyze")
-async def api_analyze(symbol: str = ""):
-    """On-demand stock analysis via Bridge + Gemini. No cache — every call is live."""
+async def api_analyze(symbol: str = "", force: bool = False):
+    """On-demand stock analysis via Gemini, cached one row per symbol per day.
+
+    Every call used to be live: one click cost ~30s and a full Gemini 2.5 Pro
+    call. stock_analyzer has always known how to write stock_analysis_cache
+    (PK symbol+analysis_date) but nothing called store_analysis after this
+    path was rebuilt, so the last row landed 2026-05-10. Same-day repeat
+    views now serve from that table; the refresh button passes force=1.
+
+    analysis_date is written by store_analysis as SQLite date('now'), which
+    is UTC, so the freshness check compares against the UTC date too —
+    comparing Kuwait local date here would miss the cache every day between
+    midnight and 03:00 local.
+    """
     if not symbol:
         return JSONResponse({"error": "symbol parameter required"}, status_code=400)
     symbol = symbol.upper().strip()
     if len(symbol) > 20:
         return JSONResponse({"error": "invalid symbol"}, status_code=400)
     try:
-        from stock_analyzer import analyze_stock
+        from stock_analyzer import analyze_stock, store_analysis, get_cached_analysis
+        today_utc = datetime.utcnow().strftime("%Y-%m-%d")
+        if not force:
+            try:
+                cached = await asyncio.to_thread(get_cached_analysis, symbol)
+            except Exception:
+                cached = None
+            if cached and cached.get("analysis_date") == today_utc:
+                payload = cached.get("analysis_json")
+                if isinstance(payload, dict) and not payload.get("error"):
+                    payload["cached"] = True
+                    payload["cached_at"] = cached.get("created_at")
+                    return payload
         result = await asyncio.to_thread(analyze_stock, symbol)
         if result.get("error"):
             # Business error (Bridge offline / no data / Gemini failure) — NOT a gateway
@@ -8173,6 +8197,11 @@ async def api_analyze(symbol: str = ""):
                 {"error": err_msg, "symbol": symbol, "bridge_online": bridge_online},
                 status_code=200,
             )
+        try:
+            await asyncio.to_thread(store_analysis, symbol, result)
+        except Exception:
+            logger.warning("analysis cache write failed for %s", symbol, exc_info=True)
+        result["cached"] = False
         return result
     except Exception as e:
         logger.exception("api_analyze failed for %s", symbol)
@@ -8181,8 +8210,8 @@ async def api_analyze(symbol: str = ""):
 
 @app.post("/api/analyze/refresh")
 async def api_analyze_refresh(symbol: str = ""):
-    """Same as GET /api/analyze — kept for frontend backward compatibility."""
-    return await api_analyze(symbol)
+    """Same as GET /api/analyze but always live — the refresh button."""
+    return await api_analyze(symbol, force=True)
 
 
 @app.post("/api/analyze/refresh-all")

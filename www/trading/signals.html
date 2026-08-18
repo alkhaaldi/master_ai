@@ -834,9 +834,17 @@ function processData(d){
     {k:'discovery',l:'\u0627\u0633\u062A\u0643\u0634\u0627\u0641',c:'pc-discovery',v:sc.discovery||0}
   ].map(x=>`<span class="pulse-chip ${x.c}">${x.l} <span class="ltr">${x.v}</span></span>`).join('');
 
-  /* Bridge diagnostics */
-  $('#bd-status').textContent = bo ? '\u0645\u062A\u0635\u0644' : '\u063A\u064A\u0631 \u0645\u062A\u0635\u0644';
-  $('#bd-status').style.color = bo ? 'var(--green)' : 'var(--red)';
+  /* تشخيص المصدر. كان هنا `bo` من d.bridge_online، حُذف مع الجسر في 16 أغسطس وبقي استخدامه هنا،
+     فكان processData يرمي ReferenceError قبل أي رسم وتظهر «فشل تحميل البيانات»
+     بينما المسارات الثلاثة ترجع 200. يعرض الآن المصدر الحقيقي،
+     مثل نقطة الحالة فوقه. */
+  const srcOk = d.source_state === 'ok';
+  $('#bd-status').textContent = d.source
+    ? d.source + (srcOk ? '' : ' \u2014 ' + d.source_state)
+    : '\u063A\u064A\u0631 \u0645\u0639\u0644\u064E\u0646';
+  $('#bd-status').style.color = d.source
+    ? (srcOk ? 'var(--green)' : 'var(--amber)')
+    : 'var(--text-3)';
   $('#bd-cached').textContent = d.bridge_cached_count!=null ? d.bridge_cached_count : '--';
   const ts = d.timestamp ? new Date(d.timestamp).toLocaleString('ar-KW',{timeZone:'Asia/Kuwait'}) : new Date().toLocaleString('ar-KW',{timeZone:'Asia/Kuwait'});
   $('#bd-time').textContent = ts;

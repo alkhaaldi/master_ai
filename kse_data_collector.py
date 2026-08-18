@@ -354,6 +354,26 @@ def log_decision(opp: dict):
 # DATA HEALTH
 # ═══════════════════════════════════════════════════
 
+def parse_utc_naive(value):
+    """Parse an ISO timestamp to naive UTC, tolerating both stored formats.
+
+    stock_radar_daily.updated_at holds naive local-ISO rows written by the
+    old collector and offset-aware '+00:00' rows written by the current one.
+    Returns None when the value cannot be parsed, so callers decide what an
+    unparseable timestamp means instead of inheriting a silent exception.
+    """
+    from datetime import datetime as _d, timezone as _tz
+    if not value:
+        return None
+    try:
+        d = _d.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    if d.tzinfo is not None:
+        d = d.astimezone(_tz.utc).replace(tzinfo=None)
+    return d
+
+
 def get_data_health() -> dict:
     """Get data health summary for API endpoint."""
     init_collector_schema()
@@ -397,7 +417,10 @@ def get_data_health() -> dict:
             for r in radar_rows:
                 if r["updated_at"]:
                     try:
-                        updated = datetime.strptime(r["updated_at"][:19], "%Y-%m-%d %H:%M:%S")
+                        updated = parse_utc_naive(r["updated_at"])
+                        if updated is None:
+                            stale_count += 1
+                            continue
                         age_hours = (now - updated).total_seconds() / 3600
                         if age_hours <= 26:
                             fresh_count += 1

@@ -1441,40 +1441,99 @@ def _get_bridge_data_30m_safe() -> dict:
     return _bridge_cache.get("30m") or {"bridge_online": False, "symbols_count": 0, "symbols": {}}
 
 
-def build_signals_30m() -> dict:
-    """30m signals. The Bridge supplied this layer; it is retired (G-4).
+def _empty_30m(now, state, reason, extra=None):
+    """The 30m envelope with no signals in it, and why.
 
-    The layer is NOT dead - G-1 measured Yahoo serving 30m for .KW: 41
-    bars over 5 sessions, tier-1 names 100% populated, thin names 65-93%.
-    So it is rebuildable locally through yahoo_gate + indicators.py, and
-    the coverage floor already knows what to do with the thin ones.
-
-    Until that is built, this returns an EMPTY list with layer_state and
-    layer_reason saying why. The one thing it must never do is let a
-    caller quietly substitute daily data - that relabelling is the exact
-    disease this phase removed everywhere else.
+    Kept as one place so every no-data path answers in the same shape: a
+    caller must never have to tell "offline" from "built but empty" by
+    guessing which keys are present.
     """
-    now = datetime.now()
-    result = {
+    out = {
         "timeframe": "30m",
         "market_open": _is_market_open_safe(),
         "bridge_online": False,
-        "layer_state": "offline",
-        "layer_reason": ("the 30m layer was fed by the TradingView bridge, "
-                         "retired 2026-08-16. Yahoo does serve 30m for .KW "
-                         "(G-1), so this is rebuildable locally - it is not "
-                         "dead data, it is unbuilt. Do NOT substitute daily "
-                         "signals here."),
+        "layer_state": state,
+        "layer_reason": reason,
         "layer_rebuildable": True,
+        "layer_source": "yahoo",
         "timestamp": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "signals": [],
+        "count": 0,
         "thresholds": _get_thresholds(),
         "flags": get_trading_flags(),
     }
+    if extra:
+        out.update(extra)
+    return out
+
+
+def build_signals_30m() -> dict:
+    """30m signals, rebuilt on Yahoo after the TradingView bridge retired.
+
+    The bridge fed this layer until 2026-08-16 and this function returned an
+    empty list with layer_state='offline' from then until now. G-1 measured
+    Yahoo serving 30m for .KW, so the layer was never dead data - it was
+    unbuilt. yahoo_30m.collect builds the same payload shape the bridge
+    produced, which is why the verdict logic below is reused untouched
+    rather than rewritten against a second shape.
+
+    Reads are cache-only. yahoo_gate throttles to one request every 2s and
+    the watchlist is 132 symbols, so fetching here would make this endpoint
+    take four minutes; _tools/collect_30m.py fills the cache on cron.
+
+    The rule the retirement note left still holds: a symbol with no usable
+    30m bars is dropped with a reason. Daily data is never substituted.
+    """
+    now = datetime.now()
+
+    try:
+        import yahoo_30m
+    except Exception as e:
+        logger.error("30m layer unavailable: %r", e)
+        return _empty_30m(now, "offline",
+                          "yahoo_30m module failed to import: %r" % (e,))
+
+    symbols = sorted(_get_radar_watchlist_safe().keys())
+    if not symbols:
+        return _empty_30m(now, "offline",
+                          "radar watchlist is empty - nothing to score")
+
+    # Freshness follows the session: a 40-minute window is right while bars
+    # are still forming and wrong at 20:00, when the newest bar that can
+    # exist is the closing one and a tight window would blank the layer.
+    market_open = _is_market_open_safe()
+    try:
+        data = yahoo_30m.collect(symbols, market_open=market_open)
+    except Exception as e:
+        logger.error("30m collect failed: %r", e)
+        return _empty_30m(now, "offline", "30m collect failed: %r" % (e,))
+
+    coverage = {
+        "symbols_requested": len(symbols),
+        "symbols_with_bars": data.get("symbols_count", 0),
+        "symbols_skipped": data.get("skipped_count", 0),
+        "skipped": data.get("skipped", {}),
+    }
+
+    if not data.get("symbols"):
+        return _empty_30m(
+            now, "stale",
+            "no symbol has 30m bars fresh enough in yahoo_bar_cache - "
+            "_tools/collect_30m.py has not filled the cache recently. This "
+            "is a stale cache, NOT an offline layer, and daily signals are "
+            "still not a substitute.",
+            {"coverage": coverage})
+
+    result = _build_signals_30m_bridge_era(data)
+    result["layer_state"] = "live"
+    result["layer_source"] = "yahoo"
+    result["layer_rebuildable"] = True
+    result["bridge_online"] = False
+    result["coverage"] = coverage
     return result
 
 
-def _build_signals_30m_bridge_era() -> dict:
+def _build_signals_30m_bridge_era(data=None) -> dict:
     now = datetime.now()
     result = {
         "timeframe": "30m",
@@ -1486,7 +1545,10 @@ def _build_signals_30m_bridge_era() -> dict:
         "flags": get_trading_flags(),
     }
 
-    bridge_data = _get_bridge_data_30m_safe()
+    # `data` is injected by build_signals_30m with the Yahoo-built payload.
+    # Falling back to the bridge accessor keeps this callable on its own for
+    # the manual bridge path, which is started by hand and never on cron.
+    bridge_data = _get_bridge_data_30m_safe() if data is None else data
     result["bridge_online"] = bridge_data.get("bridge_online", False)
     bridge_symbols = bridge_data.get("symbols", {})
 

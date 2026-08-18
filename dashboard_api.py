@@ -290,6 +290,33 @@ async def ha_dashboard():
             data["home_lights_on"] = -1; data["home_ac_on"] = -1; data["home_covers_open"] = -1
     except Exception:
         data["home_lights_on"] = -1; data["home_ac_on"] = -1; data["home_covers_open"] = -1
+    # active_devices_count - read by home.html and home-control.html, both with
+    # `|| 0`, and shipped by nobody: both pages have always said "0 جهاز نشط".
+    # Computed from the /api/states fetch above, so it costs no extra call.
+    #
+    # Covers are counted from the _inverted entities ONLY. Each physical cover
+    # has two entities (measured 2026-08-18: 14 real + 14 _inverted twins), so
+    # counting the cover domain the way quick_query._active_devices_count does
+    # is right only while the twins happen to mirror each other - 14 today by
+    # coincidence of state, not by construction. This is the same rule as
+    # home_covers_open above: one entity per cover.
+    #
+    # -1, not 0, when states could not be read. That is the convention of the
+    # three siblings above, and both pages already render it as '--'.
+    if states:
+        _ADC_ON = {"on", "playing", "open", "heat", "cool", "auto", "heat_cool", "fan_only"}
+        _ADC_DOMAINS = ("light", "switch", "fan", "climate", "media_player")
+        _adc = sum(1 for s in states
+                   if s["state"] in _ADC_ON
+                   and s["entity_id"].split(".")[0] in _ADC_DOMAINS
+                   and "backlight" not in s["entity_id"])
+        _adc += sum(1 for s in states
+                    if s["entity_id"].startswith("cover.")
+                    and "_inverted" in s["entity_id"]
+                    and s["state"] == "closed")
+        data["active_devices_count"] = _adc
+    else:
+        data["active_devices_count"] = -1
     try:
         data["rooms_summary"] = _build_rooms_summary(states)
     except Exception as _rs_err:
@@ -3166,7 +3193,11 @@ async def api_data_freshness():
             if r["updated_at"]:
                 try:
                     from datetime import datetime as _dt
-                    u = _dt.fromisoformat(r["updated_at"])
+                    from kse_data_collector import parse_utc_naive
+                    u = parse_utc_naive(r["updated_at"])
+                    if u is None:
+                        stale_count += 1
+                        continue
                     h = (_dt.utcnow() - u).total_seconds() / 3600
                     if h < 6:
                         fresh_count += 1
