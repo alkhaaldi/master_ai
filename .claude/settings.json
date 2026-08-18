@@ -7,6 +7,29 @@
           {
             "type": "command",
             "command": "/home/pi/master_ai/.claude/hooks/git_guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "/home/pi/master_ai/.claude/hooks/ops_guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/pi/master_ai/.claude/hooks/ops_guard.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/pi/master_ai/.claude/hooks/report_gate.sh"
           }
         ]
       }

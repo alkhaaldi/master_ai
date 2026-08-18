@@ -104,3 +104,8 @@ _tools/_falsy_probe_artificial.py
 # survey trail, not the review trail. STORAGE_POLICY Rule 3 puts large
 # generated artifacts on the NAS if they are ever worth keeping.
 _tools/avg_volume_fill.json
+
+# task-run tokens and markers (claude.ai places these out of band)
+_tools/.allow_restart_now
+_tools/.allow_db_write
+_tools/.session_task
