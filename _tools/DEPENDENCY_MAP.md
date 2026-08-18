@@ -1,8 +1,8 @@
 # Master AI — Dependency Map
 
-**Generated:** 2026-08-18T12:17:02.085850+00:00  
-**Commit:** 78446ab  
-**Elapsed:** 2.61 s  
+**Generated:** 2026-08-18T12:36:00.658386+00:00  
+**Commit:** 4b2ecd8  
+**Elapsed:** 2.67 s  
 
 
 ## Scan coverage
@@ -11,11 +11,15 @@
 | --- | --- |
 | python files scanned | 356 |
 | html files scanned | 20 |
-| yaml files scanned | 1 |
+| yaml files scanned | 3 |
 | routes found | 188 |
 | ha sensors found | 9 |
+| ha rest commands found | 2 |
+| ha shell commands found | 7 |
+| ha yaml edges found | 17 |
+| telegram commands found | 124 |
 | python import edges | 2250 |
-| sql edges | 2408 |
+| sql edges | 2410 |
 | schedules found | 55 |
 | shell scripts found | 4 |
 | dynamic requests found | 13 |
@@ -239,6 +243,188 @@
 | master_ai_alerts | `/dashboard/alerts` | 300s |
 | master_ai_confluence | `/dashboard/confluence` | 120s |
 | master_ai_signals | `/dashboard/signals` | 120s |
+
+
+## Home Assistant rest_command definitions
+
+_Entries in `configuration.yaml` `rest_command:` that call port 9000._
+
+| name | method | endpoint | file | line |
+| --- | --- | --- | --- | --- |
+| master_ai_event | POST | `/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74` | /var/lib/homeassistant/homeassistant/configuration.yaml | 49 |
+| master_ai_tg_cmd | POST | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/configuration.yaml | 62 |
+
+
+## Home Assistant shell_command definitions
+
+_All entries in `configuration.yaml` `shell_command:` (none currently call master_ai)._
+
+| name | command | file | line |
+| --- | --- | --- | --- |
+| unlock_kitchen_door | `python3 /config/scripts/tuya_lock.py bf1387ufqg1pslyb` | /var/lib/homeassistant/homeassistant/configuration.yaml | 31 |
+| unlock_men_room_door | `python3 /config/scripts/tuya_lock.py bf5888sku0w0208e` | /var/lib/homeassistant/homeassistant/configuration.yaml | 32 |
+| unlock_first_floor_door | `python3 /config/scripts/tuya_lock.py bf7b76c21feac56879jlzl` | /var/lib/homeassistant/homeassistant/configuration.yaml | 33 |
+| unlock_diwaniya_door | `python3 /config/scripts/tuya_lock.py bf4f0dbf0557c7c0e4v5e9` | /var/lib/homeassistant/homeassistant/configuration.yaml | 34 |
+| unlock_ground_door | `python3 /config/scripts/tuya_lock.py bff4c4cbf2c9957114coiq` | /var/lib/homeassistant/homeassistant/configuration.yaml | 35 |
+| unlock_main_door | `python3 /config/scripts/tuya_lock.py bf56d71589296efb0buexs` | /var/lib/homeassistant/homeassistant/configuration.yaml | 36 |
+| unlock_my_room | `python3 /config/scripts/tuya_lock.py bf0fd882b4c8467ed2fdr0` | /var/lib/homeassistant/homeassistant/configuration.yaml | 37 |
+
+
+## Home Assistant automation / script references
+
+_Automations and scripts that call master_ai rest_commands or shell_commands._
+
+| kind | alias/name | ref_kind | ref_name | endpoint | file | line |
+| --- | --- | --- | --- | --- | --- | --- |
+| ha_automation | Master AI - HA Started | rest_command | master_ai_event | `/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74` | /var/lib/homeassistant/homeassistant/automations.yaml | 455 |
+| ha_automation | Master AI - Door Unlocked | rest_command | master_ai_event | `/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74` | /var/lib/homeassistant/homeassistant/automations.yaml | 480 |
+| ha_automation | Master AI - Baby Crying | rest_command | master_ai_event | `/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74` | /var/lib/homeassistant/homeassistant/automations.yaml | 499 |
+| ha_automation | Quran Watchdog - Restart if stopped or hung | rest_command | master_ai_event | `/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74` | /var/lib/homeassistant/homeassistant/automations.yaml | 694 |
+| ha_script | Unlock Diwaniya Door UI | shell_command | unlock_diwaniya_door |  | /var/lib/homeassistant/homeassistant/scripts.yaml | 4 |
+| ha_script | Unlock Kitchen Door UI | shell_command | unlock_kitchen_door |  | /var/lib/homeassistant/homeassistant/scripts.yaml | 8 |
+| ha_script | تشغيل/إيقاف الرادار | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 19 |
+| ha_script | فحص السوق | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 37 |
+| ha_script | تقرير الصباح | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 55 |
+| ha_script | Backup | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 73 |
+| ha_script | حالة الرادار | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 91 |
+| ha_script | نظرة الأسهم | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 109 |
+| ha_script | تحديث الأخبار | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 127 |
+| ha_script | إطفاء الكل | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 145 |
+| ha_script | تحديث البريد | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 163 |
+| ha_script | مراجعة التداول | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 181 |
+| ha_script | TV Sync | rest_command | master_ai_tg_cmd | `/dashboard/cmd` | /var/lib/homeassistant/homeassistant/scripts.yaml | 199 |
+
+
+## Telegram slash-command dispatch
+
+_Static `if cmd == "/x"` / `cmd.startswith("/x")` entries in Python files._
+
+| command | match_type | file | line |
+| --- | --- | --- | --- |
+| `/report` | exact | _tools/_patch_phase34.py | 92 |
+| `/kairos` | exact | _tools/_patch_phase34.py | 94 |
+| `/something` | exact | _tools/depmap.py | 542 |
+| `/something` | prefix | _tools/depmap.py | 543 |
+| `/tv_stats` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 9 |
+| `/kpi` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 14 |
+| `/tv_sync` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 20 |
+| `/stocks` | exact | _tools/patchers/v12_patch_stocks.py | 9 |
+| `/tasks` | exact | _tools/patchers/v12_patch_tasks_calls.py | 9 |
+| `/help` | exact | scripts/patch_tg_cmds.py | 6 |
+| `/approvals` | exact | scripts/patch_tg_cmds.py | 18 |
+| `/backup` | exact | scripts/patch_tg_cmds.py | 31 |
+| `/restart` | exact | scripts/patch_tg_cmds.py | 41 |
+| `/errors` | exact | scripts/patch_tg_cmds.py | 56 |
+| `/start` | exact | server.py | 5362 |
+| `/kairos` | exact | server.py | 5365 |
+| `/report` | exact | server.py | 5370 |
+| `/reset` | exact | server.py | 5378 |
+| `/status` | exact | server.py | 5385 |
+| `/stats` | exact | server.py | 5392 |
+| `/lights` | exact | server.py | 5481 |
+| `/covers` | exact | server.py | 5505 |
+| `/weather` | exact | server.py | 5521 |
+| `/locks` | exact | server.py | 5531 |
+| `/media` | exact | server.py | 5541 |
+| `/temp` | exact | server.py | 5551 |
+| `/health` | exact | server.py | 5577 |
+| `/brain` | exact | server.py | 5590 |
+| `/learn` | exact | server.py | 5607 |
+| `/patterns` | exact | server.py | 5624 |
+| `/email` | exact | server.py | 5633 |
+| `/scenes` | exact | server.py | 5641 |
+| `/summary` | exact | server.py | 5660 |
+| `/suggest` | exact | server.py | 5668 |
+| `/anomaly` | exact | server.py | 5685 |
+| `/diag` | exact | server.py | 5693 |
+| `/home` | exact | server.py | 5779 |
+| `/rooms` | exact | server.py | 5816 |
+| `/devices` | prefix | server.py | 5840 |
+| `/find` | prefix | server.py | 5851 |
+| `/scenes_dynamic` | exact | server.py | 5873 |
+| `/scenes2` | exact | server.py | 5902 |
+| `/alloff` | exact | server.py | 5928 |
+| `/find` | exact | server.py | 5937 |
+| `/cam` | exact | server.py | 5967 |
+| `/approvals` | exact | server.py | 5980 |
+| `/backup` | exact | server.py | 5993 |
+| `/restart` | exact | server.py | 6003 |
+| `/errors` | exact | server.py | 6018 |
+| `/update_stock` | prefix | server.py | 6035 |
+| `/log` | exact | server.py | 6046 |
+| `/crash` | exact | server.py | 6051 |
+| `/me` | exact | server.py | 6055 |
+| `/suggest_tasks` | exact | server.py | 6121 |
+| `/life` | exact | server.py | 6129 |
+| `/week_summary` | exact | server.py | 6189 |
+| `/inbox` | exact | server.py | 6222 |
+| `/inbox_week` | exact | server.py | 6226 |
+| `/inbox48` | exact | server.py | 6229 |
+| `/tasks` | exact | server.py | 6237 |
+| `/news` | exact | server.py | 6253 |
+| `/news_now` | exact | server.py | 6261 |
+| `/news_sources` | exact | server.py | 6275 |
+| `/trade` | exact | server.py | 6280 |
+| `/close` | exact | server.py | 6311 |
+| `/trades` | exact | server.py | 6334 |
+| `/journal` | exact | server.py | 6349 |
+| `/add_expense` | exact | server.py | 6375 |
+| `/spent` | exact | server.py | 6386 |
+| `/expenses` | exact | server.py | 6393 |
+| `/contacts` | exact | server.py | 6398 |
+| `/occasions` | exact | server.py | 6402 |
+| `/person` | exact | server.py | 6408 |
+| `/فرص` | exact | server.py | 6418 |
+| `/تقييم` | exact | server.py | 6467 |
+| `/stocks` | exact | server.py | 6491 |
+| `/price` | prefix | server.py | 6495 |
+| `/radar` | exact | server.py | 6500 |
+| `/radar_add` | prefix | server.py | 6504 |
+| `/radar_remove` | prefix | server.py | 6509 |
+| `/radar_check` | prefix | server.py | 6514 |
+| `/radar_last` | exact | server.py | 6519 |
+| `/radar_status` | exact | server.py | 6528 |
+| `/radar_top` | exact | server.py | 6532 |
+| `/radar_toggle` | exact | server.py | 6536 |
+| `/news` | prefix | server.py | 6548 |
+| `/remind` | prefix | server.py | 6554 |
+| `/reminders` | prefix | server.py | 6554 |
+| `/reminders` | exact | server.py | 6564 |
+| `/cancel` | prefix | server.py | 6569 |
+| `/health_log` | exact | server.py | 6578 |
+| `/health_summary` | exact | server.py | 6583 |
+| `/health_streak` | exact | server.py | 6588 |
+| `/trade_review` | exact | server.py | 6604 |
+| `/tv_watchlist` | exact | server.py | 6611 |
+| `/tv_add` | exact | server.py | 6615 |
+| `/tv_remove` | exact | server.py | 6620 |
+| `/tv_last` | exact | server.py | 6625 |
+| `/tv_summary` | exact | server.py | 6630 |
+| `/tv_test` | exact | server.py | 6635 |
+| `/tv_stats` | exact | server.py | 6639 |
+| `/tv_sync` | exact | server.py | 6643 |
+| `/kpi` | exact | server.py | 6648 |
+| `/menu` | exact | server.py | 6655 |
+| `/shift` | exact | server.py | 6659 |
+| `/schedule` | exact | server.py | 6672 |
+| `/expense` | prefix | server.py | 6681 |
+| `/expenses` | prefix | server.py | 6681 |
+| `/health` | prefix | server.py | 6701 |
+| `/ping` | exact | server.py | 6722 |
+| `/help` | exact | server.py | 6735 |
+| `/family` | exact | server.py | 6764 |
+| `/guardian` | exact | server.py | 6771 |
+| `/timeline` | exact | server.py | 6778 |
+| `/today` | exact | server.py | 6791 |
+| `/tomorrow` | exact | server.py | 6822 |
+| `/week` | exact | server.py | 6851 |
+| `/agenda` | exact | server.py | 6860 |
+| `/habits` | exact | server.py | 6874 |
+| `/cost` | exact | server.py | 6881 |
+| `/feedback` | exact | server.py | 6901 |
+| `/corrections` | exact | server.py | 6930 |
+| `/plans` | exact | server.py | 6978 |
+| `/mode` | exact | server.py | 7009 |
 
 
 ## Schedules
@@ -792,7 +978,18 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 ### `/dashboard/cmd`
 
 - **Defined:** `dashboard_api.py:399` `POST` handler=`dashboard_cmd`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
+- **[ha_rest_command]** `/var/lib/homeassistant/homeassistant/configuration.yaml:62`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:19`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:37`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:55`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:73`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:91`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:109`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:127`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:145`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:163`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:181`
+- **[ha_script]** `/var/lib/homeassistant/homeassistant/scripts.yaml:199`
 
 
 ### `/dashboard/confluence`
@@ -1494,7 +1691,11 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 ### `/webhook/event/{token}`
 
 - **Defined:** `server.py:4992` `POST` handler=`webhook_event_legacy`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
+- **[ha_rest_command]** `/var/lib/homeassistant/homeassistant/configuration.yaml:49`
+- **[ha_automation]** `/var/lib/homeassistant/homeassistant/automations.yaml:455`
+- **[ha_automation]** `/var/lib/homeassistant/homeassistant/automations.yaml:480`
+- **[ha_automation]** `/var/lib/homeassistant/homeassistant/automations.yaml:499`
+- **[ha_automation]** `/var/lib/homeassistant/homeassistant/automations.yaml:694`
 
 
 ### `/win/jobs`
@@ -2056,6 +2257,11 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `confidence_engine`
 
 - **READ** `chat_v7.py:39`
+
+
+### `configuration`
+
+- **READ** `_tools/depmap.py:353`
 
 
 ### `confluence_decisions`
@@ -3342,7 +3548,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 ### `live`
 
 - **READ** `_deprecated/ha_discovery.py:138`
-- **READ** `_tools/depmap.py:47`
+- **READ** `_tools/depmap.py:50`
 - **READ** `golden_engine.py:515`
 
 
@@ -3940,7 +4146,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `project`
 
-- **READ** `_tools/depmap.py:60`
+- **READ** `_tools/depmap.py:63`
 
 
 ### `pydantic`
@@ -3950,7 +4156,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `python`
 
-- **READ** `_tools/depmap.py:369`
+- **READ** `_tools/depmap.py:538`
+- **READ** `_tools/depmap.py:610`
 - **READ** `_tools/patchers/apply_text_patch.py:8`
 
 
@@ -4931,8 +5138,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `this`
 
-- **READ** `_tools/depmap.py:673`
-- **READ** `_tools/depmap.py:680`
+- **READ** `_tools/depmap.py:963`
+- **READ** `_tools/depmap.py:970`
 - **READ** `dashboard_api.py:984`
 - **READ** `price_source.py:236`
 
@@ -9593,9 +9800,6 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 **`/dashboard/bridge/{symbol}`**
   - `dashboard_api.py:1903` handler=`dashboard_bridge_symbol`
 
-**`/dashboard/cmd`**
-  - `dashboard_api.py:399` handler=`dashboard_cmd`
-
 **`/dashboard/ema-active`**
   - `server.py:3798` handler=`dashboard_ema_active`
 
@@ -9863,9 +10067,6 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 **`/webhook/event`**
   - `server.py:5004` handler=`webhook_event`
 
-**`/webhook/event/{token}`**
-  - `server.py:4992` handler=`webhook_event_legacy`
-
 **`/win/jobs`**
   - `server.py:4421` handler=`win_jobs`
 
@@ -9957,6 +10158,7 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 - `collections`
 - `complete`
 - `confidence_engine`
+- `configuration`
 - `confluence_engine`
 - `context`
 - `context_compactor`

@@ -79,6 +79,26 @@
       "pattern": "'/api/flags/'+n+'/toggle',{method:'POST'});setTimeout(loadFlags,300)}catch(e){}};"
     }
   ],
+  "ha_rest_commands": [
+    {
+      "endpoint": "/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74",
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_rest_command",
+      "line": 49,
+      "method": "POST",
+      "name": "master_ai_event",
+      "url": "http://192.168.109.123:9000/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_rest_command",
+      "line": 62,
+      "method": "POST",
+      "name": "master_ai_tg_cmd",
+      "url": "http://192.168.109.123:9000/dashboard/cmd"
+    }
+  ],
   "ha_sensors": [
     {
       "endpoint": "/dashboard",
@@ -151,6 +171,219 @@
       "scan_interval_sec": 120,
       "sensor_id": "master_ai_signals",
       "url": "http://192.168.109.123:9000/dashboard/signals"
+    }
+  ],
+  "ha_shell_commands": [
+    {
+      "command": "python3 /config/scripts/tuya_lock.py bf1387ufqg1pslyb",
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_shell_command",
+      "line": 31,
+      "name": "unlock_kitchen_door"
+    },
+    {
+      "command": "python3 /config/scripts/tuya_lock.py bf5888sku0w0208e",
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_shell_command",
+      "line": 32,
+      "name": "unlock_men_room_door"
+    },
+    {
+      "command": "python3 /config/scripts/tuya_lock.py bf7b76c21feac56879jlzl",
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_shell_command",
+      "line": 33,
+      "name": "unlock_first_floor_door"
+    },
+    {
+      "command": "python3 /config/scripts/tuya_lock.py bf4f0dbf0557c7c0e4v5e9",
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_shell_command",
+      "line": 34,
+      "name": "unlock_diwaniya_door"
+    },
+    {
+      "command": "python3 /config/scripts/tuya_lock.py bff4c4cbf2c9957114coiq",
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_shell_command",
+      "line": 35,
+      "name": "unlock_ground_door"
+    },
+    {
+      "command": "python3 /config/scripts/tuya_lock.py bf56d71589296efb0buexs",
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_shell_command",
+      "line": 36,
+      "name": "unlock_main_door"
+    },
+    {
+      "command": "python3 /config/scripts/tuya_lock.py bf0fd882b4c8467ed2fdr0",
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+      "kind": "ha_shell_command",
+      "line": 37,
+      "name": "unlock_my_room"
+    }
+  ],
+  "ha_yaml_edges": [
+    {
+      "endpoint": "/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74",
+      "file": "/var/lib/homeassistant/homeassistant/automations.yaml",
+      "kind": "ha_automation",
+      "line": 455,
+      "name": "Master AI - HA Started",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_event"
+    },
+    {
+      "endpoint": "/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74",
+      "file": "/var/lib/homeassistant/homeassistant/automations.yaml",
+      "kind": "ha_automation",
+      "line": 480,
+      "name": "Master AI - Door Unlocked",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_event"
+    },
+    {
+      "endpoint": "/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74",
+      "file": "/var/lib/homeassistant/homeassistant/automations.yaml",
+      "kind": "ha_automation",
+      "line": 499,
+      "name": "Master AI - Baby Crying",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_event"
+    },
+    {
+      "endpoint": "/webhook/event/6Co3caBiT407a8txFLUEHg1rT8R76QlHVC1-seQmh74",
+      "file": "/var/lib/homeassistant/homeassistant/automations.yaml",
+      "kind": "ha_automation",
+      "line": 694,
+      "name": "Quran Watchdog - Restart if stopped or hung",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_event"
+    },
+    {
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 4,
+      "name": "Unlock Diwaniya Door UI",
+      "ref_kind": "shell_command",
+      "ref_name": "unlock_diwaniya_door"
+    },
+    {
+      "endpoint": null,
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 8,
+      "name": "Unlock Kitchen Door UI",
+      "ref_kind": "shell_command",
+      "ref_name": "unlock_kitchen_door"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 19,
+      "name": "\u062a\u0634\u063a\u064a\u0644/\u0625\u064a\u0642\u0627\u0641 \u0627\u0644\u0631\u0627\u062f\u0627\u0631",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 37,
+      "name": "\u0641\u062d\u0635 \u0627\u0644\u0633\u0648\u0642",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 55,
+      "name": "\u062a\u0642\u0631\u064a\u0631 \u0627\u0644\u0635\u0628\u0627\u062d",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 73,
+      "name": "Backup",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 91,
+      "name": "\u062d\u0627\u0644\u0629 \u0627\u0644\u0631\u0627\u062f\u0627\u0631",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 109,
+      "name": "\u0646\u0638\u0631\u0629 \u0627\u0644\u0623\u0633\u0647\u0645",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 127,
+      "name": "\u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0623\u062e\u0628\u0627\u0631",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 145,
+      "name": "\u0625\u0637\u0641\u0627\u0621 \u0627\u0644\u0643\u0644",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 163,
+      "name": "\u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0628\u0631\u064a\u062f",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 181,
+      "name": "\u0645\u0631\u0627\u062c\u0639\u0629 \u0627\u0644\u062a\u062f\u0627\u0648\u0644",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
+    },
+    {
+      "endpoint": "/dashboard/cmd",
+      "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+      "kind": "ha_script",
+      "line": 199,
+      "name": "TV Sync",
+      "ref_kind": "rest_command",
+      "ref_name": "master_ai_tg_cmd"
     }
   ],
   "html_requests": [
@@ -494,7 +727,10 @@
   "meta": {
     "counts": {
       "dynamic_requests_found": 13,
+      "ha_rest_commands_found": 2,
       "ha_sensors_found": 9,
+      "ha_shell_commands_found": 7,
+      "ha_yaml_edges_found": 17,
       "html_files_scanned": 20,
       "parse_errors": 0,
       "python_files_scanned": 356,
@@ -502,10 +738,11 @@
       "routes_found": 188,
       "schedules_found": 55,
       "shell_scripts_found": 4,
-      "sql_edges": 2408,
-      "yaml_files_scanned": 1
+      "sql_edges": 2410,
+      "telegram_commands_found": 124,
+      "yaml_files_scanned": 3
     },
-    "elapsed_sec": 2.66,
+    "elapsed_sec": 2.72,
     "excluded_dirs": {
       "__pycache__": "Python bytecode cache, not source",
       "_archive": "deprecated/retired code, intentionally decoupled from live system",
@@ -515,8 +752,8 @@
       "logs": "log files, not source code",
       "venv": "third-party packages (~20 k files), contains no project code"
     },
-    "generated_at": "2026-08-18T12:17:02.085850+00:00",
-    "git_sha": "78446ab",
+    "generated_at": "2026-08-18T12:36:00.658386+00:00",
+    "git_sha": "4b2ecd8",
     "parse_errors": []
   },
   "python_imports": [
@@ -19681,7 +19918,91 @@
         ]
       },
       "/dashboard/cmd": {
-        "consumers": [],
+        "consumers": [
+          {
+            "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+            "kind": "ha_rest_command",
+            "line": 62,
+            "name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 19,
+            "name": "\u062a\u0634\u063a\u064a\u0644/\u0625\u064a\u0642\u0627\u0641 \u0627\u0644\u0631\u0627\u062f\u0627\u0631",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 37,
+            "name": "\u0641\u062d\u0635 \u0627\u0644\u0633\u0648\u0642",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 55,
+            "name": "\u062a\u0642\u0631\u064a\u0631 \u0627\u0644\u0635\u0628\u0627\u062d",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 73,
+            "name": "Backup",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 91,
+            "name": "\u062d\u0627\u0644\u0629 \u0627\u0644\u0631\u0627\u062f\u0627\u0631",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 109,
+            "name": "\u0646\u0638\u0631\u0629 \u0627\u0644\u0623\u0633\u0647\u0645",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 127,
+            "name": "\u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0623\u062e\u0628\u0627\u0631",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 145,
+            "name": "\u0625\u0637\u0641\u0627\u0621 \u0627\u0644\u0643\u0644",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 163,
+            "name": "\u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0628\u0631\u064a\u062f",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 181,
+            "name": "\u0645\u0631\u0627\u062c\u0639\u0629 \u0627\u0644\u062a\u062f\u0627\u0648\u0644",
+            "ref_name": "master_ai_tg_cmd"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/scripts.yaml",
+            "kind": "ha_script",
+            "line": 199,
+            "name": "TV Sync",
+            "ref_name": "master_ai_tg_cmd"
+          }
+        ],
         "defined": [
           {
             "file": "dashboard_api.py",
@@ -21088,7 +21409,42 @@
         ]
       },
       "/webhook/event/{token}": {
-        "consumers": [],
+        "consumers": [
+          {
+            "file": "/var/lib/homeassistant/homeassistant/configuration.yaml",
+            "kind": "ha_rest_command",
+            "line": 49,
+            "name": "master_ai_event"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/automations.yaml",
+            "kind": "ha_automation",
+            "line": 455,
+            "name": "Master AI - HA Started",
+            "ref_name": "master_ai_event"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/automations.yaml",
+            "kind": "ha_automation",
+            "line": 480,
+            "name": "Master AI - Door Unlocked",
+            "ref_name": "master_ai_event"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/automations.yaml",
+            "kind": "ha_automation",
+            "line": 499,
+            "name": "Master AI - Baby Crying",
+            "ref_name": "master_ai_event"
+          },
+          {
+            "file": "/var/lib/homeassistant/homeassistant/automations.yaml",
+            "kind": "ha_automation",
+            "line": 694,
+            "name": "Quran Watchdog - Restart if stopped or hung",
+            "ref_name": "master_ai_event"
+          }
+        ],
         "defined": [
           {
             "file": "server.py",
@@ -29643,6 +29999,17 @@
         ],
         "writers": []
       },
+      "configuration": {
+        "creators": [],
+        "deleters": [],
+        "readers": [
+          {
+            "file": "_tools/depmap.py",
+            "line": 353
+          }
+        ],
+        "writers": []
+      },
       "confluence_decisions": {
         "creators": [
           {
@@ -33731,7 +34098,7 @@
           },
           {
             "file": "_tools/depmap.py",
-            "line": 47
+            "line": 50
           },
           {
             "file": "golden_engine.py",
@@ -35666,7 +36033,7 @@
         "readers": [
           {
             "file": "_tools/depmap.py",
-            "line": 60
+            "line": 63
           }
         ],
         "writers": []
@@ -35688,7 +36055,11 @@
         "readers": [
           {
             "file": "_tools/depmap.py",
-            "line": 369
+            "line": 538
+          },
+          {
+            "file": "_tools/depmap.py",
+            "line": 610
           },
           {
             "file": "_tools/patchers/apply_text_patch.py",
@@ -38805,11 +39176,11 @@
         "readers": [
           {
             "file": "_tools/depmap.py",
-            "line": 673
+            "line": 963
           },
           {
             "file": "_tools/depmap.py",
-            "line": 680
+            "line": 970
           },
           {
             "file": "dashboard_api.py",
@@ -41163,17 +41534,6 @@
         {
           "defined": [
             {
-              "file": "dashboard_api.py",
-              "handler": "dashboard_cmd",
-              "line": 399,
-              "method": "POST"
-            }
-          ],
-          "path": "/dashboard/cmd"
-        },
-        {
-          "defined": [
-            {
               "file": "server.py",
               "handler": "dashboard_ema_active",
               "line": 3798,
@@ -42168,17 +42528,6 @@
           "defined": [
             {
               "file": "server.py",
-              "handler": "webhook_event_legacy",
-              "line": 4992,
-              "method": "POST"
-            }
-          ],
-          "path": "/webhook/event/{token}"
-        },
-        {
-          "defined": [
-            {
-              "file": "server.py",
               "handler": "win_jobs",
               "line": 4421,
               "method": "GET"
@@ -42303,6 +42652,7 @@
         "collections",
         "complete",
         "confidence_engine",
+        "configuration",
         "confluence_engine",
         "context",
         "context_compactor",
@@ -43952,7 +44302,7 @@
       "command": null,
       "file": "_tools/depmap.py",
       "kind": "asyncio_startup_task",
-      "line": 454,
+      "line": 695,
       "schedule": "on_startup",
       "target_file": "_tools/depmap.py",
       "target_fn": "fn"
@@ -45641,31 +45991,43 @@
     },
     {
       "file": "_tools/depmap.py",
-      "line": 47,
+      "line": 50,
       "operation": "read",
       "table": "live"
     },
     {
       "file": "_tools/depmap.py",
-      "line": 60,
+      "line": 63,
       "operation": "read",
       "table": "project"
     },
     {
       "file": "_tools/depmap.py",
-      "line": 369,
+      "line": 353,
+      "operation": "read",
+      "table": "configuration"
+    },
+    {
+      "file": "_tools/depmap.py",
+      "line": 538,
       "operation": "read",
       "table": "python"
     },
     {
       "file": "_tools/depmap.py",
-      "line": 673,
+      "line": 610,
+      "operation": "read",
+      "table": "python"
+    },
+    {
+      "file": "_tools/depmap.py",
+      "line": 963,
       "operation": "read",
       "table": "this"
     },
     {
       "file": "_tools/depmap.py",
-      "line": 680,
+      "line": 970,
       "operation": "read",
       "table": "this"
     },
@@ -58838,6 +59200,876 @@
       "line": 396,
       "operation": "read",
       "table": "yahoo_bar_cache"
+    }
+  ],
+  "telegram_commands": [
+    {
+      "command": "/report",
+      "file": "_tools/_patch_phase34.py",
+      "kind": "telegram_command",
+      "line": 92,
+      "match_type": "exact"
+    },
+    {
+      "command": "/kairos",
+      "file": "_tools/_patch_phase34.py",
+      "kind": "telegram_command",
+      "line": 94,
+      "match_type": "exact"
+    },
+    {
+      "command": "/something",
+      "file": "_tools/depmap.py",
+      "kind": "telegram_command",
+      "line": 542,
+      "match_type": "exact"
+    },
+    {
+      "command": "/something",
+      "file": "_tools/depmap.py",
+      "kind": "telegram_command",
+      "line": 543,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/tv_stats",
+      "file": "_tools/patchers/phase3_tv_sync_cmd.py",
+      "kind": "telegram_command",
+      "line": 9,
+      "match_type": "exact"
+    },
+    {
+      "command": "/kpi",
+      "file": "_tools/patchers/phase3_tv_sync_cmd.py",
+      "kind": "telegram_command",
+      "line": 14,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_sync",
+      "file": "_tools/patchers/phase3_tv_sync_cmd.py",
+      "kind": "telegram_command",
+      "line": 20,
+      "match_type": "exact"
+    },
+    {
+      "command": "/stocks",
+      "file": "_tools/patchers/v12_patch_stocks.py",
+      "kind": "telegram_command",
+      "line": 9,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tasks",
+      "file": "_tools/patchers/v12_patch_tasks_calls.py",
+      "kind": "telegram_command",
+      "line": 9,
+      "match_type": "exact"
+    },
+    {
+      "command": "/help",
+      "file": "scripts/patch_tg_cmds.py",
+      "kind": "telegram_command",
+      "line": 6,
+      "match_type": "exact"
+    },
+    {
+      "command": "/approvals",
+      "file": "scripts/patch_tg_cmds.py",
+      "kind": "telegram_command",
+      "line": 18,
+      "match_type": "exact"
+    },
+    {
+      "command": "/backup",
+      "file": "scripts/patch_tg_cmds.py",
+      "kind": "telegram_command",
+      "line": 31,
+      "match_type": "exact"
+    },
+    {
+      "command": "/restart",
+      "file": "scripts/patch_tg_cmds.py",
+      "kind": "telegram_command",
+      "line": 41,
+      "match_type": "exact"
+    },
+    {
+      "command": "/errors",
+      "file": "scripts/patch_tg_cmds.py",
+      "kind": "telegram_command",
+      "line": 56,
+      "match_type": "exact"
+    },
+    {
+      "command": "/start",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5362,
+      "match_type": "exact"
+    },
+    {
+      "command": "/kairos",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5365,
+      "match_type": "exact"
+    },
+    {
+      "command": "/report",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5370,
+      "match_type": "exact"
+    },
+    {
+      "command": "/reset",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5378,
+      "match_type": "exact"
+    },
+    {
+      "command": "/status",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5385,
+      "match_type": "exact"
+    },
+    {
+      "command": "/stats",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5392,
+      "match_type": "exact"
+    },
+    {
+      "command": "/lights",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5481,
+      "match_type": "exact"
+    },
+    {
+      "command": "/covers",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5505,
+      "match_type": "exact"
+    },
+    {
+      "command": "/weather",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5521,
+      "match_type": "exact"
+    },
+    {
+      "command": "/locks",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5531,
+      "match_type": "exact"
+    },
+    {
+      "command": "/media",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5541,
+      "match_type": "exact"
+    },
+    {
+      "command": "/temp",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5551,
+      "match_type": "exact"
+    },
+    {
+      "command": "/health",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5577,
+      "match_type": "exact"
+    },
+    {
+      "command": "/brain",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5590,
+      "match_type": "exact"
+    },
+    {
+      "command": "/learn",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5607,
+      "match_type": "exact"
+    },
+    {
+      "command": "/patterns",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5624,
+      "match_type": "exact"
+    },
+    {
+      "command": "/email",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5633,
+      "match_type": "exact"
+    },
+    {
+      "command": "/scenes",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5641,
+      "match_type": "exact"
+    },
+    {
+      "command": "/summary",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5660,
+      "match_type": "exact"
+    },
+    {
+      "command": "/suggest",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5668,
+      "match_type": "exact"
+    },
+    {
+      "command": "/anomaly",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5685,
+      "match_type": "exact"
+    },
+    {
+      "command": "/diag",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5693,
+      "match_type": "exact"
+    },
+    {
+      "command": "/home",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5779,
+      "match_type": "exact"
+    },
+    {
+      "command": "/rooms",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5816,
+      "match_type": "exact"
+    },
+    {
+      "command": "/devices",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5840,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/find",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5851,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/scenes_dynamic",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5873,
+      "match_type": "exact"
+    },
+    {
+      "command": "/scenes2",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5902,
+      "match_type": "exact"
+    },
+    {
+      "command": "/alloff",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5928,
+      "match_type": "exact"
+    },
+    {
+      "command": "/find",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5937,
+      "match_type": "exact"
+    },
+    {
+      "command": "/cam",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5967,
+      "match_type": "exact"
+    },
+    {
+      "command": "/approvals",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5980,
+      "match_type": "exact"
+    },
+    {
+      "command": "/backup",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 5993,
+      "match_type": "exact"
+    },
+    {
+      "command": "/restart",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6003,
+      "match_type": "exact"
+    },
+    {
+      "command": "/errors",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6018,
+      "match_type": "exact"
+    },
+    {
+      "command": "/update_stock",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6035,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/log",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6046,
+      "match_type": "exact"
+    },
+    {
+      "command": "/crash",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6051,
+      "match_type": "exact"
+    },
+    {
+      "command": "/me",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6055,
+      "match_type": "exact"
+    },
+    {
+      "command": "/suggest_tasks",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6121,
+      "match_type": "exact"
+    },
+    {
+      "command": "/life",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6129,
+      "match_type": "exact"
+    },
+    {
+      "command": "/week_summary",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6189,
+      "match_type": "exact"
+    },
+    {
+      "command": "/inbox",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6222,
+      "match_type": "exact"
+    },
+    {
+      "command": "/inbox_week",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6226,
+      "match_type": "exact"
+    },
+    {
+      "command": "/inbox48",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6229,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tasks",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6237,
+      "match_type": "exact"
+    },
+    {
+      "command": "/news",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6253,
+      "match_type": "exact"
+    },
+    {
+      "command": "/news_now",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6261,
+      "match_type": "exact"
+    },
+    {
+      "command": "/news_sources",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6275,
+      "match_type": "exact"
+    },
+    {
+      "command": "/trade",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6280,
+      "match_type": "exact"
+    },
+    {
+      "command": "/close",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6311,
+      "match_type": "exact"
+    },
+    {
+      "command": "/trades",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6334,
+      "match_type": "exact"
+    },
+    {
+      "command": "/journal",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6349,
+      "match_type": "exact"
+    },
+    {
+      "command": "/add_expense",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6375,
+      "match_type": "exact"
+    },
+    {
+      "command": "/spent",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6386,
+      "match_type": "exact"
+    },
+    {
+      "command": "/expenses",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6393,
+      "match_type": "exact"
+    },
+    {
+      "command": "/contacts",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6398,
+      "match_type": "exact"
+    },
+    {
+      "command": "/occasions",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6402,
+      "match_type": "exact"
+    },
+    {
+      "command": "/person",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6408,
+      "match_type": "exact"
+    },
+    {
+      "command": "/\u0641\u0631\u0635",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6418,
+      "match_type": "exact"
+    },
+    {
+      "command": "/\u062a\u0642\u064a\u064a\u0645",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6467,
+      "match_type": "exact"
+    },
+    {
+      "command": "/stocks",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6491,
+      "match_type": "exact"
+    },
+    {
+      "command": "/price",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6495,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/radar",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6500,
+      "match_type": "exact"
+    },
+    {
+      "command": "/radar_add",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6504,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/radar_remove",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6509,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/radar_check",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6514,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/radar_last",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6519,
+      "match_type": "exact"
+    },
+    {
+      "command": "/radar_status",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6528,
+      "match_type": "exact"
+    },
+    {
+      "command": "/radar_top",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6532,
+      "match_type": "exact"
+    },
+    {
+      "command": "/radar_toggle",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6536,
+      "match_type": "exact"
+    },
+    {
+      "command": "/news",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6548,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/remind",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6554,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/reminders",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6554,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/reminders",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6564,
+      "match_type": "exact"
+    },
+    {
+      "command": "/cancel",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6569,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/health_log",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6578,
+      "match_type": "exact"
+    },
+    {
+      "command": "/health_summary",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6583,
+      "match_type": "exact"
+    },
+    {
+      "command": "/health_streak",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6588,
+      "match_type": "exact"
+    },
+    {
+      "command": "/trade_review",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6604,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_watchlist",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6611,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_add",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6615,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_remove",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6620,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_last",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6625,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_summary",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6630,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_test",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6635,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_stats",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6639,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tv_sync",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6643,
+      "match_type": "exact"
+    },
+    {
+      "command": "/kpi",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6648,
+      "match_type": "exact"
+    },
+    {
+      "command": "/menu",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6655,
+      "match_type": "exact"
+    },
+    {
+      "command": "/shift",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6659,
+      "match_type": "exact"
+    },
+    {
+      "command": "/schedule",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6672,
+      "match_type": "exact"
+    },
+    {
+      "command": "/expense",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6681,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/expenses",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6681,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/health",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6701,
+      "match_type": "prefix"
+    },
+    {
+      "command": "/ping",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6722,
+      "match_type": "exact"
+    },
+    {
+      "command": "/help",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6735,
+      "match_type": "exact"
+    },
+    {
+      "command": "/family",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6764,
+      "match_type": "exact"
+    },
+    {
+      "command": "/guardian",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6771,
+      "match_type": "exact"
+    },
+    {
+      "command": "/timeline",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6778,
+      "match_type": "exact"
+    },
+    {
+      "command": "/today",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6791,
+      "match_type": "exact"
+    },
+    {
+      "command": "/tomorrow",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6822,
+      "match_type": "exact"
+    },
+    {
+      "command": "/week",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6851,
+      "match_type": "exact"
+    },
+    {
+      "command": "/agenda",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6860,
+      "match_type": "exact"
+    },
+    {
+      "command": "/habits",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6874,
+      "match_type": "exact"
+    },
+    {
+      "command": "/cost",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6881,
+      "match_type": "exact"
+    },
+    {
+      "command": "/feedback",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6901,
+      "match_type": "exact"
+    },
+    {
+      "command": "/corrections",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6930,
+      "match_type": "exact"
+    },
+    {
+      "command": "/plans",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 6978,
+      "match_type": "exact"
+    },
+    {
+      "command": "/mode",
+      "file": "server.py",
+      "kind": "telegram_command",
+      "line": 7009,
+      "match_type": "exact"
     }
   ]
 }

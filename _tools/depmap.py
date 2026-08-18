@@ -34,7 +34,10 @@ from urllib.parse import urlparse
 PROJ_ROOT = Path(__file__).resolve().parent.parent   # master_ai/
 TOOLS_DIR = PROJ_ROOT / "_tools"
 WWW_DIR   = PROJ_ROOT / "www" / "trading"
-HA_CONFIG = Path("/var/lib/homeassistant/homeassistant/configuration.yaml")
+HA_DIR         = Path("/var/lib/homeassistant/homeassistant/")
+HA_CONFIG      = HA_DIR / "configuration.yaml"
+HA_AUTOMATIONS = HA_DIR / "automations.yaml"
+HA_SCRIPTS     = HA_DIR / "scripts.yaml"
 JSON_OUT  = TOOLS_DIR / "dependency_map.json"
 MD_OUT    = TOOLS_DIR / "DEPENDENCY_MAP.md"
 
@@ -336,6 +339,244 @@ def scan_ha_config(config_path: Path) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Scanner 5b — HA rest_command / shell_command definitions
+# ---------------------------------------------------------------------------
+
+_HA_SECTION_RE    = re.compile(r"^(\w[\w_]*):\s*$")
+_HA_CMD_NAME_RE   = re.compile(r"^  ([\w_]+):\s*$")
+_HA_CMD_URL_RE    = re.compile(r'^\s+url:\s*["\']?(http[^\s"\']+)["\']?')
+_HA_CMD_METHOD_RE = re.compile(r"^\s+method:\s*(\w+)")
+
+
+def scan_ha_commands(config_path: Path) -> tuple[list[dict], list[dict]]:
+    """
+    Parse rest_command: and shell_command: blocks from configuration.yaml.
+
+    Only rest_command entries that point at port 9000 / master_ai are included;
+    shell_command entries are all included (none currently reference master_ai).
+    Returns (rest_commands, shell_commands).
+    """
+    if not config_path.exists():
+        return [], []
+
+    lines = config_path.read_text(errors="replace").splitlines()
+    rest_commands: list[dict] = []
+    shell_commands: list[dict] = []
+
+    section: str | None = None
+    current_cmd: dict | None = None
+
+    def _flush() -> None:
+        nonlocal current_cmd
+        if current_cmd is None:
+            return
+        if section == "rest_command":
+            if current_cmd.get("url") and (
+                ":9000" in current_cmd["url"] or "master_ai" in current_cmd["url"].lower()
+            ):
+                rest_commands.append(current_cmd)
+        elif section == "shell_command":
+            shell_commands.append(current_cmd)
+        current_cmd = None
+
+    for i, line in enumerate(lines, 1):
+        sm = _HA_SECTION_RE.match(line)
+        if sm:
+            _flush()
+            sname = sm.group(1)
+            section = sname if sname in ("rest_command", "shell_command") else None
+            current_cmd = None
+            continue
+
+        if section == "rest_command":
+            nm = _HA_CMD_NAME_RE.match(line)
+            if nm:
+                _flush()
+                current_cmd = {
+                    "name": nm.group(1),
+                    "url": None,
+                    "endpoint": None,
+                    "method": "GET",
+                    "file": str(config_path),
+                    "line": i,
+                    "kind": "ha_rest_command",
+                }
+                continue
+            if current_cmd:
+                um = _HA_CMD_URL_RE.match(line)
+                if um:
+                    url = um.group(1)
+                    current_cmd["url"] = url
+                    current_cmd["endpoint"] = _endpoint_of_url(url)
+                    continue
+                mm = _HA_CMD_METHOD_RE.match(line)
+                if mm:
+                    current_cmd["method"] = mm.group(1).upper()
+
+        elif section == "shell_command":
+            shm = re.match(r'^  ([\w_]+):\s*["\']?(.+?)["\']?\s*$', line)
+            if shm:
+                _flush()
+                current_cmd = {
+                    "name": shm.group(1),
+                    "command": shm.group(2).strip('"\''),
+                    "endpoint": None,
+                    "file": str(config_path),
+                    "line": i,
+                    "kind": "ha_shell_command",
+                }
+
+    _flush()
+    return rest_commands, shell_commands
+
+
+# ---------------------------------------------------------------------------
+# Scanner 5c — HA automations.yaml / scripts.yaml consumer references
+# ---------------------------------------------------------------------------
+
+_HA_RC_REF_RE  = re.compile(r"action:\s*rest_command\.([\w_]+)")
+_HA_SC_REF_RE  = re.compile(r"(?:action|service):\s*shell_command\.([\w_]+)")
+_HA_URL_REF_RE = re.compile(r"(http://192\.168\.109\.123:9000(/[^\s\"']+)?)")
+_HA_ALIAS_RE   = re.compile(r'^\s+alias:\s*["\']?(.+?)["\']?\s*$')
+_HA_ID_RE      = re.compile(r"^- id:\s*(.+)")
+_HA_SNAME_RE   = re.compile(r"^([\w_]+):\s*$")
+
+
+def scan_ha_yaml_files(
+    automations_path: Path,
+    scripts_path: Path,
+    rest_commands: list[dict],
+) -> list[dict]:
+    """
+    Scan automations.yaml and scripts.yaml for references to master_ai
+    rest_commands or shell_commands (and any direct :9000 URLs).
+
+    Each hit becomes an edge with kind ha_automation or ha_script containing
+    the resolved endpoint so the reverse index can link it.
+    """
+    rc_map = {rc["name"]: rc for rc in rest_commands}
+    edges: list[dict] = []
+
+    for fpath, kind in [
+        (automations_path, "ha_automation"),
+        (scripts_path, "ha_script"),
+    ]:
+        if not fpath.exists():
+            continue
+        lines = fpath.read_text(errors="replace").splitlines()
+        current_name: str | None = None
+
+        for ln, line in enumerate(lines, 1):
+            am = _HA_ALIAS_RE.match(line)
+            if am:
+                current_name = am.group(1).strip("\"'")
+                continue
+            if kind == "ha_automation":
+                idm = _HA_ID_RE.match(line)
+                if idm:
+                    current_name = None  # reset; alias follows later
+                    continue
+            elif kind == "ha_script":
+                snm = _HA_SNAME_RE.match(line)
+                if snm and not line.startswith(" "):
+                    current_name = snm.group(1)
+                    continue
+
+            rm = _HA_RC_REF_RE.search(line)
+            if rm:
+                rc_name = rm.group(1)
+                rc = rc_map.get(rc_name)
+                edges.append({
+                    "file": str(fpath),
+                    "line": ln,
+                    "kind": kind,
+                    "name": current_name or "unknown",
+                    "ref_kind": "rest_command",
+                    "ref_name": rc_name,
+                    "endpoint": rc["endpoint"] if rc else None,
+                })
+                continue
+
+            scm = _HA_SC_REF_RE.search(line)
+            if scm:
+                edges.append({
+                    "file": str(fpath),
+                    "line": ln,
+                    "kind": kind,
+                    "name": current_name or "unknown",
+                    "ref_kind": "shell_command",
+                    "ref_name": scm.group(1),
+                    "endpoint": None,
+                })
+                continue
+
+            um = _HA_URL_REF_RE.search(line)
+            if um:
+                edges.append({
+                    "file": str(fpath),
+                    "line": ln,
+                    "kind": kind,
+                    "name": current_name or "unknown",
+                    "ref_kind": "direct_url",
+                    "ref_name": um.group(1),
+                    "endpoint": um.group(2) or "",
+                })
+
+    return edges
+
+
+# ---------------------------------------------------------------------------
+# Scanner 5d — Telegram slash-command dispatch (static if/elif chain)
+# ---------------------------------------------------------------------------
+
+_TG_EQ_RE    = re.compile(r'if\s+cmd\s*==\s*"(/[\w_/]+)"')
+_TG_START_RE = re.compile(r'cmd\.startswith\("(/[\w_/]+)"')
+
+
+def scan_telegram_commands(py_files: list[Path]) -> list[dict]:
+    """
+    Extract Telegram slash-command dispatch entries from Python source.
+
+    The dispatch in server.py is an if/elif chain (not a static dict), but the
+    command strings are literal — deterministic at scan time.  Looks for:
+        if cmd == "/something":
+        if cmd.startswith("/something"):
+    across all scanned .py files.
+    """
+    cmds: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+
+    for fpath in py_files:
+        lines = fpath.read_text(errors="replace").splitlines()
+        for ln, line in enumerate(lines, 1):
+            for m in _TG_EQ_RE.finditer(line):
+                cmd = m.group(1)
+                key = (_rel(fpath), cmd)
+                if key not in seen:
+                    seen.add(key)
+                    cmds.append({
+                        "file": _rel(fpath),
+                        "line": ln,
+                        "command": cmd,
+                        "match_type": "exact",
+                        "kind": "telegram_command",
+                    })
+            for m in _TG_START_RE.finditer(line):
+                cmd = m.group(1)
+                key = (_rel(fpath), cmd + "*")
+                if key not in seen:
+                    seen.add(key)
+                    cmds.append({
+                        "file": _rel(fpath),
+                        "line": ln,
+                        "command": cmd,
+                        "match_type": "prefix",
+                        "kind": "telegram_command",
+                    })
+    return cmds
+
+
+# ---------------------------------------------------------------------------
 # Scanner 6 — SQL table usage in Python files
 # ---------------------------------------------------------------------------
 
@@ -538,6 +779,45 @@ def build_reverse_index(data: dict) -> dict:
             "line": sensor["line"],
         })
 
+    # ── Normalize a URL path against known route patterns ──────────────────
+    def _norm_ep(path: str | None) -> str | None:
+        if not path:
+            return None
+        for route in data["routes"]:
+            rp = re.sub(r"\{[^}]+\}", "[^/]+", route["path"])
+            if re.fullmatch(rp, path):
+                return route["path"]
+        return path
+
+    # ── HA rest_command definitions ────────────────────────────────────────
+    for rc in data.get("ha_rest_commands", []):
+        ep = _norm_ep(rc["endpoint"])
+        if not ep:
+            continue
+        if ep not in ep_index:
+            ep_index[ep] = {"defined": [], "consumers": []}
+        ep_index[ep]["consumers"].append({
+            "kind": "ha_rest_command",
+            "name": rc["name"],
+            "file": rc["file"],
+            "line": rc["line"],
+        })
+
+    # ── HA automation / script references ─────────────────────────────────
+    for edge in data.get("ha_yaml_edges", []):
+        ep = _norm_ep(edge.get("endpoint"))
+        if not ep:
+            continue
+        if ep not in ep_index:
+            ep_index[ep] = {"defined": [], "consumers": []}
+        ep_index[ep]["consumers"].append({
+            "kind": edge["kind"],
+            "name": edge["name"],
+            "ref_name": edge.get("ref_name", ""),
+            "file": edge["file"],
+            "line": edge["line"],
+        })
+
     # ── SQL tables ─────────────────────────────────────────────────────────
     tbl_index: dict[str, dict] = {}
 
@@ -603,14 +883,19 @@ def build_reverse_index(data: dict) -> dict:
 
 COVERAGE_NOTE = """\
 Coverage domains this scanner handles:
-  endpoint     — FastAPI @app/@router decorators, HTML fetch(), HA REST sensors
-  html_page    — nav.js path: entries, href=/trading/... attributes, /trading/{page} route
-  python_sym   — "from X import Y" statements in Python files
-  python_mod   — same import edges, grouped by module
-  sql_table    — FROM/JOIN (read) and INSERT INTO/UPDATE/CREATE TABLE/DELETE FROM (write) in .py files
-  schedule     — crontab(pi) entries and asyncio.create_task() startup calls
-Not covered: Telegram command dispatch, dynamic endpoint construction, runtime module
-  loading (importlib), HA template sensors that read attributes rather than URLs.\
+  endpoint         — FastAPI @app/@router decorators, HTML fetch(), HA REST sensors
+  html_page        — nav.js path: entries, href=/trading/... attributes, /trading/{page} route
+  python_sym       — \"from X import Y\" statements in Python files
+  python_mod       — same import edges, grouped by module
+  sql_table        — FROM/JOIN (read) and INSERT INTO/UPDATE/CREATE TABLE/DELETE FROM (write) in .py files
+  schedule         — crontab(pi) entries and asyncio.create_task() startup calls
+  ha_rest_command  — rest_command: entries in configuration.yaml pointing at :9000
+  ha_shell_command — shell_command: entries in configuration.yaml
+  ha_automation    — automations.yaml references to master_ai rest/shell commands
+  ha_script        — scripts.yaml references to master_ai rest/shell commands
+  telegram_command — static if/cmd== dispatch entries in Python files
+Not covered: dynamic endpoint construction, runtime module loading (importlib),
+  HA template sensors that read attributes rather than URLs.\
 """
 
 
@@ -640,13 +925,18 @@ def who_consumes(data: dict, thing: str) -> int:
                 if info["consumers"]:
                     print("  Consumers:")
                     for c in info["consumers"]:
-                        if c["kind"] == "ha_sensor":
+                        k = c["kind"]
+                        if k == "ha_sensor":
                             print(f"    [ha_sensor] {c['file']}:{c['line']}  sensor_id={c['sensor_id']}")
+                        elif k == "ha_rest_command":
+                            print(f"    [ha_rest_command] {c['file']}:{c['line']}  name={c['name']}")
+                        elif k in ("ha_automation", "ha_script"):
+                            print(f"    [{k}] {c['file']}:{c['line']}  alias={c['name']}  via={c.get('ref_name','')}")
                         else:
-                            print(f"    [{c['kind']}] {c['file']}:{c['line']}")
+                            print(f"    [{k}] {c['file']}:{c['line']}")
                 else:
                     print("  Consumers: NONE detected")
-                    print("  Note: dynamic callers (Telegram, runtime URL construction) are not covered.")
+                    print("  Note: dynamic callers and runtime URL construction are not covered.")
 
     # ── HTML / JS file ─────────────────────────────────────────────────────
     if ".html" in thing or ".js" in thing:
@@ -810,6 +1100,56 @@ def write_markdown(data: dict, path: Path) -> None:
     L.append(row("---", "---", "---"))
     for s in data["ha_sensors"]:
         L.append(row(s["sensor_id"], f"`{s['endpoint']}`", f"{s['scan_interval_sec']}s"))
+    L.append("")
+
+    # ── HA rest_commands ──
+    h(2, "Home Assistant rest_command definitions")
+    L.append("_Entries in `configuration.yaml` `rest_command:` that call port 9000._\n")
+    if data.get("ha_rest_commands"):
+        L.append(row("name", "method", "endpoint", "file", "line"))
+        L.append(row("---", "---", "---", "---", "---"))
+        for rc in data["ha_rest_commands"]:
+            L.append(row(rc["name"], rc["method"], f"`{rc['endpoint']}`", rc["file"], rc["line"]))
+    else:
+        L.append("_(none found)_")
+    L.append("")
+
+    # ── HA shell_commands ──
+    h(2, "Home Assistant shell_command definitions")
+    L.append("_All entries in `configuration.yaml` `shell_command:` (none currently call master_ai)._\n")
+    if data.get("ha_shell_commands"):
+        L.append(row("name", "command", "file", "line"))
+        L.append(row("---", "---", "---", "---"))
+        for sc in data["ha_shell_commands"]:
+            L.append(row(sc["name"], f"`{sc['command'][:60]}`", sc["file"], sc["line"]))
+    else:
+        L.append("_(none found)_")
+    L.append("")
+
+    # ── HA yaml edges ──
+    h(2, "Home Assistant automation / script references")
+    L.append("_Automations and scripts that call master_ai rest_commands or shell_commands._\n")
+    if data.get("ha_yaml_edges"):
+        L.append(row("kind", "alias/name", "ref_kind", "ref_name", "endpoint", "file", "line"))
+        L.append(row("---", "---", "---", "---", "---", "---", "---"))
+        for e in data["ha_yaml_edges"]:
+            ep = e.get("endpoint") or ""
+            L.append(row(e["kind"], e["name"], e["ref_kind"], e["ref_name"],
+                         f"`{ep}`" if ep else "", e["file"], e["line"]))
+    else:
+        L.append("_(none found)_")
+    L.append("")
+
+    # ── Telegram commands ──
+    h(2, "Telegram slash-command dispatch")
+    L.append("_Static `if cmd == \"/x\"` / `cmd.startswith(\"/x\")` entries in Python files._\n")
+    if data.get("telegram_commands"):
+        L.append(row("command", "match_type", "file", "line"))
+        L.append(row("---", "---", "---", "---"))
+        for tc in data["telegram_commands"]:
+            L.append(row(f"`{tc['command']}`", tc["match_type"], tc["file"], tc["line"]))
+    else:
+        L.append("_(none found)_")
     L.append("")
 
     # ── Schedules ──
@@ -985,6 +1325,8 @@ def main() -> int:
 
     print("  [4/7] ha config …")
     ha_sensors = scan_ha_config(HA_CONFIG)
+    ha_rest_commands, ha_shell_commands = scan_ha_commands(HA_CONFIG)
+    ha_yaml_edges = scan_ha_yaml_files(HA_AUTOMATIONS, HA_SCRIPTS, ha_rest_commands)
 
     print("  [5/7] sql edges …")
     sql_edges = scan_sql(py_files)
@@ -992,10 +1334,15 @@ def main() -> int:
     print("  [6/7] schedules …")
     schedules = scan_crontab() + scan_asyncio_tasks(py_files)
 
-    print("  [7/7] shell scripts …")
+    print("  [7/7] shell scripts + telegram commands …")
     shell_scripts = scan_shell_scripts()
+    telegram_commands = scan_telegram_commands(py_files)
 
     elapsed = round(time.monotonic() - t0, 3)
+
+    yaml_files_scanned = sum(
+        1 for p in [HA_CONFIG, HA_AUTOMATIONS, HA_SCRIPTS] if p.exists()
+    )
 
     data: dict = {
         "meta": {
@@ -1005,9 +1352,13 @@ def main() -> int:
             "counts": {
                 "python_files_scanned": len(py_files),
                 "html_files_scanned": len(html_files),
-                "yaml_files_scanned": 1 if HA_CONFIG.exists() else 0,
+                "yaml_files_scanned": yaml_files_scanned,
                 "routes_found": len(routes),
                 "ha_sensors_found": len(ha_sensors),
+                "ha_rest_commands_found": len(ha_rest_commands),
+                "ha_shell_commands_found": len(ha_shell_commands),
+                "ha_yaml_edges_found": len(ha_yaml_edges),
+                "telegram_commands_found": len(telegram_commands),
                 "python_import_edges": len(py_imports),
                 "sql_edges": len(sql_edges),
                 "schedules_found": len(schedules),
@@ -1022,6 +1373,10 @@ def main() -> int:
         "routes": routes,
         "html_requests": html_requests,
         "ha_sensors": ha_sensors,
+        "ha_rest_commands": ha_rest_commands,
+        "ha_shell_commands": ha_shell_commands,
+        "ha_yaml_edges": ha_yaml_edges,
+        "telegram_commands": telegram_commands,
         "sql_edges": sql_edges,
         "schedules": schedules,
         "shell_scripts": shell_scripts,
