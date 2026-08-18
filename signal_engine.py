@@ -468,10 +468,6 @@ def build_signals() -> dict:
             "checklist": None,  # computed below after sig is built
         }
 
-        # Phase 2 ITEM 6: Compute checklist now that sig is built
-        if PRE_TRADE_CHECKLIST:
-            sig["checklist"] = pre_trade_checklist(sig, regime, sig.get("liquidity", {}))
-
         # Phase 4: Pivots + ATR stops
         pivots = _get_pivots_for_symbol(sym_upper)
         sig["pivots"] = pivots
@@ -498,6 +494,16 @@ def build_signals() -> dict:
             sig["swing_factors"] = sc["factors"]
             sig["swing_blockers"] = sc.get("blockers", [])
             sig["swing_reason"] = sc.get("reason")
+
+        # Phase 2 ITEM 6: the checklist grades swing_rr and swing_stop, so it
+        # has to run after they exist. It used to sit eighteen lines above,
+        # before either was assigned: `sig.get("swing_rr") or 0` read 0 and
+        # the "R:R > 1.5" gate failed on every symbol of every scan - 20/20
+        # on 2026-08-18, including 3.62, 3.63 and 4.64. Every verdict was
+        # "لا تدخل", which is the same as having no gate at all. swing_stop
+        # was 0 there too, so check_can_open skipped position sizing.
+        if PRE_TRADE_CHECKLIST:
+            sig["checklist"] = pre_trade_checklist(sig, regime, sig.get("liquidity", {}))
 
         signals.append(sig)
 
