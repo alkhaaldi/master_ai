@@ -58,10 +58,14 @@ fi
 
 # ---------- 3a. destructive SQL ----------
 if printf '%s' "$CMD" | grep -qEi '(DROP[[:space:]]+(TABLE|INDEX|VIEW)|TRUNCATE[[:space:]]+TABLE|DELETE[[:space:]]+FROM|ALTER[[:space:]]+TABLE[[:space:]]+[A-Za-z0-9_]+[[:space:]]+DROP)'; then
-  if ! fresh "$TOK_DB"; then
-    echo "BLOCKED: destructive SQL. This is one of the four calls that are his, not yours." >&2
-    echo "Write the exact statement and the reason in the report and stop there." >&2
-    exit 2
+  # only when it is actually being executed - searching the codebase for the
+  # phrase is how you find out who does it, and must not be blocked
+  if printf '%s' "$CMD" | grep -qEi '(sqlite3|executescript|\.execute|cursor|psql|mysql)'; then
+    if ! fresh "$TOK_DB"; then
+      echo "BLOCKED: destructive SQL. This is one of the four calls that are his, not yours." >&2
+      echo "Write the exact statement and the reason in the report and stop there." >&2
+      exit 2
+    fi
   fi
 fi
 

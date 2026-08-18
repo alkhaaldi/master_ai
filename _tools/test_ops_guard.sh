@@ -40,6 +40,8 @@ echo "--- SQL ---"
 chk "DELETE FROM"           2 "$G" "sqlite3 audit.db \"DELETE FROM stock_radar_daily\""
 chk "DROP TABLE"            2 "$G" "sqlite3 audit.db \"DROP TABLE junk\""
 chk "SELECT is fine"        0 "$G" "sqlite3 audit.db \"SELECT 1 FROM stock_radar_daily LIMIT 5\""
+chk "grep for DELETE FROM"  0 "$G" "grep -rn 'DELETE FROM' _tools/"
+chk "python execute DELETE"  2 "$G" "python3 -c \"c.execute('DELETE FROM x')\""
 
 echo "--- irreversible ---"
 chk "recursive force delete" 2 "$G" "$RMRF _tools/old"
