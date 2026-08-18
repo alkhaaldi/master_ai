@@ -475,13 +475,17 @@ def build_signals() -> dict:
         atr = sig.get("atr_14") or 0
         if price and atr:
             stop_data = calculate_swing_stop(price, atr, sig.get("support"))
-            target_data = calculate_swing_target(price, pivots, atr)
+            # risk first: the target picks the nearest level worth that stop
+            target_data = calculate_swing_target(
+                price, pivots, atr, risk_pct=stop_data.get("risk_pct", 0.0))
             sig["swing_stop"] = stop_data.get("stop_loss")
             sig["swing_stop_pct"] = stop_data.get("risk_pct")
             sig["swing_stop_type"] = stop_data.get("stop_type")
             sig["swing_target"] = target_data.get("target")
             sig["swing_target_pct"] = target_data.get("reward_pct")
             sig["swing_target_type"] = target_data.get("target_type")
+            sig["swing_target_candidates"] = target_data.get("candidates", [])
+            sig["swing_target_reason"] = target_data.get("target_reason")
             risk = stop_data.get("risk_pct", 0)
             reward = target_data.get("reward_pct", 0)
             sig["swing_rr"] = round(reward / risk, 2) if risk > 0 else 0
@@ -898,12 +902,30 @@ def calculate_swing_stop(entry_price: float, atr_14: float,
 
 
 def calculate_swing_target(entry_price: float, daily_levels: dict,
-                           atr_14: float) -> dict:
-    """Dynamic target at nearest resistance above entry."""
-    if not entry_price or entry_price <= 0:
-        return {"target": 0, "reward_pct": 0, "target_type": "error"}
+                           atr_14: float, risk_pct: float = 0.0,
+                           min_rr: float = 1.5) -> dict:
+    """Target at the nearest resistance that is worth the stop.
 
-    # Find nearest resistance above entry (+0.5% minimum)
+    This used to take resistance[0] - the nearest level above entry - and stop
+    looking. calculate_swing_stop clamps risk at 3% and usually lands exactly
+    there, so the pair routinely produced a ~1% target against a 3% stop and
+    the "R:R > 1.5" check rejected it.
+
+    Often that rejection is the truth: measured 2026-08-18, ASC and BOUBYAN
+    each had exactly one pivot above price (0.36 and 0.22) and no choice would
+    have helped. But KFIC had pp at 0.25, r1 at 0.68 and r2 at 1.55, and taking
+    pp guaranteed a rejection while a real level cleared the bar.
+
+    So the nearest level that clears min_rr wins. If none clears it the nearest
+    is kept, exactly as before - stretching to a further target that still fails
+    would only trade a bad ratio for a worse chance of being filled. `candidates`
+    carries every level with its ratio so the trade-off stays visible.
+    """
+    if not entry_price or entry_price <= 0:
+        return {"target": 0, "reward_pct": 0, "target_type": "error",
+                "candidates": [], "target_reason": "no entry price"}
+
+    # Find resistance above entry (+0.5% minimum)
     resistance = []
     for key in ("r1", "pdh", "pp", "r2"):
         val = daily_levels.get(key, 0)
@@ -911,17 +933,40 @@ def calculate_swing_target(entry_price: float, daily_levels: dict,
             resistance.append((key, val))
     resistance.sort(key=lambda x: x[1])
 
+    def _rr(price):
+        rw = (price - entry_price) / entry_price * 100
+        return round(rw / risk_pct, 2) if risk_pct > 0 else None
+
+    candidates = [{"level": k, "price": round(v, 3),
+                   "reward_pct": round((v - entry_price) / entry_price * 100, 2),
+                   "rr": _rr(v)} for k, v in resistance]
+
     if resistance:
-        t_key, t_price = resistance[0]
+        picked = None
+        if risk_pct > 0:
+            for k, v in resistance:
+                if (_rr(v) or 0) >= min_rr:
+                    picked = (k, v)
+                    break
+        if picked:
+            t_key, t_price = picked
+            reason = "nearest level clearing R:R %.1f" % min_rr
+        else:
+            t_key, t_price = resistance[0]
+            reason = ("nearest level; none of %d clears R:R %.1f"
+                      % (len(resistance), min_rr)) if risk_pct > 0 else "nearest level"
     else:
         t_price = entry_price + (3.0 * (atr_14 or entry_price * 0.01))
         t_key = "atr_3x"
+        reason = "no pivot above entry - 3x ATR"
 
     reward_pct = (t_price - entry_price) / entry_price * 100 if entry_price > 0 else 0
     return {
         "target": round(t_price, 3),
         "reward_pct": round(reward_pct, 2),
         "target_type": t_key,
+        "candidates": candidates,
+        "target_reason": reason,
     }
 
 
