@@ -96,3 +96,59 @@ Open work     _tools/OPEN_ITEMS.md — the single list
 Scales        _tools/SCALES.md — what every number means
 Storage       _tools/STORAGE_POLICY.md — where a growing file belongs
 ```
+
+## Where the protections live (built 2026-08-18)
+
+```
+.claude/hooks/git_guard.sh     no blanket staging
+.claude/hooks/ops_guard.sh     the five refusals below
+.claude/hooks/report_gate.sh   Stop hook: no report, no ending
+_tools/run_task.sh NAME        claude.ai's invoker for TASK_<NAME>.md
+_tools/test_ops_guard.sh       24 cases, all passing
+_tools/CHANGE_LOG.md           one line per run, written by run_task.sh
+_tools/depmap.py               who-consumes queries, see below
+```
+
+`ops_guard.sh` refuses, on Bash and on Write/Edit:
+
+1. editing `.claude/` from a session it governs - a guard a session can switch
+   off is not a guard
+2. restarting while the Kuwait market is open, Sun-Thu 08:45-13:15, on the real
+   clock with no environment override
+3. any outbound Telegram or mail send, including a test probe
+4. destructive SQL, but only when an executor is present, so searching the
+   codebase for the phrase still works
+5. irreversible disk or git operations - recursive force delete, reset --hard,
+   clean -f, push --force
+
+Two override tokens, each valid 30 minutes from its mtime:
+
+```
+_tools/.allow_restart_now
+_tools/.allow_db_write
+```
+
+They work because claude.ai places them over `/ssh/run`, which the hooks do not
+govern. The override deliberately lives outside the session it overrides. Both
+are gitignored, and a session inside the repo cannot create one - touching it is
+a Bash command and the guard sees it.
+
+## Before retiring anything, ask the map
+
+```
+python3 _tools/depmap.py                        regenerate, ~3 s
+python3 _tools/depmap.py --who-consumes THING   file, endpoint, table, symbol
+```
+
+Exit 1 means no consumer was found, and the tool then prints what it does and
+does not cover. Read that list before treating an empty answer as permission.
+It resolves indirection: `/dashboard/cmd` shows 11 Home Assistant scripts that
+never name the endpoint, only the `rest_command` that points at it.
+
+Known blind spots, stated so nobody trusts a zero: external callers over curl or
+the tunnel, runtime `importlib`, HA template sensors that read attributes rather
+than URLs, and endpoint paths built by string concatenation - those last are
+kept in a `dynamic_requests` section with file and line rather than dropped.
+
+146 of 188 endpoints still report zero consumers. That is a review queue, not a
+delete list.
