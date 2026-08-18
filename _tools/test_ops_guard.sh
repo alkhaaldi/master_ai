@@ -50,6 +50,12 @@ chk "git clean -fd"         2 "$G" "git clean -fd"
 chk "git push --force"      2 "$G" "git push --force origin main"
 chk "normal commit passes"  0 "$G" "git commit -m 'fix the thing'"
 
+echo "--- cli never spends api credit ---"
+chk "bare claude -p blocked"   2 "$G" "/usr/bin/claude -p 'do the thing'"
+chk "claude -p via PATH blocked" 2 "$G" "claude -p 'do the thing'"
+chk "with env -u passes"       0 "$G" "env -u ANTHROPIC_API_KEY /usr/bin/claude -p 'do the thing'"
+chk "claude --version passes"  0 "$G" "claude --version"
+
 echo "--- guard protects itself ---"
 chk "Write to .claude"      2 "$G" "" "/home/pi/master_ai/.claude/hooks/git_guard.sh"
 chk "delete a hook"         2 "$G" "rm .claude/hooks/git_guard.sh"

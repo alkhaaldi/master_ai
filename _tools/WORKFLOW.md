@@ -152,3 +152,24 @@ kept in a `dynamic_requests` section with file and line rather than dropped.
 
 146 of 188 endpoints still report zero consumers. That is a review queue, not a
 delete list.
+
+## The CLI never spends API credit (pinned 2026-08-18)
+
+`/ssh/run` puts the app's `sk-ant-` key into the environment of everything it
+launches, and the Claude Code CLI prefers that key over the subscription login.
+That is how a headless run can quietly bill API credit. Three layers now stop it:
+
+```
+/usr/local/bin/claude    wrapper, first in PATH, execs the real binary with
+                         env -u ANTHROPIC_API_KEY - covers every caller
+_tools/run_task.sh       invokes with env -u explicitly
+ops_guard.sh rule 4      blocks "claude -p" that names /usr/bin/claude directly
+                         without env -u, which is the only way around the wrapper
+```
+
+The key itself stays where it is. It is the app's, not the CLI's - `server.py:624`
+and `:736`, `chat_v7.py:487`, `inbox_engine.py:30` all read it. Removing it from
+`.env` would break those, so it was left alone.
+
+To undo the wrapper: delete `/usr/local/bin/claude`. The real binary is untouched
+at `/usr/bin/claude`.

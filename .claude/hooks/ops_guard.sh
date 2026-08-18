@@ -76,4 +76,16 @@ if printf '%s' "$CMD" | grep -qE '(\brm[[:space:]]+(-[A-Za-z]*[rR][A-Za-z]*f|-[A
   exit 2
 fi
 
+# ---------- 4. the CLI never spends API credit ----------
+# /usr/local/bin/claude already unsets the key for anything resolved via PATH.
+# This catches the one way around that: naming the real binary directly.
+if printf '%s' "$CMD" | grep -qE '(^|[;&[:space:]])(/usr/bin/)?claude[[:space:]]+(-p\b|--print\b)'; then
+  if ! printf '%s' "$CMD" | grep -q 'env -u ANTHROPIC_API_KEY'; then
+    echo "BLOCKED: this would run Claude Code on the sk-ant- API key, not the subscription." >&2
+    echo "That key belongs to the app, not to the CLI. Call it as 'claude' so the wrapper" >&2
+    echo "at /usr/local/bin/claude applies, or prefix it with 'env -u ANTHROPIC_API_KEY'." >&2
+    exit 2
+  fi
+fi
+
 exit 0
