@@ -138,7 +138,16 @@ def _caller():
     return "unknown"
 
 
-def send_telegram(text: str) -> bool:
+def _payload(chat, text, parse_mode):
+    """parse_mode is optional and omitted when None, so every existing caller
+    sends exactly the bytes it sent before this argument existed."""
+    body = {"chat_id": chat, "text": text}
+    if parse_mode:
+        body["parse_mode"] = parse_mode
+    return body
+
+
+def send_telegram(text: str, parse_mode: str | None = None) -> bool:
     """Direct Bot API send (stdlib only). Returns delivery truthfully, and
     now records the attempt so the truth outlives the stdout it was printed
     to."""
@@ -152,7 +161,7 @@ def send_telegram(text: str) -> bool:
     try:
         req = urllib.request.Request(
             "https://api.telegram.org/bot%s/sendMessage" % token,
-            data=json.dumps({"chat_id": chat, "text": text}).encode(),
+            data=json.dumps(_payload(chat, text, parse_mode)).encode(),
             headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=10) as r:
             status = r.status

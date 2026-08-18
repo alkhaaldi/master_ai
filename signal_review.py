@@ -679,16 +679,19 @@ def _send_review_telegram(summary: dict) -> bool:
         f"{best_line}\n{worst_line}"
     ).strip()
 
-    try:
-        r = _req.post(
-            f"https://api.telegram.org/bot{bot_token}/sendMessage",
-            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
-            timeout=10,
-        )
-        return r.status_code == 200
-    except Exception as e:
-        logger.error("Telegram send failed: %s", e)
-        return False
+    # Sent through the witness (2026-08-18), not by a bare requests.post.
+    # Two defects that fix at once, both found after the resolver started
+    # working and the first cron run went through silently:
+    #
+    #   1. this function never wrote to telegram_sends, so a delivery left no
+    #      trace anywhere - the run log said nothing, and the ledger held only
+    #      prove_guards probes. There was no way to answer "did the 14:20
+    #      alert arrive?" from any record.
+    #   2. it read `status_code == 200` as delivery. Telegram answers 200 with
+    #      {"ok": false} for a wrong chat id among others, so this could report
+    #      success on a message nobody received. run_witness reads the body.
+    from run_witness import send_telegram as _send
+    return _send(text, parse_mode="HTML")
 
 
 # ---------------------------------------------------------------------------
