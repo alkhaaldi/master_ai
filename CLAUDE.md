@@ -17,6 +17,7 @@ Master AI is a personal AI assistant running on Raspberry Pi 5, built with FastA
 4. Do NOT search previous conversations unless explicitly asked
 5. Do NOT assume versions, schema, or component states
 6. Read `_tools/OPERATIONAL_ACCESS_MATRIX.md` if the task involves development
+7. Read `_tools/WORKFLOW.md` — describes how claude.ai orchestrates Claude Code (headless runs, report files, scope rules)
 
 ## API Authentication
 - **GET endpoints:** `X-API-Key` header
