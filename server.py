@@ -5685,7 +5685,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"\u26a0\ufe0f diag: {e}"
 
-    if cmd == "/summary":
+    if cmd == "/sysstats":
         # Daily summary dashboard
         try:
             _up = int(time.time() - START_TIME)
@@ -5851,7 +5851,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             logger.error(f"scenes_dynamic error: {e}")
             return f"Error: {e}" 
 
-    if cmd == "/scenes" or cmd == "/scenes1":
+    if cmd == "/scenes1":
         sc = [
             {"text": "🌙 نوم", "callback_data": "sc:scene.wd_lnwm"},
             {"text": "☀️ صباح", "callback_data": "sc:scene.sbh_lkhyr"},
@@ -5881,7 +5881,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         await tg_send_inline(chat_id, "🎬 *المشاهد* (2/2)", sc2, columns=2)
         return "__inline_sent__"
 
-    if cmd == "/brain":
+    if cmd == "/homebrain":
         if not BRAIN_OK: return "home_brain not loaded"
         st = get_brain_stats()
         _bl = ["🧠 *Home Brain*"]
@@ -6473,14 +6473,14 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         return "Health engine not loaded"
 
     # Phase 5: Trading
-    if cmd == "/trade" or cmd.startswith("/trade "):
+    if cmd == "/trade_log" or cmd.startswith("/trade_log "):
         if TRADING_ENGINE_OK:
-            args = cmd.replace("/trade", "", 1).strip()
+            args = cmd.replace("/trade_log", "", 1).strip()
             return handle_trade_log(args)
         return "Trading engine not loaded"
-    if cmd == "/trades" or cmd.startswith("/trades "):
+    if cmd == "/trades_list" or cmd.startswith("/trades_list "):
         if TRADING_ENGINE_OK:
-            args = cmd.replace("/trades", "", 1).strip()
+            args = cmd.replace("/trades_list", "", 1).strip()
             return handle_trades_list(args)
         return "Trading engine not loaded"
     if cmd == "/trade_review" or cmd.startswith("/trade_review "):
@@ -6571,7 +6571,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 return f"error: {e}"
         return "life_expenses not loaded"
 
-    if cmd == "/expenses":
+    if cmd == "/expenses_today":
         if LIFE_EXPENSES_OK:
             try:
                 from life_expenses import get_expenses
@@ -6592,7 +6592,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 return f"error: {e}"
         return "life_health not loaded"
 
-    if cmd == "/report":
+    if cmd == "/sysreport":
         if TG_REPORT_OK:
             try:
                 _rep = await generate_daily_report(_router_stats, _response_times, {})
@@ -6730,7 +6730,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"calendar error: {e}"
 
-    if cmd == "/week":
+    if cmd == "/weekcal":
         try:
             from calendar_engine import get_week_events
             events = get_week_events()
