@@ -198,7 +198,10 @@ _HREF_TRADING_RE = re.compile(r'href=["\'](?P<url>/trading/[^"\']+)["\']')
 # An endpoint literal anywhere on the line, not only inside fetch(). Pages
 # that build the URL into a const and fetch the variable later were invisible
 # to who_consumes; the path itself is still written out, so it is findable.
-_URL_LITERAL_RE = re.compile(r'["\'`](?P<url>/(?:dashboard|api)/[^"\'`\s?]+)')
+_URL_LITERAL_RE = re.compile(
+    # A quote, a backtick, or the '}' closing a ${...} interpolation:
+    # `${API_BASE}/dashboard/x` is as much a reference as '/dashboard/x'.
+    r'(?<=["\'`}])(?P<url>/(?:dashboard|api)/[^"\'`\s?,)]+)')
 
 
 def _classify_fetch_arg(arg: str) -> tuple[str | None, bool, str]:

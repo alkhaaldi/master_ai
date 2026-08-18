@@ -1,8 +1,8 @@
 # Master AI — Dependency Map
 
-**Generated:** 2026-08-18T23:14:09.853011+00:00  
-**Commit:** b77e5ca  
-**Elapsed:** 6.25 s  
+**Generated:** 2026-08-18T23:19:40.224370+00:00  
+**Commit:** 24dfabf  
+**Elapsed:** 6.36 s  
 
 
 ## Scan coverage
@@ -300,8 +300,8 @@ _Static `if cmd == "/x"` / `cmd.startswith("/x")` entries in Python files._
 | --- | --- | --- | --- |
 | `/report` | exact | _tools/_patch_phase34.py | 92 |
 | `/kairos` | exact | _tools/_patch_phase34.py | 94 |
-| `/something` | exact | _tools/depmap.py | 561 |
-| `/something` | prefix | _tools/depmap.py | 562 |
+| `/something` | exact | _tools/depmap.py | 564 |
+| `/something` | prefix | _tools/depmap.py | 565 |
 | `/tv_stats` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 9 |
 | `/kpi` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 14 |
 | `/tv_sync` | exact | _tools/patchers/phase3_tv_sync_cmd.py | 20 |
@@ -1082,7 +1082,7 @@ _Endpoints with no consumers are retire-safely candidates — but verify dynamic
 ### `/dashboard/scalper`
 
 - **Defined:** `dashboard_api.py:2286` `GET` handler=`dashboard_scalper`
-- **Consumers:** NONE — retire-safely candidate (verify dynamic callers)
+- **[url_const]** `www/trading/scalper.html:516`
 
 
 ### `/dashboard/signals`
@@ -2246,7 +2246,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `configuration`
 
-- **READ** `_tools/depmap.py:372`
+- **READ** `_tools/depmap.py:375`
 
 
 ### `confluence_decisions`
@@ -3024,7 +3024,7 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `fragments`
 
-- **READ** `_tools/depmap.py:916`
+- **READ** `_tools/depmap.py:919`
 
 
 ### `fresher`
@@ -4109,8 +4109,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `python`
 
-- **READ** `_tools/depmap.py:557`
-- **READ** `_tools/depmap.py:629`
+- **READ** `_tools/depmap.py:560`
+- **READ** `_tools/depmap.py:632`
 - **READ** `_tools/patchers/apply_text_patch.py:8`
 
 
@@ -5092,8 +5092,8 @@ _fetch() calls whose URL is built at runtime — base path noted where detectabl
 
 ### `this`
 
-- **READ** `_tools/depmap.py:983`
-- **READ** `_tools/depmap.py:990`
+- **READ** `_tools/depmap.py:986`
+- **READ** `_tools/depmap.py:993`
 - **READ** `dashboard_api.py:974`
 - **READ** `price_source.py:236`
 
@@ -9590,9 +9590,6 @@ Note: symbols called via `module.func()` after `import module` are tracked in th
 
 **`/dashboard/regime`**
   - `dashboard_api.py:2417` handler=`dashboard_regime`
-
-**`/dashboard/scalper`**
-  - `dashboard_api.py:2286` handler=`dashboard_scalper`
 
 **`/debug/test_approval`**
   - `server.py:3299` handler=`debug_test_approval`
