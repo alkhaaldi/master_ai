@@ -492,6 +492,11 @@ async def execute_tool(name, args, executors):
                         messages=[{"role": "user", "content": advisor_prompt}])
                 _resp = await _aio.to_thread(_sync_advisor)
                 _advice = _resp.content[0].text
+                try:
+                    from cost_tracker import track_cost
+                    track_cost(_resp.usage, MODEL_ROUTINE, source="advisor")
+                except Exception:
+                    pass
             except Exception as _ae:
                 logger.warning(f"Advisor LLM error: {_ae}")
                 _advice = analysis.get("verdict", "N/A")

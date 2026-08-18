@@ -36,6 +36,11 @@ async def _triage_haiku(messages):
         from model_tiers import MODEL_CHEAP
         resp = client.messages.create(model=MODEL_CHEAP, max_tokens=80,
             messages=[{'role':'user','content':prompt}])
+        try:
+            from cost_tracker import track_cost
+            track_cost(resp.usage, MODEL_CHEAP, source='inbox_triage')
+        except Exception:
+            pass
         hit = re.search(r'\[([0-9, ]+)\]', resp.content[0].text)
         if hit:
             scores = [int(x.strip()) for x in hit.group(1).split(',')]

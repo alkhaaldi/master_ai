@@ -77,13 +77,19 @@ async def layer3_summarize(messages: list[dict], anthropic_client=None) -> list[
 
     if anthropic_client:
         try:
+            _ctx_model = __import__("model_tiers").MODEL_CHEAP
             response = await anthropic_client.messages.create(
-                model=__import__("model_tiers").MODEL_CHEAP,
+                model=_ctx_model,
                 max_tokens=500,
                 system="Summarize this conversation in Arabic. Focus on decisions, topics, current state. Max 200 words.",
                 messages=[{"role": "user", "content": summary_text}],
             )
             summary = response.content[0].text
+            try:
+                from cost_tracker import track_cost
+                track_cost(response.usage, _ctx_model, source="context_mgr")
+            except Exception:
+                pass
         except Exception as e:
             logger.warning("[context] Layer 3 summarize LLM failed: %s", e)
 

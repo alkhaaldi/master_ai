@@ -106,8 +106,9 @@ class AutoMemoryExtractor:
 
         if self._client:
             try:
+                _mem_model = __import__("model_tiers").MODEL_CHEAP
                 response = await self._client.messages.create(
-                    model=__import__("model_tiers").MODEL_CHEAP,
+                    model=_mem_model,
                     max_tokens=1024,
                     system=EXTRACTION_PROMPT,
                     messages=[{
@@ -115,6 +116,11 @@ class AutoMemoryExtractor:
                         "content": f"Existing observations (avoid duplicates):\n{existing}\n\n---\n\nConversation:\n{conv_text}",
                     }],
                 )
+                try:
+                    from cost_tracker import track_cost
+                    track_cost(response.usage, _mem_model, source="auto_memory")
+                except Exception:
+                    pass
                 text = response.content[0].text.strip()
                 text = text.replace("```json", "").replace("```", "").strip()
                 observations = json.loads(text)

@@ -78,8 +78,9 @@ async def find_relevant_memories(
     selected_ids = []
     try:
         if anthropic_client:
+            _recall_model = __import__("model_tiers").MODEL_CHEAP
             response = await anthropic_client.messages.create(
-                model=__import__("model_tiers").MODEL_CHEAP,
+                model=_recall_model,
                 max_tokens=256,
                 system=SELECT_MEMORIES_PROMPT,
                 messages=[{
@@ -87,6 +88,11 @@ async def find_relevant_memories(
                     "content": f"Query: {query}\n\nAvailable observations:\n{manifest_text}",
                 }],
             )
+            try:
+                from cost_tracker import track_cost
+                track_cost(response.usage, _recall_model, source="memory_recall")
+            except Exception:
+                pass
             text = response.content[0].text.strip()
             text = text.replace("```json", "").replace("```", "").strip()
             parsed = json.loads(text)

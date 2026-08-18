@@ -248,12 +248,18 @@ async def generate_digest(category=None, slot="manual"):
     try:
         import anthropic
         client = anthropic.Anthropic()
+        _news_model = __import__("model_tiers").MODEL_ROUTINE
         response = client.messages.create(
-            model=__import__("model_tiers").MODEL_ROUTINE,
+            model=_news_model,
             max_tokens=3000,
             messages=[{"role": "user", "content": prompt}]
         )
         summary = response.content[0].text
+        try:
+            from cost_tracker import track_cost
+            track_cost(response.usage, _news_model, source="news_digest")
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"LLM digest error: {e}")
         # Fallback: just list titles

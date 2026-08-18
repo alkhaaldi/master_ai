@@ -1183,6 +1183,11 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
             if trace:
                 trace.llm(_model, time.time() - t0,
                           tokens_in=resp.usage.input_tokens, tokens_out=resp.usage.output_tokens)
+            try:
+                from cost_tracker import track_cost
+                track_cost(resp.usage, _model, source="llm_call")
+            except Exception:
+                logger.debug("cost track failed in llm_call/anthropic")
             return text
         except Exception as e:
             _cb_llm.record_failure()
@@ -1204,6 +1209,13 @@ async def llm_call(system_prompt: str, user_message: str, max_tokens: int = 2048
             if trace:
                 trace.llm("gpt-4o-mini", time.time() - t0,
                           tokens_in=resp.usage.prompt_tokens, tokens_out=resp.usage.completion_tokens)
+            try:
+                from cost_tracker import track_cost_openai
+                track_cost_openai({"prompt_tokens": resp.usage.prompt_tokens,
+                                   "completion_tokens": resp.usage.completion_tokens},
+                                  model="gpt-4o-mini", source="llm_call_openai")
+            except Exception:
+                logger.debug("cost track failed in llm_call/openai")
             return text
         except Exception as e:
             logger.error(f"OpenAI failed: {e}")
@@ -7512,10 +7524,25 @@ async def llm_call_stream(system_prompt: str, user_message: str, chat_id=None,
                     else:
                         await tg_edit_message(chat_id, msg_id, full_text + " ✍️")
                     last_edit = now
+            # Grab usage while still inside stream context
+            try:
+                _final_msg = await stream.get_final_message()
+                _stream_usage = _final_msg.usage if _final_msg else None
+            except Exception:
+                _stream_usage = None
         
         # Final edit — remove typing indicator
         if msg_id and chat_id:
             await tg_edit_message(chat_id, msg_id, full_text)
+
+        # Track cost
+        if _stream_usage:
+            try:
+                from cost_tracker import track_cost
+                track_cost(_stream_usage, _stream_model, source="llm_call_stream")
+            except Exception:
+                logger.debug("cost track failed in llm_call_stream")
+
         # Save to session memory
         try:
             memory_add_short_term("assistant", full_text[:300])

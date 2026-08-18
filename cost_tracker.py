@@ -25,10 +25,14 @@ PRICING = {
     MODEL_DEEP:    {"input": 5.0, "output": 25.0},
     # OpenAI fallback
     "gpt-4o":      {"input": 2.5, "output": 10.0},
+    "gpt-4o-mini": {"input": 0.15, "output": 0.6},
 }
 
 # Fallback for unknown models
 DEFAULT_PRICING = {"input": 3.0, "output": 15.0}
+
+# Track unknown model names so the fallback is visible, not silent
+_unknown_models_seen: set = set()
 
 
 def _init_cost_db():
@@ -77,8 +81,13 @@ def track_cost(usage, model, user_id="default", source="chat_v7"):
         cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
         cache_creation = getattr(usage, "cache_creation_input_tokens", 0) or 0
         
-        # Calculate cost
-        prices = PRICING.get(model, DEFAULT_PRICING)
+        # Calculate cost — warn if model is unknown
+        prices = PRICING.get(model)
+        if prices is None:
+            if model not in _unknown_models_seen:
+                _unknown_models_seen.add(model)
+                logger.warning("Unknown model %r — using DEFAULT_PRICING (seen models: %d)", model, len(_unknown_models_seen))
+            prices = DEFAULT_PRICING
         cost = (input_tokens * prices["input"] + output_tokens * prices["output"]) / 1_000_000
         
         _init_cost_db()
@@ -100,7 +109,7 @@ def track_cost(usage, model, user_id="default", source="chat_v7"):
         logger.warning(f"Cost tracking error: {e}")
 
 
-def track_cost_openai(usage_dict, model="gpt-4o", user_id="default"):
+def track_cost_openai(usage_dict, model="gpt-4o", user_id="default", source="openai_fallback"):
     """Track cost from OpenAI response (dict-based usage)."""
     try:
         if not usage_dict:
@@ -108,7 +117,12 @@ def track_cost_openai(usage_dict, model="gpt-4o", user_id="default"):
         input_tokens = usage_dict.get("prompt_tokens", 0)
         output_tokens = usage_dict.get("completion_tokens", 0)
         
-        prices = PRICING.get(model, DEFAULT_PRICING)
+        prices = PRICING.get(model)
+        if prices is None:
+            if model not in _unknown_models_seen:
+                _unknown_models_seen.add(model)
+                logger.warning("Unknown model %r — using DEFAULT_PRICING (seen models: %d)", model, len(_unknown_models_seen))
+            prices = DEFAULT_PRICING
         cost = (input_tokens * prices["input"] + output_tokens * prices["output"]) / 1_000_000
         
         _init_cost_db()
@@ -117,7 +131,7 @@ def track_cost_openai(usage_dict, model="gpt-4o", user_id="default"):
             """INSERT INTO cost_log 
                (model, input_tokens, output_tokens, cost_usd, user_id, source)
                VALUES (?, ?, ?, ?, ?, ?)""",
-            (model, input_tokens, output_tokens, round(cost, 6), user_id, "openai_fallback")
+            (model, input_tokens, output_tokens, round(cost, 6), user_id, source)
         )
         conn.commit()
         conn.close()

@@ -137,7 +137,17 @@ Use emoji headers. Max 2000 chars. Telegram-friendly (no markdown)."""
             if r.status_code != 200:
                 logger.error(f"Anthropic API error: {r.status_code}")
                 return None, f"API error {r.status_code}"
-            text = r.json().get("content", [{}])[0].get("text", "")
+            _rj = r.json()
+            text = _rj.get("content", [{}])[0].get("text", "")
+            try:
+                from cost_tracker import track_cost
+                _u = _rj.get("usage", {})
+                class _Usage:
+                    input_tokens = _u.get("input_tokens", 0)
+                    output_tokens = _u.get("output_tokens", 0)
+                track_cost(_Usage(), __import__("model_tiers").MODEL_ROUTINE, source="tg_logbook")
+            except Exception:
+                pass
             return text, None
     except Exception as e:
         logger.error(f"Analyze logbook error: {e}")
