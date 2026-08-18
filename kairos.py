@@ -210,11 +210,6 @@ class KairosAgent:
         except Exception:
             pass
         last_b, last_g = None, None
-        try:
-            from news_engine import last_boursa_refresh, last_gemini_refresh
-            last_b, last_g = last_boursa_refresh, last_gemini_refresh
-        except Exception:
-            pass
         summary = self._health.check_all(
             cb_ha=self._cb_ha, cb_llm=self._cb_llm, cb_tg=self._cb_tg,
             bridge_status=bridge_st,

@@ -332,16 +332,6 @@ async def ha_dashboard():
         data["last_cmd_command"] = ""; data["last_cmd_status"] = ""; data["last_cmd_result"] = ""; data["last_cmd_time"] = ""
     # --- Priority Engine ---
     try:
-        # A1: Warm inbox cache on cold start so PE sees emails
-        if not hasattr(ha_dashboard_extended, "_inbox_cache") or not ha_dashboard_extended._inbox_cache.get("data"):
-            try:
-                from inbox_engine import fetch_unified_inbox
-                import asyncio as _aio
-                _inbox_warm = await fetch_unified_inbox(hours=24, limit=15)
-                import time as _tw
-                ha_dashboard_extended._inbox_cache = {"data": _inbox_warm, "ts": _tw.time()}
-            except Exception:
-                pass
         pe_ext = _pe_get_extended_snapshot()
         pe_rad = _pe_get_radar_snapshot()
         pe = build_priority_engine(data, pe_ext, pe_rad)

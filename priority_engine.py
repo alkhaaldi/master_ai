@@ -37,9 +37,7 @@ def _pe_minutes_since(time_str):
 def _pe_get_extended_snapshot():
     """Quick DB reads for priority engine — no psutil/git."""
     from datetime import date as _d
-    snap = {"tasks_list": [], "events_list": [], "email_total": 0, "email_unread": 0,
-            "email_critical": 0, "email_high": 0, "email_messages": [], "email_errors": [],
-            "anomalies_today": 0}
+    snap = {"tasks_list": [], "events_list": [], "anomalies_today": 0}
     try:
         with sqlite3.connect("data/life.db", timeout=3) as conn:
             conn.row_factory = sqlite3.Row
@@ -51,27 +49,6 @@ def _pe_get_extended_snapshot():
             snap["events_list"] = [dict(r) for r in rows2]
     except Exception as e:
         logger.debug("PE extended snapshot failed: %s", e)
-    # Use cached inbox from /dashboard/extended if available
-    try:
-        if _inbox_cache_ref is not None and hasattr(_inbox_cache_ref, '_inbox_cache') and _inbox_cache_ref._inbox_cache.get('data'):
-            inbox_data = _inbox_cache_ref._inbox_cache['data']
-            msgs = inbox_data.get("messages", [])
-            snap["email_total"] = inbox_data.get("total", 0)
-            snap["email_unread"] = sum(1 for m in msgs if m.get("unread"))
-            snap["email_critical"] = sum(1 for m in msgs if m.get("_priority") == 4)
-            snap["email_high"] = sum(1 for m in msgs if m.get("_priority") == 3)
-            snap["email_messages"] = msgs[:15]
-        else:
-            # Fallback: simple count from tg_email if available
-            try:
-                from tg_email import get_gmail_summary
-                gm = get_gmail_summary(hours=24)
-                snap["email_total"] = gm.get("total", 0)
-                snap["email_unread"] = gm.get("unread", 0)
-            except Exception:
-                pass
-    except Exception:
-        pass
     return snap
 
 

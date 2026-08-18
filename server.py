@@ -149,11 +149,8 @@ try:
     from brain_learning import detect_anomalies as bl_anomalies, format_anomaly_report as bl_anomaly_report
     from brain_learning import create_ha_automation as bl_create_auto, get_top_suggestions as bl_top_sugs
     from brain_learning import build_daily_summary_report as bl_summary
-    from tg_email import format_email_report as email_report, get_email_for_morning as email_morning
-    EMAIL_OK = True
 except Exception as _e:
-    logging.getLogger("master_ai").warning("tg_email not loaded: %s", _e)
-    EMAIL_OK = False
+    logging.getLogger("master_ai").warning("ha_doctor/brain_learning not loaded: %s", _e)
 try:
     from brain_learning import discover_scenes as bl_discover_scenes, format_scenes_report as bl_scenes_report, create_ha_scene as bl_create_scene
     from brain_learning import filter_existing_automations as bl_filter_autos
@@ -466,13 +463,6 @@ except Exception as _e:
     TG_REMIND_OK = False
     logging.getLogger("master_ai").warning("tg_reminders not loaded: %s", _e)
 
-try:
-    from tg_news import get_news_digest, news_scheduler
-    TG_NEWS_OK = True
-except Exception as _e:
-    TG_NEWS_OK = False
-    logging.getLogger("master_ai").warning("tg_news not loaded: %s", _e)
-
 # -- tg_tasks --
 TG_TASKS_OK = False
 try:
@@ -527,24 +517,6 @@ try:
     EXP_OK = True
 except Exception:
     EXP_OK = False
-
-try:
-    from news_engine import (
-        init_schema as news_init_schema,
-        generate_digest as news_generate_digest, get_latest_digest, get_today_digests,
-        format_digest_tg, format_sources_tg,
-        get_morning_news_text, handle_news_latest,
-        refresh_boursa as news_refresh_boursa,
-        refresh_gemini as news_refresh_gemini,
-        get_news as news_get_news,
-        get_counts as news_get_counts,
-        get_urgent_items as news_get_urgent,
-        cleanup_old as news_cleanup_old,
-    )
-    news_init_schema()
-    NEWS_ENGINE_OK = True
-except Exception:
-    NEWS_ENGINE_OK = False
 
 # Phase 6: Journal Engine
 try:
@@ -2741,35 +2713,6 @@ async def lifespan(app):
             await tg_send(cid, text)
         asyncio.create_task(reminder_loop(_remind_sender))
         logger.info("Reminder loop scheduled")
-    # Phase B5: Daily News
-    if TG_NEWS_OK:
-        async def _news_sender(text):
-            _cid = ADMIN_TELEGRAM_ID or "669769765"
-            await tg_send(int(_cid), text)
-        async def _stock_sender(text):
-            _cid = ADMIN_TELEGRAM_ID or "669769765"
-            await tg_send(int(_cid), text)
-        asyncio.create_task(news_scheduler(_news_sender))
-        logger.info("News scheduler scheduled")
-    # Phase B5b: Auto news digest (news_engine) every 6 hours
-    if NEWS_ENGINE_OK:
-        async def _news_digest_loop():
-            """Auto-generate news digest every 3 hours for dashboard."""
-            _log = logging.getLogger("news_digest_loop")
-            _log.info("News digest auto-scheduler started (every 3h)")
-            await asyncio.sleep(30)  # let startup complete
-            while True:
-                try:
-                    result = await news_generate_digest(None, "auto")
-                    if result.get("ok"):
-                        _log.info("Auto digest generated: %d items", result.get("item_count", 0))
-                    else:
-                        _log.warning("Auto digest failed: %s", result.get("error", "unknown"))
-                except Exception as _e:
-                    _log.error("Auto digest error: %s", _e)
-                await asyncio.sleep(3 * 3600)  # 3 hours
-        asyncio.create_task(_news_digest_loop())
-        logger.info("News digest auto-scheduler scheduled (3h)")
     # Phase 2 Radar: EMA crossover monitor
     if RADAR_OK:
         try:
@@ -3063,12 +3006,6 @@ async def lifespan(app):
                           description="Current radar watchlist")
     except Exception:
         pass
-    # -- News --
-    if NEWS_ENGINE_OK:
-        tool_reg.register("news_feed", lambda: news_get_news(limit=20), category="news",
-                          description="Latest 20 news items")
-        tool_reg.register("news_counts", news_get_counts, category="news",
-                          description="News item counts by category")
     # -- Journal --
     if JOURNAL_OK:
         try:
@@ -5424,9 +5361,9 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
     if cmd == "/status":
         uptime = int(time.time() - START_TIME)
         h, m = divmod(uptime // 60, 60)
-        _mc = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, TG_NEWS_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
+        _mc = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
         _t = _router_stats.get("total", 0)
-        return chr(10).join([f'✅ Master AI v{VERSION}', f'⭐ Uptime: {h}h {m}m', f'🔧 Plugins: {len(PLUGIN_REGISTRY._plugins)} | ✅ {_mc}/16', f'💬 Msgs: {_t}'])
+        return chr(10).join([f'✅ Master AI v{VERSION}', f'⭐ Uptime: {h}h {m}m', f'🔧 Plugins: {len(PLUGIN_REGISTRY._plugins)} | ✅ {_mc}/15', f'💬 Msgs: {_t}'])
 
     if cmd == "/stats":
         _up = int(time.time() - START_TIME)
@@ -5468,7 +5405,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             f"\U0001f9e9 Modules:",
             f"  {_m_ok(TG_INTENT_OK)} Intent  {_m_ok(LIFE_ROUTER_OK)} Life  {_m_ok(SMART_ROUTER_OK)} Router",
             f"  {_m_ok(BRAIN_AVAILABLE)} Brain  {_m_ok(TG_MORNING_OK)} Morning  {_m_ok(TG_ALERTS_OK)} Alerts",
-            f"  {_m_ok(TG_REMIND_OK)} Remind  {_m_ok(TG_NEWS_OK)} News  {_m_ok(DISCOVERY_OK)} Discovery",
+            f"  {_m_ok(TG_REMIND_OK)} Remind  {_m_ok(DISCOVERY_OK)} Discovery",
         ]
         if _router_cmd_log:
             _lines.append("")
@@ -5669,14 +5606,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return f"patterns error: {e}"
 
 
-    if cmd == "/email":
-        if not EMAIL_OK:
-            return "tg_email not loaded"
-        try:
-            return await email_report()
-        except Exception as e:
-            return f"email error: {e}"
-
     if cmd == "/scenes":
         if not LEARNING_OK:
             return "brain_learning not loaded"
@@ -5741,7 +5670,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             errs = diag.get("errors_last_hour", 0)
             _up = int(time.time() - START_TIME)
             _h2, _m2 = divmod(_up // 60, 60)
-            _mc2 = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, TG_NEWS_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
+            _mc2 = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
             _t2 = _router_stats.get("total", 0)
             import os as _os2
             _lkb = round(_os2.path.getsize("server.log") / 1024) if _os2.path.exists("server.log") else 0
@@ -5750,7 +5679,7 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 f"CPU: {cpu}% | RAM: {ram}%",
                 f"Temp: {temp}°C | Disk: {disk}%",
                 f"Up: {_h2}h {_m2}m | Msgs: {_t2}",
-                f"Modules: {_mc2}/16 | Plugins: {len(PLUGIN_REGISTRY._plugins)}",
+                f"Modules: {_mc2}/15 | Plugins: {len(PLUGIN_REGISTRY._plugins)}",
                 f"DB: {db}MB | Log: {_lkb}KB | Err/h: {errs}",
             ])
         except Exception as e:
@@ -5795,12 +5724,12 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                 _db_mb = round(_os3.path.getsize("data/audit.db") / 1024 / 1024, 1)
             except Exception:
                 pass
-            _mc = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, TG_NEWS_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
+            _mc = sum(1 for v in [TG_INTENT_OK, LIFE_ROUTER_OK, SMART_ROUTER_OK, BRAIN_AVAILABLE, TG_MORNING_OK, TG_ALERTS_OK, TG_REMIND_OK, DISCOVERY_OK, TG_SESSION_OK, TG_HOME_OK, TG_OPS_OK, LIFE_STOCKS_OK, LIFE_EXPENSES_OK, LIFE_HEALTH_OK, LIFE_WORK_OK] if v)
             _lines = [
                 f"\U0001f4cb Daily Summary",
                 f"",
                 f"\u23f1 Up: {_h}h {_m}m | v{VERSION}",
-                f"{'\u2705' if _ha_ok else '\u274c'} HA | \u2705 {_mc}/16 modules",
+                f"{'\u2705' if _ha_ok else '\u274c'} HA | \u2705 {_mc}/15 modules",
                 f"",
                 f"\U0001f4e8 Messages: {_t}",
                 f"  \U0001f44b Greeting: {_greet} (0 API)",
@@ -6096,7 +6025,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             import asyncio, time as _time
             from life_work import get_shift
             from task_engine import task_stats, task_list
-            from inbox_engine import fetch_unified_inbox, P_HIGH, P_CRITICAL
             parts = []
 
             # Greeting + date
@@ -6134,16 +6062,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                     parts.append("📋 مهام: لا توجد مهام ✅")
             except Exception: pass
 
-            # Inbox urgent
-            try:
-                idata = await fetch_unified_inbox(hours=24, limit=20)
-                urgent = [m for m in idata.get("messages",[]) if m.get("_priority",0)>=P_HIGH]
-                if urgent:
-                    parts.append("📧 إيميل مهم: " + str(len(urgent)))
-                    for m in urgent[:2]:
-                        parts.append("  • " + m.get("subject","")[:40])
-                else:
-                    parts.append("📧 Inbox: نظيف ✅")
             except Exception: pass
 
             # Cost today
@@ -6157,14 +6075,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         except Exception as e:
             return f"❌ /me error: {e}"
 
-    if cmd == "/suggest_tasks":
-        try:
-            from inbox_engine import format_email_task_suggestions
-            result = await format_email_task_suggestions()
-            return result if result else "✅ ما في إيميلات تحتاج إجراء الحين"
-        except Exception as e:
-            return f"❌ suggest_tasks error: {e}"
-
     if cmd == "/life":
         try:
             import asyncio
@@ -6173,7 +6083,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             from task_engine import task_list, task_stats
             from calendar_engine import get_today_events
             from calendar_reporting import render_morning_calendar_section
-            from inbox_engine import fetch_unified_inbox, P_CRITICAL, P_HIGH
 
             parts = []
 
@@ -6207,19 +6116,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             except Exception:
                 pass
 
-            # Inbox urgent/high only
-            try:
-                inbox_data = await fetch_unified_inbox(hours=24, limit=20)
-                urgent = [m for m in inbox_data.get("messages",[]) if m.get("_priority",0) >= P_HIGH]
-                if urgent:
-                    parts.append("📧 *إيميل مهم:* " + str(len(urgent)) + " رسالة")
-                    for m in urgent[:3]:
-                        parts.append("  • " + m.get("subject","")[:40])
-                else:
-                    parts.append("📧 الـ Inbox: ما في رسائل مهمة ✅")
-            except Exception:
-                pass
-
             return chr(10).join(parts) if parts else "✅ كل شي تمام"
         except Exception as e:
             logger.error(f"life error: {e}")
@@ -6229,7 +6125,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         try:
             import asyncio
             from task_engine import task_list, task_stats, format_task_list, PRIORITY_LABEL, STATUS_LABEL
-            from inbox_engine import inbox_weekly_digest
             lines = ["📅 *ملخص الأسبوع*", ""]
             # Tasks section
             s = task_stats()
@@ -6249,29 +6144,10 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
                         lines.append("  • [" + str(t["id"]) + "] " + t["title"][:45])
             else:
                 lines.append("📋 المهام: لا توجد مهام نشطة ✅")
-            lines.append("")
-            # Inbox weekly section
-            inbox_w = await inbox_weekly_digest()
-            lines.append(inbox_w)
             return chr(10).join(lines)
         except Exception as e:
             logger.error(f"week_summary error: {e}")
             return f"❌ week_summary error: {e}"
-
-    if cmd == "/inbox" or cmd == "/inbox48" or cmd == "/inbox_week":
-        try:
-            from inbox_engine import fetch_unified_inbox, format_inbox_tg, inbox_weekly_digest
-            import asyncio
-            if cmd == "/inbox_week":
-                result = await inbox_weekly_digest()
-            else:
-                hours = 48 if cmd == "/inbox48" else 24
-                data  = await fetch_unified_inbox(hours=hours, limit=15)
-                result = format_inbox_tg(data, show_limit=15)
-            return result
-        except Exception as e:
-            logger.error(f"inbox error: {e}")
-            return f"❌ inbox error: {e}"
 
     if cmd == "/tasks" or cmd.startswith("/tasks "):
         if not TG_TASKS_OK:
@@ -6288,33 +6164,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             return str(llm_tool_task_update(task_id=int(sub[5:].strip()), status="done"))
         else:
             return "الاستخدام: /task add <عنوان> | /task done <رقم>"
-    # --- News Digests ---
-    if cmd == "/news" or cmd.startswith("/news "):
-        if not NEWS_ENGINE_OK:
-            return "❌ news engine not loaded"
-        args_t = text.strip()[5:].strip() if len(text.strip()) > 5 else ""
-        cat = None
-        if args_t in ("kuwait", "economy", "technology", "tech"):
-            cat = "technology" if args_t == "tech" else args_t
-        return handle_news_latest(cat)
-    if cmd == "/news_now" or cmd.startswith("/news_now "):
-        if not NEWS_ENGINE_OK:
-            return "❌ news engine not loaded"
-        args_t = text.strip()[9:].strip() if len(text.strip()) > 9 else ""
-        cat = None
-        if args_t in ("kuwait", "economy", "technology", "tech"):
-            cat = "technology" if args_t == "tech" else args_t
-        try:
-            result = await news_generate_digest(cat, "manual")
-            if result.get("ok"):
-                return format_digest_tg(get_latest_digest(cat))
-            return f"❌ {result.get('error', 'failed')}"
-        except Exception as e:
-            return f"❌ {e}"
-    if cmd == "/news_sources":
-        if not NEWS_ENGINE_OK:
-            return "❌ news engine not loaded"
-        return format_sources_tg()
         # --- Journal ---
     if cmd == "/trade" or cmd.startswith("/trade "):
         if not JOURNAL_OK:
@@ -6583,12 +6432,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
         if len(parts) >= 2:
             return await get_price(parts[1])
         return "الاستخدام: /price TICKER"
-
-    if cmd.startswith("/news"):
-        if not TG_NEWS_OK:
-            return "News module not loaded"
-        digest = await get_news_digest()
-        return digest
 
     if cmd.startswith("/remind") and not cmd.startswith("/reminders"):
         if not TG_REMIND_OK:
@@ -7066,15 +6909,6 @@ async def tg_handle_command(chat_id, text: str) -> str | None:
             msg += chr(10) + "Cleaned: " + str(cleaned) + " old files"
         return msg
 
-
-    if cmd == "/tasks" or cmd.startswith("/tasks "):
-        try:
-            from tg_tasks import handle_tasks_command
-            args = cmd[7:].strip() if cmd.startswith("/tasks ") else ""
-            return handle_tasks_command(args)
-        except Exception as e:
-            logger.error(f"tasks error: {e}")
-            return f"❌ tasks error: {e}"
 
     return None
 
@@ -8158,11 +7992,6 @@ async def get_service_health():
     except Exception:
         pass
     last_b, last_g = None, None
-    try:
-        from news_engine import last_boursa_refresh, last_gemini_refresh
-        last_b, last_g = last_boursa_refresh, last_gemini_refresh
-    except Exception:
-        pass
     return health_hub.check_all(
         cb_ha=_cb_ha, cb_llm=_cb_llm, cb_tg=_cb_tg,
         bridge_status=bridge_st,
@@ -8416,7 +8245,6 @@ async def tg_stats():
             "morning_report": TG_MORNING_OK,
             "alerts": TG_ALERTS_OK,
             "reminders": TG_REMIND_OK,
-            "news": TG_NEWS_OK,
             "discovery": DISCOVERY_OK,
             "session": TG_SESSION_OK,
             "home": TG_HOME_OK,
@@ -8881,15 +8709,12 @@ async def nightly_summary_scheduler():
                     logger.info(f"Corrections decay: {_cd} corrections decayed")
             except Exception as _ce:
                 logger.warning(f"Corrections decay error: {_ce}")
-            # v8 Phase 2: Daily Tasks + Inbox digest in nightly summary
+            # v8 Phase 2: Daily Tasks digest in nightly summary
             try:
                 from task_engine import format_tasks_summary
-                from inbox_engine import inbox_digest
                 _tasks_sum = format_tasks_summary()
-                _inbox_sum = await inbox_digest(hours=24)
                 _daily_extra = ""
                 if _tasks_sum: _daily_extra += chr(10)+chr(10) + _tasks_sum
-                if _inbox_sum: _daily_extra += chr(10)+chr(10) + _inbox_sum
                 if _daily_extra:
                     await tg_send(_chat, "📋 *ملخص اليوم*" + _daily_extra)
             except Exception as _de:
@@ -8993,17 +8818,14 @@ async def brain_weekly_insight():
                         await tg_send(_chat, _fbd)
                 except Exception:
                     pass
-            # v8 Phase 2: Tasks + Inbox weekly digest on Fridays
+            # v8 Phase 2: Tasks weekly digest on Fridays
             try:
                 if __import__("datetime").datetime.now().weekday() == 4:
                     from task_engine import format_tasks_summary
-                    from inbox_engine import inbox_weekly_digest
                     t_sum = format_tasks_summary()
-                    i_sum = await inbox_weekly_digest()
-                    if t_sum or i_sum:
+                    if t_sum:
                         weekly_msg = "\U0001f4c5 *\u0645\u0644\u062e\u0635 \u0627\u0644\u0623\u0633\u0628\u0648\u0639*" + chr(10)
-                        if t_sum: weekly_msg += t_sum + chr(10)+chr(10)
-                        if i_sum: weekly_msg += i_sum
+                        weekly_msg += t_sum
                         await tg_send(_chat, weekly_msg)
             except Exception as _we:
                 logger.debug(f"Weekly digest error: {_we}")

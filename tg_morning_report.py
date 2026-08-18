@@ -232,15 +232,6 @@ async def build_morning_report() -> str:
     if brain:
         report += chr(10)*2 + "🧠 الذكاء:" + chr(10) + brain
 
-    # Email summary
-    try:
-        from tg_email import get_email_for_morning
-        email_sum = await get_email_for_morning()
-        if email_sum:
-            report += chr(10)*2 + chr(0x1f4e7) + " الإيميل:" + chr(10) + email_sum
-    except Exception:
-        pass
-
     # v8 Phase 2: Tasks summary
     try:
         from task_engine import format_tasks_summary
@@ -249,15 +240,6 @@ async def build_morning_report() -> str:
             report += chr(10)*2 + tasks_sum
     except Exception as e:
         logger.debug(f"Tasks morning: {e}")
-
-    # v8 Phase 2: Inbox digest
-    try:
-        from inbox_engine import inbox_digest
-        inbox_sum = await inbox_digest(hours=24)
-        if inbox_sum:
-            report += chr(10)*2 + inbox_sum
-    except Exception as e:
-        logger.debug(f"Inbox morning: {e}")
 
 
     # v8 Phase 3: Occasions in morning report
@@ -277,24 +259,6 @@ async def build_morning_report() -> str:
             report += chr(10)*2 + exp_text
     except Exception:
         pass
-
-    # v8 Phase 4: News in morning report
-    try:
-        from news_engine import get_morning_news_text
-        news_text = get_morning_news_text()
-        if news_text:
-            report += chr(10)*2 + news_text
-    except Exception:
-        pass
-
-    # v8 Phase 3: Email task suggestions
-    try:
-        from inbox_engine import format_email_task_suggestions
-        suggestions = await format_email_task_suggestions()
-        if suggestions:
-            report += chr(10)*2 + suggestions
-    except Exception as e:
-        logger.debug(f"Suggest tasks morning: {e}")
 
     # Phase 5+6: Health + Trading + TV
     try:

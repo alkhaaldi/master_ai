@@ -141,21 +141,6 @@ async def quick_answer(text: str):
     """Try to answer quickly without LLM. Returns None if no match."""
     t = _normalize_ar(text)
 
-    # 0-news) News — zero LLM (read latest digest only)
-    _news_pats = ["اخر الاخبار", "عطني الاخبار", "ملخص الاخبار", "شنو الاخبار",
-                   "اخبار الكويت", "اخبار الاقتصاد", "اخبار التكنولوجيا"]
-    for _np in _news_pats:
-        if _normalize_ar(_np) in t:
-            try:
-                from news_engine import handle_news_latest
-                cat = None
-                if "كويت" in t: cat = "kuwait"
-                elif "اقتصاد" in t: cat = "economy"
-                elif "تكنولوجيا" in t or "تقنيه" in t: cat = "technology"
-                return handle_news_latest(cat)
-            except Exception:
-                break
-
     # 0-exp) Expenses — zero LLM
     _exp_today = ["كم صرفت اليوم", "مصاريف اليوم", "صرف اليوم"]
     _exp_week = ["كم صرفت هالاسبوع", "مصاريف الاسبوع", "صرف هالاسبوع"]
@@ -401,16 +386,6 @@ async def quick_answer(text: str):
                 )
                 return "✅ أضفت مهمة #" + str(_task['id']) + ": " + _task['title']
             except Exception: pass
-
-    if re.search(r"أضف مهام من الإيميل|مهام من الإيميل|suggest.*task|task.*email", t):
-        try:
-            import asyncio, concurrent.futures
-            from inbox_engine import format_email_task_suggestions
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                result = pool.submit(asyncio.run, format_email_task_suggestions()).result(timeout=20)
-            return result if result else "✅ ما في إيميلات تحتاج إجراء"
-        except Exception as e:
-            return f"suggest error: {e}"
 
     # 0a) Capabilities — zero LLM
     if re.search(r"شنو تقدر تسوي|شنو تعرف تسوي|وش تسوي|قدراتك|ميزاتك", t):

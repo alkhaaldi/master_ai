@@ -162,14 +162,11 @@ TOOL RULES:
 - task_list: List user tasks (personal+work). Filter by status/category/due_today/due_overdue
 - task_create: Create a new task. title required. category=personal|work, priority=high|med|low, due_date=YYYY-MM-DD
 - task_update: Update task by task_id. Change status/priority/due_date/title
-- inbox_summary: Get unified Gmail+KNPC inbox. hours=24/48/168. Shows emails grouped by priority
 TASK RULES:
 - When user says "خلصت X" or "انجزت X" — use task_list to find task then task_update status=done
 - When user asks to add a task — use task_create. Guess category (personal/work) from context
 - When user asks about tasks without specifying — use task_list with no filters (shows active only)
 - task_list due_today=true for "مهام اليوم", due_overdue=true for "المتأخرة"
-INBOX RULES:
-- Use inbox_summary when user asks about email/inbox/إيميل
 - relationship_lookup: person info, birthday, occasions
 - relationship_add: add person/occasion/note
 - relationship_upcoming: upcoming occasions/birthdays
@@ -184,8 +181,6 @@ INBOX RULES:
 - tv_watchlist_list: list TradingView watchlist
 - tv_last_signal: last TradingView signal for ticker
 - tv_signal_summary: signal summary (day/week) (آخر مصاريف)
-- news_get_digest: latest news digest
-- news_generate_now: generate fresh news now
 - hours=24 for today, hours=48 for yesterday too, hours=168 for this week
 - IMPORTANT: You have FULL access to Google Calendar. You can read, create, and delete events. Always use calendar tools when asked about appointments or schedule.
 - ssh_run: safe commands only. No rm -rf, no reboot without asking
@@ -346,15 +341,12 @@ TOOLS = [
     ,{"name": "task_list", "description": "List personal/work tasks. Filter by status (todo/in_progress/done), category (personal/work), due_today or due_overdue.", "input_schema": {"type": "object", "properties": {"status": {"type": "string", "description": "todo|in_progress|done|cancelled"}, "category": {"type": "string", "description": "personal|work"}, "due_today": {"type": "boolean"}, "due_overdue": {"type": "boolean"}, "limit": {"type": "integer", "default": 20}}}}
     ,{"name": "task_create", "description": "Create a new task for the user. category=personal or work.", "input_schema": {"type": "object", "properties": {"title": {"type": "string"}, "category": {"type": "string", "description": "personal|work", "default": "personal"}, "priority": {"type": "string", "description": "high|med|low", "default": "med"}, "due_date": {"type": "string", "description": "YYYY-MM-DD"}, "description": {"type": "string"}}, "required": ["title"]}}
     ,{"name": "task_update", "description": "Update a task status, priority, due_date, or title by task_id.", "input_schema": {"type": "object", "properties": {"task_id": {"type": "integer"}, "status": {"type": "string", "description": "todo|in_progress|done|cancelled"}, "priority": {"type": "string"}, "due_date": {"type": "string"}, "title": {"type": "string"}}, "required": ["task_id"]}}
-    ,{"name": "inbox_summary", "description": "Get unified inbox summary from Gmail + KNPC Outlook. Shows emails by priority (critical/high/normal/low). Use hours=24 for today, hours=48 for yesterday too, hours=168 for this week.", "input_schema": {"type": "object", "properties": {"hours": {"type": "integer", "description": "Hours to look back (24/48/168)", "default": 24}, "limit": {"type": "integer", "description": "Max messages to show", "default": 10}}}}
     ,{"name": "relationship_lookup", "description": "Look up a person and their occasions/notes. Use for birthday, info queries.", "input_schema": {"type": "object", "properties": {"name": {"type": "string", "description": "Person name"}}, "required": ["name"]}}
     ,{"name": "relationship_add", "description": "Add person/occasion/note. action=add_contact|add_occasion|add_note", "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "name": {"type": "string"}, "relationship_type": {"type": "string"}, "birth_date": {"type": "string"}, "aliases": {"type": "string"}, "occasion_title": {"type": "string"}, "occasion_date": {"type": "string"}, "occasion_type": {"type": "string"}, "note_text": {"type": "string"}, "note_type": {"type": "string"}}, "required": ["action", "name"]}}
     ,{"name": "relationship_upcoming", "description": "List upcoming occasions in next N days.", "input_schema": {"type": "object", "properties": {"days": {"type": "integer", "default": 30}}}}
     ,{"name": "expense_add_entry", "description": "Add expense. amount+category required.", "input_schema": {"type": "object", "properties": {"amount": {"type": "number"}, "category": {"type": "string", "description": "restaurant|coffee|groceries|fuel|pharmacy|shopping|kids|bills|transport|misc"}, "note": {"type": "string"}}, "required": ["amount", "category"]}}
     ,{"name": "expense_get_summary", "description": "Get expense summary for period.", "input_schema": {"type": "object", "properties": {"period": {"type": "string", "description": "today|week|month"}}, "required": ["period"]}}
     ,{"name": "expense_list_recent", "description": "List recent expenses.", "input_schema": {"type": "object", "properties": {"limit": {"type": "integer", "default": 10}}}}
-    ,{"name": "news_get_digest", "description": "Get latest news digest. category: kuwait|economy|technology or null for all.", "input_schema": {"type": "object", "properties": {"category": {"type": "string", "description": "kuwait|economy|technology"}}}}
-    ,{"name": "news_generate_now", "description": "Generate fresh news digest now. category: kuwait|economy|technology or null.", "input_schema": {"type": "object", "properties": {"category": {"type": "string"}}}}
     ,{"name": "health_log_entry", "description": "Log health data: sleep hours, exercise minutes, weight kg, water cups.", "input_schema": {"type": "object", "properties": {"log_type": {"type": "string", "description": "sleep|exercise|weight|water"}, "value": {"type": "number"}, "unit": {"type": "string"}, "note": {"type": "string"}, "log_date": {"type": "string"}}, "required": ["log_type", "value"]}}
     ,{"name": "health_get_summary", "description": "Get health summary for last N days.", "input_schema": {"type": "object", "properties": {"days": {"type": "integer", "default": 7}}}}
     ,{"name": "trade_log_entry", "description": "Log a trade. action: buy/sell/close.", "input_schema": {"type": "object", "properties": {"ticker": {"type": "string"}, "action": {"type": "string"}, "shares": {"type": "integer"}, "price": {"type": "number"}, "strategy": {"type": "string"}, "reason": {"type": "string"}, "emotion": {"type": "string"}, "outcome": {"type": "string"}, "pnl": {"type": "number"}, "review": {"type": "string"}, "trade_date": {"type": "string"}}, "required": ["ticker", "action"]}}
@@ -374,9 +366,6 @@ if _SMEM: TOOLS.extend(smem.MEMORY_TOOLS)
 async def execute_tool(name, args, executors):
     try:
         # v8 Phase 2: Task tools
-        if name == "inbox_summary":
-            from inbox_engine import llm_tool_inbox_summary
-            return llm_tool_inbox_summary(**args)
         if name == "task_list":
             from tg_tasks import llm_tool_task_list
             return llm_tool_task_list(**args)
@@ -419,17 +408,6 @@ async def execute_tool(name, args, executors):
         if name == "expense_list_recent":
             from expenses_engine import list_expenses, format_recent_tg
             return {"ok": True, "text": format_recent_tg(list_expenses(args.get("limit",10)))}
-        # v8 Phase 4: News tools
-        if name == "news_get_digest":
-            from news_engine import get_latest_digest, format_digest_tg
-            return {"ok": True, "text": format_digest_tg(get_latest_digest(args.get("category")))}
-        if name == "news_generate_now":
-            from news_engine import generate_digest, get_latest_digest, format_digest_tg
-            r = await generate_digest(args.get("category"), "manual")
-            if r.get("ok"):
-                return {"ok": True, "text": format_digest_tg(get_latest_digest(args.get("category")))}
-            return json.dumps({"ok": False, "error": r.get("error", "digest generation failed")})
-
         # Phase 5: Health tools
         if name == "health_log_entry":
             from health_engine import llm_tool_health_log

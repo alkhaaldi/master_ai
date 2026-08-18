@@ -180,22 +180,6 @@ async def check_suggestions():
                 _record("tasks_overdue", msg)
         except Exception: pass
 
-    # 7. v8: Critical inbox alert (once per 6h, any hour)
-    if not _in_cooldown("inbox_critical"):
-        try:
-            import asyncio as _aio
-            import concurrent.futures as _cf
-            from inbox_engine import fetch_unified_inbox, P_CRITICAL
-            with _cf.ThreadPoolExecutor() as pool:
-                data = pool.submit(_aio.run, fetch_unified_inbox(hours=6, limit=10)).result(timeout=15)
-            critical = [m for m in data.get("messages",[]) if m.get("_priority",0) >= P_CRITICAL and m.get("unread")]
-            if critical:
-                subj = critical[0].get("subject","")[:40]
-                msg = "🚨 إيميل عاجل: " + subj
-                results.append(msg)
-                _record("inbox_critical", msg)
-        except Exception: pass
-
     return results
 
 

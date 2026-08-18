@@ -301,16 +301,6 @@ async def _route_intent_inner(text: str) -> dict | None:
         return await _handle_scene(text, emap)
 
     # --- 2. State query ---
-    # Email queries: "شنو الإيميلات؟"
-    if any(ew in text for ew in EMAIL_WORDS):
-        try:
-            from tg_email import format_email_report
-            import asyncio
-            report = await format_email_report()
-            return {"text": report, "action": "email", "source": "email"}
-        except Exception:
-            pass
-
         # Scene discovery: "مشاهد مقترحة", "اقترح مشاهد"
     if any(sw in text for sw in SCENE_DISCOVER_WORDS):
         try:
@@ -895,7 +885,6 @@ BRAIN_WORDS = {"ذكاء", "الذكاء", "brain", "مخ", "دماغ", "ثقة"
 
 SUMMARY_WORDS = {"ملخص", "الملخص", "summary", "شلون البيت", "حالة البيت", "وضع البيت"}
 SCENE_DISCOVER_WORDS = {"مشاهد مقترحة", "اقترح مشاهد", "scenes", "سينات جديدة", "مشهد جديد", "اقتراح scene"}
-EMAIL_WORDS = {"إيميل", "الإيميل", "ايميل", "الايميل", "email", "بريد", "البريد", "رسائل", "inbox", "ميل"}
 _TIME_PATTERNS = {
     "ساعة": 1, "ساعتين": 2, "٣ ساعات": 3, "3 ساعات": 3,
     "٦ ساعات": 6, "6 ساعات": 6, "١٢ ساعة": 12, "12 ساعة": 12,
