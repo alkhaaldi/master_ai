@@ -133,7 +133,7 @@ async function load(){
     const ic=$('insight-card');
     const sev=ta.urgency||ta.severity||'info';
     ic.className='card insight-card lvl-'+(sev==='high'||sev==='critical'?'alert':sev==='medium'?'warning':'info');
-    const icons={trading:'\u{1F4C8}',calendar:'\u{1F4C5}',home:'\u{1F3E0}',email:'\u{1F4E7}',system:'\u2699\uFE0F'};
+    const icons={trading:'\u{1F4C8}',calendar:'\u{1F4C5}',home:'\u{1F3E0}',system:'\u2699\uFE0F'};
     $('insight-icon').textContent=icons[ta.domain]||'\u{1F916}';
     $('insight-text').textContent=ta.headline||dash.ai_insight||'\u2705 \u0643\u0644 \u0634\u064A \u062A\u0645\u0627\u0645';
     $('insight-sub').textContent=ta.recommendation||ta.why_now||'';
