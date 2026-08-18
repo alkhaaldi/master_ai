@@ -82,8 +82,6 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
   <a class="nav-link active">&#x1F3E0; &#x0627;&#x0644;&#x0628;&#x064A;&#x062A;</a>
   <a class="nav-link" onclick="navTo('/trading/assistant')">&#x1F916; &#x0627;&#x0644;&#x0645;&#x0633;&#x0627;&#x0639;&#x062F;</a>
   <a class="nav-link" onclick="navTo('/trading/system')">&#x2699;&#xFE0F; &#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</a>
-  <a class="nav-link" onclick="navTo('/trading/email')">&#x1F4E7; &#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F;</a>
-  <a class="nav-link" onclick="navTo('/trading/news')">&#x1F4F0; &#x0627;&#x0644;&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</a>
     <a href="decisions" class="nav-link">القرارات</a>
     <a href="personality" class="nav-link">الشخصية</a>
 </div>
@@ -115,7 +113,7 @@ async function load(){
     $('p-lights').textContent=dash.home_lights_on>=0?dash.home_lights_on:'--';
     $('p-ac').textContent=dash.home_ac_on>=0?dash.home_ac_on:'--';
     $('p-covers').textContent=dash.home_covers_open>=0?dash.home_covers_open:'--';
-    $('page-sub').textContent=(dash.active_devices_count||0)+' \u062C\u0647\u0627\u0632 \u0646\u0634\u0637';
+    $('page-sub').textContent=(dash.active_devices_count>=0?dash.active_devices_count:'--')+' \u062C\u0647\u0627\u0632 \u0646\u0634\u0637';
     const rooms=dash.rooms_summary||[];
     const active=rooms.filter(r=>r.lights_on>0||(r.ac_state&&r.ac_state!=='off'));
     $('active-rooms').innerHTML=active.length?active.map(r=>renderRoom(r)).join(''):'<div class="empty">\u0644\u0627 \u063A\u0631\u0641 \u0646\u0634\u0637\u0629 \u0627\u0644\u062D\u064A\u0646</div>';
@@ -128,5 +126,5 @@ load();setInterval(load,60000);
 })();
 </script>
 <script src="indicator-tooltips.js"></script>
-<script src="nav.js?v=1"></script></body>
+<script src="nav.js?v=3"></script></body>
 </html>

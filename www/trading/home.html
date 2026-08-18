@@ -90,7 +90,7 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
 .teaser-empty{font-size:.7rem;color:var(--text-4);text-align:center;padding:4px}
 
 /* ═══ NAVIGATION ═══ */
-.nav-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.nav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .nav-btn{
   background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:14px 8px;
   text-align:center;cursor:pointer;transition:.2s;text-decoration:none;display:block;
@@ -112,7 +112,7 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
   main{padding:12px 14px 90px}
   .hero-title{font-size:1.3rem}
   .status-grid{grid-template-columns:1fr 1fr}
-  .nav-grid{grid-template-columns:repeat(4,1fr)}
+  .nav-grid{grid-template-columns:repeat(3,1fr)}
 }
 .hide{display:none!important}
 .ltr{direction:ltr;text-align:left}
@@ -224,8 +224,6 @@ main{max-width:900px;margin:0 auto;padding:16px 20px 90px}
     <a class="nav-btn" onclick="navTo('/trading/swing')" style="border-color:var(--gold-br);background:var(--gold-bg);grid-column:span 2"><div class="nav-icon">&#x1F4C8;</div><div class="nav-label" style="color:var(--gold);font-size:.75rem">&#x0627;&#x0644;&#x062A;&#x062F;&#x0627;&#x0648;&#x0644;</div></a>
     <a class="nav-btn" onclick="navTo('/trading/calendar')"><div class="nav-icon">&#x1F4C5;</div><div class="nav-label">&#x0627;&#x0644;&#x0645;&#x0648;&#x0627;&#x0639;&#x064A;&#x062F;</div></a>
     <a class="nav-btn" onclick="navTo('/trading/home-control')"><div class="nav-icon">&#x1F3E0;</div><div class="nav-label">&#x0627;&#x0644;&#x0628;&#x064A;&#x062A;</div></a>
-    <a class="nav-btn" onclick="navTo('/trading/email')"><div class="nav-icon">&#x1F4E7;</div><div class="nav-label">&#x0627;&#x0644;&#x0628;&#x0631;&#x064A;&#x062F;</div></a>
-    <a class="nav-btn" onclick="navTo('/trading/news')"><div class="nav-icon">&#x1F4F0;</div><div class="nav-label">&#x0627;&#x0644;&#x0623;&#x062E;&#x0628;&#x0627;&#x0631;</div></a>
     <a class="nav-btn" onclick="navTo('/trading/system')"><div class="nav-icon">&#x2699;&#xFE0F;</div><div class="nav-label">&#x0627;&#x0644;&#x0646;&#x0638;&#x0627;&#x0645;</div></a>
     <a class="nav-btn" onclick="navTo('/trading/assistant')"><div class="nav-icon">&#x1F916;</div><div class="nav-label">&#x0627;&#x0644;&#x0645;&#x0633;&#x0627;&#x0639;&#x062F;</div></a>
   </div>
@@ -348,7 +346,7 @@ async function load(){
     const ac = dash.home_ac_on >=0 ? dash.home_ac_on : '--';
     const covers = dash.home_covers_open >=0 ? dash.home_covers_open : '--';
     $('s-home').textContent = '💡'+lights+' ❄️'+ac+' 🪟'+covers;
-    $('s-home-sub').textContent = (dash.active_devices_count||0)+' جهاز نشط';
+    $('s-home-sub').textContent = (dash.active_devices_count>=0?dash.active_devices_count:'--')+' جهاز نشط';
 
     // Radar
     const mkt = dash.market_open ? '🟢 السوق مفتوح' : '🔴 السوق مغلق';
@@ -403,7 +401,7 @@ setInterval(load, 60000);
 })();
 </script>
 <script src="indicator-tooltips.js"></script>
-<script src="nav.js?v=1"></script>
+<script src="nav.js?v=3"></script>
   <script src="datastate-notice.js"></script>
 </body>
 </html>
