@@ -256,16 +256,16 @@ def parse_trade_input(text):
 
 # ── TG Handlers ───────────────────────────────────────────
 def handle_trade_log(args_text):
-    """/trade buy CLEANING 100 @153 [CLEANING_V3] accumulation zone"""
+    """/trade_log buy CLEANING 100 @153 [CLEANING_V3] accumulation zone"""
     if not args_text or not args_text.strip():
         return ("\u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645:\n"
-                "/trade buy CLEANING 100 @153\n"
-                "/trade sell SENERGY 200 @140\n"
-                "/trade buy INOVEST 500 @0.120 [INOVEST_V5]")
+                "/trade_log buy CLEANING 100 @153\n"
+                "/trade_log sell SENERGY 200 @140\n"
+                "/trade_log buy INOVEST 500 @0.120 [INOVEST_V5]")
 
     parsed = parse_trade_input(args_text)
     if not parsed:
-        return "\u26a0\ufe0f \u0645\u0627 \u0641\u0647\u0645\u062a. \u0627\u0644\u0635\u064a\u063a\u0629: /trade buy TICKER [shares] [@price] [strategy]"
+        return "\u26a0\ufe0f \u0645\u0627 \u0641\u0647\u0645\u062a. \u0627\u0644\u0635\u064a\u063a\u0629: /trade_log buy TICKER [shares] [@price] [strategy]"
 
     return log_trade(**parsed)
 
