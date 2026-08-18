@@ -15,8 +15,6 @@ const NAV_ITEMS = [
 const MORE_ITEMS = [
   {icon:"\u{1F4D3}",label:"\u0627\u0644\u064A\u0648\u0645\u064A\u0629",path:"/trading/journal"},
   {icon:"\u{1F4C5}",label:"\u0627\u0644\u0645\u0648\u0627\u0639\u064A\u062F",path:"/trading/calendar"},
-  {icon:"\u{1F4F0}",label:"\u0627\u0644\u0623\u062E\u0628\u0627\u0631",path:"/trading/news"},
-  {icon:"\u{1F4E7}",label:"\u0627\u0644\u0628\u0631\u064A\u062F",path:"/trading/email"},
   {icon:"\u{1F916}",label:"\u0627\u0644\u0645\u0633\u0627\u0639\u062F",path:"/trading/assistant"},
   {icon:"\u{1F3E0}",label:"\u0627\u0644\u0628\u064A\u062A",path:"/trading/home-control"},
   {icon:"\u{1F4D0}",label:"\u0627\u0644\u062A\u062D\u0644\u064A\u0644",path:"/trading/analysis"},

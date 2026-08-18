@@ -8385,65 +8385,6 @@ async def get_tool_detail(name: str):
     d["available"] = tool_reg.is_available(name)
     return d
 
-# ── News API ──────────────────────────────────────────────
-@app.get("/api/news")
-async def api_news(category: str = None, sub: str = None,
-                   limit: int = 50, min_priority: int = 1):
-    if not NEWS_ENGINE_OK:
-        return {"items": [], "counts": {}, "error": "news_engine not loaded"}
-    items = news_get_news(category, sub, limit, min_priority)
-    counts = news_get_counts()
-    try:
-        from news_engine import last_boursa_refresh, last_gemini_refresh
-        lb, lg = last_boursa_refresh, last_gemini_refresh
-    except Exception:
-        lb, lg = None, None
-    return {"items": items, "counts": counts, "last_boursa_refresh": lb, "last_gemini_refresh": lg}
-
-@app.post("/api/news/refresh-boursa")
-async def api_news_refresh_boursa(request: Request):
-    _require_api_key(request)
-    if not NEWS_ENGINE_OK:
-        return {"ok": False, "error": "news_engine not loaded"}
-    # Task tracking (Integration 7)
-    try:
-        from task_manager import TaskManager, TaskType
-        _tm = TaskManager.instance()
-        _task = _tm.create_task(TaskType.NEWS_FETCH, {"source": "boursa"})
-        _tm.start_task(_task.task_id)
-    except Exception:
-        _tm, _task = None, None
-    try:
-        result = await asyncio.to_thread(news_refresh_boursa)
-        if _tm and _task:
-            _tm.complete_task(_task.task_id, result=str(result.get("count", 0)) + " items")
-        return result
-    except Exception as e:
-        if _tm and _task:
-            _tm.fail_task(_task.task_id, error=str(e)[:100])
-        return {"ok": False, "error": str(e)}
-
-@app.post("/api/news/refresh-gemini")
-async def api_news_refresh_gemini(request: Request):
-    _require_api_key(request)
-    if not NEWS_ENGINE_OK:
-        return {"ok": False, "error": "news_engine not loaded"}
-    try:
-        from task_manager import TaskManager, TaskType
-        _tm = TaskManager.instance()
-        _task = _tm.create_task(TaskType.NEWS_FETCH, {"source": "gemini"})
-        _tm.start_task(_task.task_id)
-    except Exception:
-        _tm, _task = None, None
-    try:
-        result = await asyncio.to_thread(news_refresh_gemini)
-        if _tm and _task:
-            _tm.complete_task(_task.task_id, result=str(result.get("count", 0)) + " items")
-        return result
-    except Exception as e:
-        if _tm and _task:
-            _tm.fail_task(_task.task_id, error=str(e)[:100])
-        return {"ok": False, "error": str(e)}
 
 
 
