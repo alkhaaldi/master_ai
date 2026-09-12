@@ -1,0 +1,46 @@
+family,test,statistic,p_raw,null_model,effect,note,q_BH,p_bonferroni
+F8 groups,Meccan vs Medinan: words_per_ayah (Mann-Whitney),282.5,1.3366138739044073e-09,rank test,median Mecc=5.81 Med=18.24,,6.014762432569833e-08,6.014762432569833e-08
+F8 groups,Muqatta'at vs others: n_ayat (Mann-Whitney),2010.0,4.275450293140541e-07,rank test,median Muq=85.00 other=26.00,,9.619763159566217e-06,1.9239526319132435e-05
+F7 verse position,"last verse longer than first verse (sign test, excl. muqatta'at+Fatiha)",53.0,1.919969240032143e-05,binomial sign test,53 longer / 17 shorter / 9 equal,,0.0001730682696634399,0.0008639861580144643
+F1 correlation,"spearman(surah_no,n_ayat)",-0.845,4.999750012499375e-05,permute y across surahs,rho=-0.845,,0.0001730682696634399,0.0022498875056247186
+F2 adjacency,lag-1 autocorr of detrended log n_words (revelation order),0.411,4.999750012499375e-05,permute detrended residuals,r1=0.411,,0.0001730682696634399,0.0022498875056247186
+F1 correlation,"spearman(surah_no,words_per_ayah)",-0.711,4.999750012499375e-05,permute y across surahs,rho=-0.711,,0.0001730682696634399,0.0022498875056247186
+F1 correlation,"spearman(rev_order,words_per_ayah)",0.671,4.999750012499375e-05,permute y across surahs,rho=0.671,,0.0001730682696634399,0.0022498875056247186
+F1 correlation,"spearman(surah_no,rev_order)",-0.406,4.999750012499375e-05,permute y across surahs,rho=-0.406,,0.0001730682696634399,0.0022498875056247186
+F11 word length,"partial spearman(rev_order, letters_per_word | words_per_ayah)",0.415,4.999750012499375e-05,permute letters_per_word,rho_partial=0.415,,0.0001730682696634399,0.0022498875056247186
+F2 adjacency,lag-1 autocorr of log words_per_ayah vs block-6 shuffle (mushaf order),0.791,4.999750012499375e-05,shuffle within blocks of 6 (trend-preserving),"r1=0.791, null 0.633",,0.0001730682696634399,0.0022498875056247186
+F8 groups,"Meccan/Medinan clustering (runs test, mushaf order)",25.0,4.999750012499375e-05,permute labels,"runs=25, null mean 43.2",,0.0001730682696634399,0.0022498875056247186
+F8 groups,"Muqatta'at surahs clustering (runs test, mushaf order)",21.0,4.999750012499375e-05,permute labels,"runs=21, null mean 44.2",,0.0001730682696634399,0.0022498875056247186
+F2 adjacency,lag-1 autocorr of detrended log words_per_ayah (mushaf order),0.529,4.999750012499375e-05,permute detrended residuals,r1=0.529,,0.0001730682696634399,0.0022498875056247186
+F8 groups,Meccan vs Medinan: letters_per_word (Mann-Whitney),608.0,8.851276205713598e-05,rank test,median Mecc=4.20 Med=4.35,,0.00028450530661222275,0.003983074292571119
+F1 correlation,"spearman(n_ayat,words_per_ayah)",0.449,9.99950002499875e-05,permute y across surahs,rho=0.449,,0.0002999850007499625,0.004499775011249437
+F2 adjacency,lag-1 autocorr of detrended log words_per_ayah (revelation order),0.345,0.00014999250037498125,permute detrended residuals,r1=0.345,,0.00042185390730463477,0.006749662516874156
+F7 verse position,"mean within-surah spearman(verse index, length) over 95 surahs",0.109,0.00024993751562109475,shuffle verses within surah,,,0.0005355803906166316,0.011247188202949263
+F7 verse position,"last verse length z-score (excl. muqatta'at+Fatiha, 79 surahs)",0.486,0.00024993751562109475,shuffle verses within surah,mean z=0.49,,0.0005355803906166316,0.011247188202949263
+F7 verse position,"first verse length z-score (excl. muqatta'at+Fatiha, 79 surahs)",-0.423,0.00024993751562109475,shuffle verses within surah,mean z=-0.42,,0.0005355803906166316,0.011247188202949263
+F7 verse position,"first verse length z-score (all, 109 surahs)",-0.736,0.00024993751562109475,shuffle verses within surah,mean z=-0.74,,0.0005355803906166316,0.011247188202949263
+F7 verse position,"last verse length z-score (all, 109 surahs)",0.39,0.00024993751562109475,shuffle verses within surah,mean z=0.39,,0.0005355803906166316,0.011247188202949263
+F1 correlation,"spearman(rev_order,letters_per_word)",0.335,0.0003499825008749562,permute y across surahs,rho=0.335,,0.0007158732972442285,0.015749212539373027
+F10 regularity,median within-surah CV of verse length,0.428,0.0004997501249375312,uniform random partition of words,obs 0.428 vs null 0.897,,0.0009777719835734305,0.022488755622188904
+F8 groups,Muqatta'at vs others: words_per_ayah (Mann-Whitney),1739.0,0.000993875412254395,rank test,median Muq=14.17 other=5.00,,0.0018635163979769907,0.04472439355144778
+F2 adjacency,lag-1 autocorr of log n_ayat vs block-6 shuffle (mushaf order),0.849,0.0010499475026248687,shuffle within blocks of 6 (trend-preserving),"r1=0.849, null 0.781",,0.0018899055047247636,0.04724763761811909
+F3 parity,even-group sum(no+ayat) == total ayat (6236),6236.0,0.0014999250037498126,permute ayah counts,,broader 'any iconic total' p=0.0015,0.0025960240449515986,0.06749662516874157
+F1 correlation,"spearman(rev_order,n_ayat)",0.248,0.007299635018249088,permute y across surahs,rho=0.248,,0.01216605836374848,0.32848357582120896
+F4 primes,totals divisible by 19 (out of 6 totals),2.0,0.036055207468641104,"binomial(6, 1/19)",,tested k=2..30 — see divisibility table,0.057945869146030345,1.0
+F4 primes,# first verses with prime word count,43.0,0.14854257287135644,jitter ±2 null,,,0.22671366431678416,1.0
+F3 parity,even/odd split exactly 57/57,57.0,0.1511424428778561,permute ayah counts,,,0.22671366431678416,1.0
+F2 adjacency,lag-1 autocorr of log letters_per_word vs block-6 shuffle (mushaf order),0.4,0.1615419229038548,shuffle within blocks of 6 (trend-preserving),"r1=0.400, null 0.268",,0.23449633969914407,1.0
+F11 word length,"spearman(rev_order, letters_per_word) within Meccan surahs only",0.143,0.19089045547722613,permute within Meccan,rho=0.143 (n=86),,0.26843970301484926,1.0
+F5 fibonacci,# surahs with Fibonacci word count,1.0,0.34893255337233137,jitter ±10 null,,,0.4758171182349973,1.0
+F5 fibonacci,# surahs with Fibonacci ayah count,17.0,0.5071246437678116,jitter ±3 null,,,0.6711943814573977,1.0
+F1 correlation,"spearman(surah_no,letters_per_word)",-0.046,0.6262686865656717,permute y across surahs,rho=-0.046,,0.8046472676366183,1.0
+F4 primes,prime surah_no AND prime ayah count,7.0,0.6437178141092946,permute ayah counts,,,0.8046472676366183,1.0
+F8 groups,Meccan vs Medinan: n_ayat (Mann-Whitney),1261.0,0.7098962818949208,rank test,median Mecc=43.00 Med=29.00,,0.863387369872201,1.0
+F2 adjacency,lag-1 autocorr of detrended log n_words (mushaf order),-0.012,0.8836058197090145,permute detrended residuals,r1=-0.012,,1.0,1.0
+F9 mirror,"spearman(resid log words[i], resid log words[115-i])",0.015,0.9137543122843858,permute detrended residuals,,,1.0,1.0
+F6 word pairs,pre-registered pairs exact-equal frequency (EXACT rule),0.0,0.9999999999999999,band-conditional Poisson-binomial,expected 3.61 of 18,,1.0,1.0
+F4 primes,# surahs with prime ayah count,32.0,1.0,jitter ±3 null,null mean 31.6,,1.0,1.0
+F3 parity,surah_no parity x ayat parity independence,0.0,1.0,chi-square,,"[[30, 27], [30, 27]]",1.0,1.0
+F5 fibonacci,iconic ratios within 1% of phi/pi/e,0.0,1.0,Poisson look-elsewhere,,"550 ratios tested, expected 1.19",1.0,1.0
+F6 word pairs,pre-registered pairs exact-equal frequency (CONTAINS rule),0.0,1.0000000000000009,band-conditional Poisson-binomial,expected 1.53 of 22,,1.0,1.0
+F6 word pairs,pre-registered pairs exact-equal frequency (STEM rule),1.0,1.000000000000001,band-conditional Poisson-binomial,expected 1.95 of 22,,1.0,1.0

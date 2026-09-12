@@ -1,0 +1,168 @@
+[summary] {'n_surahs': 114, 'total_ayat': 6236, 'total_words': 77797, 'total_letters': 330709, 'meccan': 86, 'medinan': 28, 'meccan_label_vs_revorder_mismatch': []}
+
+=== Spearman correlation matrix ===
+                  surah_no  rev_order  n_ayat  n_words  n_letters  words_per_ayah  letters_per_word  meccan  muqattaat
+surah_no              1.00      -0.41   -0.84    -0.93      -0.93           -0.71             -0.05    0.18      -0.52
+rev_order            -0.41       1.00    0.25     0.44       0.45            0.67              0.34   -0.75       0.01
+n_ayat               -0.84       0.25    1.00     0.91       0.91            0.45              0.00    0.04       0.48
+n_words              -0.93       0.44    0.91     1.00       1.00            0.75             -0.01   -0.20       0.50
+n_letters            -0.93       0.45    0.91     1.00       1.00            0.75              0.02   -0.21       0.50
+words_per_ayah       -0.71       0.67    0.45     0.75       0.75            1.00              0.04   -0.57       0.31
+letters_per_word     -0.05       0.34    0.00    -0.01       0.02            0.04              1.00   -0.37      -0.23
+meccan                0.18      -0.75    0.04    -0.20      -0.21           -0.57             -0.37    1.00       0.19
+muqattaat            -0.52       0.01    0.48     0.50       0.50            0.31             -0.23    0.19       1.00
+
+=== Parity identity (6236) ===
+  n_even_group: 57
+  n_odd_group: 57
+  sum_(no+ayat)_even_group: 6236
+  sum_(no+ayat)_odd_group: 6555
+  sum_surah_no_even_group: 3303
+  sum_ayat_even_group: 2933
+  total_ayat: 6236
+  total_surah_no: 6555
+  null_mean_even_group_sum: 6392.7572
+  null_sd_even_group_sum: 685.3153060075048
+  p_exact_hit_6236: 0.0014999250037498126
+  p_any_iconic_hit: 0.0014999250037498126
+  analytic_p_point_mass: 0.0005670982711074422
+
+=== Primes ===
+  prime_ayat_count: 32
+  prime_ayat_null_mean: 31.6232
+  prime_no_and_prime_ayat: 7
+  prime_no_and_prime_ayat_null_mean: 8.42055
+  prime_first_verse_wordcount: 43
+  prime_first_verse_null_mean: 50.6229
+  totals: {'n_surahs': 114, 'total_ayat': 6236, 'total_words': 77797, 'total_letters': 330709, 'sum_surah_no': 6555, 'sum_no_plus_ayat': 12791}
+  divisibility_hits_by_k: {2: ['n_surahs', 'total_ayat'], 3: ['n_surahs', 'sum_surah_no'], 4: ['total_ayat'], 5: ['sum_surah_no'], 6: ['n_surahs'], 15: ['sum_surah_no'], 19: ['n_surahs', 'sum_surah_no'], 23: ['sum_surah_no']}
+
+=== Fibonacci / ratios ===
+  fib_ayat_count: 17
+  fib_ayat_surahs: [31, 43, 54, 60, 92, 94, 95, 97, 98, 99, 102, 103, 105, 108, 110, 111, 113]
+  fib_ayat_null_mean: 14.54455
+  fib_word_count: 1
+  fib_word_null_mean: 2.8557
+  golden_ratio_hits_within_1pct: []
+  golden_ratio_ratios_tested: 550
+  golden_ratio_expected_hits: 1.19
+
+=== Words ===
+  n_tokens: 77797
+  n_types_exact: 14870
+  n_types_stem: 9423
+  hapax_fraction_exact: 0.5856758574310693
+  zipf_exponent: 0.975
+  zipf_r2: 0.994
+  equal_frequency_word_pairs_total: 41695615
+  equal_frequency_word_pairs_freq>=5: 172328
+  equal_frequency_word_pairs_freq>=20: 1889
+  p_equal_by_band_exact: {'1-1': 1.0, '2-5': 0.3735, '6-20': 0.1163, '21-60': 0.0336, '61-200': 0.0111, '201-1000000': 0.0012}
+  p_equal_by_band_stem: {'1-1': 1.0, '2-5': 0.3561, '6-20': 0.1018, '21-60': 0.0373, '61-200': 0.0104, '201-1000000': 0.003}
+  prereg_matches_EXACT: 0
+  prereg_expected_matches_EXACT: 3.61
+  prereg_matches_STEM: 1
+  prereg_expected_matches_STEM: 1.95
+  prereg_matches_CONTAINS: 0
+  prereg_expected_matches_CONTAINS: 1.53
+  n_equal_pairs_stem_ge20: 2458
+
+=== Pre-registered pairs ===
+                     pair                     claim  exact_A  exact_B  exact_match  stem_A  stem_B  stem_match  contains_A  contains_B  contains_match
+          الدنيا / الآخرة                 115 / 115      115       71            0     115     294           0         115         312               0
+      الملائكة / الشياطين         88 / 88 (الشيطان)        0        4            0      73      68           0          73          70               0
+الملائكة / الشياطين (جمع)                                  0        1            0      73      18           0          73          18               0
+           الحياة / الموت                 145 / 145        4        0            0      82      72           0         103          87               0
+           الرجل / المرأة                   24 / 24       13       19            0      32      46           0          45          46               0
+             البحر / البر  32 / 13  (71.1% / 28.9%)       23       19            0      38      21           0          40          27               0
+            الجنة / النار 77 / 77 (claimed by some)       56      102            0      77     145           0          79         146               0
+           الصيف / الشتاء                     1 / 1        0        1            0       1       1           1           1           3               0
+             الحر / البرد                     4 / 4        3        0            0       4       1           0          42           4               0
+           النفع / الفساد                   50 / 50        0        1            0      16       2           0          45          15               0
+            الصبر / الشدة                 102 / 102        2        0            0      36       0           0          73           7               0
+          الزكاة / البركة                   32 / 32        2        0            0      33       0           0          33          15               0
+         الجهر / العلانية                   16 / 16        1        0            0      11       4           0          15           4               0
+        إبليس / الاستعاذة                   11 / 11       11        0            0      11       4           0          11           4               0
+            الشمس / القمر                                 20        5            0      33      27           0          33          27               0
+           الليل / النهار                                 59       25            0      74      57           0         169         109               0
+           السماء / الأرض                                109      287            0     303     467           0         347         469               0
+          الإيمان / الكفر                                  3       20            0      79      47           0          86         343               0
+             الخير / الشر                                  9        5            0     188       7           0         190           9               0
+           الذكر / الأنثى                                 19        2            0     144      24           0         278          24               0
+          الرحمة / العذاب                                 35      150            0     181     320           0         206         322               0
+   يوم (365?) / شهر (12?)                  365 / 12      217        4            0     448      14           0         451          20               0
+
+=== Discovery ===
+  lag1_n_words_surah_no: -0.012
+  lag1_words_per_ayah_surah_no: 0.529
+  lag1_n_words_rev_order: 0.411
+  lag1_words_per_ayah_rev_order: 0.345
+  lag1_block_null_words_per_ayah: {'obs': 0.791, 'null_mean': 0.633}
+  lag1_block_null_n_ayat: {'obs': 0.849, 'null_mean': 0.781}
+  lag1_block_null_letters_per_word: {'obs': 0.4, 'null_mean': 0.268}
+  first_verse_mean_z_all: -0.736
+  first_verse_mean_z_excl. muqatta'at+Fatiha: -0.423
+  last_verse_mean_z_all: 0.39
+  last_verse_mean_z_excl. muqatta'at+Fatiha: 0.486
+  last_minus_first_words_median: 2.0
+  within_surah_length_trend_mean_rho: 0.109
+  within_surah_length_trend_n_positive: 62
+  rev_order_vs_letters_per_word_meccan_only: 0.143
+  rev_order_vs_letters_per_word_medinan_only: -0.018
+  partial_rev_order_letters_per_word_given_verse_len: 0.415
+  letters_per_word_by_revelation_tercile: {'early': 4.187, 'middle': 4.201, 'late': 4.348}
+  muqattaat_runs: 21
+  muqattaat_runs_null_mean: 44.22
+  mirror_detrended_rho: 0.015
+  verse_length_cv_median: 0.428
+  verse_length_cv_null_mean: 0.897
+
+=== BATTERY (all tests, BH-corrected) ===
+           family                                                                     test  statistic                           effect        p_raw         q_BH  p_bonferroni
+        F8 groups                         Meccan vs Medinan: words_per_ayah (Mann-Whitney)    282.500       median Mecc=5.81 Med=18.24 1.336614e-09 6.014762e-08  6.014762e-08
+        F8 groups                              Muqatta'at vs others: n_ayat (Mann-Whitney)   2010.000     median Muq=85.00 other=26.00 4.275450e-07 9.619763e-06  1.923953e-05
+F7 verse position  last verse longer than first verse (sign test, excl. muqatta'at+Fatiha)     53.000 53 longer / 17 shorter / 9 equal 1.919969e-05 1.730683e-04  8.639862e-04
+   F1 correlation                                                spearman(surah_no,n_ayat)     -0.845                       rho=-0.845 4.999750e-05 1.730683e-04  2.249888e-03
+     F2 adjacency               lag-1 autocorr of detrended log n_words (revelation order)      0.411                         r1=0.411 4.999750e-05 1.730683e-04  2.249888e-03
+   F1 correlation                                        spearman(surah_no,words_per_ayah)     -0.711                       rho=-0.711 4.999750e-05 1.730683e-04  2.249888e-03
+   F1 correlation                                       spearman(rev_order,words_per_ayah)      0.671                        rho=0.671 4.999750e-05 1.730683e-04  2.249888e-03
+   F1 correlation                                             spearman(surah_no,rev_order)     -0.406                       rho=-0.406 4.999750e-05 1.730683e-04  2.249888e-03
+  F11 word length           partial spearman(rev_order, letters_per_word | words_per_ayah)      0.415                rho_partial=0.415 4.999750e-05 1.730683e-04  2.249888e-03
+     F2 adjacency   lag-1 autocorr of log words_per_ayah vs block-6 shuffle (mushaf order)      0.791             r1=0.791, null 0.633 4.999750e-05 1.730683e-04  2.249888e-03
+        F8 groups                      Meccan/Medinan clustering (runs test, mushaf order)     25.000          runs=25, null mean 43.2 4.999750e-05 1.730683e-04  2.249888e-03
+        F8 groups                   Muqatta'at surahs clustering (runs test, mushaf order)     21.000          runs=21, null mean 44.2 4.999750e-05 1.730683e-04  2.249888e-03
+     F2 adjacency            lag-1 autocorr of detrended log words_per_ayah (mushaf order)      0.529                         r1=0.529 4.999750e-05 1.730683e-04  2.249888e-03
+        F8 groups                       Meccan vs Medinan: letters_per_word (Mann-Whitney)    608.000        median Mecc=4.20 Med=4.35 8.851276e-05 2.845053e-04  3.983074e-03
+   F1 correlation                                          spearman(n_ayat,words_per_ayah)      0.449                        rho=0.449 9.999500e-05 2.999850e-04  4.499775e-03
+     F2 adjacency        lag-1 autocorr of detrended log words_per_ayah (revelation order)      0.345                         r1=0.345 1.499925e-04 4.218539e-04  6.749663e-03
+F7 verse position           mean within-surah spearman(verse index, length) over 95 surahs      0.109                                  2.499375e-04 5.355804e-04  1.124719e-02
+F7 verse position           last verse length z-score (excl. muqatta'at+Fatiha, 79 surahs)      0.486                      mean z=0.49 2.499375e-04 5.355804e-04  1.124719e-02
+F7 verse position          first verse length z-score (excl. muqatta'at+Fatiha, 79 surahs)     -0.423                     mean z=-0.42 2.499375e-04 5.355804e-04  1.124719e-02
+F7 verse position                             first verse length z-score (all, 109 surahs)     -0.736                     mean z=-0.74 2.499375e-04 5.355804e-04  1.124719e-02
+F7 verse position                              last verse length z-score (all, 109 surahs)      0.390                      mean z=0.39 2.499375e-04 5.355804e-04  1.124719e-02
+   F1 correlation                                     spearman(rev_order,letters_per_word)      0.335                        rho=0.335 3.499825e-04 7.158733e-04  1.574921e-02
+   F10 regularity                                   median within-surah CV of verse length      0.428          obs 0.428 vs null 0.897 4.997501e-04 9.777720e-04  2.248876e-02
+        F8 groups                      Muqatta'at vs others: words_per_ayah (Mann-Whitney)   1739.000      median Muq=14.17 other=5.00 9.938754e-04 1.863516e-03  4.472439e-02
+     F2 adjacency           lag-1 autocorr of log n_ayat vs block-6 shuffle (mushaf order)      0.849             r1=0.849, null 0.781 1.049948e-03 1.889906e-03  4.724764e-02
+        F3 parity                             even-group sum(no+ayat) == total ayat (6236)   6236.000                                  1.499925e-03 2.596024e-03  6.749663e-02
+   F1 correlation                                               spearman(rev_order,n_ayat)      0.248                        rho=0.248 7.299635e-03 1.216606e-02  3.284836e-01
+        F4 primes                                 totals divisible by 19 (out of 6 totals)      2.000                                  3.605521e-02 5.794587e-02  1.000000e+00
+        F4 primes                                     # first verses with prime word count     43.000                                  1.485426e-01 2.267137e-01  1.000000e+00
+        F3 parity                                             even/odd split exactly 57/57     57.000                                  1.511424e-01 2.267137e-01  1.000000e+00
+     F2 adjacency lag-1 autocorr of log letters_per_word vs block-6 shuffle (mushaf order)      0.400             r1=0.400, null 0.268 1.615419e-01 2.344963e-01  1.000000e+00
+  F11 word length          spearman(rev_order, letters_per_word) within Meccan surahs only      0.143                 rho=0.143 (n=86) 1.908905e-01 2.684397e-01  1.000000e+00
+     F5 fibonacci                                       # surahs with Fibonacci word count      1.000                                  3.489326e-01 4.758171e-01  1.000000e+00
+     F5 fibonacci                                       # surahs with Fibonacci ayah count     17.000                                  5.071246e-01 6.711944e-01  1.000000e+00
+   F1 correlation                                      spearman(surah_no,letters_per_word)     -0.046                       rho=-0.046 6.262687e-01 8.046473e-01  1.000000e+00
+        F4 primes                                      prime surah_no AND prime ayah count      7.000                                  6.437178e-01 8.046473e-01  1.000000e+00
+        F8 groups                                 Meccan vs Medinan: n_ayat (Mann-Whitney)   1261.000      median Mecc=43.00 Med=29.00 7.098963e-01 8.633874e-01  1.000000e+00
+     F2 adjacency                   lag-1 autocorr of detrended log n_words (mushaf order)     -0.012                        r1=-0.012 8.836058e-01 1.000000e+00  1.000000e+00
+        F9 mirror                     spearman(resid log words[i], resid log words[115-i])      0.015                                  9.137543e-01 1.000000e+00  1.000000e+00
+    F6 word pairs                  pre-registered pairs exact-equal frequency (EXACT rule)      0.000              expected 3.61 of 18 1.000000e+00 1.000000e+00  1.000000e+00
+        F4 primes                                           # surahs with prime ayah count     32.000                   null mean 31.6 1.000000e+00 1.000000e+00  1.000000e+00
+        F3 parity                               surah_no parity x ayat parity independence      0.000                                  1.000000e+00 1.000000e+00  1.000000e+00
+     F5 fibonacci                                      iconic ratios within 1% of phi/pi/e      0.000                                  1.000000e+00 1.000000e+00  1.000000e+00
+    F6 word pairs               pre-registered pairs exact-equal frequency (CONTAINS rule)      0.000              expected 1.53 of 22 1.000000e+00 1.000000e+00  1.000000e+00
+    F6 word pairs                   pre-registered pairs exact-equal frequency (STEM rule)      1.000              expected 1.95 of 22 1.000000e+00 1.000000e+00  1.000000e+00
+
+Tests: 45 | q<0.05: 27 | Bonferroni<0.05: 25

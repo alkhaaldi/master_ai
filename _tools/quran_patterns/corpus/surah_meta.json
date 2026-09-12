@@ -1,0 +1,800 @@
+[
+{
+"surah": 1,
+"name": "الفاتحة",
+"transliteration": "Al-Fatihah",
+"type": "meccan",
+"n_ayat": 7
+},
+{
+"surah": 2,
+"name": "البقرة",
+"transliteration": "Al-Baqarah",
+"type": "medinan",
+"n_ayat": 286
+},
+{
+"surah": 3,
+"name": "آل عمران",
+"transliteration": "Ali 'Imran",
+"type": "medinan",
+"n_ayat": 200
+},
+{
+"surah": 4,
+"name": "النساء",
+"transliteration": "An-Nisa",
+"type": "medinan",
+"n_ayat": 176
+},
+{
+"surah": 5,
+"name": "المائدة",
+"transliteration": "Al-Ma'idah",
+"type": "medinan",
+"n_ayat": 120
+},
+{
+"surah": 6,
+"name": "الأنعام",
+"transliteration": "Al-An'am",
+"type": "meccan",
+"n_ayat": 165
+},
+{
+"surah": 7,
+"name": "الأعراف",
+"transliteration": "Al-A'raf",
+"type": "meccan",
+"n_ayat": 206
+},
+{
+"surah": 8,
+"name": "الأنفال",
+"transliteration": "Al-Anfal",
+"type": "medinan",
+"n_ayat": 75
+},
+{
+"surah": 9,
+"name": "التوبة",
+"transliteration": "At-Tawbah",
+"type": "medinan",
+"n_ayat": 129
+},
+{
+"surah": 10,
+"name": "يونس",
+"transliteration": "Yunus",
+"type": "meccan",
+"n_ayat": 109
+},
+{
+"surah": 11,
+"name": "هود",
+"transliteration": "Hud",
+"type": "meccan",
+"n_ayat": 123
+},
+{
+"surah": 12,
+"name": "يوسف",
+"transliteration": "Yusuf",
+"type": "meccan",
+"n_ayat": 111
+},
+{
+"surah": 13,
+"name": "الرعد",
+"transliteration": "Ar-Ra'd",
+"type": "medinan",
+"n_ayat": 43
+},
+{
+"surah": 14,
+"name": "ابراهيم",
+"transliteration": "Ibrahim",
+"type": "meccan",
+"n_ayat": 52
+},
+{
+"surah": 15,
+"name": "الحجر",
+"transliteration": "Al-Hijr",
+"type": "meccan",
+"n_ayat": 99
+},
+{
+"surah": 16,
+"name": "النحل",
+"transliteration": "An-Nahl",
+"type": "meccan",
+"n_ayat": 128
+},
+{
+"surah": 17,
+"name": "الإسراء",
+"transliteration": "Al-Isra",
+"type": "meccan",
+"n_ayat": 111
+},
+{
+"surah": 18,
+"name": "الكهف",
+"transliteration": "Al-Kahf",
+"type": "meccan",
+"n_ayat": 110
+},
+{
+"surah": 19,
+"name": "مريم",
+"transliteration": "Maryam",
+"type": "meccan",
+"n_ayat": 98
+},
+{
+"surah": 20,
+"name": "طه",
+"transliteration": "Taha",
+"type": "meccan",
+"n_ayat": 135
+},
+{
+"surah": 21,
+"name": "الأنبياء",
+"transliteration": "Al-Anbya",
+"type": "meccan",
+"n_ayat": 112
+},
+{
+"surah": 22,
+"name": "الحج",
+"transliteration": "Al-Hajj",
+"type": "medinan",
+"n_ayat": 78
+},
+{
+"surah": 23,
+"name": "المؤمنون",
+"transliteration": "Al-Mu'minun",
+"type": "meccan",
+"n_ayat": 118
+},
+{
+"surah": 24,
+"name": "النور",
+"transliteration": "An-Nur",
+"type": "medinan",
+"n_ayat": 64
+},
+{
+"surah": 25,
+"name": "الفرقان",
+"transliteration": "Al-Furqan",
+"type": "meccan",
+"n_ayat": 77
+},
+{
+"surah": 26,
+"name": "الشعراء",
+"transliteration": "Ash-Shu'ara",
+"type": "meccan",
+"n_ayat": 227
+},
+{
+"surah": 27,
+"name": "النمل",
+"transliteration": "An-Naml",
+"type": "meccan",
+"n_ayat": 93
+},
+{
+"surah": 28,
+"name": "القصص",
+"transliteration": "Al-Qasas",
+"type": "meccan",
+"n_ayat": 88
+},
+{
+"surah": 29,
+"name": "العنكبوت",
+"transliteration": "Al-'Ankabut",
+"type": "meccan",
+"n_ayat": 69
+},
+{
+"surah": 30,
+"name": "الروم",
+"transliteration": "Ar-Rum",
+"type": "meccan",
+"n_ayat": 60
+},
+{
+"surah": 31,
+"name": "لقمان",
+"transliteration": "Luqman",
+"type": "meccan",
+"n_ayat": 34
+},
+{
+"surah": 32,
+"name": "السجدة",
+"transliteration": "As-Sajdah",
+"type": "meccan",
+"n_ayat": 30
+},
+{
+"surah": 33,
+"name": "الأحزاب",
+"transliteration": "Al-Ahzab",
+"type": "medinan",
+"n_ayat": 73
+},
+{
+"surah": 34,
+"name": "سبإ",
+"transliteration": "Saba",
+"type": "meccan",
+"n_ayat": 54
+},
+{
+"surah": 35,
+"name": "فاطر",
+"transliteration": "Fatir",
+"type": "meccan",
+"n_ayat": 45
+},
+{
+"surah": 36,
+"name": "يس",
+"transliteration": "Ya-Sin",
+"type": "meccan",
+"n_ayat": 83
+},
+{
+"surah": 37,
+"name": "الصافات",
+"transliteration": "As-Saffat",
+"type": "meccan",
+"n_ayat": 182
+},
+{
+"surah": 38,
+"name": "ص",
+"transliteration": "Sad",
+"type": "meccan",
+"n_ayat": 88
+},
+{
+"surah": 39,
+"name": "الزمر",
+"transliteration": "Az-Zumar",
+"type": "meccan",
+"n_ayat": 75
+},
+{
+"surah": 40,
+"name": "غافر",
+"transliteration": "Ghafir",
+"type": "meccan",
+"n_ayat": 85
+},
+{
+"surah": 41,
+"name": "فصلت",
+"transliteration": "Fussilat",
+"type": "meccan",
+"n_ayat": 54
+},
+{
+"surah": 42,
+"name": "الشورى",
+"transliteration": "Ash-Shuraa",
+"type": "meccan",
+"n_ayat": 53
+},
+{
+"surah": 43,
+"name": "الزخرف",
+"transliteration": "Az-Zukhruf",
+"type": "meccan",
+"n_ayat": 89
+},
+{
+"surah": 44,
+"name": "الدخان",
+"transliteration": "Ad-Dukhan",
+"type": "meccan",
+"n_ayat": 59
+},
+{
+"surah": 45,
+"name": "الجاثية",
+"transliteration": "Al-Jathiyah",
+"type": "meccan",
+"n_ayat": 37
+},
+{
+"surah": 46,
+"name": "الأحقاف",
+"transliteration": "Al-Ahqaf",
+"type": "meccan",
+"n_ayat": 35
+},
+{
+"surah": 47,
+"name": "محمد",
+"transliteration": "Muhammad",
+"type": "medinan",
+"n_ayat": 38
+},
+{
+"surah": 48,
+"name": "الفتح",
+"transliteration": "Al-Fath",
+"type": "medinan",
+"n_ayat": 29
+},
+{
+"surah": 49,
+"name": "الحجرات",
+"transliteration": "Al-Hujurat",
+"type": "medinan",
+"n_ayat": 18
+},
+{
+"surah": 50,
+"name": "ق",
+"transliteration": "Qaf",
+"type": "meccan",
+"n_ayat": 45
+},
+{
+"surah": 51,
+"name": "الذاريات",
+"transliteration": "Adh-Dhariyat",
+"type": "meccan",
+"n_ayat": 60
+},
+{
+"surah": 52,
+"name": "الطور",
+"transliteration": "At-Tur",
+"type": "meccan",
+"n_ayat": 49
+},
+{
+"surah": 53,
+"name": "النجم",
+"transliteration": "An-Najm",
+"type": "meccan",
+"n_ayat": 62
+},
+{
+"surah": 54,
+"name": "القمر",
+"transliteration": "Al-Qamar",
+"type": "meccan",
+"n_ayat": 55
+},
+{
+"surah": 55,
+"name": "الرحمن",
+"transliteration": "Ar-Rahman",
+"type": "medinan",
+"n_ayat": 78
+},
+{
+"surah": 56,
+"name": "الواقعة",
+"transliteration": "Al-Waqi'ah",
+"type": "meccan",
+"n_ayat": 96
+},
+{
+"surah": 57,
+"name": "الحديد",
+"transliteration": "Al-Hadid",
+"type": "medinan",
+"n_ayat": 29
+},
+{
+"surah": 58,
+"name": "المجادلة",
+"transliteration": "Al-Mujadila",
+"type": "medinan",
+"n_ayat": 22
+},
+{
+"surah": 59,
+"name": "الحشر",
+"transliteration": "Al-Hashr",
+"type": "medinan",
+"n_ayat": 24
+},
+{
+"surah": 60,
+"name": "الممتحنة",
+"transliteration": "Al-Mumtahanah",
+"type": "medinan",
+"n_ayat": 13
+},
+{
+"surah": 61,
+"name": "الصف",
+"transliteration": "As-Saf",
+"type": "medinan",
+"n_ayat": 14
+},
+{
+"surah": 62,
+"name": "الجمعة",
+"transliteration": "Al-Jumu'ah",
+"type": "medinan",
+"n_ayat": 11
+},
+{
+"surah": 63,
+"name": "المنافقون",
+"transliteration": "Al-Munafiqun",
+"type": "medinan",
+"n_ayat": 11
+},
+{
+"surah": 64,
+"name": "التغابن",
+"transliteration": "At-Taghabun",
+"type": "medinan",
+"n_ayat": 18
+},
+{
+"surah": 65,
+"name": "الطلاق",
+"transliteration": "At-Talaq",
+"type": "medinan",
+"n_ayat": 12
+},
+{
+"surah": 66,
+"name": "التحريم",
+"transliteration": "At-Tahrim",
+"type": "medinan",
+"n_ayat": 12
+},
+{
+"surah": 67,
+"name": "الملك",
+"transliteration": "Al-Mulk",
+"type": "meccan",
+"n_ayat": 30
+},
+{
+"surah": 68,
+"name": "القلم",
+"transliteration": "Al-Qalam",
+"type": "meccan",
+"n_ayat": 52
+},
+{
+"surah": 69,
+"name": "الحاقة",
+"transliteration": "Al-Haqqah",
+"type": "meccan",
+"n_ayat": 52
+},
+{
+"surah": 70,
+"name": "المعارج",
+"transliteration": "Al-Ma'arij",
+"type": "meccan",
+"n_ayat": 44
+},
+{
+"surah": 71,
+"name": "نوح",
+"transliteration": "Nuh",
+"type": "meccan",
+"n_ayat": 28
+},
+{
+"surah": 72,
+"name": "الجن",
+"transliteration": "Al-Jinn",
+"type": "meccan",
+"n_ayat": 28
+},
+{
+"surah": 73,
+"name": "المزمل",
+"transliteration": "Al-Muzzammil",
+"type": "meccan",
+"n_ayat": 20
+},
+{
+"surah": 74,
+"name": "المدثر",
+"transliteration": "Al-Muddaththir",
+"type": "meccan",
+"n_ayat": 56
+},
+{
+"surah": 75,
+"name": "القيامة",
+"transliteration": "Al-Qiyamah",
+"type": "meccan",
+"n_ayat": 40
+},
+{
+"surah": 76,
+"name": "الانسان",
+"transliteration": "Al-Insan",
+"type": "medinan",
+"n_ayat": 31
+},
+{
+"surah": 77,
+"name": "المرسلات",
+"transliteration": "Al-Mursalat",
+"type": "meccan",
+"n_ayat": 50
+},
+{
+"surah": 78,
+"name": "النبإ",
+"transliteration": "An-Naba",
+"type": "meccan",
+"n_ayat": 40
+},
+{
+"surah": 79,
+"name": "النازعات",
+"transliteration": "An-Nazi'at",
+"type": "meccan",
+"n_ayat": 46
+},
+{
+"surah": 80,
+"name": "عبس",
+"transliteration": "'Abasa",
+"type": "meccan",
+"n_ayat": 42
+},
+{
+"surah": 81,
+"name": "التكوير",
+"transliteration": "At-Takwir",
+"type": "meccan",
+"n_ayat": 29
+},
+{
+"surah": 82,
+"name": "الإنفطار",
+"transliteration": "Al-Infitar",
+"type": "meccan",
+"n_ayat": 19
+},
+{
+"surah": 83,
+"name": "المطففين",
+"transliteration": "Al-Mutaffifin",
+"type": "meccan",
+"n_ayat": 36
+},
+{
+"surah": 84,
+"name": "الإنشقاق",
+"transliteration": "Al-Inshiqaq",
+"type": "meccan",
+"n_ayat": 25
+},
+{
+"surah": 85,
+"name": "البروج",
+"transliteration": "Al-Buruj",
+"type": "meccan",
+"n_ayat": 22
+},
+{
+"surah": 86,
+"name": "الطارق",
+"transliteration": "At-Tariq",
+"type": "meccan",
+"n_ayat": 17
+},
+{
+"surah": 87,
+"name": "الأعلى",
+"transliteration": "Al-A'la",
+"type": "meccan",
+"n_ayat": 19
+},
+{
+"surah": 88,
+"name": "الغاشية",
+"transliteration": "Al-Ghashiyah",
+"type": "meccan",
+"n_ayat": 26
+},
+{
+"surah": 89,
+"name": "الفجر",
+"transliteration": "Al-Fajr",
+"type": "meccan",
+"n_ayat": 30
+},
+{
+"surah": 90,
+"name": "البلد",
+"transliteration": "Al-Balad",
+"type": "meccan",
+"n_ayat": 20
+},
+{
+"surah": 91,
+"name": "الشمس",
+"transliteration": "Ash-Shams",
+"type": "meccan",
+"n_ayat": 15
+},
+{
+"surah": 92,
+"name": "الليل",
+"transliteration": "Al-Layl",
+"type": "meccan",
+"n_ayat": 21
+},
+{
+"surah": 93,
+"name": "الضحى",
+"transliteration": "Ad-Duhaa",
+"type": "meccan",
+"n_ayat": 11
+},
+{
+"surah": 94,
+"name": "الشرح",
+"transliteration": "Ash-Sharh",
+"type": "meccan",
+"n_ayat": 8
+},
+{
+"surah": 95,
+"name": "التين",
+"transliteration": "At-Tin",
+"type": "meccan",
+"n_ayat": 8
+},
+{
+"surah": 96,
+"name": "العلق",
+"transliteration": "Al-'Alaq",
+"type": "meccan",
+"n_ayat": 19
+},
+{
+"surah": 97,
+"name": "القدر",
+"transliteration": "Al-Qadr",
+"type": "meccan",
+"n_ayat": 5
+},
+{
+"surah": 98,
+"name": "البينة",
+"transliteration": "Al-Bayyinah",
+"type": "medinan",
+"n_ayat": 8
+},
+{
+"surah": 99,
+"name": "الزلزلة",
+"transliteration": "Az-Zalzalah",
+"type": "medinan",
+"n_ayat": 8
+},
+{
+"surah": 100,
+"name": "العاديات",
+"transliteration": "Al-'Adiyat",
+"type": "meccan",
+"n_ayat": 11
+},
+{
+"surah": 101,
+"name": "القارعة",
+"transliteration": "Al-Qari'ah",
+"type": "meccan",
+"n_ayat": 11
+},
+{
+"surah": 102,
+"name": "التكاثر",
+"transliteration": "At-Takathur",
+"type": "meccan",
+"n_ayat": 8
+},
+{
+"surah": 103,
+"name": "العصر",
+"transliteration": "Al-'Asr",
+"type": "meccan",
+"n_ayat": 3
+},
+{
+"surah": 104,
+"name": "الهمزة",
+"transliteration": "Al-Humazah",
+"type": "meccan",
+"n_ayat": 9
+},
+{
+"surah": 105,
+"name": "الفيل",
+"transliteration": "Al-Fil",
+"type": "meccan",
+"n_ayat": 5
+},
+{
+"surah": 106,
+"name": "قريش",
+"transliteration": "Quraysh",
+"type": "meccan",
+"n_ayat": 4
+},
+{
+"surah": 107,
+"name": "الماعون",
+"transliteration": "Al-Ma'un",
+"type": "meccan",
+"n_ayat": 7
+},
+{
+"surah": 108,
+"name": "الكوثر",
+"transliteration": "Al-Kawthar",
+"type": "meccan",
+"n_ayat": 3
+},
+{
+"surah": 109,
+"name": "الكافرون",
+"transliteration": "Al-Kafirun",
+"type": "meccan",
+"n_ayat": 6
+},
+{
+"surah": 110,
+"name": "النصر",
+"transliteration": "An-Nasr",
+"type": "medinan",
+"n_ayat": 3
+},
+{
+"surah": 111,
+"name": "المسد",
+"transliteration": "Al-Masad",
+"type": "meccan",
+"n_ayat": 5
+},
+{
+"surah": 112,
+"name": "الإخلاص",
+"transliteration": "Al-Ikhlas",
+"type": "meccan",
+"n_ayat": 4
+},
+{
+"surah": 113,
+"name": "الفلق",
+"transliteration": "Al-Falaq",
+"type": "meccan",
+"n_ayat": 5
+},
+{
+"surah": 114,
+"name": "الناس",
+"transliteration": "An-Nas",
+"type": "meccan",
+"n_ayat": 6
+}
+]
